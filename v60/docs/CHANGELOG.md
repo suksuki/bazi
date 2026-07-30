@@ -2,6 +2,52 @@
 
 ## 2026-07-31
 
+### Private reality-question Dream return loop
+
+- Added an optional account-private path from one user-selected reality
+  domain and a normalized 4–120 character question into the Grove candidate
+  with that exact domain. The server rechecks the candidate/domain binding;
+  it does not use the current Reading, an LLM or inferred meaning to rank,
+  reorder or replace the three lives. A matched terminal life remains visibly
+  unavailable instead of being redirected to another domain.
+- Persisted each inquiry append-only with the authenticated account, active
+  Owner Case, LifeCase revision, current Reading, candidate Ref/Hash, Actor,
+  Tree, created Encounter and superseded inquiry identity. Inquiry admission
+  and Encounter creation share one account-locked transaction, so a failed
+  chapter entry cannot leave an orphan private question.
+- After the bound Encounter is completed and reconciled, the server exposes
+  exactly three deterministic reality-observation options for the selected
+  domain. Selecting one creates one immutable task with a seven-day checkpoint;
+  the browser can submit only a server-issued option Ref.
+- After returning to the Grove, the viewer can append `看见了`,
+  `暂未看见` or `还在观察` check-ins with an optional normalized note of up
+  to 160 characters. Each self-report links to the previous Ref/Hash; the
+  latest entry and total count recover from PostgreSQL.
+- Prevented a new question from hiding an unfinished observation, while a
+  continued same-tree chapter can still return to Grove and unlock the source
+  question's check-in. Owner Case switching and inquiry creation now share the
+  account-current lock, and dates follow the bound Profile timezone.
+- Runtime integrity now compares every persisted inquiry/task/check-in scalar
+  with its immutable JSON/Hash identity, in addition to validating parent and
+  append-only chain lineage.
+- Added strict Encounter and Grove projections for `IN_DREAM`,
+  `DREAM_INTERRUPTED`, `AWAITING_OBSERVATION`, `OBSERVING` and
+  `FOLLOWED_UP`. Invalid account, candidate, tree, Encounter or Hash lineage
+  is withheld or rejected rather than repaired in presentation.
+- Kept the whole path `NOT_MINGLI_EVIDENCE`: Dream does not answer the private
+  question, a check-in does not validate Dream or Mingli, and no Reading,
+  candidate order, chapter route, Episode Question, Answer, NPC choice, World
+  outcome, Cognition Decision or Knowledge object is changed.
+- Added migration `0025_dream_personal_journey`; advanced Foundation to
+  `.017`, Dream Game to `.019`, Grove to `.005`, Unit Dream to `.020` and
+  Runtime Architecture to `.052`. Story `.011`, Mingli `.025`, Knowledge
+  `.008` and Cognition `.004` are unchanged.
+- Completed a real signed-in browser journey through relationship question
+  intake, independent Dream outcome, seven-day observation, two check-ins,
+  refresh and managed Runtime restart. The same Ref/Hash lineage recovered,
+  all personal integrity counters stayed zero, and the browser console stayed
+  clean. Evidence is in `.artifacts/dream-personal-journey/`.
+
 ### Second independent canonical Dream story chain
 
 - Added the Hash-locked `heyang-delivery-settlement` source package and an

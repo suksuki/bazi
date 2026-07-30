@@ -11,6 +11,7 @@ from abu_v60.dream.attention_follow_through import (
 from abu_v60.dream.catalog import DreamEpisodeCatalog, EpisodeCatalogError
 from abu_v60.dream.errors import DreamStateError
 from abu_v60.dream.persistence import DreamRepository
+from abu_v60.dream.personal_journey import DreamPersonalJourneyService
 from abu_v60.dream.return_attention import DreamReturnAttentionCoordinator
 from abu_v60.experience import EpisodePublicProjection, ExperienceProjectionComposer
 from abu_v60.game import DreamCommand, DreamGameplayDirector
@@ -31,6 +32,7 @@ class DreamSnapshotProjector:
         repository: DreamRepository,
         return_attention: DreamReturnAttentionCoordinator,
         attention_follow_through: DreamAttentionFollowThroughProjector,
+        personal_journey: DreamPersonalJourneyService,
     ) -> None:
         self._engine = engine
         self._director = director
@@ -40,6 +42,7 @@ class DreamSnapshotProjector:
         self._repository = repository
         self._return_attention = return_attention
         self._attention_follow_through = attention_follow_through
+        self._personal_journey = personal_journey
 
     def snapshot(self, *, account_ref: str) -> dict[str, Any]:
         with self._engine.connect() as connection:
@@ -262,6 +265,11 @@ class DreamSnapshotProjector:
                         dict(item) for item in revealed_evidence
                     ),
                 )
+            )
+            personal_journey = self._personal_journey.project_encounter(
+                connection,
+                account_ref=account_ref,
+                encounter_ref=str(encounter["encounter_ref"]),
             )
 
         state = encounter["state_json"]
@@ -488,6 +496,11 @@ class DreamSnapshotProjector:
             "attention_follow_through": (
                 attention_follow_through.model_dump(mode="json")
                 if attention_follow_through is not None
+                else None
+            ),
+            "personal_journey": (
+                personal_journey.model_dump(mode="json")
+                if personal_journey is not None
                 else None
             ),
         }

@@ -145,6 +145,22 @@ It is not successful merely because the database can create Encounters.
 Dream learning returns as an Observation or Evaluation reference. It cannot
 change Mingli truth until a separately admitted research process qualifies it.
 
+Dream may also preserve one account-private reality question and later
+self-reports:
+
+```text
+user-selected domain + private short question
+-> exact-domain synthetic life, without text interpretation
+-> independent Dream judgment and World result
+-> one server-issued seven-day reality observation
+-> append-only Grove check-ins
+```
+
+This is a personal reflection loop, not the professional research process.
+The question does not alter Dream canon; the Dream result does not answer it;
+the observation and check-ins are `NOT_MINGLI_EVIDENCE` and cannot update the
+Reading, Decision ledger or Knowledge.
+
 ## Theater As A Relatively Independent Studio
 
 Theater is not part of the online Mingli decision chain. It is a directing and
@@ -229,11 +245,19 @@ V50 capability has been professionally admitted yet.
 - Let Abu explain the same proposition without adding a conclusion.
 - Carry only the bounded unknown into Dream.
 
-### Slice 4: Dream Return Value
+### Slice 4: Dream Return Value — `PARTIALLY_IMPLEMENTED_IN_DREAM`
 
-- Complete the playable judgment and independent evidence loop.
-- Return one Observation Seed to the private Home LifeTree.
-- Keep the seed outside chart truth until separately admitted.
+- The playable judgment and independent World-evidence loop is complete.
+- An optional private reality question can now enter the exact-domain Dream
+  life without selecting or changing its Story.
+- A completed, reconciled journey exposes three server-issued observation
+  options, persists one seven-day task and accepts append-only self-reported
+  follow-ups after Grove return.
+- These records bind the current Owner Case/Reading for provenance but remain
+  inside the private Dream ledger and outside chart truth.
+- Returning a qualified Observation Seed into the private Home LifeTree is
+  still not implemented. No current Dream task or check-in may be presented as
+  that seed.
 
 ### Slice 5: Theater Studio Package
 
@@ -248,5 +272,7 @@ V50 capability has been professionally admitted yet.
 - no multilingual implementation, only language-neutral identities;
 - no bulk NPC or question factory;
 - no automatic self-training;
+- no automatic semantic evaluation of private questions or self-reported
+  check-ins;
 - no production deployment or Server 13 synchronization;
 - no claim of Mingli accuracy before blinded real-case evidence exists.

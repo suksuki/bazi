@@ -1093,7 +1093,7 @@ def test_return_attention_is_replay_safe_private_and_applies_only_same_tree(
     prompt = DreamReturnAttentionPrompt.model_validate(prompt_payload)
     assert prompt.status == "AWAITING_SELECTION"
     assert prompt.tree_ref == first_tree_ref
-    assert first_grove["grove"]["grove_version"] == "v60.dream-grove.004"
+    assert first_grove["grove"]["grove_version"] == "v60.dream-grove.005"
     next_chapter_route = next(
         candidate["chapter_route"]
         for candidate in first_grove["grove"]["candidates"]

@@ -274,13 +274,14 @@ const lens = {
 };
 
 const grove = (overrides = {}) => ({
-  grove_version: "v60.dream-grove.004",
+  grove_version: "v60.dream-grove.005",
   selection_status: "AWAITING_TREE_SELECTION",
   candidates,
   return_echo: null,
   next_attention: null,
   pending_attention: pending,
   attention_follow_through: null,
+  personal_journey: null,
   hidden_outcome_included: false,
   hidden_npc_choice_included: false,
   ...overrides,
@@ -294,6 +295,7 @@ const groveProps = (groveValue) => ({
   media,
   onSelect: () => {},
   onSelectAttention: () => {},
+  onStartPersonalJourney: () => {},
 });
 
 const buttonTag = (markup, candidateRef) =>
@@ -909,7 +911,7 @@ try {
 
 const report = {
   contractVersion: routeBase.contract_version,
-  groveVersion: "v60.dream-grove.004",
+  groveVersion: "v60.dream-grove.005",
   validStates: [
     "AVAILABLE:ENTRYPOINT",
     "AVAILABLE:CANONICAL_TRANSITION",

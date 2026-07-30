@@ -25,13 +25,17 @@ Every iteration must preserve:
 
 ```text
 login
+-> optionally choose one reality domain and write one private short question
+-> exact domain match highlights one Grove life without reordering the Grove
 -> persistent LifeTree encounter
 -> observe two leaves and one branch
 -> question flower
 -> independent AnswerSeals
 -> world settlement
 -> fruit reveal and reconciliation
+-> choose one of three server-issued seven-day reality observations
 -> persistent Grove return echo
+-> append a private self-reported check-in after returning to the Grove
 -> choose one server-issued next observation
 -> other trees leave that observation pending
 -> Grove marks the exact source tree
@@ -47,6 +51,58 @@ login
 The same snapshot feeds Dream, Mingli Calculation, Abu, Theater and Lab. The
 current implementation is desktop-first; mobile remains a guardrail until the
 desktop composition is stable.
+
+## Completed Delivery: Private Reality Question And Follow-Up
+
+Status: `IMPLEMENTED_AND_REAL_BROWSER_AUDITED_LOCAL`
+
+- The Grove now accepts one user-selected domain and a normalized 4–120
+  character private question. The server requires the selected candidate to
+  have that exact `career`, `wealth` or `relationship` domain and uses the
+  existing canonical chapter router. It neither interprets the text nor uses
+  the Owner Reading to choose, rank, reorder or replace a life.
+- Inquiry and Encounter creation are atomic and account-locked. The immutable
+  inquiry binds the active Owner Case, LifeCase revision, current Reading,
+  candidate Ref/Hash, Actor, Tree and exact Encounter. Starting another
+  inquiry creates a supersession link; it does not rewrite the earlier one.
+  An observation with no check-in, or whose latest check-in is still
+  `STILL_OBSERVING`, must be finished before another question can hide it.
+- The private question remains visible beside the Encounter as an observation
+  lens. The authored Question, independent AnswerSeal, NPC choice and World
+  result continue unchanged. An interrupted or expired-unsealed visit is
+  shown as incomplete and is not turned into an answer.
+- Only a completed, reconciled Encounter receives three deterministic,
+  server-issued reality-observation options for its selected domain. One
+  selection creates an append-only task with a checkpoint dated seven days
+  later. The checkpoint is an observation target, not a prediction or an
+  enforced proof window.
+- After the current canonical Dream timeline has returned to the Grove, the
+  viewer may append
+  `OBSERVED`, `NOT_OBSERVED` or `STILL_OBSERVING` self-reports and an optional
+  160-character note. Grove shows the latest report and count while preserving
+  the complete Ref/Hash-linked history.
+- Exact-domain matching is honest about content availability. A domain whose
+  canonical story is currently complete remains disabled; the product does
+  not silently redirect the question to a different life.
+- Inquiry, task and check-in are account-private Dream records. They are
+  explicitly `NOT_MINGLI_EVIDENCE`, do not answer the Owner question, do not
+  evaluate semantic correspondence, and permit no Mingli, Decision or
+  Knowledge write. Starting the journey uses the canonical chapter's ordinary
+  Opportunity/Encounter creation; private text cannot change that chapter's
+  Question, NPC choice or World outcome.
+- Account-current admission uses the same transaction lock as Owner Case
+  switching; checkpoint and check-in dates use the bound Profile timezone.
+  Runtime integrity compares every materialized scalar column with its
+  immutable JSON/Hash record.
+- Foundation is `.017`, migration head is
+  `0025_dream_personal_journey`, Dream Game is `.019`, Grove is `.005`, Unit
+  Dream is `.020` and Runtime Architecture is `.052`. Story remains `.011`;
+  Mingli, Knowledge and Cognition remain `.025/.008/.004`.
+- A real signed-in relationship journey was played from question intake
+  through Reveal, reconciliation, one server-issued observation and two Grove
+  check-ins. Refresh and a managed Runtime restart restored the same
+  Inquiry/Task/Check-in lineage with zero integrity or browser-console errors.
+  Evidence is under `.artifacts/dream-personal-journey/`.
 
 ## Completed Delivery: Second Independent Canonical Dream Story Chain
 
@@ -1182,8 +1238,12 @@ real LifeCase proposition
 -> native Abu explanation
 -> Dream judgment and consequence
 -> committed Theater evidence
--> Observation Seed back on the private LifeTree
+-> bounded observation window beside the private LifeTree
 ```
+
+This historical expression loop did not persist a qualified Observation Seed
+as a Home-tree fact. The current private Dream journey also remains outside
+the Home tree.
 
 ## Completed Delivery: Mingli Corpus And Three-Life Grove
 
@@ -1549,6 +1609,9 @@ Already usable locally:
 - a three-domain, equal-weight Reading observation lens across Dream Grove and
   the full Encounter that does not alter tree candidates/order, enter the
   AnswerSeal/result or receive Dream outcome authority;
+- an optional exact-domain private reality question, one server-issued
+  seven-day observation and append-only Grove self-reports, all outside
+  Mingli evidence and the private Home tree;
 - three-tree Dream selection, observation, Seal, World waiting, Reveal,
   reconciliation, return to Grove and another Encounter;
 - refresh and process persistence through server-owned state.
@@ -1561,6 +1624,9 @@ Still honestly incomplete:
   for root usability, seasonal capacity and competing-mechanism
   counter-evidence;
 - broader Dream story coverage and long-term return value;
+- a separately qualified path for any Dream observation to become a private
+  Home-tree seed; current private tasks and check-ins do not cross that
+  boundary;
 - final picture-book Grove tree assets and the final in-tree transition
   composition currently being prepared by design.
 

@@ -5,6 +5,7 @@ import type {
 } from "./api";
 import { DreamAttentionFollowThroughCard } from "./components/DreamAttentionFollowThroughCard";
 import { DreamOpeningAttention } from "./components/DreamOpeningAttention";
+import { DreamPersonalJourneyEncounter } from "./components/DreamPersonalJourneyEncounter";
 
 interface LifeTreeSceneProps {
   background: RuntimeAssetDelivery;
@@ -139,6 +140,11 @@ export function LifeTreeScene({
       </div>
 
       <section className="question-band" aria-live="polite">
+        <DreamPersonalJourneyEncounter
+          busy={busy}
+          encounterRef={snapshot.encounter.encounter_ref}
+          journey={snapshot.personal_journey}
+        />
         <p
           className="dream-chapter-marker"
           data-dream-chapter-marker={snapshot.encounter.chapter}

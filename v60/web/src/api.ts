@@ -8,14 +8,10 @@ import type {
   DreamPendingAttention,
 } from "./dreamAttentionFollowThroughTypes";
 import type { DreamGroveChapterRoute } from "./dreamChapterRouteTypes";
+import type { DreamPersonalJourney } from "./dreamPersonalJourneyTypes";
 
 export { request } from "./http";
-export {
-  loadBootstrap,
-  loadSession,
-  login,
-  logout,
-} from "./runtimeApi";
+export { loadBootstrap, loadSession, login, logout } from "./runtimeApi";
 export {
   ensureEncounter,
   executeDreamCommand,
@@ -441,6 +437,7 @@ export interface DreamSnapshot {
   };
   opening_attention?: DreamOpeningAttention | null;
   attention_follow_through?: DreamAttentionFollowThrough | null;
+  personal_journey: DreamPersonalJourney | null;
 }
 
 export interface DreamGroveCandidate {
@@ -471,13 +468,14 @@ export interface DreamGroveCandidate {
 }
 
 export interface DreamGrove {
-  grove_version: "v60.dream-grove.004";
+  grove_version: "v60.dream-grove.005";
   selection_status: "AWAITING_TREE_SELECTION";
   candidates: DreamGroveCandidate[];
   return_echo?: DreamReturnEcho | null;
   next_attention?: DreamReturnAttentionPrompt | null;
   pending_attention?: DreamPendingAttention | null;
   attention_follow_through?: DreamAttentionFollowThrough | null;
+  personal_journey: DreamPersonalJourney | null;
   hidden_outcome_included: false;
   hidden_npc_choice_included: false;
 }

@@ -140,9 +140,10 @@ const candidates = Object.freeze([
 ]);
 
 const baseGrove = {
-  grove_version: "v60.dream-grove.004",
+  grove_version: "v60.dream-grove.005",
   selection_status: "AWAITING_TREE_SELECTION",
   candidates,
+  personal_journey: null,
   hidden_outcome_included: false,
   hidden_npc_choice_included: false,
 };
@@ -318,6 +319,8 @@ try {
       lens,
       media,
       onSelect: () => {},
+      onSelectAttention: () => {},
+      onStartPersonalJourney: () => {},
     }),
   );
   const withEchoGroveMarkup = renderToStaticMarkup(
@@ -328,6 +331,8 @@ try {
       lens,
       media,
       onSelect: () => {},
+      onSelectAttention: () => {},
+      onStartPersonalJourney: () => {},
     }),
   );
   assertIncludes("grove-empty-state", noEchoGroveMarkup, 'data-return-echo="false"');

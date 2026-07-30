@@ -17,8 +17,10 @@ world.
 login
 -> my private life tree
 -> enter Abu Dream
+-> optionally carry one private reality question into an exact-domain life
 -> encounter a canonical synthetic life line
 -> observe through Dream / Mingli / Abu / Theater / Lab
+-> leave one private reality observation and later self-report
 -> return to my private life tree
 ```
 
@@ -32,6 +34,9 @@ login
 - Tree: a read-only projection of the current versioned LifeCase, chart,
   CanonicalScene and formal Facts.
 - It is never inserted into the pool of Dream encounter subjects.
+- A Dream private inquiry may bind this Case, its current LifeCase revision
+  and Reading for provenance. The inquiry remains in the account-private
+  Dream ledger and does not become a Home-tree organ, Fact or Reading.
 
 ### DREAM_ENCOUNTER
 
@@ -57,9 +62,33 @@ the currently active life line:
 | Theater | future viewer-owned life scenes | admitted Encounter story |
 | Lab | hypotheses and unresolved candidates | subject-scoped candidates |
 
-The first implementation exposes Home and the Dream threshold. It does not
-invent Home theater content, private questions or Lab conclusions where no
-admitted source exists.
+The current implementation exposes Home, the Dream threshold and an optional
+account-private reality-question loop inside Dream. It does not invent Home
+theater content, write the question into the Home tree or create Lab
+conclusions where no admitted source exists.
+
+## Private Question And Reality Follow-Up
+
+- The viewer chooses `career`, `wealth` or `relationship` and writes one
+  normalized 4–120 character question.
+- The server binds it only to the Grove candidate with that exact domain.
+  Matching does not parse the text, use the Reading, reorder candidates or
+  substitute another life when the matching story is terminal.
+- Inquiry and Encounter are committed atomically. The private record binds the
+  account, active Owner Case, LifeCase revision, current Reading, candidate,
+  Actor, Tree and Encounter.
+- The Dream Encounter remains independent. Its authored Question, AnswerSeal,
+  NPC choice and World outcome do not answer or adapt to the private question.
+- After completion and reconciliation, three server-issued domain observation
+  options become available. Selecting one saves a private task with a
+  seven-day checkpoint.
+- After returning to the Grove, the viewer may append short self-reported
+  check-ins. They are not automatically compared with the Dream result and
+  cannot validate Dream or Mingli.
+- Starting another private question appends a superseding inquiry; prior
+  records are preserved. A task with no check-in or a latest
+  `STILL_OBSERVING` report remains visible and blocks supersession until the
+  viewer records a final observed/not-observed state.
 
 ## Navigation And Recovery
 
@@ -71,6 +100,8 @@ admitted source exists.
 - Returning Home does not close or recreate the current Dream Encounter.
 - Entering Dream resumes the current Encounter, or creates the next legal one
   through the existing Dream owner.
+- Submitted private inquiries, selected observations and check-ins reload from
+  PostgreSQL. An unsubmitted text draft is not canonical state.
 - Scope changes never use `localStorage` as a fact source.
 
 ## Visual Contract
@@ -95,6 +126,19 @@ admitted source exists.
   Reveal or synthetic Case reference.
 - Dream payload must continue to use its existing Context disclosure boundary.
 - Scope crossing writes no Mingli, World, Story or Dream domain fact.
+- A private inquiry whose domain does not equal the selected Grove candidate
+  fails closed.
+- A terminal matching candidate is shown as unavailable; the system does not
+  redirect the question to another domain.
+- A reality-observation option must be server-issued and may be selected only
+  after the exact Encounter is completed and reconciled.
+- A check-in may be appended only for the authenticated account's latest
+  inquiry after its canonical Dream timeline has returned to the Grove,
+  including when the source Encounter continued into another chapter first.
+- Inquiry, observation and check-in remain `NOT_MINGLI_EVIDENCE` and permit no
+  Reading, Decision or Knowledge write. The inquiry uses the selected
+  canonical chapter's normal Opportunity/Encounter creation, but its private
+  text cannot alter the Episode Question, NPC choice or World outcome.
 
 ## Acceptance
 
@@ -107,3 +151,11 @@ admitted source exists.
 7. Home source refs and Dream source refs do not overlap except for shared
    versioned knowledge authority.
 8. Scope changes create no canonical writes.
+9. Exact-domain inquiry creation and Encounter creation are atomic.
+10. The private question remains visible through its bound Encounter without
+    changing the authored Dream question or outcome.
+11. A completed journey exposes exactly three server-issued reality
+    observations and preserves one selected seven-day task.
+12. Grove reload restores the latest task and all appended check-in lineage.
+13. No private question, task or check-in appears as a Home-tree fact or
+    Mingli evidence.

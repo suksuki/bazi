@@ -38,6 +38,9 @@ from abu_v60.mingli.relation_effect_request_contracts import (
     RelationEffectEvidencePreparationRequest,
     RelationEffectEvidenceRequestReceipt,
 )
+from abu_v60.observability.personal_journey_integrity import (
+    DreamPersonalJourneyIntegrityInspector,
+)
 from abu_v60.provenance import content_hash
 from abu_v60.runtime import world_runtime_worker
 from abu_v60.system_manifest import PRIMARY_WORLD_ID
@@ -319,6 +322,9 @@ class RuntimeIntegrityService:
         relation_effect_packet_resolver = (
             MingliRelationEffectHistoricalPacketResolver(engine)
         )
+        personal_journey_integrity = (
+            DreamPersonalJourneyIntegrityInspector()
+        )
         with engine.connect() as connection:
             migration_head = connection.execute(
                 text("SELECT version_num FROM alembic_version"),
@@ -361,6 +367,13 @@ class RuntimeIntegrityService:
                             AS return_attention_selections,
                         (SELECT count(*) FROM dream.return_attention_applications)
                             AS return_attention_applications,
+                        (SELECT count(*) FROM dream.private_inquiries)
+                            AS private_inquiries,
+                        (SELECT count(*) FROM dream.personal_observation_tasks)
+                            AS personal_observation_tasks,
+                        (SELECT count(*)
+                         FROM dream.personal_observation_checkins)
+                            AS personal_observation_checkins,
                         (SELECT count(*) FROM dream.answer_seals) AS answer_seals,
                         (SELECT count(*) FROM dream.reveals) AS reveals
                     """
@@ -659,6 +672,9 @@ class RuntimeIntegrityService:
                     resolver=relation_effect_packet_resolver,
                 )
             )
+            personal_journey_integrity_results = (
+                personal_journey_integrity.inspect(connection)
+            )
             inconsistent_reveals = int(
                 connection.execute(
                     text(
@@ -729,6 +745,7 @@ class RuntimeIntegrityService:
             "invalid_dream_return_attention_applications": (
                 invalid_dream_return_attention_applications
             ),
+            **personal_journey_integrity_results,
             "invalid_relation_effect_evidence_request_receipts": (
                 invalid_relation_effect_evidence_request_receipts
             ),

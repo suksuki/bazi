@@ -23,6 +23,8 @@ import { CompanionRail } from "./components/CompanionRail";
 import { ExperienceHeader } from "./components/ExperienceHeader";
 import { ExperienceRuntimeOverlay } from "./components/ExperienceRuntimeOverlay";
 import { createDreamNextAttentionHandler } from "./dreamNextAttentionAction";
+import { startDreamPersonalJourney } from "./dreamPersonalJourneyApi";
+import type { DreamLifeDomain } from "./dreamPersonalJourneyTypes";
 import { ExperienceStoryCanvas } from "./components/ExperienceStoryCanvas";
 import { HomeCompanionRail } from "./components/HomeCompanionRail";
 import { LoginScene } from "./components/LoginScene";
@@ -258,10 +260,19 @@ export function App() {
     }
   };
 
-  const selectGroveTree = async (candidateRef: string) => {
+  const selectGroveTree = async (
+    candidateRef: string,
+    personal?: { domain: DreamLifeDomain; question: string },
+  ) => {
     setRuntime((current) => ({ ...current, busy: true, error: null }));
     try {
-      const snapshot = await selectDreamTree(candidateRef);
+      const snapshot = personal
+        ? await startDreamPersonalJourney(
+            candidateRef,
+            personal.domain,
+            personal.question,
+          )
+        : await selectDreamTree(candidateRef);
       setRuntime((current) => ({
         ...current,
         grove: null,
@@ -408,6 +419,9 @@ export function App() {
           focusedOrganRef={semanticFocus?.organ.organ_ref ?? null}
           onEnterDream={() => void enterDream()}
           onSelectTree={(candidateRef) => void selectGroveTree(candidateRef)}
+          onStartPersonalJourney={(candidateRef, domain, question) =>
+            void selectGroveTree(candidateRef, { domain, question })
+          }
           onSelectDreamAttention={createDreamNextAttentionHandler(
             runtime,
             setRuntime,

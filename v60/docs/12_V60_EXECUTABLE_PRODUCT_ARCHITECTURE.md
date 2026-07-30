@@ -73,7 +73,7 @@ attempt to write canonical state.
 | Decision request, gate receipt, formal decision | Cognition | Submit typed requests |
 | ClockEpoch, WorldEvent, evidence, actor timeline, outbox | World | Consume typed output |
 | QuestionInstance and ScenePlan | Story | Read committed source refs |
-| Encounter, organ progress, AnswerSeal, Fruit, Reveal, ReturnAttention selection/application | Dream Game | Issue commands |
+| Encounter, organ progress, AnswerSeal, Fruit, Reveal, ReturnAttention selection/application, private inquiry/observation/check-in ledgers | Dream Game | Issue typed Dream commands or private self-report requests |
 | Asset identity, version, hash and Runtime delivery | Media | Resolve by asset ID |
 | Import receipt and source lineage | Migration | No Runtime fallback to V50 |
 
@@ -95,6 +95,9 @@ one application service:
 | `dream.grove_departure.DreamGroveDepartureCoordinator` | replay-safe departure of reconciled or expired-unsealed Opportunities | outcome settlement, retrospective AnswerSeal or chapter selection |
 | `dream.return_attention.DreamReturnAttentionCoordinator` | candidate-bound next-observation selection, replay and same-tree application | Mingli evidence, Knowledge admission, Question/Answer/NPC/outcome mutation |
 | `dream.attention_follow_through.DreamAttentionFollowThroughProjector` | revalidated pending, active and returned read-only attention projection | canonical writes, semantic-match decisions or professional evidence |
+| `dream.personal_journey.DreamPersonalJourneyService` | account-private inquiry, server-issued reality observation and append-only check-in orchestration | interpreting private text, answering the inquiry or mutating Reading/Question/Answer/NPC/World |
+| `dream.personal_journey_store.DreamPersonalJourneyStore` | immutable inquiry/task/check-in persistence and exact owner lineage reads | gameplay legality, story routing or semantic evaluation |
+| `observability.personal_journey_integrity.DreamPersonalJourneyIntegrityInspector` | rebuild private-ledger Ref/Hash, parent and owner integrity without exposing private text | product mutation or Mingli admission |
 | `mingli.relation_effect_request.RelationEffectEvidenceRequestStore` | account-private, append-only preparation-request receipt derived from one canonical packet | material intake, professional evidence, review, Knowledge or Decision |
 | `mingli.relation_effect_history.MingliRelationEffectHistoricalPacketResolver` | reconstruct one packet from immutable Reading/Quant/Source Review lineage for integrity checks | current-Case selection or receipt mutation |
 | `App` | session, navigation and Runtime composition | login layout, companion-unit internals |
@@ -295,7 +298,7 @@ DecisionRecord, Knowledge promotion request, professional material or
 effect/usability write. Existing Readings cannot acquire a newly admitted
 Profile retroactively.
 
-Player gestures follow an equally explicit path:
+Encounter gameplay gestures follow an equally explicit path:
 
 ```text
 product gesture
@@ -320,6 +323,30 @@ reuse of the idempotency key conflicts.
 cannot advance World Tick or settle an event. It polls the read-only Encounter
 projection while the Runtime host invokes the World owner from authoritative
 database time.
+
+Private reality inquiry and self-reporting are deliberately outside the
+Encounter state machine:
+
+```text
+user-selected domain + normalized private question
+-> server exact-checks Grove candidate.domain
+-> account-locked inquiry + canonical Encounter creation
+-> completed and reconciled Encounter
+-> three deterministic server-issued reality-observation options
+-> one append-only task with a seven-day checkpoint
+-> departed Grove
+-> zero or more Ref/Hash-linked self-reported check-ins
+```
+
+These requests use dedicated typed Dream endpoints because neither the
+inquiry nor a later check-in is a gameplay transition. They still share the
+Dream schema owner, the same account-current advisory lock used by Owner Case
+switching, strict idempotency and server-side lineage validation. The inquiry
+binds the active Owner Case, LifeCase revision and
+current Reading for provenance, but `reading_used_to_select_candidate=false`;
+matching is exact user-selected domain only. The task and check-ins remain
+account-private self-observation, not World evidence, a semantic-match
+evaluation or a route into Mingli, Cognition or Knowledge.
 
 Mutable canonical objects are not copied directly into that projection.
 `EpisodePublicProjection` applies the current Episode's disclosure horizon:
@@ -365,13 +392,14 @@ OBSERVING
 It validates commands, derives legal actions and projects organ visibility. It
 does not own the world clock or outcome.
 
-All Dream mutations enter through the single
+All Encounter and Return Attention gameplay mutations enter through the single
 `POST /api/v60/dream/command` boundary. The Dream command router sends
 Encounter commands to the engine, which validates the current phase and organ
 semantic role, and sends `SELECT_NEXT_ATTENTION` to the Return Attention
-coordinator. React, accessibility controls and later media cues therefore
-remain on one authoritative Dream command path without pretending that an
-Echo observation is an Encounter phase transition.
+coordinator. Private inquiry creation, reality-observation selection and
+self-reported check-ins use separate strict Dream request contracts because
+they do not advance a gameplay phase. None of these presentation paths can
+mutate Question, Answer, NPC choice or World outcome.
 
 The Dream schema also owns the command receipt ledger. It records no new
 story fact: it proves exactly which command envelope caused which committed
@@ -409,6 +437,30 @@ The records and projections are `NOT_EVIDENCE`: they cannot change a Question,
 Answer, NPC choice, outcome, owner Reading, Cognition Decision or Knowledge
 object. They do not decide whether the remembered observation semantically
 matches the later material.
+
+The same Dream schema now owns a separate personal-journey ledger:
+
+```text
+private_inquiries
+-> personal_observation_tasks
+-> personal_observation_checkins (append-only chain)
+```
+
+The three record types are immutable, Hash-checked, idempotent and private to
+the authenticated account. A new inquiry supersedes the previous latest
+inquiry without mutating it, but cannot hide a task with no check-in or a
+latest `STILL_OBSERVING` check-in. Observation options are deterministic
+domain-specific templates and appear only after the bound Encounter is
+completed and reconciled; the client may submit only an issued option Ref.
+Check-ins are accepted only when the current canonical Dream timeline has
+returned to the Grove; this also covers a source Encounter followed by a
+continued chapter. They may
+record `OBSERVED`, `NOT_OBSERVED` or `STILL_OBSERVING` with an optional short
+note. Their seven-day checkpoint is a user-facing observation target; the
+system does not infer validation, probability, causation or professional
+meaning from timing or wording. Dates use the bound Owner Profile timezone,
+and Runtime integrity compares all materialized columns with the immutable
+JSON/Hash identity rather than trusting either representation alone.
 
 Grove chapter routing is a separate read authority:
 
@@ -633,6 +685,9 @@ adaptation, simulation branch or fictional education.
 - No canonical product command can advance the World Clock. Waiting surfaces
   may refresh read models but cannot write time or outcomes.
 - Encounter state survives refresh and process restart.
+- Private inquiries, server-issued observation tasks and chained self-reported
+  check-ins survive refresh and process restart; private text is not URL or
+  browser-storage state.
 - TreeProjection is rebuilt from committed state through the current Episode
   horizon; the latest canonical tree version is not exposed as an earlier
   chapter's public state.
@@ -701,6 +756,9 @@ The executable architecture is ready; the content breadth is not:
   with no material intake, automatic executor or professional evidence;
 - a separate account-private append-only bibliography-candidate ledger whose
   structured metadata satisfies no requested artifact or evidence dimension;
+- one optional account-private Dream journey from an exact user-selected
+  domain and private question through a server-issued seven-day observation
+  and append-only Grove check-ins; it is not Home-tree or Mingli evidence;
 - no production LLM orchestration;
 - no large NPC population or content factory;
 - desktop composition validated; mobile visual design deferred;

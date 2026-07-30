@@ -15,7 +15,7 @@ from abu_v60.architecture.contracts import (
 @lru_cache(maxsize=1)
 def runtime_architecture() -> RuntimeArchitecture:
     architecture = RuntimeArchitecture(
-        architecture_version="v60.runtime-architecture.051",
+        architecture_version="v60.runtime-architecture.052",
         modules=(
             RuntimeModule(
                 module_id="identity",
@@ -194,7 +194,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="dream-game",
                 kind=ModuleKind.ENGINE,
-                version="v60.dream-game-engine.018",
+                version="v60.dream-game-engine.019",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("dream",),
                 reads_from=("identity", "mingli", "world", "story", "cognition"),
@@ -244,6 +244,11 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "expired_unsealed_opportunity_departure",
                     "account_serialized_attention_and_chapter_entry",
                     "candidate_bound_historical_echo",
+                    "account_private_reality_question",
+                    "exact_domain_personal_journey_binding",
+                    "server_issued_reality_observation",
+                    "append_only_personal_checkin_history",
+                    "personal_journey_not_mingli_evidence",
                 ),
                 writes_canonical_state=True,
             ),
@@ -299,7 +304,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-dream",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-dream.019",
+                version="v60.unit-dream.020",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "media"),
                 capabilities=(
@@ -331,6 +336,9 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "multiple_same_tree_story_chains",
                     "visible_question_window_recovery",
                     "dream_outcome_not_owner_mingli_evidence",
+                    "private_question_dream_mirror",
+                    "seven_day_reality_observation",
+                    "persistent_self_reported_followup",
                 ),
             ),
             RuntimeModule(

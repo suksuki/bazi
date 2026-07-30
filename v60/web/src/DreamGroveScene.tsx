@@ -14,6 +14,7 @@ import type {
 import { DreamReadingObservationLens } from "./components/DreamReadingObservationLens";
 import { DreamGroveChapterRouteSummary } from "./components/DreamGroveChapterRoute";
 import { DreamPendingAttentionBadge } from "./components/DreamPendingAttentionBadge";
+import { DreamPersonalJourneyCard } from "./components/DreamPersonalJourneyCard";
 import { DreamReturnEchoCard } from "./components/DreamReturnEchoCard";
 import {
   isDreamPendingAttentionDisplayable,
@@ -22,6 +23,8 @@ import {
 import { isDreamGroveChapterRouteDisplayable } from "./dreamChapterRouteTypes";
 import { isDreamReturnEchoDisplayable } from "./dreamReturnEchoTypes";
 import type { DreamReadingObservationLensModel } from "./homeDreamObservationLens";
+import type { DreamLifeDomain } from "./dreamPersonalJourneyTypes";
+import { isDreamPersonalJourneyDisplayable } from "./dreamPersonalJourneyTypes";
 
 const DOMAIN_LABELS = {
   career: "职责与位置",
@@ -119,6 +122,7 @@ export function DreamGroveScene({
   media,
   onSelect,
   onSelectAttention,
+  onStartPersonalJourney,
 }: {
   background: RuntimeAssetDelivery;
   busy: boolean;
@@ -127,6 +131,11 @@ export function DreamGroveScene({
   media: RuntimeMediaManifest;
   onSelect: (candidateRef: string) => void;
   onSelectAttention: (observationRef: string) => void;
+  onStartPersonalJourney: (
+    candidateRef: string,
+    domain: DreamLifeDomain,
+    question: string,
+  ) => void;
 }) {
   const returnEcho = grove.return_echo ?? null;
   const returnEchoDisplayable = isDreamReturnEchoDisplayable(returnEcho);
@@ -145,11 +154,28 @@ export function DreamGroveScene({
   )
     ? grove.pending_attention
     : null;
+  const personalCandidate = grove.personal_journey
+    ? grove.candidates.find(
+        (candidate) =>
+          candidate.candidate_ref ===
+          grove.personal_journey?.inquiry.candidate_ref,
+      ) ?? null
+    : null;
+  const personalJourney =
+    personalCandidate &&
+    isDreamPersonalJourneyDisplayable(grove.personal_journey, {
+      candidateRef: personalCandidate.candidate_ref,
+      candidateHash: personalCandidate.candidate_hash,
+      treeRef: personalCandidate.tree_ref,
+    })
+      ? grove.personal_journey
+      : null;
 
   return (
     <div
       className="dream-grove-scene"
       data-return-echo={returnEchoDisplayable}
+      data-personal-journey={personalJourney?.status ?? "INTAKE"}
     >
       <img
         className="dream-grove-background"
@@ -164,6 +190,12 @@ export function DreamGroveScene({
         <span>选择一棵树，先看已经发生的事，再留下你的判断。</span>
       </div>
       <DreamReadingObservationLens lens={lens} />
+      <DreamPersonalJourneyCard
+        busy={busy}
+        candidates={grove.candidates}
+        journey={grove.personal_journey}
+        onStart={onStartPersonalJourney}
+      />
       <div
         className="dream-grove-trees"
         role="group"
@@ -203,6 +235,10 @@ export function DreamGroveScene({
               data-chapter-route-status={route?.status ?? "WITHHELD"}
               data-pending-attention={
                 pending?.source_candidate_ref === candidate.candidate_ref
+              }
+              data-personal-journey-tree={
+                personalJourney?.inquiry.candidate_ref ===
+                candidate.candidate_ref
               }
               data-tree-version={candidate.tree.version}
               key={`${candidate.candidate_ref}:${candidate.candidate_hash}:${candidate.tree_ref}:${candidateIndex}`}

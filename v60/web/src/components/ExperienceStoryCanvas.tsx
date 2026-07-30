@@ -5,6 +5,7 @@ import type {
   TreeOrgan,
 } from "../api";
 import { DreamGroveScene } from "../DreamGroveScene";
+import type { DreamLifeDomain } from "../dreamPersonalJourneyTypes";
 import type { ExperienceScope } from "../experienceNavigation";
 import type { HomeSnapshot } from "../homeApi";
 import { buildDreamReadingObservationLens } from "../homeDreamObservationLens";
@@ -22,6 +23,11 @@ interface ExperienceStoryCanvasProps {
   focusedOrganRef: string | null;
   onEnterDream: () => void;
   onSelectTree: (candidateRef: string) => void;
+  onStartPersonalJourney: (
+    candidateRef: string,
+    domain: DreamLifeDomain,
+    question: string,
+  ) => void;
   onSelectDreamAttention: (observationRef: string) => void;
   onFocus: (organ: TreeOrgan) => void;
   onOrgan: (organ: TreeOrgan) => void;
@@ -42,6 +48,7 @@ export function ExperienceStoryCanvas({
   focusedOrganRef,
   onEnterDream,
   onSelectTree,
+  onStartPersonalJourney,
   onSelectDreamAttention,
   onFocus,
   onOrgan,
@@ -75,6 +82,7 @@ export function ExperienceStoryCanvas({
           media={media}
           onSelect={onSelectTree}
           onSelectAttention={onSelectDreamAttention}
+          onStartPersonalJourney={onStartPersonalJourney}
         />
       ) : (
         snapshot && (

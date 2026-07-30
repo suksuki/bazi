@@ -65,8 +65,8 @@ def test_health_binds_database_to_runtime_foundation() -> None:
     assert payload["status"] == "ready"
     assert payload["database"] == {
         "status": "ready",
-        "foundation_version": "v60.foundation.016",
-        "expected_foundation_version": "v60.foundation.016",
+        "foundation_version": "v60.foundation.017",
+        "expected_foundation_version": "v60.foundation.017",
     }
 
 
@@ -85,7 +85,10 @@ def test_runtime_status_exposes_owner_integrity_without_case_content() -> None:
     assert payload["integrity"] == {
         "invalid_dream_command_receipts": 0,
         "invalid_dream_return_attention_applications": 0,
-        "invalid_dream_return_attention_selections": 0,
+            "invalid_dream_return_attention_selections": 0,
+            "invalid_dream_private_inquiries": 0,
+            "invalid_dream_personal_observation_tasks": 0,
+            "invalid_dream_personal_observation_checkins": 0,
         "invalid_life_tree_admissions": 0,
         "invalid_relation_effect_evidence_material_records": 0,
         "invalid_relation_effect_evidence_request_receipts": 0,

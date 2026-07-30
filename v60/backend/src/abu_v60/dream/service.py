@@ -26,6 +26,8 @@ from abu_v60.dream.grove_selection import DreamGroveEncounterSelector
 from abu_v60.dream.opportunity import DreamOpportunityMaterializer
 from abu_v60.dream.outcomes import DreamOutcomeCoordinator
 from abu_v60.dream.persistence import DreamRepository
+from abu_v60.dream.personal_journey import DreamPersonalJourneyService
+from abu_v60.dream.personal_journey_contracts import DreamPrivateInquiryRequest
 from abu_v60.dream.projection import DreamSnapshotProjector
 from abu_v60.dream.return_attention import DreamReturnAttentionCoordinator
 from abu_v60.dream.return_echo import DreamReturnEchoProjector
@@ -75,6 +77,7 @@ class DreamService:
             repository=self._repository,
             return_echo=self._return_echo,
         )
+        self._personal_journey = DreamPersonalJourneyService(engine)
         self._attention_follow_through = DreamAttentionFollowThroughProjector(
             coordinator=self._return_attention,
             return_echo=self._return_echo,
@@ -101,6 +104,7 @@ class DreamService:
             repository=self._repository,
             return_attention=self._return_attention,
             attention_follow_through=self._attention_follow_through,
+            personal_journey=self._personal_journey,
         )
     def ensure_encounter(self, *, account_ref: str) -> dict[str, Any]:
         with self._engine.begin() as connection:
@@ -159,6 +163,9 @@ class DreamService:
                         if return_echo is not None
                         else None
                     )
+                    personal_journey = self._personal_journey.project_grove(
+                        connection, account_ref=account_ref
+                    )
                     return {
                         "kind": "GROVE",
                         "grove": {
@@ -176,6 +183,11 @@ class DreamService:
                                 else None
                             ),
                             **attention_projections,
+                            "personal_journey": (
+                                personal_journey.model_dump(mode="json")
+                                if personal_journey is not None
+                                else None
+                            ),
                             "hidden_outcome_included": False,
                             "hidden_npc_choice_included": False,
                         },
@@ -212,6 +224,23 @@ class DreamService:
                     encounter_ref=encounter_ref,
                     tree_ref=intent.tree_ref,
                 )
+        return self.snapshot(account_ref=account_ref)
+
+    def start_personal_grove_encounter(
+        self,
+        *,
+        account_ref: str,
+        candidate_ref: str,
+        request: DreamPrivateInquiryRequest,
+    ) -> dict[str, Any]:
+        self._personal_journey.start_encounter(
+            account_ref=account_ref,
+            candidate_ref=candidate_ref,
+            request=request,
+            grove_selector=self._grove_selector,
+            encounter_creator=self._encounter_creator,
+            return_attention=self._return_attention,
+        )
         return self.snapshot(account_ref=account_ref)
 
     def execute_command(

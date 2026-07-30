@@ -385,6 +385,71 @@ dream_return_attention_applications = Table(
     schema="dream",
 )
 
+dream_private_inquiries = Table(
+    "private_inquiries",
+    metadata,
+    Column("inquiry_ref", String(180), primary_key=True),
+    Column("viewer_account_ref", String(160), nullable=False),
+    Column("case_ref", String(160), nullable=False),
+    Column("life_case_revision_ref", String(180), nullable=False),
+    Column("reading_ref", String(180), nullable=False),
+    Column("candidate_ref", String(180), nullable=False),
+    Column("encounter_ref", String(180), nullable=False),
+    Column("domain", String(40), nullable=False),
+    Column("idempotency_key", String(180), nullable=False),
+    Column("inquiry_json", JSONB, nullable=False),
+    Column("inquiry_hash", String(64), nullable=False, unique=True),
+    Column(
+        "created_at",
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    ),
+    schema="dream",
+)
+
+dream_personal_observation_tasks = Table(
+    "personal_observation_tasks",
+    metadata,
+    Column("task_ref", String(180), primary_key=True),
+    Column("viewer_account_ref", String(160), nullable=False),
+    Column("inquiry_ref", String(180), nullable=False),
+    Column("encounter_ref", String(180), nullable=False),
+    Column("option_ref", String(180), nullable=False),
+    Column("checkpoint_on", Date, nullable=False),
+    Column("idempotency_key", String(180), nullable=False),
+    Column("task_json", JSONB, nullable=False),
+    Column("task_hash", String(64), nullable=False, unique=True),
+    Column(
+        "created_at",
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    ),
+    schema="dream",
+)
+
+dream_personal_observation_checkins = Table(
+    "personal_observation_checkins",
+    metadata,
+    Column("checkin_ref", String(180), primary_key=True),
+    Column("viewer_account_ref", String(160), nullable=False),
+    Column("inquiry_ref", String(180), nullable=False),
+    Column("task_ref", String(180), nullable=False),
+    Column("status", String(40), nullable=False),
+    Column("checked_in_on", Date, nullable=False),
+    Column("idempotency_key", String(180), nullable=False),
+    Column("checkin_json", JSONB, nullable=False),
+    Column("checkin_hash", String(64), nullable=False, unique=True),
+    Column(
+        "created_at",
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    ),
+    schema="dream",
+)
+
 mingli_quant_foundation_vectors = Table(
     "quant_foundation_vectors",
     metadata,
