@@ -1,9 +1,11 @@
 import { useState } from "react";
 
 import type { HomeSnapshot } from "../homeApi";
+import { isRelationEffectEvidenceMaterialStateDisplayable } from "../homeRelationEffectEvidenceMaterialGuard";
 import { isRelationEffectEvidenceRequestStateDisplayable } from "../homeRelationEffectEvidenceRequestGuard";
 import type { HomeRelationEffectEvidenceRequestReceipt } from "../homeRelationEffectEvidenceRequestTypes";
 import { createRelationEffectEvidenceRequest } from "../relationEffectEvidenceRequestApi";
+import { RelationEffectEvidenceMaterialControl } from "./RelationEffectEvidenceMaterial";
 
 const PILLAR_LABELS = {
   year: "年柱",
@@ -33,7 +35,15 @@ export function RelationEffectEvidenceRequestSummary({
     packet,
     lab: home.lab,
   });
-  if (!safe) return <Withheld mode="summary" />;
+  const materials =
+    home.mingli.relation_effect_evidence_materials;
+  const materialsSafe =
+    isRelationEffectEvidenceMaterialStateDisplayable(materials, {
+      packet,
+      receipt,
+      lab: home.lab,
+    });
+  if (!safe || !materialsSafe) return <Withheld mode="summary" />;
   if (!receipt) return null;
 
   return (
@@ -50,10 +60,12 @@ export function RelationEffectEvidenceRequestSummary({
         <strong>补证准备请求已登记</strong>
       </span>
       <span>
-        <b>0</b> 份材料 ·{" "}
+        <b>{materials.length}</b> 份未核验候选元数据 ·{" "}
         <b>0 / {receipt.requested_dimension_slot_count}</b> 就绪
       </span>
-      <p>这是准备请求，不是专业证据、专业审阅或作用 Decision。</p>
+      <p>
+        候选元数据不是专业材料、专业证据、专业审阅或作用 Decision。
+      </p>
     </section>
   );
 }
@@ -74,8 +86,13 @@ export function RelationEffectEvidenceRequestControl({
     packet,
     lab: home.lab,
   });
+  const materialsSafe =
+    isRelationEffectEvidenceMaterialStateDisplayable(
+      home.mingli.relation_effect_evidence_materials,
+      { packet, receipt, lab: home.lab },
+    );
 
-  if (!safe) return <Withheld mode="detailed" />;
+  if (!safe || !materialsSafe) return <Withheld mode="detailed" />;
   if (packet.status !== "EVIDENCE_INTAKE_REQUIRED") return null;
 
   const createRequest = async () => {
@@ -126,16 +143,25 @@ export function RelationEffectEvidenceRequestControl({
     );
   }
 
-  return <RecordedRequest packet={packet} receipt={receipt} />;
+  return (
+    <RecordedRequest
+      home={home}
+      onChanged={onChanged}
+      receipt={receipt}
+    />
+  );
 }
 
 function RecordedRequest({
-  packet,
+  home,
+  onChanged,
   receipt,
 }: {
-  packet: HomeSnapshot["mingli"]["relation_effect_evidence_packet"];
+  home: HomeSnapshot;
+  onChanged: () => Promise<void>;
   receipt: HomeRelationEffectEvidenceRequestReceipt;
 }) {
+  const packet = home.mingli.relation_effect_evidence_packet;
   return (
     <section
       aria-label="关系作用补证准备请求回执"
@@ -170,7 +196,7 @@ function RecordedRequest({
         </span>
         <span>
           <b>0</b>
-          份材料
+          专业材料
         </span>
         <span>
           <b>0 / {receipt.requested_dimension_slot_count}</b>
@@ -231,9 +257,15 @@ function RecordedRequest({
         })}
       </div>
 
+      <RelationEffectEvidenceMaterialControl
+        home={home}
+        onChanged={onChanged}
+      />
+
       <p className="relation-effect-evidence-request-boundary">
-        当前只建立了补证准备请求：未接收材料，未进入 Owner 专业审阅或
-        Knowledge 准入，作用与来源可用性继续 UNRESOLVED。
+        当前补证准备请求仍是 0 专业材料、0 专业证据；候选书目元数据不会改变
+        Owner 专业审阅、Knowledge 准入或作用与来源可用性的
+        UNRESOLVED 状态。
       </p>
     </section>
   );

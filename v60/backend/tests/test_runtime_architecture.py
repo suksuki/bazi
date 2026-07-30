@@ -7,7 +7,7 @@ from abu_v60.system_manifest import runtime_manifest
 def test_runtime_architecture_has_one_owner_per_schema_and_five_units() -> None:
     architecture = runtime_architecture()
     architecture.validate_boundaries()
-    assert architecture.architecture_version == "v60.runtime-architecture.047"
+    assert architecture.architecture_version == "v60.runtime-architecture.048"
     assert architecture.product_units == (
         "unit-mingli",
         "unit-dream",
@@ -58,7 +58,7 @@ def test_manifest_exposes_world_game_and_localization_reservation() -> None:
     assert manifest["engines"]["context"] == "v60.experience-context.003"
     assert manifest["engines"]["game"] == "v60.dream-game-engine.015"
     assert manifest["engines"]["world"] == "v60.world-continuity-engine.004"
-    assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.024"
+    assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.025"
     assert manifest["engines"]["story"] == "v60.life-story-engine.009"
     source_review = manifest["source_review_profiles"]
     assert len(source_review) == 1
@@ -110,11 +110,11 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     architecture = runtime_architecture()
     modules = {module.module_id: module for module in architecture.modules}
 
-    assert modules["mingli"].version == "v60.mingli-cognitive-engine.024"
+    assert modules["mingli"].version == "v60.mingli-cognitive-engine.025"
     assert modules["knowledge"].version == "v60.knowledge-authority.008"
-    assert modules["unit-mingli"].version == "v60.unit-mingli.018"
+    assert modules["unit-mingli"].version == "v60.unit-mingli.019"
     assert modules["unit-abu"].version == "v60.unit-abu-says.007"
-    assert modules["unit-lab"].version == "v60.unit-lab.015"
+    assert modules["unit-lab"].version == "v60.unit-lab.016"
     assert modules["unit-dream"].version == "v60.unit-dream.016"
     assert "structural_candidate_projection" in modules["mingli"].capabilities
     assert "candidate_qualification_receipt" in modules["mingli"].capabilities
@@ -201,6 +201,18 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     )
     assert (
         "server_derived_evidence_request_items"
+        in modules["mingli"].capabilities
+    )
+    assert (
+        "append_only_relation_effect_candidate_material"
+        in modules["mingli"].capabilities
+    )
+    assert (
+        "account_private_structured_bibliography_candidate"
+        in modules["mingli"].capabilities
+    )
+    assert (
+        "candidate_material_not_professional_evidence"
         in modules["mingli"].capabilities
     )
     assert "explicit_active_profile_selection" in modules["knowledge"].capabilities
@@ -340,6 +352,10 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
         in modules["unit-lab"].capabilities
     )
     assert (
+        "relation_effect_candidate_material_inspection"
+        in modules["unit-lab"].capabilities
+    )
+    assert (
         "same_reading_decision_trace_handoff"
         in modules["unit-abu"].capabilities
     )
@@ -439,6 +455,7 @@ def test_bootstrap_writes_route_through_each_schema_owner() -> None:
             source_root / "mingli" / "mechanism_store.py",
             source_root / "mingli" / "quant_store.py",
             source_root / "mingli" / "reading_store.py",
+            source_root / "mingli" / "relation_effect_material.py",
             source_root / "mingli" / "relation_effect_request.py",
             source_root / "mingli" / "source_review_store.py",
             source_root / "mingli" / "timing_store.py",

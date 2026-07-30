@@ -42,6 +42,59 @@ The same snapshot feeds Dream, Mingli Calculation, Abu, Theater and Lab. The
 current implementation is desktop-first; mobile remains a guardrail until the
 desktop composition is stable.
 
+## Completed Delivery: Persistent Relation-Effect Bibliography Candidate
+
+Status: `IMPLEMENTED_AND_REAL_BROWSER_BOUNDARY_AUDITED_LOCAL`
+
+- Lab now exposes one structured registration surface for the exact
+  `PROFESSIONAL_PROVENANCE` gap after a preparation-request receipt exists.
+  It accepts only title, responsible party, edition/publication identity and
+  locator. The contract has no file, URL, quotation body, unstructured-note,
+  conclusion or user-supplied content-digest field.
+- The submitted object is
+  `BIBLIOGRAPHIC_COORDINATE_CANDIDATE`, while
+  `PROFESSIONAL_SOURCE_MANIFEST` is only its future target artifact kind.
+  Its immutable status is
+  `CANDIDATE_METADATA_RECORDED_NOT_REQUESTED_ARTIFACT`: one candidate remains
+  zero professional materials, zero professional evidence and `0 / 6` ready.
+- Mingli derives a canonical bibliography Hash on the server and binds the
+  candidate to the current account, active `HUMAN_OWNER` Case, Reading,
+  evidence packet, request receipt, exact request item, demand packet and
+  provenance slot. Exact replay is idempotent; changed-key duplicate
+  bibliography coordinates, stale lineage and cross-demand slot reuse fail
+  closed.
+- The original `.001` preparation receipt remains immutable at the state it
+  recorded: zero materials and `material_intake_open=false`. Candidate
+  metadata lives in a separate account-private append-only ledger and cannot
+  enter its professional material or evidence refs.
+- Runtime Integrity rebuilds the historical packet and request receipt from
+  the persisted Reading chain, then re-derives every candidate record. Home
+  applies the same exact-chain validation before display, so a self-consistent
+  wrong-demand or wrong-slot row is withheld rather than briefly rendered.
+- Mingli Calculation now shows the count of unverified candidate metadata;
+  Lab shows the bounded form, candidate Ref/Hash and the unchanged
+  `WITHHELD / UNRESOLVED` result. No LLM, Provider, Owner professional review,
+  Knowledge admission, Gate, DecisionRequest or Decision is invoked.
+- Foundation is now `v60.foundation.016`, Mingli
+  `v60.mingli-cognitive-engine.025`, Unit Mingli/Lab `.019/.016`, Runtime
+  Architecture `.048` and migration head
+  `0024_relation_effect_material`. Knowledge remains `.008`, Cognition
+  `.004` and Dream Game `.015`.
+- The real V60 account currently has no source that can honestly be registered
+  as a professional candidate. Browser verification therefore audits the
+  visible empty form and zero-write boundary rather than inventing a book,
+  locator or digest. Refresh and managed Runtime restart recover the same
+  Receipt and empty candidate state. Rollback-isolated PostgreSQL tests cover
+  transactional insert/replay, changed-key deduplication, privacy,
+  append-only enforcement and forgery rejection; they do not claim restart
+  recovery of a non-fabricated candidate record.
+- All 284 backend tests, Ruff, TypeScript/Vite build, Runtime Architecture,
+  source maintainability and the 38-mutation candidate contract pass. The
+  real browser found four bounded fields, no file/URL/textarea controls, a
+  disabled empty submission, zero material writes and zero console logs
+  before and after refresh and Runtime restart. Evidence is in
+  `.artifacts/relation-effect-provenance-material/`.
+
 ## Completed Delivery: Persistent Relation-Effect Evidence Preparation Request
 
 Status: `IMPLEMENTED_AND_REAL_BROWSER_AUDITED_LOCAL`
@@ -61,10 +114,12 @@ Status: `IMPLEMENTED_AND_REAL_BROWSER_AUDITED_LOCAL`
   same Receipt Ref/Hash, exact Year-Ji / Hour-Wu / Month-Zi demand and the six
   server-owned next actions.
 - The receipt is explicitly `NOT_EVIDENCE`. It records zero professional
-  materials, zero professional evidence and zero ready dimensions. There is
-  currently no automatic executor or material-intake surface; file, URL and
-  free-text submission are closed. Owner professional review, Knowledge
-  admission, Gate and a relation-effect Decision remain uninvoked.
+  materials, zero professional evidence and zero ready dimensions. Its `.001`
+  contract has no automatic executor or material-intake fields; file, URL and
+  free-text submission remain closed within this receipt. The later
+  bibliography-candidate ledger does not rewrite it. Owner professional
+  review, Knowledge admission, Gate and a relation-effect Decision remain
+  uninvoked.
 - Active-Case switching, preparation-request creation and mechanism
   comparison now share one account transaction fence. The lock covers the
   current snapshot through the Receipt or Decision write, and the lower

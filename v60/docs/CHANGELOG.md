@@ -2,6 +2,48 @@
 
 ## 2026-07-30
 
+### Persistent relation-effect bibliography candidate
+
+- Added `v60.mingli-relation-effect-evidence-material.001` as an
+  account-private append-only record for one
+  `BIBLIOGRAPHIC_COORDINATE_CANDIDATE` bound to the exact professional
+  provenance demand.
+- Split candidate type from target artifact kind. The target remains
+  `PROFESSIONAL_SOURCE_MANIFEST`, while every record is explicitly
+  `CANDIDATE_METADATA_RECORDED_NOT_REQUESTED_ARTIFACT`, `NOT_EVIDENCE`,
+  zero professional materials, zero professional evidence and `0 / 6` ready.
+- Restricted input to title, responsible party, edition/publication identity
+  and locator. The contract exposes no file, URL, quotation body,
+  unstructured-note, conclusion or client-declared content-digest field.
+- Server-derived the canonical bibliography Hash and exact-bound account,
+  active `HUMAN_OWNER` Case, Reading, packet, request receipt, request item,
+  demand Ref/Hash and provenance slot. Exact replay is idempotent;
+  changed-key duplicates, cross-demand slot reuse and stale or forged lineage
+  fail closed.
+- Kept the existing preparation receipt immutable at its historical zero
+  material/evidence state. Candidate metadata uses a separate ledger and
+  cannot enter professional material or evidence refs.
+- Added Mingli's unverified-candidate count and Lab's structured form/list.
+  Home and Runtime Integrity both re-derive the complete historical chain
+  before displaying or accepting a record.
+- Added migration `0024_relation_effect_material`; advanced Foundation to
+  `.016`, Mingli to `.025`, Unit Mingli/Lab to `.019/.016` and Runtime
+  Architecture to `.048`. Knowledge `.008`, Cognition `.004` and Dream Game
+  `.015` are unchanged.
+- The real V60 account contains no honest professional source candidate, so
+  browser verification covers the empty form and zero-write boundary instead
+  of fabricated metadata. Refresh and managed Runtime restart recover the same
+  empty state. Rollback-isolated PostgreSQL tests cover transactional
+  insert/replay, changed-key deduplication, privacy, append-only enforcement
+  and forgery rejection without claiming restart recovery of a real candidate
+  record.
+- Passed all 284 backend tests, Ruff, TypeScript/Vite build, Runtime
+  Architecture, source maintainability and the 38-mutation candidate
+  frontend contract. The real browser verified four bounded fields, no
+  file/URL/textarea controls, disabled invalid submission, zero writes and
+  zero console logs. Evidence is in
+  `.artifacts/relation-effect-provenance-material/`.
+
 ### Persistent relation-effect evidence preparation request
 
 - Added `v60.mingli-relation-effect-evidence-request.001` and append-only

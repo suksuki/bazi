@@ -1,0 +1,195 @@
+.relation-effect-evidence-material {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid rgb(70 89 132 / 18%);
+  background: rgb(244 246 252 / 78%);
+}
+
+.relation-effect-evidence-material > header,
+.relation-effect-evidence-material form > header,
+.relation-effect-evidence-material-list article > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.relation-effect-evidence-material > header > span,
+.relation-effect-evidence-material form > header > span {
+  display: grid;
+  gap: 2px;
+}
+
+.relation-effect-evidence-material > header small,
+.relation-effect-evidence-material form > header small {
+  color: var(--ink-faint);
+  font-size: 7px;
+}
+
+.relation-effect-evidence-material > header strong,
+.relation-effect-evidence-material form > header strong {
+  color: #405178;
+  font-size: 9px;
+}
+
+.relation-effect-evidence-material > header em,
+.relation-effect-evidence-material form > header em,
+.relation-effect-evidence-material-list article > header em {
+  padding: 3px 5px;
+  border: 1px solid rgb(70 89 132 / 18%);
+  color: #526284;
+  font-size: 7px;
+  font-style: normal;
+}
+
+.relation-effect-evidence-material-counts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.relation-effect-evidence-material-counts > span {
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  background: rgb(255 255 255 / 65%);
+  color: var(--ink-faint);
+  font-size: 7px;
+}
+
+.relation-effect-evidence-material-counts b {
+  color: #405178;
+  font-size: 12px;
+}
+
+.relation-effect-evidence-material form {
+  display: grid;
+  gap: 7px;
+  padding: 8px;
+  border: 1px dashed rgb(70 89 132 / 24%);
+  background: rgb(255 255 255 / 60%);
+}
+
+.relation-effect-evidence-material form > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.relation-effect-evidence-material form label {
+  display: grid;
+  gap: 3px;
+  color: var(--ink-soft);
+  font-size: 7px;
+}
+
+.relation-effect-evidence-material form input {
+  min-width: 0;
+  min-height: 30px;
+  padding: 5px 7px;
+  border: 1px solid rgb(70 89 132 / 20%);
+  border-radius: 0;
+  background: rgb(255 255 255 / 82%);
+  color: var(--ink);
+  font: inherit;
+  font-size: 8px;
+}
+
+.relation-effect-evidence-material form input:focus {
+  border-color: rgb(64 81 120 / 54%);
+  outline: 1px solid rgb(64 81 120 / 18%);
+}
+
+.relation-effect-evidence-material form > p,
+.relation-effect-evidence-material-boundary,
+.relation-effect-evidence-material-list article > small,
+.relation-effect-evidence-material.is-withheld p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 7px;
+  line-height: 1.5;
+}
+
+.relation-effect-evidence-material form > button {
+  min-height: 32px;
+  border: 1px solid rgb(64 81 120 / 32%);
+  background: #405178;
+  color: white;
+  cursor: pointer;
+  font: inherit;
+  font-size: 8px;
+}
+
+.relation-effect-evidence-material form > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.relation-effect-evidence-material form > p[role="alert"] {
+  color: #8b3f32;
+}
+
+.relation-effect-evidence-material-list {
+  display: grid;
+  gap: 5px;
+}
+
+.relation-effect-evidence-material-list article {
+  display: grid;
+  gap: 5px;
+  padding: 7px;
+  border: 1px solid rgb(70 89 132 / 14%);
+  background: rgb(255 255 255 / 68%);
+}
+
+.relation-effect-evidence-material-list article > header strong {
+  color: var(--ink);
+  font-size: 9px;
+}
+
+.relation-effect-evidence-material-list dl {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+}
+
+.relation-effect-evidence-material-list dl > div {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 5px;
+}
+
+.relation-effect-evidence-material-list dt {
+  color: var(--ink-faint);
+  font-size: 7px;
+}
+
+.relation-effect-evidence-material-list dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--ink-soft);
+  font-size: 7px;
+}
+
+.relation-effect-evidence-material-boundary {
+  padding-top: 6px;
+  border-top: 1px solid rgb(70 89 132 / 12%);
+}
+
+.relation-effect-evidence-material.is-withheld {
+  border-color: rgb(139 91 38 / 20%);
+  background: rgb(255 248 232 / 78%);
+}
+
+.relation-effect-evidence-material.is-withheld strong {
+  color: #7d5224;
+  font-size: 9px;
+}
+
+@media (max-width: 760px) {
+  .relation-effect-evidence-material form > div {
+    grid-template-columns: 1fr;
+  }
+}

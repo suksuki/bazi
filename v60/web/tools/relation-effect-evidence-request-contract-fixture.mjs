@@ -5,6 +5,7 @@ import {
 
 export function buildRecordedRelationEffectEvidenceRequestFixture() {
   const fixture = buildRelationEffectEvidencePacketFixture();
+  initializeMaterialProjection(fixture);
   const requestItems = fixture.packet.demand_packets.map(
     (demandPacket, requestIndex) => ({
       request_item_ref: `evidence-request-item-ref-${requestIndex + 1}`,
@@ -95,9 +96,20 @@ export function buildRecordedRelationEffectEvidenceRequestFixture() {
 }
 
 export function buildEmptyRelationEffectEvidenceRequestFixture() {
-  return buildRelationEffectEvidencePacketFixture();
+  const fixture = buildRelationEffectEvidencePacketFixture();
+  initializeMaterialProjection(fixture);
+  return fixture;
 }
 
 export function buildClearRelationEffectEvidenceRequestFixture() {
-  return makeNotTriggeredEvidencePacketFixture();
+  const fixture = makeNotTriggeredEvidencePacketFixture();
+  initializeMaterialProjection(fixture);
+  return fixture;
+}
+
+function initializeMaterialProjection(fixture) {
+  fixture.materials = [];
+  fixture.bindings.lab.relation_effect_evidence_material_refs = [];
+  fixture.bindings.lab.relation_effect_evidence_material_hashes = [];
+  fixture.bindings.lab.relation_effect_evidence_material_count = 0;
 }

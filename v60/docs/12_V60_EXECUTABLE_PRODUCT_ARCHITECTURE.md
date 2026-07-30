@@ -221,6 +221,8 @@ deterministic relation membership and source coordinate
 -> professional evidence readiness packet
 -> optional account-private preparation-request receipt
    (0 materials / 0 professional evidence / 0 ready dimensions)
+-> optional account-private bibliography-coordinate candidate
+   (unverified metadata / requested artifact still unsatisfied)
 -> effect and source usability remain UNRESOLVED
 ```
 
@@ -234,6 +236,14 @@ does not accept or generate evidence. The client sends only the current packet
 Ref/Hash, request version and idempotency key. Mingli derives the exact demand
 and six slots, persists the receipt append-only, and restores the same identity
 after refresh or process restart.
+
+The later bibliography-candidate writer does not reopen or rewrite that
+receipt. It accepts four bounded structured coordinates and persists a
+separate `BIBLIOGRAPHIC_COORDINATE_CANDIDATE`. The
+`PROFESSIONAL_SOURCE_MANIFEST` value is only the requested future artifact,
+not the type or status of the candidate. A server-derived bibliography Hash
+prevents changed-key duplicates; request item, demand Ref/Hash and provenance
+slot are exact-bound because a slot Ref may repeat across future demands.
 
 Active-Case admission, mechanism comparison and preparation-request creation
 share one account-scoped PostgreSQL transaction lock. Each write path also
@@ -254,10 +264,11 @@ complete professional evidence packet
 -> typed effect result, or still UNRESOLVED
 ```
 
-The current packet and preparation receipt do not execute this chain. They
-create no DecisionRequest, Gate receipt, DecisionRecord, Knowledge promotion
-request, professional material or effect/usability write. Existing Readings
-cannot acquire a newly admitted Profile retroactively.
+The current packet, preparation receipt and bibliography candidates do not
+execute this chain. They create no DecisionRequest, Gate receipt,
+DecisionRecord, Knowledge promotion request, professional material or
+effect/usability write. Existing Readings cannot acquire a newly admitted
+Profile retroactively.
 
 Player gestures follow an equally explicit path:
 
@@ -617,6 +628,8 @@ The executable architecture is ready; the content breadth is not:
   readiness dimensions and no effect or source-usability verdict;
 - one account-private append-only preparation-request receipt over that packet,
   with no material intake, automatic executor or professional evidence;
+- a separate account-private append-only bibliography-candidate ledger whose
+  structured metadata satisfies no requested artifact or evidence dimension;
 - no production LLM orchestration;
 - no large NPC population or content factory;
 - desktop composition validated; mobile visual design deferred;

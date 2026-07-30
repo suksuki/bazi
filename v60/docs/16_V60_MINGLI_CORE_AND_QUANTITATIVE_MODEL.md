@@ -39,6 +39,7 @@ must not be reported as real-world accuracy.
 | Relation-effect research frontier | Executable read projection | Orders match-scope versus effect-rule demands; admits no rule or verdict |
 | Relation-effect evidence readiness | Executable read projection | One exact demand, six dimensions, zero professional evidence |
 | Evidence preparation request receipt | Executable persistent request | Account-private and append-only; not material, review, rule or Decision |
+| Bibliography coordinate candidate | Executable persistent candidate | Structured unverified metadata; not requested artifact, professional material or evidence |
 | Root usability and seasonal capacity | Missing | V50 research exists but is not admitted |
 | Relation effect and transformation | Missing | Relation membership is not effect |
 | Mechanism candidate evidence | Executable | Five versioned patterns; candidate presence only |
@@ -339,9 +340,11 @@ inputs.
 The persisted receipt contains one exact demand, six requested slots, zero
 professional materials, zero professional evidence and zero ready dimensions.
 It is not a queue claiming that an expert or agent will automatically do the
-work. V60 currently has no material-intake surface or automatic executor for
-this request. Mingli Calculation shows the compact recorded state; Lab shows
-the same Receipt Ref/Hash and complete server-owned checklist.
+work. The `.001` receipt has no material-intake fields or automatic executor;
+the later bibliography-candidate ledger is separate and remains outside
+professional material and evidence. Mingli Calculation shows the compact
+recorded state; Lab shows the same Receipt Ref/Hash and complete server-owned
+checklist.
 
 This advances the central decision mechanism by making its abstention
 recoverable:
@@ -386,6 +389,79 @@ request item, six dimensions, zero intake controls, the same Receipt Ref/Hash
 in Mingli and Lab, refresh and managed-Runtime-restart recovery, and zero
 console warnings/errors. Evidence is in
 `.artifacts/relation-effect-evidence-request/`.
+
+## Implemented relation-effect bibliography candidate v1
+
+The first provenance write deliberately stops before source content or
+professional authority:
+
+```text
+preparation-request receipt
+-> exact request item and PROFESSIONAL_PROVENANCE slot
+-> structured bibliography coordinates
+   (title / responsible party / edition-publication identity / locator)
+-> append-only BIBLIOGRAPHIC_COORDINATE_CANDIDATE
+-> requested PROFESSIONAL_SOURCE_MANIFEST remains unsatisfied
+-> 0 professional materials / 0 professional evidence / 0 of 6 ready
+-> effect and source usability remain WITHHELD / UNRESOLVED
+```
+
+The candidate type and target artifact kind are separate fields. A record is
+`UNVERIFIED_BIBLIOGRAPHY_METADATA_ONLY` and
+`CANDIDATE_METADATA_RECORDED_NOT_REQUESTED_ARTIFACT`; it is never inserted
+into a professional material, manifest or evidence reference collection.
+V60 exposes no source-byte, URL, quotation, note, conclusion or
+client-declared content-digest field in this slice.
+
+The server validates the four bibliography fields and computes their canonical
+Hash, then binds that identity to the authenticated account, current active
+`HUMAN_OWNER` Case, Reading, packet, immutable request receipt, exact request
+item, demand packet and provenance slot. This request-item and demand binding
+is required because a dimension slot Ref is not globally unique across future
+demands. Exact retry returns the same record; changed-key duplicate
+coordinates and any stale or forged chain fail closed.
+
+The preparation receipt itself is not rewritten. Its historical
+`material_intake_open=false`, zero material count and zero evidence count
+remain true. Candidate records occupy a separate account-private append-only
+ledger. Home re-derives each record against the canonical packet and receipt
+before exposing it, and Runtime Integrity independently rebuilds the
+historical chain from persisted Reading data.
+
+This extends the central Mingli decision mechanism only to evidence
+provenance preparation:
+
+```text
+deterministic facts
+-> available
+
+unverified bibliography candidate
+-> identity and demand binding available
+-> authenticity, source content and professional review unavailable
+
+professional relation-effect Decision
+-> not requested
+-> Knowledge / Gate / Reasoner not invoked
+-> WITHHELD
+```
+
+No V60 source currently qualifies for honest registration in the real account.
+Existing owner-boundary strings and unreviewed Knowledge metadata are not
+professional sources, and V50 remains frozen. The real browser audit therefore
+proves the empty structured surface, zero writes and the same empty state
+after refresh and managed Runtime restart. Rollback-isolated PostgreSQL tests
+prove transactional insert/replay, deduplication, privacy, append-only
+enforcement and forged-lineage rejection; no real candidate record was
+fabricated to claim process-restart recovery.
+
+Current identities are `v60.mingli-cognitive-engine.025`,
+`v60.foundation.016`, `v60.runtime-architecture.048`,
+`v60.unit-mingli.019`, `v60.unit-lab.016` and migration
+`0024_relation_effect_material`. Knowledge remains `.008`, Cognition `.004`
+and Dream Game `.015`. All 284 backend tests, Ruff, TypeScript/Vite build,
+Runtime Architecture, source maintainability and the 38-mutation frontend
+contract pass. Evidence is in
+`.artifacts/relation-effect-provenance-material/`.
 
 ## Implemented verifiable attention-Decision trace v1
 
@@ -836,15 +912,18 @@ selection.
 10. **Relation-effect evidence preparation:** completed for one persistent,
     account-private, server-derived request over the exact six-dimensional
     gap, without material or Decision promotion.
-11. **Product expression:** Abu explains the exact Reading, Dream makes a
+11. **Provenance candidate intake:** completed for one structured,
+    account-private bibliography-coordinate candidate type that remains
+    outside professional material, evidence, Knowledge and Decision.
+12. **Product expression:** Abu explains the exact Reading, Dream makes a
     bounded uncertainty playable, Lab exposes the evidence, and Theater adapts
     only approved source packages.
 
-The next safe Mingli slice is a provenance-first material boundary for one
-requested dimension, with immutable source identity and an explicit
-`MATERIAL_NOT_YET_PROFESSIONAL_EVIDENCE` state. It must remain outside
-Knowledge and Decision until professional review is implemented. Root
-usability, seasonal capacity, relation effect, competing mechanisms and
+The next professional step requires a real source artifact and Owner
+professional review; V60 cannot synthesize either from bibliography metadata.
+Until an authentic source is supplied, the next visible slice should return
+to Dream playability instead of producing another abstention projection.
+Root usability, seasonal capacity, relation effect, competing mechanisms and
 counter-evidence remain unresolved. The calibration ledger remains the next
 quantitative proof layer only after those claims have stable professional
 meaning. Probability work remains blocked until both the claim model and the

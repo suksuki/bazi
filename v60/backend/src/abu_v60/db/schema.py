@@ -273,6 +273,38 @@ mingli_relation_effect_evidence_request_receipts = Table(
     schema="mingli",
 )
 
+mingli_relation_effect_evidence_material_records = Table(
+    "relation_effect_evidence_material_records",
+    metadata,
+    Column("material_ref", String(180), primary_key=True),
+    Column("material_version", String(100), nullable=False),
+    Column("requester_account_ref", String(160), nullable=False),
+    Column("case_ref", String(160), nullable=False),
+    Column("reading_ref", String(180), nullable=False),
+    Column("request_receipt_ref", String(180), nullable=False),
+    Column("request_receipt_hash", String(64), nullable=False),
+    Column("packet_ref", String(180), nullable=False),
+    Column("packet_hash", String(64), nullable=False),
+    Column("request_item_ref", String(180), nullable=False),
+    Column("demand_packet_ref", String(180), nullable=False),
+    Column("demand_packet_hash", String(64), nullable=False),
+    Column("slot_ref", String(180), nullable=False),
+    Column("dimension_id", String(80), nullable=False),
+    Column("candidate_kind", String(100), nullable=False),
+    Column("target_artifact_kind", String(100), nullable=False),
+    Column("bibliography_hash", String(64), nullable=False),
+    Column("idempotency_key", String(180), nullable=False),
+    Column("material_json", JSONB, nullable=False),
+    Column("material_hash", String(64), nullable=False, unique=True),
+    Column(
+        "created_at",
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    ),
+    schema="mingli",
+)
+
 corpus_qualification_runs = Table(
     "corpus_qualification_runs",
     metadata,

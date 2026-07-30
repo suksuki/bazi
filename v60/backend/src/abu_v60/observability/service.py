@@ -24,6 +24,13 @@ from abu_v60.media import (
 from abu_v60.mingli.relation_effect_history import (
     MingliRelationEffectHistoricalPacketResolver,
 )
+from abu_v60.mingli.relation_effect_material import (
+    RelationEffectEvidenceMaterialStore,
+)
+from abu_v60.mingli.relation_effect_material_contracts import (
+    RelationEffectEvidenceMaterialRecord,
+    RelationEffectEvidenceMaterialRequest,
+)
 from abu_v60.mingli.relation_effect_request import (
     RelationEffectEvidenceRequestStore,
 )
@@ -140,6 +147,171 @@ class RuntimeIntegrityService:
                 invalid_count += 1
         return invalid_count
 
+    @staticmethod
+    def _count_invalid_relation_effect_evidence_materials(
+        connection: Connection,
+        *,
+        resolver: MingliRelationEffectHistoricalPacketResolver,
+    ) -> int:
+        invalid_count = 0
+        rows = (
+            connection.execute(
+                text(
+                    """
+                    SELECT material.*,
+                           account.account_ref AS persisted_account_ref,
+                           owner_case.owner_account_ref,
+                           owner_case.subject_kind
+                               AS owner_case_subject_kind,
+                           reading.case_ref AS reading_case_ref,
+                           reading.reading_hash AS persisted_reading_hash,
+                           request.receipt_json,
+                           request.requester_account_ref
+                               AS receipt_account_ref,
+                           request.receipt_hash
+                               AS persisted_receipt_hash,
+                           request.packet_ref AS receipt_packet_ref,
+                           request.packet_hash AS receipt_packet_hash
+                    FROM mingli.relation_effect_evidence_material_records
+                         AS material
+                    LEFT JOIN identity.accounts AS account
+                      ON account.account_ref =
+                         material.requester_account_ref
+                    LEFT JOIN mingli.cases AS owner_case
+                      ON owner_case.case_ref = material.case_ref
+                    LEFT JOIN mingli.readings AS reading
+                      ON reading.reading_ref = material.reading_ref
+                    LEFT JOIN
+                         mingli.relation_effect_evidence_request_receipts
+                         AS request
+                      ON request.receipt_ref =
+                         material.request_receipt_ref
+                    """
+                )
+            )
+            .mappings()
+            .all()
+        )
+        for row in rows:
+            try:
+                record = RelationEffectEvidenceMaterialRecord.model_validate(
+                    row["material_json"]
+                )
+                receipt = RelationEffectEvidenceRequestReceipt.model_validate(
+                    row["receipt_json"]
+                )
+                packet = resolver.resolve_in_connection(
+                    connection,
+                    reading_ref=record.reading_ref,
+                )
+                expected_receipt = (
+                    RelationEffectEvidenceRequestStore
+                    .derive_expected_receipt(
+                        account_ref=receipt.requester_account_ref,
+                        request=RelationEffectEvidencePreparationRequest(
+                            request_version=receipt.request_version,
+                            expected_packet_ref=receipt.packet_ref,
+                            expected_packet_hash=receipt.packet_hash,
+                            idempotency_key=receipt.idempotency_key,
+                        ),
+                        packet=packet,
+                    )
+                )
+                expected_record = (
+                    RelationEffectEvidenceMaterialStore
+                    .derive_expected_record(
+                        account_ref=record.requester_account_ref,
+                        request=RelationEffectEvidenceMaterialRequest(
+                            material_request_version=(
+                                record.material_request_version
+                            ),
+                            expected_receipt_ref=(
+                                record.request_receipt_ref
+                            ),
+                            expected_receipt_hash=(
+                                record.request_receipt_hash
+                            ),
+                            expected_packet_ref=record.packet_ref,
+                            expected_packet_hash=record.packet_hash,
+                            expected_request_item_ref=(
+                                record.request_item_ref
+                            ),
+                            expected_demand_packet_ref=(
+                                record.demand_packet_ref
+                            ),
+                            expected_demand_packet_hash=(
+                                record.demand_packet_hash
+                            ),
+                            expected_slot_ref=record.slot_ref,
+                            candidate_kind=record.candidate_kind,
+                            target_artifact_kind=(
+                                record.target_artifact_kind
+                            ),
+                            bibliography=record.bibliography,
+                            idempotency_key=record.idempotency_key,
+                        ),
+                        receipt=receipt,
+                        packet=packet,
+                    )
+                )
+                expected_columns = {
+                    "material_ref": record.material_ref,
+                    "material_version": record.material_version,
+                    "requester_account_ref": (
+                        record.requester_account_ref
+                    ),
+                    "case_ref": record.case_ref,
+                    "reading_ref": record.reading_ref,
+                    "request_receipt_ref": (
+                        record.request_receipt_ref
+                    ),
+                    "request_receipt_hash": (
+                        record.request_receipt_hash
+                    ),
+                    "packet_ref": record.packet_ref,
+                    "packet_hash": record.packet_hash,
+                    "request_item_ref": record.request_item_ref,
+                    "demand_packet_ref": record.demand_packet_ref,
+                    "demand_packet_hash": record.demand_packet_hash,
+                    "slot_ref": record.slot_ref,
+                    "dimension_id": record.dimension_id,
+                    "candidate_kind": record.candidate_kind,
+                    "target_artifact_kind": (
+                        record.target_artifact_kind
+                    ),
+                    "bibliography_hash": record.bibliography_hash,
+                    "idempotency_key": record.idempotency_key,
+                    "material_hash": record.material_hash,
+                }
+                if (
+                    any(
+                        row[key] != value
+                        for key, value in expected_columns.items()
+                    )
+                    or row["material_json"]
+                    != record.model_dump(mode="json")
+                    or row["persisted_account_ref"]
+                    != record.requester_account_ref
+                    or row["owner_account_ref"]
+                    != record.requester_account_ref
+                    or row["owner_case_subject_kind"] != "HUMAN_OWNER"
+                    or row["reading_case_ref"] != record.case_ref
+                    or row["persisted_reading_hash"]
+                    != record.reading_hash
+                    or row["receipt_account_ref"]
+                    != record.requester_account_ref
+                    or row["persisted_receipt_hash"]
+                    != record.request_receipt_hash
+                    or row["receipt_packet_ref"] != record.packet_ref
+                    or row["receipt_packet_hash"] != record.packet_hash
+                    or receipt != expected_receipt
+                    or record != expected_record
+                ):
+                    invalid_count += 1
+            except (TypeError, ValueError):
+                invalid_count += 1
+        return invalid_count
+
     def inspect(self, engine: Engine) -> dict[str, Any]:
         architecture = runtime_architecture()
         architecture.validate_boundaries()
@@ -175,6 +347,9 @@ class RuntimeIntegrityService:
                         (SELECT count(*)
                          FROM mingli.relation_effect_evidence_request_receipts)
                             AS relation_effect_evidence_requests,
+                        (SELECT count(*)
+                         FROM mingli.relation_effect_evidence_material_records)
+                            AS relation_effect_evidence_materials,
                         (SELECT count(*) FROM world.actors) AS actors,
                         (SELECT count(*) FROM cognition.decision_records) AS decisions,
                         (SELECT count(*) FROM world.events) AS world_events,
@@ -478,6 +653,12 @@ class RuntimeIntegrityService:
                     resolver=relation_effect_packet_resolver,
                 )
             )
+            invalid_relation_effect_evidence_material_records = (
+                self._count_invalid_relation_effect_evidence_materials(
+                    connection,
+                    resolver=relation_effect_packet_resolver,
+                )
+            )
             inconsistent_reveals = int(
                 connection.execute(
                     text(
@@ -550,6 +731,9 @@ class RuntimeIntegrityService:
             ),
             "invalid_relation_effect_evidence_request_receipts": (
                 invalid_relation_effect_evidence_request_receipts
+            ),
+            "invalid_relation_effect_evidence_material_records": (
+                invalid_relation_effect_evidence_material_records
             ),
             "reveal_without_settled_world_event": inconsistent_reveals,
         }

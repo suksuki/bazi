@@ -17,6 +17,9 @@ from abu_v60.experience.home import (
 )
 from abu_v60.mingli import (
     MechanismComparisonUnavailableError,
+    RelationEffectEvidenceMaterialConflictError,
+    RelationEffectEvidenceMaterialError,
+    RelationEffectEvidenceMaterialRequest,
     RelationEffectEvidencePreparationRequest,
     RelationEffectEvidenceRequestConflictError,
     RelationEffectEvidenceRequestError,
@@ -94,3 +97,29 @@ def request_relation_effect_evidence(
             detail=str(exc),
         ) from exc
     return receipt.model_dump(mode="json")
+
+
+@router.post("/home/relation-effect-evidence-material")
+def register_relation_effect_evidence_material(
+    payload: RelationEffectEvidenceMaterialRequest,
+    session: SessionDependency,
+) -> dict[str, Any]:
+    try:
+        record = service.register_relation_effect_evidence_material(
+            account_ref=session.account.account_ref,
+            request=payload,
+        )
+    except (
+        HomeExperienceUnavailableError,
+        RelationEffectEvidenceMaterialConflictError,
+    ) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+    except RelationEffectEvidenceMaterialError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    return record.model_dump(mode="json")

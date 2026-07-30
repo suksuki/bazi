@@ -61,6 +61,7 @@ try {
       relation_effect_evidence_packet: fixture.packet,
       relation_effect_evidence_request_receipt:
         fixture.requestReceipt,
+      relation_effect_evidence_materials: fixture.materials,
     },
     lab: fixture.bindings.lab,
   });
@@ -166,9 +167,9 @@ try {
       `data-receipt-ref="${recorded.requestReceipt.receipt_ref}"`,
       `data-receipt-hash="${recorded.requestReceipt.receipt_hash}"`,
       "补证准备请求已登记",
-      "<b>0</b> 份材料",
+      "<b>0</b> 份未核验候选元数据",
       "<b>0 / 6</b> 就绪",
-      "不是专业证据、专业审阅或作用 Decision",
+      "不是专业材料、专业证据、专业审阅或作用 Decision",
     ]) {
       assertIncludes("recorded-summary", markup, expected);
     }
@@ -183,9 +184,9 @@ try {
       'data-ready-dimension-slot-count="0"',
       "精确需求",
       "年柱 己 · 时柱午／月柱子",
-      "未接收材料",
-      "未进入 Owner 专业审阅或 Knowledge 准入",
-      "作用与来源可用性继续 UNRESOLVED",
+      "0 专业材料、0 专业证据",
+      "Owner 专业审阅、Knowledge 准入",
+      "UNRESOLVED 状态",
     ]) {
       assertIncludes("recorded-detailed", markup, expected);
     }

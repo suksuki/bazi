@@ -160,6 +160,18 @@ from abu_v60.mingli.relation_effect_frontier_contracts import (
     MingliRelationEffectResearchFrontierEnvelope,
     RelationEffectRuleDemand,
 )
+from abu_v60.mingli.relation_effect_material import (
+    RelationEffectEvidenceMaterialConflictError,
+    RelationEffectEvidenceMaterialError,
+    RelationEffectEvidenceMaterialStore,
+)
+from abu_v60.mingli.relation_effect_material_contracts import (
+    RELATION_EFFECT_EVIDENCE_MATERIAL_REQUEST_VERSION,
+    RELATION_EFFECT_EVIDENCE_MATERIAL_VERSION,
+    RelationEffectEvidenceBibliographyMetadata,
+    RelationEffectEvidenceMaterialRecord,
+    RelationEffectEvidenceMaterialRequest,
+)
 from abu_v60.mingli.relation_effect_request import (
     RelationEffectEvidenceRequestConflictError,
     RelationEffectEvidenceRequestError,
@@ -241,6 +253,8 @@ __all__ = [
     "QUANT_VECTOR_VERSION",
     "RELATION_EFFECT_ADMISSION_REVIEW_VERSION",
     "RELATION_EFFECT_EVIDENCE_DECISION_PATH",
+    "RELATION_EFFECT_EVIDENCE_MATERIAL_REQUEST_VERSION",
+    "RELATION_EFFECT_EVIDENCE_MATERIAL_VERSION",
     "RELATION_EFFECT_EVIDENCE_PACKET_VERSION",
     "RELATION_EFFECT_EVIDENCE_REQUEST_RECEIPT_VERSION",
     "RELATION_EFFECT_EVIDENCE_REQUEST_VERSION",
@@ -341,7 +355,13 @@ __all__ = [
     "RelationEffectCompetingInterpretation",
     "RelationEffectDemandEvidencePacket",
     "RelationEffectDimensionAssessment",
+    "RelationEffectEvidenceBibliographyMetadata",
     "RelationEffectEvidenceDimensionSlot",
+    "RelationEffectEvidenceMaterialConflictError",
+    "RelationEffectEvidenceMaterialError",
+    "RelationEffectEvidenceMaterialRecord",
+    "RelationEffectEvidenceMaterialRequest",
+    "RelationEffectEvidenceMaterialStore",
     "RelationEffectEvidencePreparationRequest",
     "RelationEffectEvidenceRequestConflictError",
     "RelationEffectEvidenceRequestError",

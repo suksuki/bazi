@@ -30,7 +30,8 @@
     "audit:relation-effect-frontier-contract": "node tools/relation-effect-frontier-contract-audit.mjs",
     "audit:relation-effect-admission-contract": "node tools/relation-effect-admission-contract-audit.mjs",
     "audit:relation-effect-evidence-packet-contract": "node tools/relation-effect-evidence-packet-contract-audit.mjs",
-    "audit:relation-effect-evidence-request-contract": "node tools/relation-effect-evidence-request-contract-audit.mjs"
+    "audit:relation-effect-evidence-request-contract": "node tools/relation-effect-evidence-request-contract-audit.mjs",
+    "audit:relation-effect-evidence-material-contract": "node tools/relation-effect-evidence-material-contract-audit.mjs"
   },
   "dependencies": {
     "pixi.js": "^8.19.0",

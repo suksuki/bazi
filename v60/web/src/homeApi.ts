@@ -14,6 +14,7 @@ import type {
 import type { HomeReadingBrief } from "./homeReadingTypes";
 import type { HomeRelationEffectAdmissionReviewEnvelope } from "./homeRelationEffectAdmissionTypes";
 import type { HomeRelationEffectEvidencePacketEnvelope } from "./homeRelationEffectEvidencePacketTypes";
+import type { HomeRelationEffectEvidenceMaterial } from "./homeRelationEffectEvidenceMaterialTypes";
 import type { HomeRelationEffectEvidenceRequestReceipt } from "./homeRelationEffectEvidenceRequestTypes";
 import type { HomeRelationEffectResearchFrontierEnvelope } from "./homeRelationEffectFrontierTypes";
 import type {
@@ -29,6 +30,7 @@ import type {
 export type { HomeReadingBrief } from "./homeReadingTypes";
 export type { HomeRelationEffectAdmissionReviewEnvelope } from "./homeRelationEffectAdmissionTypes";
 export type { HomeRelationEffectEvidencePacketEnvelope } from "./homeRelationEffectEvidencePacketTypes";
+export type { HomeRelationEffectEvidenceMaterial } from "./homeRelationEffectEvidenceMaterialTypes";
 export type { HomeRelationEffectEvidenceRequestReceipt } from "./homeRelationEffectEvidenceRequestTypes";
 export type { HomeRelationEffectResearchFrontierEnvelope } from "./homeRelationEffectFrontierTypes";
 export type { HomeMechanismQualification } from "./homeQualificationTypes";
@@ -316,6 +318,7 @@ export interface HomeSnapshot {
     relation_effect_admission_review: HomeRelationEffectAdmissionReviewEnvelope;
     relation_effect_evidence_packet: HomeRelationEffectEvidencePacketEnvelope;
     relation_effect_evidence_request_receipt: HomeRelationEffectEvidenceRequestReceipt | null;
+    relation_effect_evidence_materials: HomeRelationEffectEvidenceMaterial[];
     mechanism_evidence: HomeMechanismEvidence;
     timing_evidence: HomeTimingEvidence;
     life_domains: HomeLifeDomainEvidence;
@@ -363,6 +366,9 @@ export interface HomeSnapshot {
     relation_effect_evidence_packet_hash: string;
     relation_effect_evidence_request_receipt_ref: string | null;
     relation_effect_evidence_request_receipt_hash: string | null;
+    relation_effect_evidence_material_refs: string[];
+    relation_effect_evidence_material_hashes: string[];
+    relation_effect_evidence_material_count: number;
     mechanism_vector_ref: string;
     mechanism_vector_hash: string;
     timing_vector_ref: string;

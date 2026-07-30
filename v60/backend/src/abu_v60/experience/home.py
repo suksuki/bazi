@@ -32,6 +32,10 @@ from abu_v60.mingli import (
     MingliSourceUsabilityPrerequisiteProjector,
     MingliTimingEvidenceCompiler,
     MingliTimingVectorStore,
+    RelationEffectEvidenceMaterialConflictError,
+    RelationEffectEvidenceMaterialRecord,
+    RelationEffectEvidenceMaterialRequest,
+    RelationEffectEvidenceMaterialStore,
     RelationEffectEvidencePreparationRequest,
     RelationEffectEvidenceRequestReceipt,
     RelationEffectEvidenceRequestStore,
@@ -75,6 +79,9 @@ class HomeExperienceService:
         ) = None,
         relation_effect_requests: (
             RelationEffectEvidenceRequestStore | None
+        ) = None,
+        relation_effect_materials: (
+            RelationEffectEvidenceMaterialStore | None
         ) = None,
         mechanism_compiler: MingliMechanismEvidenceCompiler | None = None,
         mechanism_store: MingliMechanismVectorStore | None = None,
@@ -121,6 +128,13 @@ class HomeExperienceService:
         self._relation_effect_requests = (
             relation_effect_requests
             or RelationEffectEvidenceRequestStore(engine)
+        )
+        self._relation_effect_materials = (
+            relation_effect_materials
+            or RelationEffectEvidenceMaterialStore(
+                engine,
+                evidence_requests=self._relation_effect_requests,
+            )
         )
         self._mechanism_compiler = mechanism_compiler or MingliMechanismEvidenceCompiler()
         self._mechanism_store = mechanism_store or MingliMechanismVectorStore(engine)
@@ -258,6 +272,15 @@ class HomeExperienceService:
                 packet=relation_effect_evidence_packet,
             )
         )
+        relation_effect_evidence_materials = (
+            self._relation_effect_materials.for_receipt(
+                account_ref=account_ref,
+                receipt=relation_effect_evidence_request_receipt,
+                packet=relation_effect_evidence_packet,
+            )
+            if relation_effect_evidence_request_receipt is not None
+            else ()
+        )
         explanation = self._explanations.project(
             reading=reading,
             facts=facts,
@@ -382,6 +405,10 @@ class HomeExperienceService:
                     is not None
                     else None
                 ),
+                "relation_effect_evidence_materials": [
+                    material.model_dump(mode="json")
+                    for material in relation_effect_evidence_materials
+                ],
                 "mechanism_evidence": mechanism_vector.model_dump(mode="json"),
                 "timing_evidence": timing_vector.model_dump(mode="json"),
                 "life_domains": life_domain_vector.model_dump(mode="json"),
@@ -479,6 +506,17 @@ class HomeExperienceService:
                     if relation_effect_evidence_request_receipt
                     is not None
                     else None
+                ),
+                "relation_effect_evidence_material_refs": [
+                    material.material_ref
+                    for material in relation_effect_evidence_materials
+                ],
+                "relation_effect_evidence_material_hashes": [
+                    material.material_hash
+                    for material in relation_effect_evidence_materials
+                ],
+                "relation_effect_evidence_material_count": len(
+                    relation_effect_evidence_materials
                 ),
                 "source_usability_prerequisite_carriers": [
                     item.model_dump(mode="json")
@@ -578,5 +616,44 @@ class HomeExperienceService:
                 connection,
                 account_ref=account_ref,
                 request=request,
+                packet=packet,
+            )
+
+    def register_relation_effect_evidence_material(
+        self,
+        *,
+        account_ref: str,
+        request: RelationEffectEvidenceMaterialRequest,
+    ) -> RelationEffectEvidenceMaterialRecord:
+        with self._engine.begin() as connection:
+            lock_account_transaction(
+                connection,
+                account_ref=account_ref,
+            )
+            snapshot = self.snapshot(account_ref=account_ref)
+            packet = (
+                MingliRelationEffectEvidencePacketEnvelope.model_validate(
+                    snapshot["mingli"][
+                        "relation_effect_evidence_packet"
+                    ]
+                )
+            )
+            receipt_payload = snapshot["mingli"][
+                "relation_effect_evidence_request_receipt"
+            ]
+            if receipt_payload is None:
+                raise RelationEffectEvidenceMaterialConflictError(
+                    "relation_effect_evidence_material_request_receipt_missing"
+                )
+            receipt = (
+                RelationEffectEvidenceRequestReceipt.model_validate(
+                    receipt_payload
+                )
+            )
+            return self._relation_effect_materials.register_in_connection(
+                connection,
+                account_ref=account_ref,
+                request=request,
+                receipt=receipt,
                 packet=packet,
             )
