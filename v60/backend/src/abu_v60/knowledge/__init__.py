@@ -43,6 +43,18 @@ from abu_v60.knowledge.quant_contracts import (
     ElementCycleDefinition,
     TenGodDefinition,
 )
+from abu_v60.knowledge.relation_effect_bazi import (
+    RELATION_EFFECT_ADMISSION_POLICY_ID,
+    RELATION_EFFECT_RULE_PROPOSAL_ID,
+    bazi_relation_effect_admission_policy,
+    bazi_zi_wu_automatic_damage_proposal,
+)
+from abu_v60.knowledge.relation_effect_contracts import (
+    RELATION_EFFECT_RULE_DIMENSIONS,
+    BaziRelationEffectAdmissionPolicy,
+    BaziRelationEffectRuleProposal,
+    RelationEffectProposalDimension,
+)
 from abu_v60.knowledge.service import KnowledgeAuthority, KnowledgeAuthorityError
 from abu_v60.knowledge.source_review_bazi import (
     SOURCE_REVIEW_PROFILE_ID,
@@ -71,6 +83,9 @@ __all__ = [
     "MECHANISM_EVIDENCE_PROFILE_VERSION",
     "QUANT_FOUNDATION_PROFILE_ID",
     "QUANT_FOUNDATION_PROFILE_VERSION",
+    "RELATION_EFFECT_ADMISSION_POLICY_ID",
+    "RELATION_EFFECT_RULE_DIMENSIONS",
+    "RELATION_EFFECT_RULE_PROPOSAL_ID",
     "SIX_CLASH",
     "SIX_HARMONY",
     "SOURCE_REF",
@@ -82,6 +97,8 @@ __all__ = [
     "BaziFoundationProfile",
     "BaziMechanismEvidenceProfile",
     "BaziQuantFoundationProfile",
+    "BaziRelationEffectAdmissionPolicy",
+    "BaziRelationEffectRuleProposal",
     "BaziSourceCoordinateReviewProfile",
     "BaziTimingEvidenceProfile",
     "BranchDefinition",
@@ -93,6 +110,7 @@ __all__ = [
     "KnowledgeProfileSelection",
     "MechanismPatternDefinition",
     "MechanismRoleDefinition",
+    "RelationEffectProposalDimension",
     "SourceCoordinateReviewRule",
     "StemDefinition",
     "TenGodDefinition",
@@ -101,6 +119,8 @@ __all__ = [
     "bazi_foundation_profile",
     "bazi_mechanism_evidence_profile",
     "bazi_quant_foundation_profile",
+    "bazi_relation_effect_admission_policy",
     "bazi_source_coordinate_review_profile",
     "bazi_timing_evidence_profile",
+    "bazi_zi_wu_automatic_damage_proposal",
 ]

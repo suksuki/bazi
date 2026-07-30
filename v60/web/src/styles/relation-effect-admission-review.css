@@ -1,0 +1,275 @@
+.relation-effect-admission-review {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgb(139 91 38 / 22%);
+  border-left: 3px solid rgb(139 91 38 / 74%);
+  background:
+    linear-gradient(135deg, rgb(255 249 235 / 94%), rgb(247 250 246 / 74%)),
+    var(--paper);
+}
+
+.relation-effect-admission-review > header,
+.relation-effect-admission-review > header > span,
+.relation-effect-admission-review > footer,
+.relation-effect-admission-assessment > summary,
+.relation-effect-admission-assessment > summary > span,
+.relation-effect-held-interpretations > header,
+.relation-effect-admission-dimensions > header,
+.relation-effect-held-interpretations article > span,
+.relation-effect-admission-dimensions article > span {
+  display: flex;
+  align-items: center;
+}
+
+.relation-effect-admission-review > header,
+.relation-effect-admission-assessment > summary,
+.relation-effect-held-interpretations > header,
+.relation-effect-admission-dimensions > header,
+.relation-effect-held-interpretations article > span,
+.relation-effect-admission-dimensions article > span {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.relation-effect-admission-review > header > span,
+.relation-effect-admission-assessment > summary > span {
+  display: grid;
+  gap: 2px;
+}
+
+.relation-effect-admission-review > header small,
+.relation-effect-admission-assessment > summary small,
+.relation-effect-held-interpretations header small,
+.relation-effect-admission-dimensions header small {
+  color: var(--ink-faint);
+  font-size: 8px;
+}
+
+.relation-effect-admission-review > header strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.relation-effect-admission-review > header em,
+.relation-effect-admission-assessment > summary em {
+  padding: 3px 7px;
+  border: 1px solid rgb(139 91 38 / 24%);
+  color: #7d5224;
+  font-size: 8px;
+  font-style: normal;
+  letter-spacing: 0.03em;
+}
+
+.relation-effect-admission-counts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.relation-effect-admission-counts span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid rgb(139 91 38 / 13%);
+  background: rgb(255 255 255 / 60%);
+  color: var(--ink-faint);
+  font-size: 8px;
+  line-height: 1.3;
+}
+
+.relation-effect-admission-counts b {
+  color: #7d5224;
+  font-family: var(--display-font);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.relation-effect-admission-counts span:nth-child(2) {
+  border-color: rgb(49 90 74 / 16%);
+}
+
+.relation-effect-admission-counts span:nth-child(2) b {
+  color: var(--moss);
+}
+
+.relation-effect-admission-summary,
+.relation-effect-admission-empty,
+.relation-effect-admission-truth-boundary,
+.relation-effect-admission-boundary,
+.relation-effect-admission-review.is-withheld p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.relation-effect-admission-review > footer {
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.relation-effect-admission-review > footer span {
+  padding: 3px 6px;
+  background: rgb(139 91 38 / 6%);
+  color: var(--ink-faint);
+  font-size: 8px;
+}
+
+.relation-effect-admission-assessments {
+  display: grid;
+  gap: 8px;
+}
+
+.relation-effect-admission-assessment {
+  border: 1px solid rgb(139 91 38 / 16%);
+  background: rgb(255 255 255 / 58%);
+}
+
+.relation-effect-admission-assessment > summary {
+  padding: 9px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.relation-effect-admission-assessment > summary::-webkit-details-marker {
+  display: none;
+}
+
+.relation-effect-admission-assessment > summary strong {
+  color: var(--ink);
+  font-size: 10px;
+}
+
+.relation-effect-admission-assessment > summary::after {
+  color: var(--gold);
+  content: "－";
+}
+
+.relation-effect-admission-assessment:not([open]) > summary::after {
+  content: "＋";
+}
+
+.relation-effect-admission-assessment blockquote {
+  margin: 0 9px 8px;
+  padding: 8px 9px;
+  border-left: 2px solid rgb(139 91 38 / 44%);
+  background: rgb(255 248 232 / 70%);
+  color: var(--ink);
+  font-size: 9px;
+  line-height: 1.6;
+}
+
+.relation-effect-admission-truth-boundary,
+.relation-effect-admission-boundary {
+  margin: 0 9px 9px;
+}
+
+.relation-effect-held-interpretations,
+.relation-effect-admission-dimensions {
+  display: grid;
+  gap: 7px;
+  margin: 0 9px 9px;
+  padding-top: 8px;
+  border-top: 1px solid rgb(139 91 38 / 11%);
+}
+
+.relation-effect-held-interpretations header strong,
+.relation-effect-admission-dimensions header strong {
+  color: var(--ink-soft);
+  font-size: 9px;
+}
+
+.relation-effect-held-interpretations > div,
+.relation-effect-admission-dimensions > div {
+  display: grid;
+  gap: 6px;
+}
+
+.relation-effect-held-interpretations article,
+.relation-effect-admission-dimensions article {
+  display: grid;
+  gap: 5px;
+  padding: 7px 8px;
+  border: 1px solid rgb(49 90 74 / 10%);
+  background: rgb(249 251 248 / 72%);
+}
+
+.relation-effect-held-interpretations article b,
+.relation-effect-admission-dimensions article b {
+  color: var(--ink);
+  font-size: 8px;
+}
+
+.relation-effect-held-interpretations article em,
+.relation-effect-admission-dimensions article em {
+  color: #7d5224;
+  font-size: 7px;
+  font-style: normal;
+}
+
+.relation-effect-held-interpretations article p,
+.relation-effect-admission-dimensions article p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.relation-effect-admission-dimensions article > div {
+  display: grid;
+  gap: 3px;
+}
+
+.relation-effect-admission-dimensions code,
+.relation-effect-admission-identity code {
+  overflow-wrap: anywhere;
+  color: var(--ink-faint);
+  font-size: 7px;
+}
+
+.relation-effect-admission-dimensions article > div small {
+  color: var(--ink-faint);
+  font-size: 7px;
+}
+
+.relation-effect-admission-identity {
+  display: grid;
+  gap: 4px;
+  margin: 0 9px 9px;
+  padding-top: 8px;
+  border-top: 1px solid rgb(139 91 38 / 11%);
+}
+
+.relation-effect-admission-identity > div {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  gap: 6px;
+}
+
+.relation-effect-admission-identity dt {
+  color: var(--ink-faint);
+  font-size: 7px;
+}
+
+.relation-effect-admission-identity dd {
+  min-width: 0;
+  margin: 0;
+}
+
+.relation-effect-admission-boundary {
+  padding-top: 8px;
+  border-top: 1px solid rgb(139 91 38 / 11%);
+}
+
+.relation-effect-admission-review.is-withheld {
+  border-color: rgb(139 91 38 / 20%);
+  background: rgb(255 248 232 / 78%);
+}
+
+.relation-effect-admission-review.is-withheld strong {
+  color: #7d5224;
+  font-size: 11px;
+}

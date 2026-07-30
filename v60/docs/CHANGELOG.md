@@ -2,6 +2,46 @@
 
 ## 2026-07-30
 
+### Relation-effect rule pre-admission review
+
+- Added `v60.mingli-relation-rule-admission-review.001` over the existing
+  relation-effect Frontier. The real `10/7/3` source-review sample now produces
+  one exact shortcut review, zero admitted effect rules and two demands
+  deferred until match scope is authorized.
+- Added a Knowledge-owned, Hash-locked preflight policy and one research-only
+  proposal for the shortcut that Zi-Wu six-clash membership automatically
+  damages the exact hidden source in Wu and makes it unusable. The proposal has
+  no professional source manifest or review receipt and is not evaluated as
+  true or false.
+- Held three competing interpretations without selection or effect-atom
+  creation. The six admission dimensions remain
+  `PARTIAL / COMPETING / MISSING / MISSING / MISSING / MISSING`; effect and
+  usability remain `UNRESOLVED`.
+- Added a compact Mingli Calculation summary and a detailed Lab inspection
+  over the same Reading, Frontier, Policy, Proposal and Review identities.
+  Version, lineage or authority drift withholds the entire candidate rather
+  than rendering partial proposal text.
+- Revalidated relation-effect objects on Knowledge registration and
+  resolution, required the projector to resolve the canonical registered
+  Policy and Proposal, and made empty registries and unregistered proposals
+  fail closed.
+- Derived scope-invariant and match-scope demand inventories from the
+  validated Frontier. The Review requires assessed, deferred and unreviewed
+  demands to be a complete mutually exclusive partition and cross-checks each
+  Assessment coordinate against its Frontier demand.
+- Kept Provider, professional review, Knowledge promotion, Gate, Decision,
+  effect atoms, probability and canonical writes outside this read-only
+  review. Rejection of the shortcut is not a claim that relation effect is
+  absent.
+- Advanced Mingli to `v60.mingli-cognitive-engine.022`, Knowledge to
+  `v60.knowledge-authority.008`, Unit Mingli/Lab to `.016/.013` and Runtime
+  Architecture to `.044`. Foundation `.013`, Dream Game `.014` and migration
+  head `0021_source_coordinate_review` are unchanged.
+- Passed all 256 backend tests, Ruff, TypeScript/Vite build, Runtime
+  Architecture, source maintainability, frontend fail-closed contracts and
+  signed-in real Chrome inspection. Evidence is in
+  `.artifacts/relation-effect-admission-review/`.
+
 ### Persistent Dream return echo
 
 - Added `v60.dream-return-echo.001`, an account-private read projection over

@@ -11,6 +11,7 @@ import { MechanismEvidenceContrast } from "./MechanismEvidenceContrast";
 import { MechanismQualificationMatrix } from "./MechanismQualificationMatrix";
 import { MingliEvidenceExplanation } from "./MingliEvidenceExplanation";
 import { MingliCaseManager } from "./MingliCaseManager";
+import { RelationEffectAdmissionReview } from "./RelationEffectAdmissionReview";
 import { RelationEffectResearchFrontier } from "./RelationEffectResearchFrontier";
 import { SourceCoordinateReviewPanel } from "./SourceCoordinateReviewPanel";
 import { SourceDiscussionAbstentionReceipt } from "./SourceDiscussionAbstentionReceipt";
@@ -117,6 +118,10 @@ export function HomeCompanionRail({
             />
             <RelationEffectResearchFrontier
               frontier={home.mingli.relation_effect_frontier}
+              mode="summary"
+            />
+            <RelationEffectAdmissionReview
+              home={home}
               mode="summary"
             />
             <MingliEvidenceExplanation explanation={home.mingli.explanation} />
@@ -256,6 +261,10 @@ export function HomeCompanionRail({
             />
             <RelationEffectResearchFrontier
               frontier={home.mingli.relation_effect_frontier}
+              mode="detailed"
+            />
+            <RelationEffectAdmissionReview
+              home={home}
               mode="detailed"
             />
             <MechanismEvidenceContrast

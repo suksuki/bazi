@@ -23,7 +23,20 @@ def test_manifest_has_no_v50_runtime_dependency() -> None:
     assert payload["reasoner_runtime"]["status"] == "NOT_CONFIGURED"
     assert payload["reasoner_runtime"]["network_calls_enabled"] is False
     assert payload["engines"]["context"] == "v60.experience-context.003"
+    assert payload["engines"]["mingli"] == "v60.mingli-cognitive-engine.022"
     assert payload["engines"]["story"] == "v60.life-story-engine.009"
+    relation_effect_admission = payload["relation_effect_rule_admission"]
+    assert relation_effect_admission["professional_rule_count"] == 0
+    assert relation_effect_admission["admitted_effect_rule_profiles"] == []
+    assert relation_effect_admission["runtime_effect_authority"] == "NONE"
+    assert (
+        relation_effect_admission["policy"]["effect_conclusion_allowed"]
+        is False
+    )
+    assert (
+        relation_effect_admission["proposal"]["professionally_reviewed"]
+        is False
+    )
     source_packages = payload["episode_source_packages"]
     assert source_packages["canonical_story"]["runtime_access"] == "ADMISSION_ONLY"
     assert {

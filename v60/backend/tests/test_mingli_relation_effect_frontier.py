@@ -1,121 +1,22 @@
 from __future__ import annotations
 
-from datetime import date, time
-
 import pytest
 from abu_v60.mingli import (
     RELATION_EFFECT_REQUIRED_RULE_DIMENSIONS,
     RELATION_EFFECT_RESEARCH_FRONTIER_VERSION,
-    MingliLifeDomainEvidenceCompiler,
-    MingliMechanismEvidenceCompiler,
-    MingliQuantFoundationCompiler,
-    MingliReadingProjector,
     MingliRelationEffectResearchFrontierEnvelope,
     MingliRelationEffectResearchFrontierProjector,
-    MingliSourceCoordinateReviewCompiler,
-    MingliSourceDiscussionAbstentionProjector,
     MingliSourceDiscussionAbstentionReceipt,
     MingliSourceUsabilityPrerequisiteEnvelope,
-    MingliSourceUsabilityPrerequisiteProjector,
-    MingliTimingEvidenceCompiler,
-    StructuralCandidateCompiler,
 )
-from abu_v60.mingli.calendar import BirthInput, ChartPillars
-from abu_v60.mingli.compiler import compile_case
+from abu_v60.mingli.calendar import ChartPillars
 from abu_v60.provenance import canonical_json
-
-ANALYSIS_DATE = date(2026, 7, 29)
-
-
-def _bundle(
-    pillars: ChartPillars,
-    *,
-    reverse_facts: bool = False,
-) -> dict[str, object]:
-    case_ref = f"case-relation-frontier-{pillars.year}-{pillars.month}"
-    birth_input = BirthInput(
-        calendar_type="solar",
-        birth_date=date(2000, 1, 1),
-        birth_time=time(12, 0),
-        timezone="Asia/Shanghai",
-    )
-    compiled = compile_case(
-        case_ref=case_ref,
-        birth_input=birth_input,
-        chart=pillars,
-    )
-    facts = (
-        tuple(reversed(compiled.facts))
-        if reverse_facts
-        else compiled.facts
-    )
-    quant = MingliQuantFoundationCompiler().compile(
-        case_ref=case_ref,
-        chart_version_ref=compiled.chart_version_ref,
-        pillars=compiled.pillars,
-        facts=facts,
-    )
-    source_review = MingliSourceCoordinateReviewCompiler().compile(
-        quant_vector=quant,
-        facts=facts,
-    )
-    prerequisite = MingliSourceUsabilityPrerequisiteProjector().project(
-        quant_vector=quant,
-        source_review_vector=source_review,
-    )
-    mechanism = MingliMechanismEvidenceCompiler().compile(
-        quant_vector=quant,
-        facts=facts,
-    )
-    timing = MingliTimingEvidenceCompiler().compile(
-        case_ref=case_ref,
-        chart_version_ref=compiled.chart_version_ref,
-        life_case_revision_ref=f"{case_ref}-life-v1",
-        birth_input=birth_input,
-        gender="male",
-        pillars=compiled.pillars,
-        facts=facts,
-        analysis_date=ANALYSIS_DATE,
-        mechanism_vector=mechanism,
-    )
-    domains = MingliLifeDomainEvidenceCompiler().compile(
-        mechanism_vector=mechanism,
-        timing_vector=timing,
-    )
-    reading = MingliReadingProjector().project(
-        case_ref=case_ref,
-        chart_version_ref=compiled.chart_version_ref,
-        life_case_revision_ref=f"{case_ref}-life-v1",
-        facts=facts,
-        candidates=StructuralCandidateCompiler().compile(
-            chart_version_ref=compiled.chart_version_ref,
-            facts=facts,
-        ),
-        quant_vector=quant,
-        source_review_vector=source_review,
-        mechanism_vector=mechanism,
-        timing_vector=timing,
-        life_domain_vector=domains,
-    )
-    refusal = MingliSourceDiscussionAbstentionProjector().project(
-        reading=reading,
-        prerequisite=prerequisite,
-    )
-    return {
-        "reading": reading,
-        "source_review": source_review,
-        "prerequisite": prerequisite,
-        "refusal": refusal,
-    }
-
-
-def _frontier(bundle: dict[str, object]):
-    return MingliRelationEffectResearchFrontierProjector().project(
-        reading=bundle["reading"],
-        source_review_vector=bundle["source_review"],
-        prerequisite=bundle["prerequisite"],
-        refusal=bundle["refusal"],
-    )
+from mingli_relation_effect_test_support import (
+    project_relation_effect_frontier as _frontier,
+)
+from mingli_relation_effect_test_support import (
+    relation_effect_bundle as _bundle,
+)
 
 
 def _reissue_prerequisite(

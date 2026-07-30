@@ -7,7 +7,7 @@ from abu_v60.system_manifest import runtime_manifest
 def test_runtime_architecture_has_one_owner_per_schema_and_five_units() -> None:
     architecture = runtime_architecture()
     architecture.validate_boundaries()
-    assert architecture.architecture_version == "v60.runtime-architecture.043"
+    assert architecture.architecture_version == "v60.runtime-architecture.044"
     assert architecture.product_units == (
         "unit-mingli",
         "unit-dream",
@@ -58,7 +58,7 @@ def test_manifest_exposes_world_game_and_localization_reservation() -> None:
     assert manifest["engines"]["context"] == "v60.experience-context.003"
     assert manifest["engines"]["game"] == "v60.dream-game-engine.014"
     assert manifest["engines"]["world"] == "v60.world-continuity-engine.004"
-    assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.021"
+    assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.022"
     assert manifest["engines"]["story"] == "v60.life-story-engine.009"
     source_review = manifest["source_review_profiles"]
     assert len(source_review) == 1
@@ -67,6 +67,23 @@ def test_manifest_exposes_world_game_and_localization_reservation() -> None:
     assert source_review[0]["profile_hash"] == (
         "e21e13ff2f79dbd4c180b34ee651996c30a0ac545931d3ce95d1b96a6a5b145c"
     )
+    relation_effect_admission = manifest["relation_effect_rule_admission"]
+    assert relation_effect_admission["professional_rule_count"] == 0
+    assert relation_effect_admission["admitted_effect_rule_profiles"] == []
+    assert relation_effect_admission["runtime_effect_authority"] == "NONE"
+    assert (
+        relation_effect_admission["policy"]["runtime_scope"]
+        == "RELATION_EFFECT_RULE_PREFLIGHT"
+    )
+    assert (
+        relation_effect_admission["policy"]["effect_conclusion_allowed"]
+        is False
+    )
+    assert (
+        relation_effect_admission["proposal"]["professionally_reviewed"]
+        is False
+    )
+    assert relation_effect_admission["proposal"]["research_only"] is True
     sources = manifest["episode_source_packages"]
     assert sources["canonical_story"]["runtime_access"] == "ADMISSION_ONLY"
     assert len(sources["canonical_story"]["packages"]) == 5
@@ -93,10 +110,11 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     architecture = runtime_architecture()
     modules = {module.module_id: module for module in architecture.modules}
 
-    assert modules["mingli"].version == "v60.mingli-cognitive-engine.021"
-    assert modules["unit-mingli"].version == "v60.unit-mingli.015"
+    assert modules["mingli"].version == "v60.mingli-cognitive-engine.022"
+    assert modules["knowledge"].version == "v60.knowledge-authority.008"
+    assert modules["unit-mingli"].version == "v60.unit-mingli.016"
     assert modules["unit-abu"].version == "v60.unit-abu-says.007"
-    assert modules["unit-lab"].version == "v60.unit-lab.012"
+    assert modules["unit-lab"].version == "v60.unit-lab.013"
     assert modules["unit-dream"].version == "v60.unit-dream.015"
     assert "structural_candidate_projection" in modules["mingli"].capabilities
     assert "candidate_qualification_receipt" in modules["mingli"].capabilities
@@ -149,10 +167,34 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
         "scope_dependency_rule_demand_classification"
         in modules["mingli"].capabilities
     )
+    assert (
+        "versioned_relation_effect_rule_admission_review"
+        in modules["mingli"].capabilities
+    )
+    assert (
+        "shortcut_pre_admission_rejection"
+        in modules["mingli"].capabilities
+    )
+    assert (
+        "competing_relation_interpretation_hold"
+        in modules["mingli"].capabilities
+    )
     assert "explicit_active_profile_selection" in modules["knowledge"].capabilities
     assert "hash_locked_quant_foundation_profile" in modules["knowledge"].capabilities
     assert "hash_locked_source_coordinate_review_profile" in modules["knowledge"].capabilities
     assert "hash_locked_mechanism_evidence_profile" in modules["knowledge"].capabilities
+    assert (
+        "hash_locked_relation_effect_admission_policy"
+        in modules["knowledge"].capabilities
+    )
+    assert (
+        "hash_locked_unadmitted_rule_proposal"
+        in modules["knowledge"].capabilities
+    )
+    assert (
+        "empty_professional_effect_rule_registry"
+        in modules["knowledge"].capabilities
+    )
     assert "candidate_path_projection" in modules["unit-lab"].capabilities
     assert "qualification_trace" in modules["unit-lab"].capabilities
     assert "shared_reading_identity" in modules["unit-lab"].capabilities
@@ -174,6 +216,10 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     )
     assert (
         "relation_effect_research_frontier_summary"
+        in modules["unit-mingli"].capabilities
+    )
+    assert (
+        "relation_effect_shortcut_rejection_summary"
         in modules["unit-mingli"].capabilities
     )
     assert "return_to_grove_after_reconciliation" in modules["unit-dream"].capabilities
@@ -225,6 +271,14 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     )
     assert (
         "relation_effect_rule_demand_inspection"
+        in modules["unit-lab"].capabilities
+    )
+    assert (
+        "relation_effect_preflight_inspection"
+        in modules["unit-lab"].capabilities
+    )
+    assert (
+        "competing_relation_interpretation_inspection"
         in modules["unit-lab"].capabilities
     )
     assert (

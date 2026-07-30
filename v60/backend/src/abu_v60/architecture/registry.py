@@ -15,7 +15,7 @@ from abu_v60.architecture.contracts import (
 @lru_cache(maxsize=1)
 def runtime_architecture() -> RuntimeArchitecture:
     architecture = RuntimeArchitecture(
-        architecture_version="v60.runtime-architecture.043",
+        architecture_version="v60.runtime-architecture.044",
         modules=(
             RuntimeModule(
                 module_id="identity",
@@ -33,7 +33,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="mingli",
                 kind=ModuleKind.ENGINE,
-                version="v60.mingli-cognitive-engine.021",
+                version="v60.mingli-cognitive-engine.022",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("mingli",),
                 reads_from=("identity",),
@@ -83,13 +83,16 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "professional_rule_chain_fail_closed_abstention",
                     "versioned_relation_effect_research_frontier",
                     "scope_dependency_rule_demand_classification",
+                    "versioned_relation_effect_rule_admission_review",
+                    "shortcut_pre_admission_rejection",
+                    "competing_relation_interpretation_hold",
                 ),
                 writes_canonical_state=True,
             ),
             RuntimeModule(
                 module_id="knowledge",
                 kind=ModuleKind.AUTHORITY,
-                version="v60.knowledge-authority.007",
+                version="v60.knowledge-authority.008",
                 status=ModuleStatus.BOUNDED,
                 capabilities=(
                     "versioned_rule_profile_refs",
@@ -101,6 +104,9 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "hash_locked_source_coordinate_review_profile",
                     "hash_locked_mechanism_evidence_profile",
                     "hash_locked_timing_evidence_profile",
+                    "hash_locked_relation_effect_admission_policy",
+                    "hash_locked_unadmitted_rule_proposal",
+                    "empty_professional_effect_rule_registry",
                 ),
             ),
             RuntimeModule(
@@ -293,7 +299,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-mingli",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-mingli.015",
+                version="v60.unit-mingli.016",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context",),
                 capabilities=(
@@ -315,6 +321,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "shared_attention_decision_trace_summary",
                     "source_discussion_abstention_summary",
                     "relation_effect_research_frontier_summary",
+                    "relation_effect_shortcut_rejection_summary",
                 ),
             ),
             RuntimeModule(
@@ -349,7 +356,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-lab",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-lab.012",
+                version="v60.unit-lab.013",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "knowledge", "cognition"),
                 capabilities=(
@@ -368,6 +375,8 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "source_discussion_receipt_lineage_inspection",
                     "research_proposal_requires_knowledge_admission",
                     "relation_effect_rule_demand_inspection",
+                    "relation_effect_preflight_inspection",
+                    "competing_relation_interpretation_inspection",
                 ),
             ),
         ),

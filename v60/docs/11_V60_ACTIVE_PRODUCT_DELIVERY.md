@@ -39,6 +39,51 @@ The same snapshot feeds Dream, Mingli Calculation, Abu, Theater and Lab. The
 current implementation is desktop-first; mobile remains a guardrail until the
 desktop composition is stable.
 
+## Completed Delivery: Relation-Effect Rule Pre-Admission Review
+
+Status: `IMPLEMENTED_AND_REAL_CHROME_AUDITED_LOCAL`
+
+- Knowledge now exposes one Hash-locked admission policy and one explicitly
+  unadmitted research proposal for the shortcut “a Zi-Wu six-clash membership
+  automatically damages the exact hidden source in Wu and therefore makes
+  that source unusable.”
+- The proposal is not evaluated as true or false. The system rejects its
+  admission because relation membership alone does not supply a professionally
+  reviewed effect rule.
+- The real `10 candidates / 7 clear / 3 review` Case now yields one exact
+  pre-admission review, zero admitted effect rules and two same-element,
+  different-identity demands that remain deferred until match scope is
+  authorized.
+- Lab holds three competing interpretations without selecting one:
+  membership disturbance only, source opening or exposure, and source damage
+  or removal. The six admission dimensions remain
+  `PARTIAL / COMPETING / MISSING / MISSING / MISSING / MISSING`.
+- Mingli Calculation shows only the compact `1 review / 0 admitted / 2 waiting
+  for scope` result. Lab expands the exact Year-Ji source coordinate at
+  Hour-Wu against Month-Zi, all three held interpretations, the six gaps and
+  the shared Reading, Frontier, Policy, Proposal, Assessment and Review
+  identities.
+- Knowledge objects are fully revalidated at registration and resolution.
+  The projector can use only the canonical registered Policy and Proposal;
+  stale Ref/Hash objects, empty registries and unregistered reissued proposals
+  fail closed.
+- The Review derives two demand inventories from the validated Frontier.
+  Assessed, deferred and unreviewed demands must form a complete, mutually
+  exclusive partition, and every Assessment coordinate must match its
+  Frontier demand.
+- This rejection is not proof that a relation has no effect. Relation effect
+  and source usability remain `UNRESOLVED`; no Provider, professional review,
+  Knowledge promotion, Gate, Decision, effect atom, probability claim or
+  canonical write is invoked.
+- Mingli is now `v60.mingli-cognitive-engine.022`, Knowledge
+  `v60.knowledge-authority.008`, Unit Mingli `.016`, Unit Lab `.013` and
+  Runtime Architecture `.044`. Foundation remains `.013`, Dream Game remains
+  `.014` and migration head remains `0021_source_coordinate_review`.
+- All 256 backend tests, Ruff, TypeScript/Vite build, Runtime Architecture,
+  source maintainability, fail-closed frontend contracts and signed-in real
+  Chrome inspection pass. Evidence is in
+  `.artifacts/relation-effect-admission-review/`.
+
 ## Completed Delivery: Readable Mingli Result
 
 Status: `IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`

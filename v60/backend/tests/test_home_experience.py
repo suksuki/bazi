@@ -367,6 +367,60 @@ def test_home_relation_effect_frontier_is_shared_and_creates_no_decision() -> No
     assert decisions_after == decisions_before
 
 
+def test_home_relation_effect_admission_review_is_shared_and_creates_no_decision() -> None:
+    account_ref = _human_owner_account_ref()
+    service = HomeExperienceService(engine)
+    with engine.connect() as connection:
+        decisions_before = connection.execute(
+            text("SELECT count(*) FROM cognition.decision_records")
+        ).scalar_one()
+
+    first = service.snapshot(account_ref=account_ref)
+    second = service.snapshot(account_ref=account_ref)
+    review = first["mingli"]["relation_effect_admission_review"]
+    frontier = first["mingli"]["relation_effect_frontier"]
+    source_review = first["mingli"]["source_coordinate_review"]
+
+    with engine.connect() as connection:
+        decisions_after = connection.execute(
+            text("SELECT count(*) FROM cognition.decision_records")
+        ).scalar_one()
+
+    assert review == second["mingli"]["relation_effect_admission_review"]
+    assert source_review["source_evidence_count"] == 10
+    assert source_review["clear_coordinate_count"] == 7
+    assert source_review["review_required_count"] == 3
+    assert (review["frontier_ref"], review["frontier_hash"]) == (
+        frontier["frontier_ref"],
+        frontier["frontier_hash"],
+    )
+    assert review["reviewed_demand_count"] == 1
+    assert review["rejected_pre_admission_count"] == 1
+    assert review["admitted_effect_rule_count"] == 0
+    assert len(review["deferred_match_scope_demand_refs"]) == 2
+    assert review["unreviewed_scope_invariant_demand_refs"] == []
+    assert review["disposition"] == "REJECTED_PRE_ADMISSION"
+    assert review["effect_status"] == "UNRESOLVED"
+    assert review["usability_status"] == "UNRESOLVED"
+    assert review["provider_invoked"] is False
+    assert review["owner_professional_review_invoked"] is False
+    assert review["knowledge_promotion_request_created"] is False
+    assert review["gate_invoked"] is False
+    assert review["decision_created"] is False
+    assert review["selection_authority"] is False
+    assert review["professional_verdict_allowed"] is False
+    assert review["probability_claim_allowed"] is False
+    assert review["canonical_write_allowed"] is False
+    assert review["read_only"] is True
+    assert first["lab"]["relation_effect_admission_review_ref"] == (
+        review["review_ref"]
+    )
+    assert first["lab"]["relation_effect_admission_review_hash"] == (
+        review["review_hash"]
+    )
+    assert decisions_after == decisions_before
+
+
 def test_home_explanation_is_stable_and_contains_no_outcome_verdict() -> None:
     service = HomeExperienceService(engine)
     first = service.snapshot(account_ref=_human_owner_account_ref())

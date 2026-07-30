@@ -25,7 +25,8 @@
     "audit:dream-reading-lens-continuity": "node tools/dream-reading-lens-continuity-audit.mjs",
     "audit:dream-return-echo-contract": "node tools/dream-return-echo-contract-audit.mjs",
     "audit:dream-return-echo": "node tools/dream-return-echo-audit.mjs",
-    "audit:relation-effect-frontier-contract": "node tools/relation-effect-frontier-contract-audit.mjs"
+    "audit:relation-effect-frontier-contract": "node tools/relation-effect-frontier-contract-audit.mjs",
+    "audit:relation-effect-admission-contract": "node tools/relation-effect-admission-contract-audit.mjs"
   },
   "dependencies": {
     "pixi.js": "^8.19.0",

@@ -12,6 +12,7 @@ import type {
   HomeMechanismQualification,
 } from "./homeQualificationTypes";
 import type { HomeReadingBrief } from "./homeReadingTypes";
+import type { HomeRelationEffectAdmissionReviewEnvelope } from "./homeRelationEffectAdmissionTypes";
 import type { HomeRelationEffectResearchFrontierEnvelope } from "./homeRelationEffectFrontierTypes";
 import type {
   HomeSourceCoordinateReview,
@@ -24,6 +25,7 @@ import type {
 } from "./homeSourceUsabilityTypes";
 
 export type { HomeReadingBrief } from "./homeReadingTypes";
+export type { HomeRelationEffectAdmissionReviewEnvelope } from "./homeRelationEffectAdmissionTypes";
 export type { HomeRelationEffectResearchFrontierEnvelope } from "./homeRelationEffectFrontierTypes";
 export type { HomeMechanismQualification } from "./homeQualificationTypes";
 export type {
@@ -307,6 +309,7 @@ export interface HomeSnapshot {
     source_usability_prerequisite: HomeSourceUsabilityPrerequisiteEnvelope;
     source_discussion_receipt: HomeSourceDiscussionAbstentionReceipt;
     relation_effect_frontier: HomeRelationEffectResearchFrontierEnvelope;
+    relation_effect_admission_review: HomeRelationEffectAdmissionReviewEnvelope;
     mechanism_evidence: HomeMechanismEvidence;
     timing_evidence: HomeTimingEvidence;
     life_domains: HomeLifeDomainEvidence;
@@ -348,6 +351,8 @@ export interface HomeSnapshot {
     source_discussion_receipt_hash: string;
     relation_effect_frontier_ref: string;
     relation_effect_frontier_hash: string;
+    relation_effect_admission_review_ref: string;
+    relation_effect_admission_review_hash: string;
     mechanism_vector_ref: string;
     mechanism_vector_hash: string;
     timing_vector_ref: string;
