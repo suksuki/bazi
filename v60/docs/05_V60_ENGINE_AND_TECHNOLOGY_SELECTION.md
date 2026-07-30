@@ -285,7 +285,10 @@ provenance drift. Mutable Actor and LifeTree state is never reset by replay.
 
 - Redis, Kafka and a service mesh.
 - A second database or graph database.
-- A general NPC mind framework.
-- Unbounded LLM agents.
-- A custom visual editor or story DSL.
+- A general-purpose NPC mind framework outside the Dream product.
+- Unbounded LLM agents; Dream AI NPCs must emit bounded, server-validated
+  intents and dialogue over canonical Actor knowledge and World state.
+- A general-purpose visual editor or unrestricted story DSL. A bounded,
+  versioned Question/Episode authoring workflow is part of the active Dream
+  product target.
 - Runtime model training or automatic rule promotion.

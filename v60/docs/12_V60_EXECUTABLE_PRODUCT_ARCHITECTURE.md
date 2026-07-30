@@ -760,7 +760,8 @@ The executable architecture is ready; the content breadth is not:
   domain and private question through a server-issued seven-day observation
   and append-only Grove check-ins; it is not Home-tree or Mingli evidence;
 - no production LLM orchestration;
-- no large NPC population or content factory;
+- no multi-NPC simulation or real question-authoring system yet; controlled
+  AI NPCs and versioned question authoring are now active product gaps;
 - desktop composition validated; mobile visual design deferred;
 - further designer media still pending admission.
 

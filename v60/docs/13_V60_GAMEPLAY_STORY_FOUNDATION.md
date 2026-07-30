@@ -5,6 +5,22 @@ Status: `IMPLEMENTED_LOCAL`
 This is the development contract for adding playable Dream content without
 turning content, presentation or an LLM into a second game engine.
 
+## Product review and active direction
+
+The reliable persistence foundation is implemented; the complete game is not.
+The current public Grove contains five chapters and fifteen fixed choices,
+roughly 30–45 minutes of first-play content. The source registries contain ten
+original Question templates; the much larger runtime Question count consists
+mostly of time-window instances and is not a question-bank metric. Every
+Episode still uses one linear `life_tree_question_v1` loop.
+
+The four persisted Actors do not currently form a multi-NPC simulation.
+Hidden NPC choices and World outcomes are authored and sealed in advance; they
+are not AI-generated intents or outcomes derived from interacting Actor state.
+This foundation must now grow into the controlled AI NPC, conditional question
+and branching story system defined in
+`docs/15_V60_TWO_PRODUCT_LINES_AND_PRE_MERGE_PLAN.md`.
+
 ## Development order
 
 V60 follows a game-production order:
@@ -43,8 +59,8 @@ enter one continuing world
 -> return to the changed world
 ```
 
-The current five Episodes are content instances of this loop. They are not
-special branches inside the engine.
+The current public Grove's five Episodes are content instances of this loop.
+They are not special branches inside the engine.
 
 ## Four runtime layers
 
@@ -371,7 +387,9 @@ It never mutates the preceding Episode. A genuinely different loop requires a
 new gameplay implementation and version; it must not be smuggled in as
 optional fields or a growing set of Question-ID conditions.
 
-V60 deliberately has no general gameplay DSL or story editor yet.
+V60 does not yet have a reusable question system, gameplay DSL or story
+authoring tool. These are now explicit product gaps rather than deferred
+non-goals.
 
 ## Story authoring rules
 
@@ -422,26 +440,15 @@ language-neutral. `content_key` is persisted now, but V60 remains `zh-CN`
 only. Translation catalogues, language switches and automatic translation are
 not implemented.
 
-## Gate before detail work
+## Active product target
 
-Before broad content or visual polish, a gameplay foundation is acceptable
-only when:
+The next slice is not another fixed Episode using the existing loop. It must
+prove a three-Actor scene with goals, bounded knowledge, memory, relationships,
+commitments and server-validated actions. Player actions must change available
+evidence, commitments and later scenes while a prediction answer remains
+unable to rewrite world truth. The same slice must introduce conditional
+questions, branching chapters and outcomes derived from canonical Actor and
+World state.
 
-- at least two authored episodes run through the same engine;
-- changing an Episode Contract does not require editing Dream Service;
-- future evidence is absent before Seal;
-- world settlement is independent from answer choice;
-- refresh and process restart recover the same chapter;
-- the complete active Episode graph and Scene registry report `READY`;
-- the player can understand one meaningful choice and its consequence;
-- the next content slice can be added as data plus bounded presentation.
-
-The current five Episodes satisfy the structural and append-only continuity
-parts of this gate. The third chapter proves that an Actor promise and later
-public action can use the same loop. The fourth proves that a frozen Mingli
-timing vector and an already-committed world fact can become two independent
-evidence leaves without letting timing coordinates dictate the outcome. The
-fifth proves that one committed Episode outcome can become the historical
-baseline for a new bounded career-duty proposition without reusing the old
-settled event as a new unknown. Product-unit depth, scene-native interaction
-and final media remain the next product work.
+The exact review, stop list and acceptance result are maintained in
+`docs/15_V60_TWO_PRODUCT_LINES_AND_PRE_MERGE_PLAN.md`.

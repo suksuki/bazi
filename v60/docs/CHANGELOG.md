@@ -2,6 +2,26 @@
 
 ## 2026-07-31
 
+### Two-line product direction before prototype merge
+
+- Replaced the former five-unit delivery roadmap with one active authority:
+  advanced-practitioner-grade Mingli destiny reading and a complete Abu Dream
+  story game with a real question system, mature engine and controlled AI NPCs.
+- Recorded honest capability reviews: Mingli is approximately 25–30% of the
+  advanced-practitioner goal; Dream is approximately 35% of the complete-game
+  goal. The review distinguishes authored questions from runtime instances,
+  reliable world settlement from dynamic simulation, and fixed NPC choices
+  from AI NPC behavior.
+- Froze the incremental Active Product Delivery document as history. Lab, Abu
+  Says and Theater now serve the two product outcomes rather than maintaining
+  independent roadmaps.
+- Defined the next visible slices: one professionally reviewed complete
+  Reading over a real Case, and one branching three-Actor Zhaoning chapter with
+  conditional questions and server-validated NPC actions.
+- Explicitly stopped boundary-only pages, Episode cloning presented as content
+  growth, infrastructure-only delivery and work unrelated to the two product
+  outcomes.
+
 ### Private reality-question Dream return loop
 
 - Added an optional account-private path from one user-selected reality

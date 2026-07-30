@@ -2,16 +2,20 @@
 
 ## North star
 
-V60 is a Mingli-centered Life Intelligence product. Mingli Calculation is the
-core brain and truth-facing product; Abu Dream World is the priority V60
-breakthrough that turns bounded uncertainty into persistent, verifiable play.
+V60 now has exactly two product outcomes: Mingli Calculation must reach
+advanced-practitioner-grade destiny reading, and Abu Dream must become a
+complete Mingli story game with a real question system, mature game engine
+and controlled AI NPC participation.
 
-It is not five disconnected applications. It is also not a game whose visuals
-may invent Mingli meaning.
+Lab, Abu Says and Theater support those outcomes; they are not independent
+product roadmaps. The active pre-merge authority is
+`docs/15_V60_TWO_PRODUCT_LINES_AND_PRE_MERGE_PLAN.md`.
 
-## Five product units
+Dream visuals, authored copy and AI NPCs may not invent Mingli meaning.
 
-| Unit | User purpose | Authority boundary |
+## Supporting product surfaces
+
+| Surface | User purpose | Authority boundary |
 | --- | --- | --- |
 | Abu Mingli | Calculate and preserve facts, readings and uncertainty | Mingli truth chain |
 | Abu Dream | Explore, meet, judge, wait and reveal | World and encounter state |
@@ -19,7 +23,7 @@ may invent Mingli meaning.
 | Abu Says | Express the current Mingli reading | Exact approved reading context |
 | Abu Theater | Direct, produce and distribute approved stories | Studio projection only |
 
-All five units preserve the same:
+All supporting surfaces preserve the same:
 
 ```text
 CaseRef
@@ -52,7 +56,8 @@ Establish a real Case
 1. Mingli Calculation is the product core and truth authority; Dream is the
    priority playable breakthrough.
 2. One Case has one formal cognition history and one Canonical Scene.
-3. World events cannot be determined by player answers.
+3. A sealed prediction answer cannot determine an independent outcome.
+   Server-validated in-world actions may create causal WorldEvents.
 4. A visual state cannot create a relation, path, fact or outcome.
 5. Abu explains, navigates and expresses; Abu is not a second Reasoner.
 6. Theater dramatizes a committed or explicitly hypothetical scene.
@@ -73,9 +78,9 @@ text and accessibility remain live and authoritative.
 The complete direction is defined in
 `docs/09_V60_VISUAL_DIRECTION_AND_CINEMATIC_LANGUAGE.md`.
 
-The authoritative unit hierarchy, Lab feedback loop, native Abu expression
-and Theater Studio boundary are defined in
-`docs/15_V60_FIVE_UNIT_OPERATING_MODEL_AND_DELIVERY_PLAN.md`.
+The authoritative two-line direction, current capability reviews and
+pre-merge work are defined in
+`docs/15_V60_TWO_PRODUCT_LINES_AND_PRE_MERGE_PLAN.md`.
 
 ## First-release world model
 
@@ -91,7 +96,8 @@ and Theater Studio boundary are defined in
 
 - No open-world free movement.
 - No real-time multiplayer.
-- No unbounded NPC LLM loop.
+- No unbounded NPC LLM loop. Controlled AI NPC planning and dialogue are
+  allowed only through server-validated intents and canonical WorldEvents.
 - No ranking, economy or daily attendance mechanics.
 - No self-training runtime.
 - No automatic promotion of synthetic results into Mingli knowledge.

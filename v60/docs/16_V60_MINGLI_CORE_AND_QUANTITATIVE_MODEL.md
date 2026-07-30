@@ -8,6 +8,21 @@ Mingli Calculation is the permanent core of Abu Knows. Dream, Lab, Abu Says
 and Theater consume its versioned outputs; none of them may create a second
 chart, fact chain or verdict.
 
+The current system is a trustworthy fact and research foundation, not yet an
+advanced practitioner capable of a complete destiny reading. The assessed
+overall completion against that product goal is approximately 25–30%:
+deterministic chart facts are useful, but strength, climate adjustment,
+structure success/failure, useful/unhelpful mechanisms, relation effects,
+timing activation, whole-chart synthesis and calibrated real-case judgment
+remain incomplete.
+
+The active work is no longer another evidence-gap display. It is one
+professionally reviewed, end-to-end real Reading from full chart boundary
+through seasonal capacity, root/strength, one complete relation-effect family,
+mechanism competition, current timing and one direct life-domain answer. The
+full review and acceptance definition are maintained in
+`docs/15_V60_TWO_PRODUCT_LINES_AND_PRE_MERGE_PLAN.md`.
+
 The product objective is not to make traditional terms look numerical. It is
 to improve decision quality through:
 
@@ -885,47 +900,27 @@ been read. It is not currently an input to that static natal comparison and
 cannot be used to reinterpret its recorded rationale as professional
 selection.
 
-## Delivery sequence
+## Active delivery
 
-1. **V50 capability inventory:** completed for the capabilities needed by the
-   first quantitative slice; continue only when a concrete V60 feature needs
-   another asset.
-2. **Quantitative foundation v1:** completed for deterministic element,
-   polarity, Ten-God and bounded source/manifestation evidence.
-3. **Mechanism evidence v1:** completed for deterministic candidate roles,
-   source evidence, competition and explicit unresolved blockers across the
-   available real-data corpus.
-4. **Mingli timing v1:** completed for append-only Dayun, year and month
-   coordinates, natal membership evidence and unresolved mechanism overlap.
-5. **Domain Reading v1:** completed for append-only career, wealth and
-   relationship attention windows with explicit unresolved boundaries.
-6. **Mechanism qualification v1:** completed for explicit evidence gaps,
-   falsifiers and cross-unit identity without scores or verdict promotion.
-7. **Calibration ledger:** collect sealed predictions and authorized outcomes,
-   then evaluate support scores before enabling probabilities.
-8. **Bounded Reasoner activation:** completed against the existing
-   dblife-hosted Ollama service; unsupported or partial provider configuration
-   still fails closed.
-9. **Decision evidence trace:** completed for server verification of the
-   immutable static-natal attention Decision and one shared Mingli/Abu/Lab
-   handoff with explicit unbound input scopes.
-10. **Relation-effect evidence preparation:** completed for one persistent,
-    account-private, server-derived request over the exact six-dimensional
-    gap, without material or Decision promotion.
-11. **Provenance candidate intake:** completed for one structured,
-    account-private bibliography-coordinate candidate type that remains
-    outside professional material, evidence, Knowledge and Decision.
-12. **Product expression:** Abu explains the exact Reading, Dream makes a
-    bounded uncertainty playable, Lab exposes the evidence, and Theater adapts
-    only approved source packages.
+The previous incremental evidence-foundation sequence is complete history.
+The only active Mingli slice is:
 
-The next professional step requires a real source artifact and Owner
-professional review; V60 cannot synthesize either from bibliography metadata.
-Until an authentic source is supplied, the next visible slice should return
-to Dream playability instead of producing another abstention projection.
-Root usability, seasonal capacity, relation effect, competing mechanisms and
-counter-evidence remain unresolved. The calibration ledger remains the next
-quantitative proof layer only after those claims have stable professional
-meaning. Probability work remains blocked until both the claim model and the
-ledger can state population, sample size, outcome quality, model version and
-abstention behavior.
+```text
+one authorized real Case
+-> complete calendar and chart boundary
+-> month command and seasonal capacity
+-> root usability and day-master strength
+-> one complete relation-effect rule family
+-> mechanism competition, blocking and counter-evidence
+-> current Dayun / annual effect
+-> one direct life-domain answer
+-> professional review and replayable observation points
+```
+
+The result must be one formal Reading shared by Mingli Calculation, Lab and
+Abu Says. Missing professional material remains a legitimate blocker, but
+another UI that only restates the blocker is not a product delivery.
+
+Statistical calibration begins only after the claim model has stable
+professional meaning. Until then, V60 may not display a fortune-reading
+accuracy rate or probability.

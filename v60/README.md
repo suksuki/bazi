@@ -1,10 +1,10 @@
 # Abu Knows V60
 
-V60 is a Mingli-centered Life Intelligence product. Mingli Calculation is the
-core brain and truth-facing product; Abu Dream World is the priority V60 game
-breakthrough. Lab improves Mingli through versioned admission, Abu explains
-the same Reading natively, and Theater is a relatively independent directing
-and media-production studio.
+V60 has two product outcomes: Mingli Calculation must reach
+advanced-practitioner-grade destiny reading, and Abu Dream World must become
+a complete Mingli story game with a real question system, mature game engine
+and controlled AI NPC participation. Lab, Abu Says and Theater support these
+two outcomes rather than forming separate product roadmaps.
 
 ## Product spine
 
@@ -213,8 +213,7 @@ rules are recorded in
 [`docs/09_V60_VISUAL_DIRECTION_AND_CINEMATIC_LANGUAGE.md`](docs/09_V60_VISUAL_DIRECTION_AND_CINEMATIC_LANGUAGE.md).
 The same-world second-visit product and runtime contract is recorded in
 [`docs/10_V60_RETURN_ENCOUNTER_SLICE.md`](docs/10_V60_RETURN_ENCOUNTER_SLICE.md).
-The current executable product slice, next visible work and multilingual
-reservation are maintained in
+The frozen history of previously delivered product slices is preserved in
 [`docs/11_V60_ACTIVE_PRODUCT_DELIVERY.md`](docs/11_V60_ACTIVE_PRODUCT_DELIVERY.md).
 The executable module graph, unique write owners, game-engine split and five
 product-unit boundaries are recorded in
@@ -225,9 +224,9 @@ rules are recorded in
 The private Home LifeTree, explicit Dream threshold and cross-scope authority
 rules are recorded in
 [`docs/14_V60_PRIVATE_HOME_TREE_AND_DREAM_THRESHOLD.md`](docs/14_V60_PRIVATE_HOME_TREE_AND_DREAM_THRESHOLD.md).
-The five-unit hierarchy, Lab feedback loop, native Abu expression, Theater
-Studio boundary and active delivery sequence are recorded in
-[`docs/15_V60_FIVE_UNIT_OPERATING_MODEL_AND_DELIVERY_PLAN.md`](docs/15_V60_FIVE_UNIT_OPERATING_MODEL_AND_DELIVERY_PLAN.md).
+The authoritative two-line direction, honest Mingli and Dream reviews,
+explicit stop list and pre-merge product work are recorded in
+[`docs/15_V60_TWO_PRODUCT_LINES_AND_PRE_MERGE_PLAN.md`](docs/15_V60_TWO_PRODUCT_LINES_AND_PRE_MERGE_PLAN.md).
 The Mingli capability inventory, central decision hierarchy, V50 reuse
 boundary and quantitative/statistical model are recorded in
 [`docs/16_V60_MINGLI_CORE_AND_QUANTITATIVE_MODEL.md`](docs/16_V60_MINGLI_CORE_AND_QUANTITATIVE_MODEL.md).

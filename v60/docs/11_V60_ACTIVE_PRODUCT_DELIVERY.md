@@ -1,8 +1,12 @@
-# V60 Active Product Delivery
+# V60 Historical Product Delivery
 
-This is the single living delivery list for the current local V60 product.
-It records executable work, not speculative phases. Completed history remains
-in `docs/CHANGELOG.md`.
+Status: `FROZEN_HISTORY`
+
+This document preserves previously delivered slices and is no longer an
+active roadmap. Do not append new incremental slices here. Current work is
+governed only by the two product outcomes and reviews in
+`docs/15_V60_TWO_PRODUCT_LINES_AND_PRE_MERGE_PLAN.md`; completed implementation
+history belongs in `docs/CHANGELOG.md`.
 
 ## Product Direction
 
