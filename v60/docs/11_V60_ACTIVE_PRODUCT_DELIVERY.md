@@ -48,6 +48,47 @@ The same snapshot feeds Dream, Mingli Calculation, Abu, Theater and Lab. The
 current implementation is desktop-first; mobile remains a guardrail until the
 desktop composition is stable.
 
+## Completed Delivery: Second Independent Canonical Dream Story Chain
+
+Status: `IMPLEMENTED_AND_REAL_BROWSER_AUDITED_LOCAL`
+
+- 禾央的 `染布树` now has a real second authored chapter,
+  `heyang-delivery-settlement`. It asks what verifiable acceptance and balance
+  records remain after the first small-batch order instead of treating the
+  earlier deposit as proof of settlement or stable cooperation.
+- Qualification source Registry `.003` contains five Hash-locked packages and
+  two explicit transitions. The new package is bound to the exact first
+  chapter outcome event, two new baseline facts and one independently sealed
+  World result. Its three AnswerSeal options do not control either the NPC
+  choice or outcome.
+- The existing account-history router now proves two candidate-owned
+  continuation graphs at once: completed Wenxi remains terminal, completed
+  Heyang advances to its new chapter and first-visit Zhaoning remains
+  available. Focused regressions also prove account, actor, tree and candidate
+  separation; a mismatched candidate identity fails closed.
+- The new append-only seed has its own batch receipt. The original three-tree
+  batch keeps Registry Hash `11a060…`, the earlier Wenxi extension keeps
+  `9c421…`, and only the Heyang extension binds the new `.003` Registry Hash.
+  Restart admission therefore adds the new Story material without rewriting
+  either historical receipt or Case provenance.
+- Terminal and withheld Grove cards are now keyboard-focusable and expose
+  their complete chapter status through an accessible name, while
+  `aria-disabled` plus click and Enter/Space guards prevents chapter entry.
+  Available cards remain ordinary selectable buttons.
+- Story is `.011`, Dream Game `.018`, Unit Dream `.019` and Runtime
+  Architecture `.051`. Foundation remains `.016` with migration head
+  `0024_relation_effect_material`; no table or migration was added.
+- All 291 backend tests, Ruff, TypeScript/Vite build, Runtime Architecture,
+  source maintainability and the Dream chapter, Reading lens, Return Echo and
+  Attention contracts pass. Runtime integrity reports zero defects.
+- The signed-in browser entered the real Heyang second chapter, observed two
+  leaves and one branch, sealed an answer independent of the authored World
+  outcome, waited for the World-owned result, revealed and reconciled it, and
+  returned to a Grove where both Wenxi and Heyang were terminal while
+  Zhaoning remained available. Refresh and managed Runtime restart recovered
+  the same terminal route identities. Evidence is in
+  `.artifacts/heyang-second-chapter/`.
+
 ## Completed Delivery: Canonical Same-Tree Dream Second Chapter
 
 Status: `IMPLEMENTED_AND_REAL_BROWSER_AUDITED_LOCAL`

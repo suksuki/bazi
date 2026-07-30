@@ -1,5 +1,35 @@
 # V60 Change Log
 
+## 2026-07-31
+
+### Second independent canonical Dream story chain
+
+- Added the Hash-locked `heyang-delivery-settlement` source package and an
+  explicit transition from Heyang's first Question. The chapter keeps
+  deposit, delivery, acceptance and balance facts separate and does not infer
+  stable cooperation.
+- Advanced the qualification source Registry to `.003`: five packages and two
+  candidate-owned continuation edges now drive Wenxi and Heyang independently.
+  Added router regressions for two simultaneous chains, account/actor/tree
+  isolation and wrong-candidate fail-closed behavior.
+- Added a separate append-only Heyang extension seed receipt. Preserved the
+  original three-tree Registry Hash and the historical Wenxi-extension
+  Registry Hash so startup adds the new package without rewriting either
+  receipt or Case provenance.
+- Made terminal, withheld and busy Grove cards keyboard-focusable and fully
+  labelled with `aria-disabled`; click and Enter/Space fail closed while
+  available cards remain selectable. Extended the frontend contract with
+  interaction-level invalid, duplicate, terminal and busy cases.
+- Advanced Story to `.011`, Dream Game to `.018`, Unit Dream to `.019` and
+  Runtime Architecture to `.051`. Foundation `.016`, migration head
+  `0024_relation_effect_material`, Mingli `.025`, Knowledge `.008` and
+  Cognition `.004` are unchanged.
+- Passed all 291 backend tests, Ruff, TypeScript/Vite build, Runtime
+  Architecture, source maintainability and the relevant Dream contracts. A
+  signed-in browser completed the real Heyang second chapter and recovered
+  both Wenxi and Heyang terminal routes after refresh and managed Runtime
+  restart. Evidence is in `.artifacts/heyang-second-chapter/`.
+
 ## 2026-07-30
 
 ### Canonical same-tree Dream second chapter

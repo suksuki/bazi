@@ -69,8 +69,8 @@
   color: #c8dbae;
 }
 
-.grove-tree-choice[data-chapter-route-status="WITHHELD"]:disabled,
-.grove-tree-choice[data-chapter-route-status="STORY_CURRENTLY_COMPLETE"]:disabled {
+.grove-tree-choice[data-chapter-route-status="WITHHELD"][aria-disabled="true"],
+.grove-tree-choice[data-chapter-route-status="STORY_CURRENTLY_COMPLETE"][aria-disabled="true"] {
   cursor: not-allowed;
 }
 

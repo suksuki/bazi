@@ -24,7 +24,7 @@ def test_manifest_has_no_v50_runtime_dependency() -> None:
     assert payload["reasoner_runtime"]["network_calls_enabled"] is False
     assert payload["engines"]["context"] == "v60.experience-context.003"
     assert payload["engines"]["mingli"] == "v60.mingli-cognitive-engine.025"
-    assert payload["engines"]["story"] == "v60.life-story-engine.010"
+    assert payload["engines"]["story"] == "v60.life-story-engine.011"
     relation_effect_admission = payload["relation_effect_rule_admission"]
     assert relation_effect_admission["professional_rule_count"] == 0
     assert relation_effect_admission["admitted_effect_rule_profiles"] == []
@@ -50,8 +50,12 @@ def test_manifest_has_no_v50_runtime_dependency() -> None:
         "v60.episode-package.yanzhou-roster-duty.v1",
     }
     assert len(source_packages["canonical_story"]["transitions"]) == 4
-    assert len(source_packages["three_life_qualification"]["packages"]) == 4
-    assert len(source_packages["three_life_qualification"]["transitions"]) == 1
+    assert (
+        source_packages["three_life_qualification"]["registry_version"]
+        == "v60.episode-source-registry.003"
+    )
+    assert len(source_packages["three_life_qualification"]["packages"]) == 5
+    assert len(source_packages["three_life_qualification"]["transitions"]) == 2
 
 
 def test_health_binds_database_to_runtime_foundation() -> None:
@@ -96,12 +100,12 @@ def test_runtime_status_exposes_owner_integrity_without_case_content() -> None:
         "unhashed_question_organs": 0,
     }
     assert payload["episode_catalog"]["status"] == "READY"
-    assert payload["episode_catalog"]["active_template_episode_count"] == 9
+    assert payload["episode_catalog"]["active_template_episode_count"] == 10
     assert payload["episode_catalog"]["active_episode_count"] == (
-        9
+        10
         + payload["episode_catalog"]["active_materialized_opportunity_count"]
     )
-    assert payload["episode_catalog"]["active_transition_count"] == 5
+    assert payload["episode_catalog"]["active_transition_count"] == 6
     assert len(payload["episode_catalog"]["graph_hash"]) == 64
     assert payload["scene_registry"]["status"] == "READY"
     assert len(payload["scene_registry"]["scenes"]) == 6

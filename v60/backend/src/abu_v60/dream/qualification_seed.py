@@ -58,8 +58,14 @@ THREE_LIFE_SEED_BATCH_REF = "v60-seed-batch-three-life-qualification-v1"
 THREE_LIFE_CHAPTER_TWO_SEED_BATCH_REF = (
     "v60-seed-batch-three-life-wenxi-chapter-two-v1"
 )
+THREE_LIFE_HEYANG_CHAPTER_TWO_SEED_BATCH_REF = (
+    "v60-seed-batch-three-life-heyang-chapter-two-v1"
+)
 THREE_LIFE_LEGACY_SOURCE_REGISTRY_HASH = (
     "11a060ced3ae7413a99f9d2b3aaa41156aac5fbc05e27d54ba35b08a6a182b34"
+)
+WENXI_CHAPTER_TWO_SOURCE_REGISTRY_HASH = (
+    "9c42166f63d97fb6608656f71077cc91283ef266b811e83b861f60b3cf7dacd8"
 )
 WENXI_CHAPTER_TWO_PACKAGE_REF = (
     "v60.episode-package.wenxi-index-convention.v1"
@@ -77,9 +83,30 @@ WENXI_CHAPTER_TWO_TRANSITION_REF = (
 WENXI_CHAPTER_TWO_TRANSITION_HASH = (
     "74d92439d60a74c41623951bfff4e73e52680959a8251d25e88aa70c78ee9fbe"
 )
+HEYANG_CHAPTER_TWO_PACKAGE_REF = (
+    "v60.episode-package.heyang-delivery-settlement.v1"
+)
+HEYANG_CHAPTER_TWO_PACKAGE_HASH = (
+    "56ec73713b30aeedba7614dd8ed9df26f23193b5c0c6499426c6dabbbe2e992a"
+)
+HEYANG_CHAPTER_TWO_QUESTION_REF = (
+    "v60-question-heyang-delivery-settlement-v1"
+)
+HEYANG_CHAPTER_TWO_WORLD_EVENT_REF = (
+    "v60-world-event-heyang-delivery-settlement-v1"
+)
+HEYANG_CHAPTER_TWO_TRANSITION_REF = (
+    "v60-episode-transition-4a26813b25683563290a"
+)
+HEYANG_CHAPTER_TWO_TRANSITION_HASH = (
+    "56b69403515aff0770bf8bff61e4e73ddaa1143d22643a0663b714d86d5ad254"
+)
 _CONTINUATION_PACKAGE_REFS = {
     "v60.episode-package.wenxi-archive-trial.v1": (
         WENXI_CHAPTER_TWO_PACKAGE_REF,
+    ),
+    "v60.episode-package.heyang-dyed-cloth.v1": (
+        HEYANG_CHAPTER_TWO_PACKAGE_REF,
     ),
 }
 
@@ -103,13 +130,26 @@ def seed_three_life_qualification(engine: Engine) -> dict[str, Any]:
         "seed_id": "v60.dream-three-life-wenxi-chapter-two.v1",
         "parent_batch_ref": THREE_LIFE_SEED_BATCH_REF,
         "source_origin": "V60_OWNER_APPROVED_SYNTHETIC_CONTENT",
-        "source_registry_hash": QUALIFICATION_EPISODE_SOURCE_REGISTRY_HASH,
+        "source_registry_hash": WENXI_CHAPTER_TWO_SOURCE_REGISTRY_HASH,
         "package_ref": WENXI_CHAPTER_TWO_PACKAGE_REF,
         "package_hash": WENXI_CHAPTER_TWO_PACKAGE_HASH,
         "question_ref": WENXI_CHAPTER_TWO_QUESTION_REF,
         "world_event_ref": WENXI_CHAPTER_TWO_WORLD_EVENT_REF,
         "transition_ref": WENXI_CHAPTER_TWO_TRANSITION_REF,
         "transition_hash": WENXI_CHAPTER_TWO_TRANSITION_HASH,
+        "llm_calls": 0,
+    }
+    heyang_chapter_two_manifest = {
+        "seed_id": "v60.dream-three-life-heyang-chapter-two.v1",
+        "parent_batch_ref": THREE_LIFE_SEED_BATCH_REF,
+        "source_origin": "V60_OWNER_APPROVED_SYNTHETIC_CONTENT",
+        "source_registry_hash": QUALIFICATION_EPISODE_SOURCE_REGISTRY_HASH,
+        "package_ref": HEYANG_CHAPTER_TWO_PACKAGE_REF,
+        "package_hash": HEYANG_CHAPTER_TWO_PACKAGE_HASH,
+        "question_ref": HEYANG_CHAPTER_TWO_QUESTION_REF,
+        "world_event_ref": HEYANG_CHAPTER_TWO_WORLD_EVENT_REF,
+        "transition_ref": HEYANG_CHAPTER_TWO_TRANSITION_REF,
+        "transition_hash": HEYANG_CHAPTER_TWO_TRANSITION_HASH,
         "llm_calls": 0,
     }
     with engine.begin() as connection:
@@ -134,6 +174,16 @@ def seed_three_life_qualification(engine: Engine) -> dict[str, Any]:
                 manifest=chapter_two_manifest,
             ),
         )
+        batch_admission.admit(
+            connection,
+            definition=MigrationBatchDefinition(
+                batch_ref=THREE_LIFE_HEYANG_CHAPTER_TWO_SEED_BATCH_REF,
+                source_system="V60",
+                source_database="qiazhi_v60",
+                status="COMPLETED",
+                manifest=heyang_chapter_two_manifest,
+            ),
+        )
         for item in prepared:
             _admit_prepared(connection, engine=engine, item=item)
         transition_admission = StoryEpisodeTransitionAdmissionService()
@@ -148,6 +198,9 @@ def seed_three_life_qualification(engine: Engine) -> dict[str, Any]:
         "source_registry_hash": QUALIFICATION_EPISODE_SOURCE_REGISTRY_HASH,
         "legacy_source_registry_hash": THREE_LIFE_LEGACY_SOURCE_REGISTRY_HASH,
         "chapter_two_seed_batch_ref": THREE_LIFE_CHAPTER_TWO_SEED_BATCH_REF,
+        "heyang_chapter_two_seed_batch_ref": (
+            THREE_LIFE_HEYANG_CHAPTER_TWO_SEED_BATCH_REF
+        ),
         "llm_calls": 0,
         "candidates": [
             {

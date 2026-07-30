@@ -6,11 +6,19 @@ from abu_v60.decision import CognitiveDecisionLedger
 from abu_v60.dream import THREE_LIFE_POOL_REF, DreamGroveRepository
 from abu_v60.dream.opportunity import DreamOpportunityMaterializer
 from abu_v60.dream.qualification_seed import (
+    HEYANG_CHAPTER_TWO_PACKAGE_HASH,
+    HEYANG_CHAPTER_TWO_PACKAGE_REF,
+    HEYANG_CHAPTER_TWO_QUESTION_REF,
+    HEYANG_CHAPTER_TWO_TRANSITION_HASH,
+    HEYANG_CHAPTER_TWO_TRANSITION_REF,
+    HEYANG_CHAPTER_TWO_WORLD_EVENT_REF,
     THREE_LIFE_CHAPTER_TWO_SEED_BATCH_REF,
+    THREE_LIFE_HEYANG_CHAPTER_TWO_SEED_BATCH_REF,
     THREE_LIFE_LEGACY_SOURCE_REGISTRY_HASH,
     WENXI_CHAPTER_TWO_PACKAGE_HASH,
     WENXI_CHAPTER_TWO_PACKAGE_REF,
     WENXI_CHAPTER_TWO_QUESTION_REF,
+    WENXI_CHAPTER_TWO_SOURCE_REGISTRY_HASH,
     WENXI_CHAPTER_TWO_TRANSITION_HASH,
     WENXI_CHAPTER_TWO_TRANSITION_REF,
     WENXI_CHAPTER_TWO_WORLD_EVENT_REF,
@@ -39,6 +47,10 @@ def test_three_life_seed_is_idempotent_and_grove_projection_is_safe() -> None:
     assert (
         first["chapter_two_seed_batch_ref"]
         == THREE_LIFE_CHAPTER_TWO_SEED_BATCH_REF
+    )
+    assert (
+        first["heyang_chapter_two_seed_batch_ref"]
+        == THREE_LIFE_HEYANG_CHAPTER_TWO_SEED_BATCH_REF
     )
     assert len(first["candidates"]) == 3
     assert {item["domain"] for item in first["candidates"]} == {
@@ -105,6 +117,24 @@ def test_three_life_seed_is_idempotent_and_grove_projection_is_safe() -> None:
             .mappings()
             .one()
         )
+        heyang_chapter_two = (
+            connection.execute(
+                text(
+                    """
+                    SELECT question.question_ref, question.actor_ref,
+                           question.episode_contract_json,
+                           event.world_event_ref, event.event_json
+                    FROM story.question_instances AS question
+                    JOIN world.events AS event
+                      ON event.world_event_ref = question.world_event_ref
+                    WHERE question.question_ref = :question_ref
+                    """
+                ),
+                {"question_ref": HEYANG_CHAPTER_TWO_QUESTION_REF},
+            )
+            .mappings()
+            .one()
+        )
         transition = (
             connection.execute(
                 text(
@@ -120,6 +150,21 @@ def test_three_life_seed_is_idempotent_and_grove_projection_is_safe() -> None:
             .mappings()
             .one()
         )
+        heyang_transition = (
+            connection.execute(
+                text(
+                    """
+                    SELECT transition_ref, from_question_ref, to_question_ref,
+                           transition_json, transition_hash
+                    FROM story.episode_transitions
+                    WHERE transition_ref = :transition_ref
+                    """
+                ),
+                {"transition_ref": HEYANG_CHAPTER_TWO_TRANSITION_REF},
+            )
+            .mappings()
+            .one()
+        )
         extension_batch = (
             connection.execute(
                 text(
@@ -130,6 +175,20 @@ def test_three_life_seed_is_idempotent_and_grove_projection_is_safe() -> None:
                     """
                 ),
                 {"batch_ref": THREE_LIFE_CHAPTER_TWO_SEED_BATCH_REF},
+            )
+            .mappings()
+            .one()
+        )
+        heyang_extension_batch = (
+            connection.execute(
+                text(
+                    """
+                    SELECT manifest_json, manifest_hash
+                    FROM platform.migration_batches
+                    WHERE batch_ref = :batch_ref
+                    """
+                ),
+                {"batch_ref": THREE_LIFE_HEYANG_CHAPTER_TWO_SEED_BATCH_REF},
             )
             .mappings()
             .one()
@@ -185,6 +244,20 @@ def test_three_life_seed_is_idempotent_and_grove_projection_is_safe() -> None:
     assert chapter_two["event_json"]["summary"] == (
         "观察共同修复后形成的新索引会怎样进入下一册工作。"
     )
+    heyang_runtime = heyang_chapter_two["episode_contract_json"]
+    assert heyang_chapter_two["actor_ref"] == "v60-actor-heyang-v1"
+    assert (
+        heyang_chapter_two["world_event_ref"]
+        == HEYANG_CHAPTER_TWO_WORLD_EVENT_REF
+    )
+    assert heyang_runtime["entrypoint"] is False
+    assert heyang_runtime["chapter"] == "RETURN_VISIT"
+    assert heyang_runtime["entry_world_event"]["caused_by_event_ref"] == (
+        "v60-world-event-heyang-cloth-exchange-v1"
+    )
+    assert heyang_chapter_two["event_json"]["summary"] == (
+        "观察小批订单交付后是否形成可核验的验收与余款记录。"
+    )
     assert transition["from_question_ref"] == (
         "v60-question-wenxi-archive-trial-v1"
     )
@@ -193,11 +266,25 @@ def test_three_life_seed_is_idempotent_and_grove_projection_is_safe() -> None:
     assert content_hash(transition["transition_json"]) == (
         WENXI_CHAPTER_TWO_TRANSITION_HASH
     )
+    assert heyang_transition["from_question_ref"] == (
+        "v60-question-heyang-dyed-cloth-v1"
+    )
+    assert (
+        heyang_transition["to_question_ref"]
+        == HEYANG_CHAPTER_TWO_QUESTION_REF
+    )
+    assert (
+        heyang_transition["transition_hash"]
+        == HEYANG_CHAPTER_TWO_TRANSITION_HASH
+    )
+    assert content_hash(heyang_transition["transition_json"]) == (
+        HEYANG_CHAPTER_TWO_TRANSITION_HASH
+    )
     expected_extension_manifest = {
         "seed_id": "v60.dream-three-life-wenxi-chapter-two.v1",
         "parent_batch_ref": "v60-seed-batch-three-life-qualification-v1",
         "source_origin": "V60_OWNER_APPROVED_SYNTHETIC_CONTENT",
-        "source_registry_hash": QUALIFICATION_EPISODE_SOURCE_REGISTRY_HASH,
+        "source_registry_hash": WENXI_CHAPTER_TWO_SOURCE_REGISTRY_HASH,
         "package_ref": WENXI_CHAPTER_TWO_PACKAGE_REF,
         "package_hash": WENXI_CHAPTER_TWO_PACKAGE_HASH,
         "question_ref": WENXI_CHAPTER_TWO_QUESTION_REF,
@@ -209,6 +296,26 @@ def test_three_life_seed_is_idempotent_and_grove_projection_is_safe() -> None:
     assert extension_batch["manifest_json"] == expected_extension_manifest
     assert extension_batch["manifest_hash"] == content_hash(
         expected_extension_manifest
+    )
+    expected_heyang_extension_manifest = {
+        "seed_id": "v60.dream-three-life-heyang-chapter-two.v1",
+        "parent_batch_ref": "v60-seed-batch-three-life-qualification-v1",
+        "source_origin": "V60_OWNER_APPROVED_SYNTHETIC_CONTENT",
+        "source_registry_hash": QUALIFICATION_EPISODE_SOURCE_REGISTRY_HASH,
+        "package_ref": HEYANG_CHAPTER_TWO_PACKAGE_REF,
+        "package_hash": HEYANG_CHAPTER_TWO_PACKAGE_HASH,
+        "question_ref": HEYANG_CHAPTER_TWO_QUESTION_REF,
+        "world_event_ref": HEYANG_CHAPTER_TWO_WORLD_EVENT_REF,
+        "transition_ref": HEYANG_CHAPTER_TWO_TRANSITION_REF,
+        "transition_hash": HEYANG_CHAPTER_TWO_TRANSITION_HASH,
+        "llm_calls": 0,
+    }
+    assert (
+        heyang_extension_batch["manifest_json"]
+        == expected_heyang_extension_manifest
+    )
+    assert heyang_extension_batch["manifest_hash"] == content_hash(
+        expected_heyang_extension_manifest
     )
     assert legacy_batch_hash == THREE_LIFE_LEGACY_SOURCE_REGISTRY_HASH
     assert case_source_hashes == [THREE_LIFE_LEGACY_SOURCE_REGISTRY_HASH]

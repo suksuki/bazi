@@ -17,6 +17,7 @@ from abu_v60.story.contracts import (
 from abu_v60.story.packages import (
     EPISODE_SOURCE_REGISTRY_HASH,
     QUALIFICATION_EPISODE_SOURCE_REGISTRY_HASH,
+    QUALIFICATION_EPISODE_SOURCE_REGISTRY_VERSION,
     EpisodeSourceCompilation,
     EpisodeSourcePackage,
     EpisodeSourcePackageError,
@@ -28,6 +29,7 @@ from abu_v60.story.packages import (
 __all__ = [
     "EPISODE_SOURCE_REGISTRY_HASH",
     "QUALIFICATION_EPISODE_SOURCE_REGISTRY_HASH",
+    "QUALIFICATION_EPISODE_SOURCE_REGISTRY_VERSION",
     "CompiledEpisodeAdmission",
     "EpisodeAdmissionCompiler",
     "EpisodeAdmissionError",

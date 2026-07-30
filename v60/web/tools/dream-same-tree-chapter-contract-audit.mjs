@@ -6,6 +6,11 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 
+import {
+  auditDreamGroveAccessibility,
+  hasNativeDisabledAttribute,
+} from "./dream-grove-accessibility-contract.mjs";
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 const webRoot = path.resolve(here, "..");
 const vite = await createServer({
@@ -305,6 +310,7 @@ const buttonTags = (markup, candidateRef) =>
     ),
   ].map((match) => match[0]);
 
+let accessibilityReport = null;
 try {
   const { isDreamGroveChapterRouteDisplayable } =
     await vite.ssrLoadModule("/src/dreamChapterRouteTypes.ts");
@@ -486,7 +492,22 @@ try {
   assertExcludes(
     "available-button-enabled",
     buttonTag(withPendingMarkup, refs.candidate),
-    "disabled",
+    'aria-disabled="true"',
+  );
+  assertIncludes(
+    "available-button-aria-enabled",
+    buttonTag(withPendingMarkup, refs.candidate),
+    'aria-disabled="false"',
+  );
+  assertIncludes(
+    "available-button-keyboard-focusable",
+    buttonTag(withPendingMarkup, refs.candidate),
+    'tabindex="0"',
+  );
+  assertEqual(
+    "available-button-has-no-native-disabled",
+    hasNativeDisabledAttribute(buttonTag(withPendingMarkup, refs.candidate)),
+    false,
   );
   for (const routeIdentity of [
     `data-route-hash="${routeBase.route_hash}"`,
@@ -528,9 +549,24 @@ try {
     'data-chapter-route-status="WITHHELD"',
   );
   assertIncludes(
-    "invalid-route-disabled",
+    "invalid-route-aria-disabled",
     buttonTag(invalidMarkup, refs.candidate),
-    "disabled",
+    'aria-disabled="true"',
+  );
+  assertIncludes(
+    "invalid-route-keyboard-focusable",
+    buttonTag(invalidMarkup, refs.candidate),
+    'tabindex="0"',
+  );
+  assertEqual(
+    "invalid-route-has-no-native-disabled",
+    hasNativeDisabledAttribute(buttonTag(invalidMarkup, refs.candidate)),
+    false,
+  );
+  assertIncludes(
+    "invalid-route-readable-label",
+    buttonTag(invalidMarkup, refs.candidate),
+    "路线凭据没有完整对上，不能进入",
   );
   assertIncludes(
     "invalid-route-boundary-copy",
@@ -578,7 +614,40 @@ try {
     duplicateButtons.every(
       (tag) =>
         tag.includes('data-chapter-route-status="WITHHELD"') &&
-        tag.includes("disabled"),
+        tag.includes('aria-disabled="true"') &&
+        tag.includes('tabindex="0"') &&
+        !hasNativeDisabledAttribute(tag),
+    ),
+    true,
+  );
+
+  const exactDuplicateCandidateMarkup = renderToStaticMarkup(
+    React.createElement(
+      DreamGroveScene,
+      groveProps(
+        grove({
+          candidates: [
+            candidate(),
+            candidate(),
+            ...candidates.slice(1),
+          ],
+        }),
+      ),
+    ),
+  );
+  const exactDuplicateButtons = buttonTags(
+    exactDuplicateCandidateMarkup,
+    refs.candidate,
+  );
+  assertEqual("exact-duplicate-candidate-count", exactDuplicateButtons.length, 2);
+  assertEqual(
+    "exact-duplicate-candidates-fail-closed-and-focusable",
+    exactDuplicateButtons.every(
+      (tag) =>
+        tag.includes('data-chapter-route-status="WITHHELD"') &&
+        tag.includes('aria-disabled="true"') &&
+        tag.includes('tabindex="0"') &&
+        !hasNativeDisabledAttribute(tag),
     ),
     true,
   );
@@ -598,9 +667,19 @@ try {
     'data-chapter-route-status="STORY_CURRENTLY_COMPLETE"',
   );
   assertIncludes(
-    "terminal-button-disabled",
+    "terminal-button-aria-disabled",
     buttonTag(completedMarkup, refs.candidate),
-    "disabled",
+    'aria-disabled="true"',
+  );
+  assertIncludes(
+    "terminal-button-keyboard-focusable",
+    buttonTag(completedMarkup, refs.candidate),
+    'tabindex="0"',
+  );
+  assertEqual(
+    "terminal-button-has-no-native-disabled",
+    hasNativeDisabledAttribute(buttonTag(completedMarkup, refs.candidate)),
+    false,
   );
   for (const expected of [
     terminalRoute.chapter_label,
@@ -616,6 +695,45 @@ try {
     completedMarkup,
     `${terminalRoute.chapter_label}已经完成，等待新章`,
   );
+
+  accessibilityReport = auditDreamGroveAccessibility({
+    DreamGroveScene,
+    assertEqual,
+    candidateRef: refs.candidate,
+    availableProps: groveProps(grove()),
+    busyProps: { ...groveProps(grove()), busy: true },
+    blockedCases: [
+      {
+        label: "invalid",
+        props: groveProps(
+          grove({ candidates: [invalidCandidate, ...candidates.slice(1)] }),
+        ),
+      },
+      {
+        expectedButtonCount: 2,
+        label: "duplicate",
+        props: groveProps(
+          grove({
+            candidates: [
+              candidate(),
+              candidate({
+                candidateRef: refs.candidate,
+                candidateHash: "9".repeat(64),
+                treeRef: "tree-wenxi-shadow",
+              }),
+              ...candidates.slice(1),
+            ],
+          }),
+        ),
+      },
+      {
+        label: "terminal",
+        props: groveProps(
+          grove({ candidates: [completedCandidate, ...candidates.slice(1)] }),
+        ),
+      },
+    ],
+  });
 
   const openingAttention = {
     contract_version: "v60.dream-opening-attention.001",
@@ -780,6 +898,7 @@ try {
     ".dream-grove-chapter-route-complete",
     '.grove-tree-choice[data-chapter-route-status="WITHHELD"]',
     '.grove-tree-choice[data-chapter-route-status="STORY_CURRENTLY_COMPLETE"]',
+    '[aria-disabled="true"]',
     ".dream-chapter-marker",
   ]) {
     assertIncludes("route-styles", styles, expected);
@@ -802,7 +921,8 @@ const report = {
   routeSameWithOrWithoutPendingAttention: true,
   invalidRouteFailsClosed: true,
   duplicateCandidateRefsFailClosed: true,
-  terminalChapterDisabled: true,
+  ...accessibilityReport,
+  terminalChapterAriaDisabled: true,
   returnVisitMarkerVisible: true,
   failures,
 };

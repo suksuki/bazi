@@ -15,7 +15,7 @@ from abu_v60.architecture.contracts import (
 @lru_cache(maxsize=1)
 def runtime_architecture() -> RuntimeArchitecture:
     architecture = RuntimeArchitecture(
-        architecture_version="v60.runtime-architecture.050",
+        architecture_version="v60.runtime-architecture.051",
         modules=(
             RuntimeModule(
                 module_id="identity",
@@ -170,7 +170,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="story",
                 kind=ModuleKind.ENGINE,
-                version="v60.life-story-engine.010",
+                version="v60.life-story-engine.011",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("story",),
                 reads_from=("mingli", "world", "cognition"),
@@ -181,6 +181,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "source_bound_episode_graph",
                     "registry_owned_external_episode_transitions",
                     "canonical_same_tree_chapter_transition",
+                    "multiple_candidate_continuation_graphs",
                     "multi_root_episode_catalog",
                     "independent_qualification_episode_sources",
                     "append_only_episode_transition",
@@ -193,7 +194,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="dream-game",
                 kind=ModuleKind.ENGINE,
-                version="v60.dream-game-engine.017",
+                version="v60.dream-game-engine.018",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("dream",),
                 reads_from=("identity", "mingli", "world", "story", "cognition"),
@@ -228,6 +229,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "completed_history_resurrection_guard",
                     "account_private_return_echo_projection",
                     "return_echo_committed_source_validation",
+                    "multi_tree_canonical_chapter_frontiers",
                     "append_only_return_attention_selection",
                     "same_tree_attention_application",
                     "return_attention_not_owner_evidence",
@@ -297,7 +299,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-dream",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-dream.018",
+                version="v60.unit-dream.019",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "media"),
                 capabilities=(
@@ -325,6 +327,8 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "same_tree_new_chapter_preview",
                     "attention_independent_chapter_entry",
                     "terminal_story_wait_state",
+                    "focusable_terminal_chapter_state",
+                    "multiple_same_tree_story_chains",
                     "visible_question_window_recovery",
                     "dream_outcome_not_owner_mingli_evidence",
                 ),

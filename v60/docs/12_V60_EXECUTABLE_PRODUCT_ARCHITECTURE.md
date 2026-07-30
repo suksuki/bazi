@@ -105,6 +105,28 @@ collapsing back into thousand-line files. It scans Runtime source only; media
 post-processing tools and generated outputs are governed by their own pipeline
 contracts.
 
+The Grove chapter frontier is candidate-owned rather than a single Wenxi
+special case. Registry `.003` now contains independent Wenxi and Heyang
+continuation edges. For each candidate, the router filters canonical completed
+history by account, actor and tree, revalidates the persisted candidate and
+Episode lineage, then resolves only the first missing prefix chapter:
+
+```text
+candidate root + canonical Episode graph + account-owned completed prefix
+-> ENTRYPOINT | CANONICAL_TRANSITION | TERMINAL_CHAPTER
+-> exact target Episode/Question/transition/preceding WorldEvent
+-> Attention remains read-only and cannot select the route
+```
+
+Legacy first-visit records without a persisted candidate identity remain a
+deliberate compatibility exception and are accepted only after their source
+Episode lineage is revalidated. Current Grove admission exposes exactly one
+active candidate for each root, but that uniqueness is not yet an admission
+constraint. Continuation history is candidate-bound and mismatched history
+fails closed; presentation also withholds duplicate candidate Refs. Enforcing
+one active candidate identity per root at admission remains a narrow
+compatibility-hardening item before any future candidate-registry expansion.
+
 Knowledge currently owns a small code-native Registry rather than a database
 schema. It resolves exact `profile_id + profile_version + profile_hash`,
 publishes a non-sensitive manifest and exposes immutable lookup views to

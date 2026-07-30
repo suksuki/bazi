@@ -1,4 +1,8 @@
-import type { CSSProperties } from "react";
+import type {
+  CSSProperties,
+  KeyboardEvent,
+  MouseEvent,
+} from "react";
 
 import { AbuCompanionMotion } from "./AbuCompanionMotion";
 import type {
@@ -24,6 +28,31 @@ const DOMAIN_LABELS = {
   wealth: "交换与回流",
   relationship: "协作与边界",
 } as const;
+
+const BLOCKED_ACTIVATION_KEYS = new Set(["Enter", " "]);
+
+function guardBlockedClick(
+  event: MouseEvent<HTMLButtonElement>,
+  blocked: boolean,
+  select: () => void,
+) {
+  if (blocked) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+  select();
+}
+
+function guardBlockedKeyDown(
+  event: KeyboardEvent<HTMLButtonElement>,
+  blocked: boolean,
+) {
+  if (blocked && BLOCKED_ACTIVATION_KEYS.has(event.key)) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+}
 
 function treeStyle(candidate: DreamGroveCandidate): CSSProperties {
   const phenotype = candidate.tree.phenotype;
@@ -140,7 +169,7 @@ export function DreamGroveScene({
         role="group"
         aria-label="选择一棵生命树"
       >
-        {grove.candidates.map((candidate) => {
+        {grove.candidates.map((candidate, candidateIndex) => {
           const route =
             !duplicateCandidateRefs.has(candidate.candidate_ref) &&
             isDreamGroveChapterRouteDisplayable(candidate.chapter_route, {
@@ -151,8 +180,21 @@ export function DreamGroveScene({
               ? candidate.chapter_route
               : null;
           const selectable = route?.status === "AVAILABLE";
+          const selectionBlocked = busy || !selectable;
+          const routeAccessibleLabel =
+            route === null
+              ? "章节路线暂不可用。这棵树先留在雾里；路线凭据没有完整对上，不能进入"
+              : route.status === "STORY_CURRENTLY_COMPLETE"
+                ? `${route.chapter_label}，${route.title}。${route.premise}。暂时没有下一章可进入`
+                : `${route.chapter_label}，${route.title}。${route.premise}。可以进入`;
           return (
             <button
+              aria-disabled={selectionBlocked}
+              aria-label={`${candidate.public_alias}，${
+                DOMAIN_LABELS[candidate.domain]
+              }。${routeAccessibleLabel}${
+                busy && selectable ? "。正在处理，请稍候" : ""
+              }`}
               className="grove-tree-choice"
               data-candidate-ref={candidate.candidate_ref}
               data-candidate-hash={candidate.candidate_hash}
@@ -163,10 +205,17 @@ export function DreamGroveScene({
                 pending?.source_candidate_ref === candidate.candidate_ref
               }
               data-tree-version={candidate.tree.version}
-              disabled={busy || !selectable}
-              key={`${candidate.candidate_ref}:${candidate.candidate_hash}:${candidate.tree_ref}`}
-              onClick={() => onSelect(candidate.candidate_ref)}
+              key={`${candidate.candidate_ref}:${candidate.candidate_hash}:${candidate.tree_ref}:${candidateIndex}`}
+              onClick={(event) =>
+                guardBlockedClick(event, selectionBlocked, () =>
+                  onSelect(candidate.candidate_ref),
+                )
+              }
+              onKeyDown={(event) =>
+                guardBlockedKeyDown(event, selectionBlocked)
+              }
               style={treeStyle(candidate)}
+              tabIndex={0}
               type="button"
             >
               <DreamPendingAttentionBadge

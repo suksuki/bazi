@@ -14,8 +14,11 @@ from abu_v60.story.contracts import EpisodeTransitionContract
 EPISODE_SOURCE_PACKAGE_VERSION = "v60.episode-source-package.002"
 EPISODE_SOURCE_REGISTRY_VERSION = "v60.episode-source-registry.002"
 EPISODE_SOURCE_REGISTRY_HASH = "863708cccfe500d40a58f4ebe460e6e542e8ee1001fb896c1bc54b60fbbc2cba"
+QUALIFICATION_EPISODE_SOURCE_REGISTRY_VERSION = (
+    "v60.episode-source-registry.003"
+)
 QUALIFICATION_EPISODE_SOURCE_REGISTRY_HASH = (
-    "9c42166f63d97fb6608656f71077cc91283ef266b811e83b861f60b3cf7dacd8"
+    "47e4dc392bdd766e00e633fc9f2e7d3211f2042876cae2e985904a6b6059de8e"
 )
 
 
@@ -111,7 +114,10 @@ class EpisodeSourceTransition(BaseModel):
 class EpisodeSourceRegistryDocument(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    registry_version: Literal["v60.episode-source-registry.002"]
+    registry_version: Literal[
+        "v60.episode-source-registry.002",
+        "v60.episode-source-registry.003",
+    ]
     packages: tuple[EpisodeSourceRegistryRow, ...] = Field(min_length=1)
     transitions: tuple[EpisodeSourceTransition, ...] = ()
 

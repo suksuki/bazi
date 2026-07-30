@@ -34,6 +34,7 @@ from abu_v60.provenance import content_hash
 from abu_v60.story.packages import (
     EPISODE_SOURCE_REGISTRY_HASH,
     QUALIFICATION_EPISODE_SOURCE_REGISTRY_HASH,
+    QUALIFICATION_EPISODE_SOURCE_REGISTRY_VERSION,
     EpisodeSourcePackageError,
     EpisodeSourceRegistry,
     default_episode_source_registry,
@@ -146,9 +147,13 @@ def test_three_life_qualification_registry_is_hash_locked_and_public_safe() -> N
     registry = qualification_episode_source_registry()
     manifest = registry.public_manifest()
 
+    assert (
+        manifest["registry_version"]
+        == QUALIFICATION_EPISODE_SOURCE_REGISTRY_VERSION
+    )
     assert manifest["registry_hash"] == QUALIFICATION_EPISODE_SOURCE_REGISTRY_HASH
     assert manifest["runtime_access"] == "ADMISSION_ONLY"
-    assert len(manifest["packages"]) == 4
+    assert len(manifest["packages"]) == 5
     assert manifest["transitions"] == [
         {
             "transition_ref": "v60-episode-transition-64b0804f1fdb3d1093fa",
@@ -161,7 +166,19 @@ def test_three_life_qualification_registry_is_hash_locked_and_public_safe() -> N
             "to_package_ref": (
                 "v60.episode-package.wenxi-index-convention.v1"
             ),
-        }
+        },
+        {
+            "transition_ref": "v60-episode-transition-4a26813b25683563290a",
+            "transition_hash": (
+                "56b69403515aff0770bf8bff61e4e73ddaa1143d22643a0663b714d86d5ad254"
+            ),
+            "from_package_ref": (
+                "v60.episode-package.heyang-dyed-cloth.v1"
+            ),
+            "to_package_ref": (
+                "v60.episode-package.heyang-delivery-settlement.v1"
+            ),
+        },
     ]
     assert {
         package["package_ref"] for package in manifest["packages"]
@@ -169,6 +186,7 @@ def test_three_life_qualification_registry_is_hash_locked_and_public_safe() -> N
         "v60.episode-package.wenxi-archive-trial.v1",
         "v60.episode-package.wenxi-index-convention.v1",
         "v60.episode-package.heyang-dyed-cloth.v1",
+        "v60.episode-package.heyang-delivery-settlement.v1",
         "v60.episode-package.zhaoning-lantern-roster.v1",
     }
     assert next(
@@ -178,6 +196,14 @@ def test_three_life_qualification_registry_is_hash_locked_and_public_safe() -> N
         == "v60.episode-package.wenxi-index-convention.v1"
     )["package_hash"] == (
         "6e0af51871d116eb5b9ed49e236b047b99bb4ae50b4767bab0ac8f216f466284"
+    )
+    assert next(
+        package
+        for package in manifest["packages"]
+        if package["package_ref"]
+        == "v60.episode-package.heyang-delivery-settlement.v1"
+    )["package_hash"] == (
+        "56ec73713b30aeedba7614dd8ed9df26f23193b5c0c6499426c6dabbbe2e992a"
     )
     serialized = json.dumps(manifest)
     assert "prompt" not in serialized
@@ -212,6 +238,13 @@ def test_three_life_qualification_registry_is_hash_locked_and_public_safe() -> N
                 "career_life_domain_vector_ref": "domain:career",
             },
         ),
+        registry.compile_package(
+            "v60.episode-package.heyang-delivery-settlement.v1",
+            bindings={
+                "wealth_structure_fact_ref": "fact:wealth",
+                "wealth_life_domain_vector_ref": "domain:wealth",
+            },
+        ),
     )
     assert len({item.definition.actor_ref for item in compiled}) == 3
     assert len({item.definition.tree_ref for item in compiled}) == 3
@@ -220,7 +253,7 @@ def test_three_life_qualification_registry_is_hash_locked_and_public_safe() -> N
     ]
     assert len(entrypoints) == 3
 
-    returning = compiled[-1]
+    returning = compiled[-2]
     runtime = returning.definition.runtime
     assert runtime.chapter.value == "RETURN_VISIT"
     assert runtime.entrypoint is False
@@ -243,6 +276,43 @@ def test_three_life_qualification_registry_is_hash_locked_and_public_safe() -> N
     assert returning.definition.organ_set[
         "outcome_fruit"
     ].source_refs == (runtime.world_event_ref,)
+
+    heyang_returning = compiled[-1]
+    heyang_runtime = heyang_returning.definition.runtime
+    assert heyang_runtime.chapter.value == "RETURN_VISIT"
+    assert heyang_runtime.entrypoint is False
+    assert heyang_runtime.cutoff_tick == 54
+    assert heyang_runtime.due_tick == 108
+    assert heyang_runtime.entry_world_event is not None
+    assert heyang_runtime.entry_world_event.caused_by_event_ref == (
+        "v60-world-event-heyang-cloth-exchange-v1"
+    )
+    assert (
+        heyang_runtime.entry_world_event.evidence
+        == heyang_returning.definition.baseline_evidence
+    )
+    assert [
+        event.world_event_ref
+        for event in heyang_returning.world_event_definitions
+    ] == ["v60-world-event-heyang-delivery-settlement-v1"]
+    assert heyang_runtime.baseline_event_ref not in {
+        event.world_event_ref
+        for event in heyang_returning.world_event_definitions
+    }
+    assert len(heyang_returning.definition.options) == 3
+    assert len(
+        {
+            tuple(sorted(option.proposition.items()))
+            for option in heyang_returning.definition.options
+        }
+    ) == 3
+    assert heyang_returning.definition.resolution_rule.npc_choice_id == (
+        "accepted_settled"
+    )
+    assert heyang_returning.definition.sealed_outcome.resolved_proposition == {
+        "delivery_disposition": "retained_for_review",
+        "balance_status": "held",
+    }
 
 
 def test_first_episode_package_preserves_existing_contract() -> None:

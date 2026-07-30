@@ -114,7 +114,7 @@
   border-radius: 6px;
 }
 
-.grove-tree-choice:disabled {
+.grove-tree-choice[aria-disabled="true"] {
   cursor: wait;
 }
 
@@ -132,7 +132,7 @@
     transform 280ms ease;
 }
 
-.grove-tree-choice:hover:not(:disabled) .grove-tree-art {
+.grove-tree-choice:hover:not([aria-disabled="true"]) .grove-tree-art {
   filter:
     hue-rotate(var(--grove-hue))
     saturate(calc(var(--grove-saturation) + 0.12))
