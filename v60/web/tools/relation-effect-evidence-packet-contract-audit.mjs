@@ -53,10 +53,13 @@ try {
             relation_effect_frontier: fixture.bindings.frontier,
             relation_effect_admission_review: fixture.review,
             relation_effect_evidence_packet: fixture.packet,
+            relation_effect_evidence_request_receipt:
+              fixture.requestReceipt,
           },
           lab: fixture.bindings.lab,
         },
         mode,
+        onEvidenceRequestChanged: async () => {},
       }),
     );
 

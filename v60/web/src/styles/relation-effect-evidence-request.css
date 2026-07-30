@@ -1,0 +1,205 @@
+.relation-effect-evidence-request-summary,
+.relation-effect-evidence-request {
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid rgb(55 108 96 / 18%);
+  background: rgb(239 248 244 / 72%);
+}
+
+.relation-effect-evidence-request-summary {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.relation-effect-evidence-request-summary > span:first-child,
+.relation-effect-evidence-request > header > span,
+.relation-effect-evidence-request-items article > header > span {
+  display: grid;
+  gap: 2px;
+}
+
+.relation-effect-evidence-request-summary small,
+.relation-effect-evidence-request > header small,
+.relation-effect-evidence-request-items article > header small {
+  color: var(--ink-faint);
+  font-size: 8px;
+}
+
+.relation-effect-evidence-request-summary strong,
+.relation-effect-evidence-request > header strong {
+  color: #315f57;
+  font-size: 10px;
+}
+
+.relation-effect-evidence-request-summary > span:nth-child(2) {
+  color: var(--ink-soft);
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.relation-effect-evidence-request-summary > span:nth-child(2) b {
+  color: #315f57;
+  font-size: 10px;
+}
+
+.relation-effect-evidence-request-summary p {
+  grid-column: 1 / -1;
+}
+
+.relation-effect-evidence-request-summary p,
+.relation-effect-evidence-request > p,
+.relation-effect-evidence-request > small {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 8px;
+  line-height: 1.55;
+}
+
+.relation-effect-evidence-request > header,
+.relation-effect-evidence-request-items article > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+}
+
+.relation-effect-evidence-request > header em,
+.relation-effect-evidence-request-items article > header em {
+  padding: 3px 6px;
+  border: 1px solid rgb(55 108 96 / 20%);
+  color: #315f57;
+  font-size: 7px;
+  font-style: normal;
+}
+
+.relation-effect-evidence-request > button {
+  min-height: 34px;
+  border: 1px solid rgb(55 108 96 / 28%);
+  background: #315f57;
+  color: white;
+  cursor: pointer;
+  font: inherit;
+  font-size: 9px;
+}
+
+.relation-effect-evidence-request > button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.relation-effect-evidence-request > p[role="alert"] {
+  color: #8b3f32;
+}
+
+.relation-effect-evidence-request-counts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.relation-effect-evidence-request-counts > span {
+  display: grid;
+  gap: 2px;
+  padding: 7px;
+  background: rgb(255 255 255 / 62%);
+  color: var(--ink-faint);
+  font-size: 7px;
+}
+
+.relation-effect-evidence-request-counts b {
+  color: #315f57;
+  font-size: 14px;
+}
+
+.relation-effect-evidence-request-identity {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.relation-effect-evidence-request-identity > div {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 6px;
+}
+
+.relation-effect-evidence-request-identity dt {
+  color: var(--ink-faint);
+  font-size: 7px;
+}
+
+.relation-effect-evidence-request-identity dd {
+  min-width: 0;
+  margin: 0;
+}
+
+.relation-effect-evidence-request-identity code {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--ink-soft);
+  font-size: 7px;
+}
+
+.relation-effect-evidence-request-items {
+  display: grid;
+  gap: 6px;
+}
+
+.relation-effect-evidence-request-items article {
+  display: grid;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid rgb(55 108 96 / 12%);
+  background: rgb(255 255 255 / 56%);
+}
+
+.relation-effect-evidence-request-items article > header strong {
+  color: var(--ink);
+  font-size: 9px;
+}
+
+.relation-effect-evidence-request-items article > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.relation-effect-evidence-request-items article > div > span {
+  display: grid;
+  gap: 2px;
+  padding: 5px;
+  background: rgb(55 108 96 / 6%);
+}
+
+.relation-effect-evidence-request-items article > div b {
+  color: var(--ink-soft);
+  font-size: 8px;
+}
+
+.relation-effect-evidence-request-items article > div > span > span {
+  color: var(--ink-soft);
+  font-size: 7px;
+  line-height: 1.45;
+}
+
+.relation-effect-evidence-request-items article > div small {
+  color: var(--ink-faint);
+  font-size: 7px;
+  line-height: 1.45;
+}
+
+.relation-effect-evidence-request-boundary {
+  padding-top: 7px;
+  border-top: 1px solid rgb(55 108 96 / 12%);
+}
+
+.relation-effect-evidence-request.is-withheld {
+  border-color: rgb(139 91 38 / 20%);
+  background: rgb(255 248 232 / 78%);
+}
+
+.relation-effect-evidence-request.is-withheld strong {
+  color: #7d5224;
+  font-size: 10px;
+}

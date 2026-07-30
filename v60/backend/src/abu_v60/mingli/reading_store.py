@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from sqlalchemy import text
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 
 from abu_v60.mingli.reading import MingliReadingEnvelope
 from abu_v60.provenance import canonical_json
@@ -146,7 +146,18 @@ class MingliReadingStore:
 
     def get(self, *, reading_ref: str) -> MingliReadingEnvelope:
         with self._engine.connect() as connection:
-            row = self._load_row(connection, reading_ref=reading_ref)
+            return self.get_in_connection(
+                connection,
+                reading_ref=reading_ref,
+            )
+
+    def get_in_connection(
+        self,
+        connection: Connection,
+        *,
+        reading_ref: str,
+    ) -> MingliReadingEnvelope:
+        row = self._load_row(connection, reading_ref=reading_ref)
         if row is None:
             raise MingliReadingNotFoundError("mingli_reading_not_found")
         reading = MingliReadingEnvelope.model_validate(row["reading_json"])

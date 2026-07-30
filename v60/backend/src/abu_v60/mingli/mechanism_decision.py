@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from sqlalchemy import text
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 
 from abu_v60.decision import (
     BoundedReasonerContext,
@@ -25,6 +25,7 @@ from abu_v60.decision import (
     reasoner_runtime_manifest,
 )
 from abu_v60.decision.service import DECISION_KERNEL_VERSION
+from abu_v60.identity import lock_account_transaction
 from abu_v60.mingli.mechanism_contracts import (
     MechanismCandidateEvidence,
     MingliMechanismEvidenceVector,
@@ -130,17 +131,43 @@ class MingliMechanismComparisonService:
     def compare(
         self,
         *,
+        account_ref: str,
         vector: MingliMechanismEvidenceVector,
     ) -> dict[str, Any]:
+        with self._engine.begin() as connection:
+            return self.compare_in_connection(
+                connection,
+                account_ref=account_ref,
+                vector=vector,
+            )
+
+    def compare_in_connection(
+        self,
+        connection: Connection,
+        *,
+        account_ref: str,
+        vector: MingliMechanismEvidenceVector,
+    ) -> dict[str, Any]:
+        lock_account_transaction(
+            connection,
+            account_ref=account_ref,
+        )
+        if not self._case_is_active_owned(
+            connection,
+            account_ref=account_ref,
+            case_ref=vector.case_ref,
+        ):
+            raise MechanismComparisonUnavailableError(
+                "mechanism_comparison_active_owner_case_conflict"
+            )
         request, context = self._request_and_context(vector)
         if not vector.candidates:
             raise MechanismComparisonUnavailableError("mechanism_comparison_has_no_candidates")
-        with self._engine.begin() as connection:
-            execution = self._coordinator.decide_and_record(
-                connection=connection,
-                request=request,
-                reasoner_context=context,
-            )
+        execution = self._coordinator.decide_and_record(
+            connection=connection,
+            request=request,
+            reasoner_context=context,
+        )
         return {
             "decision_ref": execution.ledger_result.decision_id,
             "decision_hash": execution.ledger_result.record_hash,
@@ -164,6 +191,34 @@ class MingliMechanismComparisonService:
                 else None
             ),
         }
+
+    @staticmethod
+    def _case_is_active_owned(
+        connection: Connection,
+        *,
+        account_ref: str,
+        case_ref: str,
+    ) -> bool:
+        return bool(
+            connection.execute(
+                text(
+                    """
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM mingli.cases
+                        WHERE case_ref = :case_ref
+                          AND owner_account_ref = :account_ref
+                          AND subject_kind = 'HUMAN_OWNER'
+                          AND status = 'ACTIVE'
+                    )
+                    """
+                ),
+                {
+                    "case_ref": case_ref,
+                    "account_ref": account_ref,
+                },
+            ).scalar_one()
+        )
 
     @staticmethod
     def _request_and_context(

@@ -9,6 +9,11 @@ from abu_v60.experience.home import (
     HomeExperienceService,
     HomeExperienceUnavailableError,
 )
+from abu_v60.mingli import (
+    MechanismComparisonUnavailableError,
+    MingliMechanismComparisonService,
+    MingliMechanismVectorStore,
+)
 from abu_v60.provenance import canonical_json
 from sqlalchemy import text
 
@@ -557,6 +562,82 @@ def test_home_mechanism_comparison_fails_closed_or_replays_existing_record() -> 
     assert replay["already_recorded"] is True
     assert replay["reasoner_execution"] is None
     assert replay["canonical_mingli_write_allowed"] is False
+
+
+def test_mechanism_comparison_rejects_wrong_account_before_decision() -> None:
+    account_ref = _human_owner_account_ref()
+    snapshot = HomeExperienceService(engine).snapshot(
+        account_ref=account_ref
+    )
+    vector = MingliMechanismVectorStore(engine).get(
+        vector_ref=str(snapshot["lab"]["mechanism_vector_ref"])
+    )
+
+    class ForbiddenCoordinator:
+        @staticmethod
+        def decide_and_record(**_kwargs):
+            raise AssertionError("ownership fence must precede decision")
+
+    service = MingliMechanismComparisonService(
+        engine,
+        coordinator=ForbiddenCoordinator(),
+    )
+
+    with pytest.raises(
+        MechanismComparisonUnavailableError,
+        match="mechanism_comparison_active_owner_case_conflict",
+    ):
+        service.compare(
+            account_ref="v60-account-wrong-mechanism-owner",
+            vector=vector,
+        )
+
+
+def test_mechanism_comparison_rejects_owned_non_owner_case() -> None:
+    with engine.connect() as connection:
+        reference_row = (
+            connection.execute(
+                text(
+                    """
+                    SELECT vector.vector_ref,
+                           owner_case.owner_account_ref
+                    FROM mingli.mechanism_evidence_vectors AS vector
+                    JOIN mingli.cases AS owner_case
+                      ON owner_case.case_ref = vector.case_ref
+                    WHERE owner_case.subject_kind = 'HUMAN_REFERENCE'
+                      AND owner_case.status = 'ACTIVE'
+                    ORDER BY vector.vector_ref
+                    LIMIT 1
+                    """
+                )
+            )
+            .mappings()
+            .one()
+        )
+    account_ref = str(reference_row["owner_account_ref"])
+    vector = MingliMechanismVectorStore(engine).get(
+        vector_ref=str(reference_row["vector_ref"])
+    )
+
+    class ForbiddenCoordinator:
+        @staticmethod
+        def decide_and_record(**_kwargs):
+            raise AssertionError("case fence must precede decision")
+
+    service = MingliMechanismComparisonService(
+        engine,
+        coordinator=ForbiddenCoordinator(),
+    )
+
+    with engine.begin() as connection, pytest.raises(
+        MechanismComparisonUnavailableError,
+        match="mechanism_comparison_active_owner_case_conflict",
+    ):
+        service.compare_in_connection(
+            connection,
+            account_ref=account_ref,
+            vector=vector,
+        )
 
 
 class _AmbiguousCaseService:

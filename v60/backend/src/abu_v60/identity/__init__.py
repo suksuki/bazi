@@ -1,3 +1,4 @@
+from abu_v60.identity.account_lock import lock_account_transaction
 from abu_v60.identity.admission import (
     AccountAdmissionDefinition,
     IdentityAdmissionDefinition,
@@ -16,4 +17,5 @@ __all__ = [
     "IdentityProfileAdmissionService",
     "IdentityService",
     "ProfileAdmissionDefinition",
+    "lock_account_transaction",
 ]

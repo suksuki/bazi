@@ -14,6 +14,7 @@ import type {
 import type { HomeReadingBrief } from "./homeReadingTypes";
 import type { HomeRelationEffectAdmissionReviewEnvelope } from "./homeRelationEffectAdmissionTypes";
 import type { HomeRelationEffectEvidencePacketEnvelope } from "./homeRelationEffectEvidencePacketTypes";
+import type { HomeRelationEffectEvidenceRequestReceipt } from "./homeRelationEffectEvidenceRequestTypes";
 import type { HomeRelationEffectResearchFrontierEnvelope } from "./homeRelationEffectFrontierTypes";
 import type {
   HomeSourceCoordinateReview,
@@ -28,6 +29,7 @@ import type {
 export type { HomeReadingBrief } from "./homeReadingTypes";
 export type { HomeRelationEffectAdmissionReviewEnvelope } from "./homeRelationEffectAdmissionTypes";
 export type { HomeRelationEffectEvidencePacketEnvelope } from "./homeRelationEffectEvidencePacketTypes";
+export type { HomeRelationEffectEvidenceRequestReceipt } from "./homeRelationEffectEvidenceRequestTypes";
 export type { HomeRelationEffectResearchFrontierEnvelope } from "./homeRelationEffectFrontierTypes";
 export type { HomeMechanismQualification } from "./homeQualificationTypes";
 export type {
@@ -313,6 +315,7 @@ export interface HomeSnapshot {
     relation_effect_frontier: HomeRelationEffectResearchFrontierEnvelope;
     relation_effect_admission_review: HomeRelationEffectAdmissionReviewEnvelope;
     relation_effect_evidence_packet: HomeRelationEffectEvidencePacketEnvelope;
+    relation_effect_evidence_request_receipt: HomeRelationEffectEvidenceRequestReceipt | null;
     mechanism_evidence: HomeMechanismEvidence;
     timing_evidence: HomeTimingEvidence;
     life_domains: HomeLifeDomainEvidence;
@@ -358,6 +361,8 @@ export interface HomeSnapshot {
     relation_effect_admission_review_hash: string;
     relation_effect_evidence_packet_ref: string;
     relation_effect_evidence_packet_hash: string;
+    relation_effect_evidence_request_receipt_ref: string | null;
+    relation_effect_evidence_request_receipt_hash: string | null;
     mechanism_vector_ref: string;
     mechanism_vector_hash: string;
     timing_vector_ref: string;

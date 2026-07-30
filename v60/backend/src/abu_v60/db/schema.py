@@ -251,6 +251,28 @@ mingli_readings = Table(
     schema="mingli",
 )
 
+mingli_relation_effect_evidence_request_receipts = Table(
+    "relation_effect_evidence_request_receipts",
+    metadata,
+    Column("receipt_ref", String(180), primary_key=True),
+    Column("receipt_version", String(100), nullable=False),
+    Column("requester_account_ref", String(160), nullable=False),
+    Column("case_ref", String(160), nullable=False),
+    Column("reading_ref", String(180), nullable=False),
+    Column("packet_ref", String(180), nullable=False),
+    Column("packet_hash", String(64), nullable=False),
+    Column("idempotency_key", String(180), nullable=False),
+    Column("receipt_json", JSONB, nullable=False),
+    Column("receipt_hash", String(64), nullable=False, unique=True),
+    Column(
+        "created_at",
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    ),
+    schema="mingli",
+)
+
 corpus_qualification_runs = Table(
     "corpus_qualification_runs",
     metadata,

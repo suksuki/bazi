@@ -5,6 +5,10 @@ import type {
   HomeRelationEffectEvidenceDimensionSlot,
   HomeRelationEffectProfessionalArtifactKind,
 } from "../homeRelationEffectEvidencePacketTypes";
+import {
+  RelationEffectEvidenceRequestControl,
+  RelationEffectEvidenceRequestSummary,
+} from "./RelationEffectEvidenceRequest";
 
 const SLOT_LABELS = {
   year: "年柱",
@@ -60,9 +64,11 @@ const PROFESSIONAL_PATH_LABELS = {
 export function RelationEffectEvidencePacket({
   home,
   mode,
+  onEvidenceRequestChanged,
 }: {
   home: HomeSnapshot;
   mode: "summary" | "detailed";
+  onEvidenceRequestChanged: () => Promise<void>;
 }) {
   const packet = home.mingli.relation_effect_evidence_packet;
   if (
@@ -150,6 +156,9 @@ export function RelationEffectEvidencePacket({
             当前运行基底只能定位事实与缺口，不是专业证据；六维材料未齐，不能讨论关系作用或来源可用性。
           </p>
           <DecisionPath path={packet.decision_path} />
+          {mode === "summary" && (
+            <RelationEffectEvidenceRequestSummary home={home} />
+          )}
         </>
       ) : (
         <p className="relation-effect-evidence-empty">
@@ -160,6 +169,10 @@ export function RelationEffectEvidencePacket({
       {mode === "detailed" && triggered && (
         <>
           <RequiredProfessionalPath path={packet.required_professional_path} />
+          <RelationEffectEvidenceRequestControl
+            home={home}
+            onChanged={onEvidenceRequestChanged}
+          />
           <div
             className="relation-effect-evidence-demands"
             data-demand-packet-count={packet.demand_packet_count}

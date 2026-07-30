@@ -188,7 +188,11 @@ export function buildRelationEffectEvidencePacketFixture() {
     packet.packet_ref;
   fixture.bindings.lab.relation_effect_evidence_packet_hash =
     packet.packet_hash;
-  return { ...fixture, packet };
+  fixture.bindings.lab.relation_effect_evidence_request_receipt_ref =
+    null;
+  fixture.bindings.lab.relation_effect_evidence_request_receipt_hash =
+    null;
+  return { ...fixture, packet, requestReceipt: null };
 }
 
 export function makeNotTriggeredEvidencePacketFixture() {

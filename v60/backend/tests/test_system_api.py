@@ -23,7 +23,7 @@ def test_manifest_has_no_v50_runtime_dependency() -> None:
     assert payload["reasoner_runtime"]["status"] == "NOT_CONFIGURED"
     assert payload["reasoner_runtime"]["network_calls_enabled"] is False
     assert payload["engines"]["context"] == "v60.experience-context.003"
-    assert payload["engines"]["mingli"] == "v60.mingli-cognitive-engine.023"
+    assert payload["engines"]["mingli"] == "v60.mingli-cognitive-engine.024"
     assert payload["engines"]["story"] == "v60.life-story-engine.009"
     relation_effect_admission = payload["relation_effect_rule_admission"]
     assert relation_effect_admission["professional_rule_count"] == 0
@@ -60,8 +60,8 @@ def test_health_binds_database_to_runtime_foundation() -> None:
     assert payload["status"] == "ready"
     assert payload["database"] == {
         "status": "ready",
-        "foundation_version": "v60.foundation.014",
-        "expected_foundation_version": "v60.foundation.014",
+        "foundation_version": "v60.foundation.015",
+        "expected_foundation_version": "v60.foundation.015",
     }
 
 
@@ -82,6 +82,7 @@ def test_runtime_status_exposes_owner_integrity_without_case_content() -> None:
         "invalid_dream_return_attention_applications": 0,
         "invalid_dream_return_attention_selections": 0,
         "invalid_life_tree_admissions": 0,
+        "invalid_relation_effect_evidence_request_receipts": 0,
         "invalid_world_actor_admissions": 0,
         "invalid_world_event_admissions": 0,
         "orphan_encounters": 0,

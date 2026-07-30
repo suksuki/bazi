@@ -5,6 +5,7 @@ from typing import Any, Self
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import text
 
+from abu_v60.identity import lock_account_transaction
 from abu_v60.mingli.compiler import CompiledCase
 from abu_v60.provenance import canonical_json, content_hash
 
@@ -177,9 +178,9 @@ class MingliCaseAdmissionService:
         case_ref: str,
         require_existing: bool = True,
     ) -> bool:
-        connection.execute(
-            text("SELECT pg_advisory_xact_lock(hashtext(:account_ref))"),
-            {"account_ref": account_ref},
+        lock_account_transaction(
+            connection,
+            account_ref=account_ref,
         )
         target_exists = connection.execute(
             text(

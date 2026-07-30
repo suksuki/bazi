@@ -15,7 +15,12 @@ from abu_v60.experience.home import (
     HomeExperienceService,
     HomeExperienceUnavailableError,
 )
-from abu_v60.mingli import MechanismComparisonUnavailableError
+from abu_v60.mingli import (
+    MechanismComparisonUnavailableError,
+    RelationEffectEvidencePreparationRequest,
+    RelationEffectEvidenceRequestConflictError,
+    RelationEffectEvidenceRequestError,
+)
 
 router = APIRouter(prefix="/api/v60/experience", tags=["experience"])
 service = HomeExperienceService(engine)
@@ -63,3 +68,29 @@ def compare_home_mechanisms(session: SessionDependency) -> dict[str, Any]:
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
         ) from exc
+
+
+@router.post("/home/relation-effect-evidence-request")
+def request_relation_effect_evidence(
+    payload: RelationEffectEvidencePreparationRequest,
+    session: SessionDependency,
+) -> dict[str, Any]:
+    try:
+        receipt = service.request_relation_effect_evidence(
+            account_ref=session.account.account_ref,
+            request=payload,
+        )
+    except (
+        HomeExperienceUnavailableError,
+        RelationEffectEvidenceRequestConflictError,
+    ) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+    except RelationEffectEvidenceRequestError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    return receipt.model_dump(mode="json")

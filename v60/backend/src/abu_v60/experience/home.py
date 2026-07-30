@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy.engine import Engine
 
 from abu_v60.abu import MingliAbuExpressionProjector
+from abu_v60.identity import lock_account_transaction
 from abu_v60.mingli import (
     MingliExplanationProjector,
     MingliLifeDomainEvidenceCompiler,
@@ -22,6 +23,7 @@ from abu_v60.mingli import (
     MingliReadingProjector,
     MingliReadingStore,
     MingliRelationEffectAdmissionProjector,
+    MingliRelationEffectEvidencePacketEnvelope,
     MingliRelationEffectEvidencePacketProjector,
     MingliRelationEffectResearchFrontierProjector,
     MingliSourceCoordinateReviewCompiler,
@@ -30,6 +32,9 @@ from abu_v60.mingli import (
     MingliSourceUsabilityPrerequisiteProjector,
     MingliTimingEvidenceCompiler,
     MingliTimingVectorStore,
+    RelationEffectEvidencePreparationRequest,
+    RelationEffectEvidenceRequestReceipt,
+    RelationEffectEvidenceRequestStore,
     StructuralCandidateCompiler,
 )
 from abu_v60.mingli.brief import MingliReadingBriefProjector
@@ -68,6 +73,9 @@ class HomeExperienceService:
         relation_effect_evidence: (
             MingliRelationEffectEvidencePacketProjector | None
         ) = None,
+        relation_effect_requests: (
+            RelationEffectEvidenceRequestStore | None
+        ) = None,
         mechanism_compiler: MingliMechanismEvidenceCompiler | None = None,
         mechanism_store: MingliMechanismVectorStore | None = None,
         mechanism_comparison: MingliMechanismComparisonService | None = None,
@@ -81,6 +89,7 @@ class HomeExperienceService:
         analysis_date_provider: Callable[[str], date] | None = None,
         abu: MingliAbuExpressionProjector | None = None,
     ) -> None:
+        self._engine = engine
         self._cases = cases or MingliCaseService(engine)
         self._candidates = candidates or StructuralCandidateCompiler()
         self._readings = readings or MingliReadingProjector()
@@ -108,6 +117,10 @@ class HomeExperienceService:
         self._relation_effect_evidence = (
             relation_effect_evidence
             or MingliRelationEffectEvidencePacketProjector()
+        )
+        self._relation_effect_requests = (
+            relation_effect_requests
+            or RelationEffectEvidenceRequestStore(engine)
         )
         self._mechanism_compiler = mechanism_compiler or MingliMechanismEvidenceCompiler()
         self._mechanism_store = mechanism_store or MingliMechanismVectorStore(engine)
@@ -239,6 +252,12 @@ class HomeExperienceService:
                 admission_review=relation_effect_admission_review,
             )
         )
+        relation_effect_evidence_request_receipt = (
+            self._relation_effect_requests.for_packet(
+                account_ref=account_ref,
+                packet=relation_effect_evidence_packet,
+            )
+        )
         explanation = self._explanations.project(
             reading=reading,
             facts=facts,
@@ -355,6 +374,14 @@ class HomeExperienceService:
                 "relation_effect_evidence_packet": (
                     relation_effect_evidence_packet.model_dump(mode="json")
                 ),
+                "relation_effect_evidence_request_receipt": (
+                    relation_effect_evidence_request_receipt.model_dump(
+                        mode="json"
+                    )
+                    if relation_effect_evidence_request_receipt
+                    is not None
+                    else None
+                ),
                 "mechanism_evidence": mechanism_vector.model_dump(mode="json"),
                 "timing_evidence": timing_vector.model_dump(mode="json"),
                 "life_domains": life_domain_vector.model_dump(mode="json"),
@@ -441,6 +468,18 @@ class HomeExperienceService:
                 "relation_effect_evidence_packet_hash": (
                     relation_effect_evidence_packet.packet_hash
                 ),
+                "relation_effect_evidence_request_receipt_ref": (
+                    relation_effect_evidence_request_receipt.receipt_ref
+                    if relation_effect_evidence_request_receipt
+                    is not None
+                    else None
+                ),
+                "relation_effect_evidence_request_receipt_hash": (
+                    relation_effect_evidence_request_receipt.receipt_hash
+                    if relation_effect_evidence_request_receipt
+                    is not None
+                    else None
+                ),
                 "source_usability_prerequisite_carriers": [
                     item.model_dump(mode="json")
                     for item in source_usability_prerequisite.carriers
@@ -499,6 +538,45 @@ class HomeExperienceService:
         }
 
     def compare_mechanisms(self, *, account_ref: str) -> dict[str, Any]:
-        snapshot = self.snapshot(account_ref=account_ref)
-        vector = self._mechanism_store.get(vector_ref=str(snapshot["lab"]["mechanism_vector_ref"]))
-        return self._mechanism_comparison.compare(vector=vector)
+        with self._engine.begin() as connection:
+            lock_account_transaction(
+                connection,
+                account_ref=account_ref,
+            )
+            snapshot = self.snapshot(account_ref=account_ref)
+            vector = self._mechanism_store.get(
+                vector_ref=str(
+                    snapshot["lab"]["mechanism_vector_ref"]
+                )
+            )
+            return self._mechanism_comparison.compare_in_connection(
+                connection,
+                account_ref=account_ref,
+                vector=vector,
+            )
+
+    def request_relation_effect_evidence(
+        self,
+        *,
+        account_ref: str,
+        request: RelationEffectEvidencePreparationRequest,
+    ) -> RelationEffectEvidenceRequestReceipt:
+        with self._engine.begin() as connection:
+            lock_account_transaction(
+                connection,
+                account_ref=account_ref,
+            )
+            snapshot = self.snapshot(account_ref=account_ref)
+            packet = (
+                MingliRelationEffectEvidencePacketEnvelope.model_validate(
+                    snapshot["mingli"][
+                        "relation_effect_evidence_packet"
+                    ]
+                )
+            )
+            return self._relation_effect_requests.request_in_connection(
+                connection,
+                account_ref=account_ref,
+                request=request,
+                packet=packet,
+            )

@@ -115,7 +115,11 @@ export function HomeCompanionRail({
               mode="summary"
               receipt={home.mingli.source_discussion_receipt}
             />
-            <RelationEffectReviewStack home={home} mode="summary" />
+            <RelationEffectReviewStack
+              home={home}
+              mode="summary"
+              onEvidenceRequestChanged={onHomeRefresh}
+            />
             <MingliEvidenceExplanation explanation={home.mingli.explanation} />
             <MechanismEvidenceContrast
               depth={home.mingli.mechanism_evidence_depth}
@@ -251,7 +255,11 @@ export function HomeCompanionRail({
               mode="detailed"
               receipt={home.mingli.source_discussion_receipt}
             />
-            <RelationEffectReviewStack home={home} mode="detailed" />
+            <RelationEffectReviewStack
+              home={home}
+              mode="detailed"
+              onEvidenceRequestChanged={onHomeRefresh}
+            />
             <MechanismEvidenceContrast
               depth={home.mingli.mechanism_evidence_depth}
               mode="detailed"

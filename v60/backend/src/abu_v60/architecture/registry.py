@@ -15,7 +15,7 @@ from abu_v60.architecture.contracts import (
 @lru_cache(maxsize=1)
 def runtime_architecture() -> RuntimeArchitecture:
     architecture = RuntimeArchitecture(
-        architecture_version="v60.runtime-architecture.046",
+        architecture_version="v60.runtime-architecture.047",
         modules=(
             RuntimeModule(
                 module_id="identity",
@@ -33,7 +33,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="mingli",
                 kind=ModuleKind.ENGINE,
-                version="v60.mingli-cognitive-engine.023",
+                version="v60.mingli-cognitive-engine.024",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("mingli",),
                 reads_from=("identity",),
@@ -89,6 +89,9 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "versioned_relation_effect_evidence_packet",
                     "professional_evidence_readiness_projection",
                     "relation_effect_decision_path_withheld",
+                    "append_only_relation_effect_evidence_request_receipt",
+                    "account_private_evidence_preparation_request",
+                    "server_derived_evidence_request_items",
                 ),
                 writes_canonical_state=True,
             ),
@@ -307,7 +310,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-mingli",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-mingli.017",
+                version="v60.unit-mingli.018",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context",),
                 capabilities=(
@@ -331,6 +334,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "relation_effect_research_frontier_summary",
                     "relation_effect_shortcut_rejection_summary",
                     "relation_effect_evidence_readiness_summary",
+                    "relation_effect_evidence_preparation_request",
                 ),
             ),
             RuntimeModule(
@@ -365,7 +369,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-lab",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-lab.014",
+                version="v60.unit-lab.015",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "knowledge", "cognition"),
                 capabilities=(
@@ -388,6 +392,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "competing_relation_interpretation_inspection",
                     "relation_effect_evidence_packet_inspection",
                     "runtime_basis_professional_evidence_separation",
+                    "relation_effect_evidence_request_receipt_inspection",
                 ),
             ),
         ),

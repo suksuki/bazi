@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from sqlalchemy import text
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 
 from abu_v60.mingli.quant_contracts import MingliQuantFoundationVector
 from abu_v60.provenance import canonical_json
@@ -71,7 +71,18 @@ class MingliQuantVectorStore:
 
     def get(self, *, vector_ref: str) -> MingliQuantFoundationVector:
         with self._engine.connect() as connection:
-            row = self._load_row(connection, vector_ref=vector_ref)
+            return self.get_in_connection(
+                connection,
+                vector_ref=vector_ref,
+            )
+
+    def get_in_connection(
+        self,
+        connection: Connection,
+        *,
+        vector_ref: str,
+    ) -> MingliQuantFoundationVector:
+        row = self._load_row(connection, vector_ref=vector_ref)
         if row is None:
             raise MingliQuantVectorNotFoundError("quant_vector_not_found")
         vector = MingliQuantFoundationVector.model_validate(row["vector_json"])

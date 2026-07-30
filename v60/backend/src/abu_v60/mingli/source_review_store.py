@@ -78,7 +78,18 @@ class MingliSourceReviewVectorStore:
         vector_ref: str,
     ) -> MingliSourceCoordinateReviewVector:
         with self._engine.connect() as connection:
-            row = self._load_row(connection, vector_ref=vector_ref)
+            return self.get_in_connection(
+                connection,
+                vector_ref=vector_ref,
+            )
+
+    def get_in_connection(
+        self,
+        connection: Connection,
+        *,
+        vector_ref: str,
+    ) -> MingliSourceCoordinateReviewVector:
+        row = self._load_row(connection, vector_ref=vector_ref)
         if row is None:
             raise MingliSourceReviewVectorNotFoundError("source_review_vector_not_found")
         vector = MingliSourceCoordinateReviewVector.model_validate(row["vector_json"])

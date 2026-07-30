@@ -1,6 +1,6 @@
 # V60 Mingli Core and Quantitative Model
 
-Status: `RELATION_EFFECT_RESEARCH_FRONTIER_V1_IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
+Status: `EVIDENCE_PREPARATION_REQUEST_V1_IMPLEMENTED_AND_REAL_BROWSER_AUDITED_LOCAL`
 
 ## Product decision
 
@@ -37,6 +37,8 @@ must not be reported as real-world accuracy.
 | Source usability discussion prerequisites | Executable | Competing source scopes and missing rules only; no scope selection or usability verdict |
 | Source discussion abstention receipt | Executable read projection | Facts and gaps only; not Gate/Decision authority |
 | Relation-effect research frontier | Executable read projection | Orders match-scope versus effect-rule demands; admits no rule or verdict |
+| Relation-effect evidence readiness | Executable read projection | One exact demand, six dimensions, zero professional evidence |
+| Evidence preparation request receipt | Executable persistent request | Account-private and append-only; not material, review, rule or Decision |
 | Root usability and seasonal capacity | Missing | V50 research exists but is not admitted |
 | Relation effect and transformation | Missing | Relation membership is not effect |
 | Mechanism candidate evidence | Executable | Five versioned patterns; candidate presence only |
@@ -308,6 +310,83 @@ pass. A real Chrome replay verifies `10/7/3 -> 3 -> 1/2/0`, shared
 Mingli/Lab identity, refresh stability, zero read-time POSTs and no authority
 leak. Evidence is in `.artifacts/source-coordinate-review/`.
 
+## Implemented relation-effect evidence preparation request v1
+
+The Frontier now continues through the shortcut pre-admission Review and the
+professional-evidence readiness packet without pretending that a missing rule
+has been decided:
+
+```text
+deterministic relation membership
++ exact source coordinate
+-> relation-effect research Frontier
+-> shortcut pre-admission Review
+   (one exact proposition reviewed, zero rules admitted)
+-> professional-evidence readiness packet
+   (one exact demand, six dimensions, 0 / 6 ready)
+-> optional preparation-request receipt
+   (account-private, append-only, NOT_EVIDENCE)
+-> effect and source usability remain UNRESOLVED
+```
+
+The visible command is deliberately narrow. The client sends only the request
+contract version, expected packet Ref/Hash and a deterministic idempotency key.
+The server derives the exact Year-Ji / Hour-Wu / Month-Zi demand and all six
+slots. Account, Case, demand items, requirements, artifact kinds, quotations,
+files, URLs, free text, review results and effect conclusions are not client
+inputs.
+
+The persisted receipt contains one exact demand, six requested slots, zero
+professional materials, zero professional evidence and zero ready dimensions.
+It is not a queue claiming that an expert or agent will automatically do the
+work. V60 currently has no material-intake surface or automatic executor for
+this request. Mingli Calculation shows the compact recorded state; Lab shows
+the same Receipt Ref/Hash and complete server-owned checklist.
+
+This advances the central decision mechanism by making its abstention
+recoverable:
+
+```text
+relation/source facts
+-> deterministic SYSTEM facts are available
+
+mechanism attention candidates
+-> an existing bounded Cognition Decision may order investigation priority
+
+relation effect or source usability
+-> no admitted professional rule and 0 / 6 evidence
+-> DecisionRequest is not created
+-> Gate and Reasoner are not invoked
+-> WITHHELD / UNRESOLVED
+-> preparation request may be recorded without changing that result
+```
+
+The first two branches are implemented; the third now has a durable next-action
+receipt but still has no professional decision authority. A generic
+Epistemic-Gate record would not close this gap: complete professional evidence,
+Owner professional review, immutable Knowledge admission and a new Reading
+bound to that exact rule version are still required before deterministic
+application.
+
+The write path is fenced against concurrent authority drift. Active-Case
+switching, mechanism comparison and preparation-request creation share one
+account transaction lock from current snapshot through write, and each lower
+writer rechecks the active `HUMAN_OWNER` Case. Runtime Integrity rebuilds the
+historical packet from the persisted Reading, Quant Vector and Source Review
+Vector and exact-compares the derived receipt. A self-consistent forged packet,
+changed six-dimension guidance, wrong account or reference Case fails closed.
+
+Current identities are `v60.mingli-cognitive-engine.024`,
+`v60.foundation.015`, `v60.runtime-architecture.047`,
+`v60.unit-mingli.018`, `v60.unit-lab.015` and migration
+`0023_relation_effect_request`. All 277 backend tests, Ruff,
+TypeScript/Vite, Runtime Architecture, source maintainability and the
+relation-effect contract matrices pass. A real signed-in browser verified one
+request item, six dimensions, zero intake controls, the same Receipt Ref/Hash
+in Mingli and Lab, refresh and managed-Runtime-restart recovery, and zero
+console warnings/errors. Evidence is in
+`.artifacts/relation-effect-evidence-request/`.
+
 ## Implemented verifiable attention-Decision trace v1
 
 The persisted mechanism comparison has always been narrower than a professional
@@ -533,6 +612,13 @@ eight-part mechanism qualification projection or professional admission.
 Those scopes are not Decision inputs today and remain explicitly unbound in
 the Decision trace.
 
+For the current relation-effect request, the router stops earlier:
+deterministic membership and coordinates exist, but no professional rule and
+no professional evidence dimension is ready. The correct decision state is
+therefore `WITHHELD / UNRESOLVED`, not an LLM comparison. The persistent
+preparation receipt records a requested next action only; it neither creates a
+DecisionRequest nor upgrades the evidence state.
+
 ## Quantitative Mingli model
 
 V60 separates four numerical meanings.
@@ -747,14 +833,20 @@ selection.
 9. **Decision evidence trace:** completed for server verification of the
    immutable static-natal attention Decision and one shared Mingli/Abu/Lab
    handoff with explicit unbound input scopes.
-10. **Product expression:** Abu explains the exact Reading, Dream makes a
-   bounded uncertainty playable, Lab exposes the evidence, and Theater adapts
-   only approved source packages.
+10. **Relation-effect evidence preparation:** completed for one persistent,
+    account-private, server-derived request over the exact six-dimensional
+    gap, without material or Decision promotion.
+11. **Product expression:** Abu explains the exact Reading, Dream makes a
+    bounded uncertainty playable, Lab exposes the evidence, and Theater adapts
+    only approved source packages.
 
-The immediate implementation priority is to deepen the evidence behind the
-current explanation: root usability, seasonal capacity, relation effect,
-competing mechanisms and explicit counter-evidence. The calibration ledger
-remains the next quantitative proof layer after those claims can be stated
-with stable professional meaning. Probability work remains blocked until both
-the claim model and the ledger can state population, sample size, outcome
-quality, model version and abstention behavior.
+The next safe Mingli slice is a provenance-first material boundary for one
+requested dimension, with immutable source identity and an explicit
+`MATERIAL_NOT_YET_PROFESSIONAL_EVIDENCE` state. It must remain outside
+Knowledge and Decision until professional review is implemented. Root
+usability, seasonal capacity, relation effect, competing mechanisms and
+counter-evidence remain unresolved. The calibration ledger remains the next
+quantitative proof layer only after those claims have stable professional
+meaning. Probability work remains blocked until both the claim model and the
+ledger can state population, sample size, outcome quality, model version and
+abstention behavior.

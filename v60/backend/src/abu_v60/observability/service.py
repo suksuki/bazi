@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from sqlalchemy import text
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 
 from abu_v60.architecture import runtime_architecture
 from abu_v60.dream.catalog import DreamEpisodeCatalog, EpisodeCatalogError
@@ -21,6 +21,16 @@ from abu_v60.media import (
     RuntimeMediaError,
     runtime_media_manifest,
 )
+from abu_v60.mingli.relation_effect_history import (
+    MingliRelationEffectHistoricalPacketResolver,
+)
+from abu_v60.mingli.relation_effect_request import (
+    RelationEffectEvidenceRequestStore,
+)
+from abu_v60.mingli.relation_effect_request_contracts import (
+    RelationEffectEvidencePreparationRequest,
+    RelationEffectEvidenceRequestReceipt,
+)
 from abu_v60.provenance import content_hash
 from abu_v60.runtime import world_runtime_worker
 from abu_v60.system_manifest import PRIMARY_WORLD_ID
@@ -36,10 +46,107 @@ from abu_v60.world import (
 class RuntimeIntegrityService:
     """Read-only operational proof for the executable V60 boundaries."""
 
+    @staticmethod
+    def _count_invalid_relation_effect_evidence_requests(
+        connection: Connection,
+        *,
+        resolver: MingliRelationEffectHistoricalPacketResolver,
+    ) -> int:
+        invalid_count = 0
+        rows = (
+            connection.execute(
+                text(
+                    """
+                    SELECT request.*, account.account_ref
+                               AS persisted_account_ref,
+                           owner_case.owner_account_ref,
+                           owner_case.subject_kind
+                               AS owner_case_subject_kind,
+                           reading.case_ref AS reading_case_ref,
+                           reading.reading_hash AS persisted_reading_hash
+                    FROM mingli.relation_effect_evidence_request_receipts
+                         AS request
+                    LEFT JOIN identity.accounts AS account
+                      ON account.account_ref =
+                         request.requester_account_ref
+                    LEFT JOIN mingli.cases AS owner_case
+                      ON owner_case.case_ref = request.case_ref
+                    LEFT JOIN mingli.readings AS reading
+                      ON reading.reading_ref = request.reading_ref
+                    """
+                )
+            )
+            .mappings()
+            .all()
+        )
+        for row in rows:
+            try:
+                receipt = (
+                    RelationEffectEvidenceRequestReceipt.model_validate(
+                        row["receipt_json"]
+                    )
+                )
+                expected_columns = {
+                    "receipt_ref": receipt.receipt_ref,
+                    "receipt_version": receipt.receipt_version,
+                    "requester_account_ref": (
+                        receipt.requester_account_ref
+                    ),
+                    "case_ref": receipt.case_ref,
+                    "reading_ref": receipt.reading_ref,
+                    "packet_ref": receipt.packet_ref,
+                    "packet_hash": receipt.packet_hash,
+                    "idempotency_key": receipt.idempotency_key,
+                    "receipt_hash": receipt.receipt_hash,
+                }
+                packet = resolver.resolve_in_connection(
+                    connection,
+                    reading_ref=receipt.reading_ref,
+                )
+                expected_receipt = (
+                    RelationEffectEvidenceRequestStore
+                    .derive_expected_receipt(
+                        account_ref=receipt.requester_account_ref,
+                        request=(
+                            RelationEffectEvidencePreparationRequest(
+                                request_version=receipt.request_version,
+                                expected_packet_ref=receipt.packet_ref,
+                                expected_packet_hash=receipt.packet_hash,
+                                idempotency_key=receipt.idempotency_key,
+                            )
+                        ),
+                        packet=packet,
+                    )
+                )
+                if (
+                    any(
+                        row[key] != value
+                        for key, value in expected_columns.items()
+                    )
+                    or row["receipt_json"]
+                    != receipt.model_dump(mode="json")
+                    or row["persisted_account_ref"]
+                    != receipt.requester_account_ref
+                    or row["owner_account_ref"]
+                    != receipt.requester_account_ref
+                    or row["owner_case_subject_kind"] != "HUMAN_OWNER"
+                    or row["reading_case_ref"] != receipt.case_ref
+                    or row["persisted_reading_hash"]
+                    != receipt.reading_hash
+                    or receipt != expected_receipt
+                ):
+                    invalid_count += 1
+            except ValueError:
+                invalid_count += 1
+        return invalid_count
+
     def inspect(self, engine: Engine) -> dict[str, Any]:
         architecture = runtime_architecture()
         architecture.validate_boundaries()
         episode_catalog_service = DreamEpisodeCatalog()
+        relation_effect_packet_resolver = (
+            MingliRelationEffectHistoricalPacketResolver(engine)
+        )
         with engine.connect() as connection:
             migration_head = connection.execute(
                 text("SELECT version_num FROM alembic_version"),
@@ -65,6 +172,9 @@ class RuntimeIntegrityService:
                     SELECT
                         (SELECT count(*) FROM mingli.cases) AS cases,
                         (SELECT count(*) FROM mingli.readings) AS readings,
+                        (SELECT count(*)
+                         FROM mingli.relation_effect_evidence_request_receipts)
+                            AS relation_effect_evidence_requests,
                         (SELECT count(*) FROM world.actors) AS actors,
                         (SELECT count(*) FROM cognition.decision_records) AS decisions,
                         (SELECT count(*) FROM world.events) AS world_events,
@@ -362,6 +472,12 @@ class RuntimeIntegrityService:
                         invalid_dream_return_attention_applications += 1
                 except ValueError:
                     invalid_dream_return_attention_applications += 1
+            invalid_relation_effect_evidence_request_receipts = (
+                self._count_invalid_relation_effect_evidence_requests(
+                    connection,
+                    resolver=relation_effect_packet_resolver,
+                )
+            )
             inconsistent_reveals = int(
                 connection.execute(
                     text(
@@ -431,6 +547,9 @@ class RuntimeIntegrityService:
             ),
             "invalid_dream_return_attention_applications": (
                 invalid_dream_return_attention_applications
+            ),
+            "invalid_relation_effect_evidence_request_receipts": (
+                invalid_relation_effect_evidence_request_receipts
             ),
             "reveal_without_settled_world_event": inconsistent_reveals,
         }

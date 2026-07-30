@@ -42,6 +42,53 @@ The same snapshot feeds Dream, Mingli Calculation, Abu, Theater and Lab. The
 current implementation is desktop-first; mobile remains a guardrail until the
 desktop composition is stable.
 
+## Completed Delivery: Persistent Relation-Effect Evidence Preparation Request
+
+Status: `IMPLEMENTED_AND_REAL_BROWSER_AUDITED_LOCAL`
+
+- The exact relation-effect evidence gap now has one visible product action:
+  `登记补证准备请求`. It is available only when the canonical current
+  professional-evidence packet contains an exact demand. A clear Case still
+  exposes no action and performs no write.
+- The browser submits only the packet Ref/Hash, request contract version and a
+  deterministic idempotency key. Mingli derives the exact demand and all six
+  preparation slots on the server; the client cannot submit an account, Case,
+  demand, material, quotation, URL, free text, professional verdict or effect
+  conclusion.
+- The result is an account-private, append-only, replay-safe receipt persisted
+  in `mingli.relation_effect_evidence_request_receipts`. Mingli Calculation
+  shows the compact `已登记 / 0 份材料 / 0/6` state, while Lab exposes the
+  same Receipt Ref/Hash, exact Year-Ji / Hour-Wu / Month-Zi demand and the six
+  server-owned next actions.
+- The receipt is explicitly `NOT_EVIDENCE`. It records zero professional
+  materials, zero professional evidence and zero ready dimensions. There is
+  currently no automatic executor or material-intake surface; file, URL and
+  free-text submission are closed. Owner professional review, Knowledge
+  admission, Gate and a relation-effect Decision remain uninvoked.
+- Active-Case switching, preparation-request creation and mechanism
+  comparison now share one account transaction fence. The lock covers the
+  current snapshot through the Receipt or Decision write, and the lower
+  writers independently require the same account's active `HUMAN_OWNER` Case.
+  A stale packet therefore cannot be recorded during a concurrent Case or
+  mechanism change.
+- Runtime Integrity no longer trusts a self-consistent receipt. It rebuilds
+  the canonical historical packet from the persisted Reading, Quant Vector
+  and Source Review Vector, reprojects the complete rule chain and exact
+  compares the derived receipt. Forged packet lineage, forged six-dimension
+  guidance, wrong-account and non-Owner records fail closed.
+- Foundation is now `v60.foundation.015`, Mingli
+  `v60.mingli-cognitive-engine.024`, Unit Mingli/Lab `.018/.015`, Runtime
+  Architecture `.047` and migration head
+  `0023_relation_effect_request`. Knowledge remains `.008`, Cognition `.004`
+  and Dream Game `.015`.
+- All 277 backend tests, Ruff, TypeScript/Vite build, Runtime Architecture,
+  source maintainability and four relation-effect frontend contracts pass. A
+  signed-in real browser recorded the one exact demand and six preparation
+  slots, verified zero material controls and zero console warnings/errors,
+  then recovered the same Receipt Ref/Hash after refresh and managed Runtime
+  restart. Evidence is in
+  `.artifacts/relation-effect-evidence-request/`.
+
 ## Completed Delivery: Relation-Effect Professional Evidence Readiness
 
 Status: `IMPLEMENTED_AND_REAL_BROWSER_AUDITED_LOCAL`

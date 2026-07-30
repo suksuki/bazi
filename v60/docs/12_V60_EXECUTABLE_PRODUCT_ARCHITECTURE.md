@@ -69,7 +69,7 @@ attempt to write canonical state.
 | --- | --- | --- |
 | Account, session, profile, consent | Identity | Read through identity ports |
 | Admitted knowledge profile identity and content Hash | Knowledge | Read exact immutable profile |
-| ChartVersion, facts, LifeCaseRevision | Mingli | Read-only projection |
+| ChartVersion, facts, LifeCaseRevision, Reading lineage, evidence-preparation receipt | Mingli | Read-only projection or typed request |
 | Decision request, gate receipt, formal decision | Cognition | Submit typed requests |
 | ClockEpoch, WorldEvent, evidence, actor timeline, outbox | World | Consume typed output |
 | QuestionInstance and ScenePlan | Story | Read committed source refs |
@@ -92,6 +92,8 @@ one application service:
 | `dream.outcomes.DreamOutcomeCoordinator` | committed WorldEvent to Fruit/Reveal reconciliation | browser commands or World outcomes |
 | `dream.encounter_creation.DreamEncounterCreator` | one canonical Encounter creation transaction for Grove and graph continuation | command routing, authored content or public projection |
 | `dream.return_attention.DreamReturnAttentionCoordinator` | candidate-bound next-observation selection, replay and same-tree application | Mingli evidence, Knowledge admission, Question/Answer/NPC/outcome mutation |
+| `mingli.relation_effect_request.RelationEffectEvidenceRequestStore` | account-private, append-only preparation-request receipt derived from one canonical packet | material intake, professional evidence, review, Knowledge or Decision |
+| `mingli.relation_effect_history.MingliRelationEffectHistoricalPacketResolver` | reconstruct one packet from immutable Reading/Quant/Source Review lineage for integrity checks | current-Case selection or receipt mutation |
 | `App` | session, navigation and Runtime composition | login layout, companion-unit internals |
 | `components/*` | bounded presentation responsibilities | canonical product state |
 
@@ -217,12 +219,28 @@ deterministic relation membership and source coordinate
 -> research Frontier
 -> shortcut pre-admission Review
 -> professional evidence readiness packet
+-> optional account-private preparation-request receipt
+   (0 materials / 0 professional evidence / 0 ready dimensions)
 -> effect and source usability remain UNRESOLVED
 ```
 
 Runtime facts, coordinate refs, Policy and Proposal refs in that packet are
 `RUNTIME_CONTEXT_ONLY_NOT_PROFESSIONAL_EVIDENCE`. They identify the precise
 question and missing dimensions; they do not satisfy those dimensions.
+
+The preparation receipt is the only new canonical write in this slice. It
+records that one account asked to preserve the server-owned gap checklist; it
+does not accept or generate evidence. The client sends only the current packet
+Ref/Hash, request version and idempotency key. Mingli derives the exact demand
+and six slots, persists the receipt append-only, and restores the same identity
+after refresh or process restart.
+
+Active-Case admission, mechanism comparison and preparation-request creation
+share one account-scoped PostgreSQL transaction lock. Each write path also
+revalidates that its Case belongs to the same active `HUMAN_OWNER`. Runtime
+Integrity reconstructs the historical packet from the persisted Reading and
+its immutable Quant and Source Review vectors rather than accepting a
+self-consistent receipt as proof.
 
 Any future professional relation-effect Decision requires a separate
 authority chain:
@@ -236,9 +254,10 @@ complete professional evidence packet
 -> typed effect result, or still UNRESOLVED
 ```
 
-The current packet does not execute this chain. It creates no DecisionRequest,
-Gate receipt, DecisionRecord, Knowledge promotion request or canonical write,
-and existing Readings cannot acquire a newly admitted Profile retroactively.
+The current packet and preparation receipt do not execute this chain. They
+create no DecisionRequest, Gate receipt, DecisionRecord, Knowledge promotion
+request, professional material or effect/usability write. Existing Readings
+cannot acquire a newly admitted Profile retroactively.
 
 Player gestures follow an equally explicit path:
 
@@ -471,12 +490,13 @@ A relationship fact is not automatically effective work. Unknown capacity or
 professional status remains visibly `UNRESOLVED`.
 
 For the current narrow Zi-Wu question, Lab also projects a six-dimensional
-professional evidence intake contract: applicability context, effect
+professional evidence readiness contract: applicability context, effect
 direction, completion conditions, blocking conditions, counter-evidence and
 professional provenance. Existing runtime basis refs remain separate from
 the empty professional-evidence channel. Mingli Calculation shows only the
-readiness summary; Lab may inspect requested artifact types, but neither unit
-may accept them or publish a rule.
+readiness summary. Lab may persist one preparation request and inspect its
+server-derived checklist, but neither unit may accept materials, conduct the
+professional review or publish a rule.
 
 The executable candidate chain is:
 
@@ -595,6 +615,8 @@ The executable architecture is ready; the content breadth is not:
   professionally reviewed;
 - one versioned relation-effect professional evidence packet with six empty
   readiness dimensions and no effect or source-usability verdict;
+- one account-private append-only preparation-request receipt over that packet,
+  with no material intake, automatic executor or professional evidence;
 - no production LLM orchestration;
 - no large NPC population or content factory;
 - desktop composition validated; mobile visual design deferred;

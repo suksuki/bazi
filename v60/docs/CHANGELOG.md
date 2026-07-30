@@ -2,6 +2,43 @@
 
 ## 2026-07-30
 
+### Persistent relation-effect evidence preparation request
+
+- Added `v60.mingli-relation-effect-evidence-request.001` and append-only
+  `v60.mingli-relation-effect-evidence-request-receipt.001`. The real exact
+  Year-Ji / Hour-Wu / Month-Zi demand can now be registered once as an
+  account-private preparation request and recovered after refresh or process
+  restart.
+- Restricted the client payload to request version, expected packet Ref/Hash
+  and deterministic idempotency key. Mingli derives the exact demand and six
+  slots on the server; no account, Case, item, material, URL, free text,
+  quotation, review or effect conclusion is accepted from the browser.
+- Added Mingli's compact `已登记 / 0 份材料 / 0/6` summary and Lab's detailed
+  Receipt Ref/Hash, exact demand and six next actions. A clear Case still emits
+  no command and performs no write.
+- Kept the receipt `NOT_EVIDENCE`: zero materials, zero professional evidence,
+  zero ready dimensions and no automatic executor or intake UI. Provider,
+  Reasoner, Owner review, Knowledge admission, Gate, relation-effect Decision,
+  probability and effect/usability writes remain disabled.
+- Added one account transaction fence shared by active-Case switching,
+  mechanism comparison and preparation-request creation from snapshot through
+  write. Lower writers also require the same account's active `HUMAN_OWNER`
+  Case.
+- Strengthened Runtime Integrity to rebuild the canonical historical packet
+  from persisted Reading/Quant/Source Review lineage and exact-compare the
+  derived receipt. Forged packet lineage, canonical six-slot guidance drift,
+  wrong-account and reference-Case records fail closed.
+- Added migration `0023_relation_effect_request`; advanced Foundation to
+  `.015`, Mingli to `.024`, Unit Mingli/Lab to `.018/.015` and Runtime
+  Architecture to `.047`. Knowledge `.008`, Cognition `.004` and Dream Game
+  `.015` are unchanged.
+- Passed all 277 backend tests, Ruff, TypeScript/Vite build, Runtime
+  Architecture, source maintainability and four relation-effect frontend
+  contracts. A signed-in real browser verified the persistent shared
+  Receipt Ref/Hash across Lab and Mingli, refresh and managed-Runtime-restart
+  recovery, zero intake controls and zero console warnings/errors. Evidence is
+  in `.artifacts/relation-effect-evidence-request/`.
+
 ### Relation-effect professional evidence readiness
 
 - Added `v60.mingli-relation-effect-evidence-packet.001` over the canonical
