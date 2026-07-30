@@ -7,6 +7,8 @@ import type {
   RuntimeAssetDelivery,
   RuntimeMediaManifest,
 } from "./api";
+import { DreamReadingObservationLens } from "./components/DreamReadingObservationLens";
+import type { DreamReadingObservationLensModel } from "./homeDreamObservationLens";
 
 const DOMAIN_LABELS = {
   career: "职责与位置",
@@ -75,12 +77,14 @@ export function DreamGroveScene({
   background,
   busy,
   grove,
+  lens,
   media,
   onSelect,
 }: {
   background: RuntimeAssetDelivery;
   busy: boolean;
   grove: DreamGrove;
+  lens: DreamReadingObservationLensModel;
   media: RuntimeMediaManifest;
   onSelect: (candidateRef: string) => void;
 }) {
@@ -98,6 +102,7 @@ export function DreamGroveScene({
         <h1>三段人生正在林中继续</h1>
         <span>选择一棵树，先看已经发生的事，再留下你的判断。</span>
       </div>
+      <DreamReadingObservationLens lens={lens} />
       <div
         className="dream-grove-trees"
         role="group"

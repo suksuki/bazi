@@ -19,7 +19,9 @@
     "audit:mechanism-evidence-depth": "node tools/mechanism-evidence-depth-audit.mjs",
     "audit:source-coordinate-review": "node tools/source-coordinate-review-audit.mjs",
     "audit:mechanism-decision-trace": "node tools/mechanism-decision-trace-audit.mjs",
-    "audit:mechanism-decision-contract": "node tools/mechanism-decision-trace-contract-audit.mjs"
+    "audit:mechanism-decision-contract": "node tools/mechanism-decision-trace-contract-audit.mjs",
+    "audit:dream-reading-lens-contract": "node tools/dream-reading-lens-contract-audit.mjs",
+    "audit:dream-reading-lens": "node tools/dream-reading-lens-audit.mjs"
   },
   "dependencies": {
     "pixi.js": "^8.19.0",

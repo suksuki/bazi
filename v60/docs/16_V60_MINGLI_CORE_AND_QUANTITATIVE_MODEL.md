@@ -35,6 +35,7 @@ must not be reported as real-world accuracy.
 | Ten Gods | Executable | Complete deterministic stem matrix, profile-pinned and replayable |
 | Source / manifestation evidence | Partial executable | Exact and same-element cross-layer evidence only; effect unresolved |
 | Source usability discussion prerequisites | Executable | Competing source scopes and missing rules only; no scope selection or usability verdict |
+| Source discussion abstention receipt | Executable read projection | Facts and gaps only; not Gate/Decision authority |
 | Root usability and seasonal capacity | Missing | V50 research exists but is not admitted |
 | Relation effect and transformation | Missing | Relation membership is not effect |
 | Mechanism candidate evidence | Executable | Five versioned patterns; candidate presence only |
@@ -46,6 +47,7 @@ must not be reported as real-world accuracy.
 | Cognitive Decision Kernel | Executable | Routes authority and records immutable decisions |
 | Network LLM Reasoner | Executable | dblife Ollama `gemma4:latest`; hash-locked structured-decision profile; attention priority only |
 | Mingli Decision evidence trace | Executable read projection | Verifies immutable identity and reference coverage; not professional correctness or admission |
+| Dream Grove Reading observation lens | Executable read projection | Three equal domains; does not alter tree candidates/order or write back |
 | Statistical calibration | Missing | No production probability may be displayed |
 
 ## Implemented quantitative foundation v1
@@ -236,6 +238,24 @@ build, Runtime Architecture and source-maintainability audits pass. The real
 Chrome audit confirms the four-carrier `6/5/1` versus `10/7/3` scope contrast,
 shared Mingli/Lab identity, refresh stability, zero console/network failures
 and zero document overflow.
+
+## Implemented source-discussion abstention receipt v1
+
+`v60.mingli-source-discussion-abstention-receipt.001` is an immutable,
+downstream read-only sibling over the Reading, source review and prerequisite
+projection. It is not an `EpistemicGate` receipt or Decision, invokes no
+Provider and creates no Decision. With no admitted professional rule chain it
+permits only `ABSTAIN / FACTS_AND_GAPS_ONLY` for `RELATION_EFFECT` and
+`SOURCE_USABILITY`.
+
+Facts, candidates, comparison, Decision, Reading and refusal are now auditable;
+professional relation effect and source usability remain incomplete. A future
+rule requires a new version plus Knowledge admission; `.001` is not upgraded
+in place.
+
+The same Receipt Ref/Hash is visible in Mingli Calculation, Abu Says and Lab.
+A real Chrome replay over the `10 source / 7 clear / 3 review` QA Case confirms
+four carriers, zero ready carriers, refresh stability and no read-time POST.
 
 ## Implemented verifiable attention-Decision trace v1
 
@@ -557,6 +577,17 @@ INSUFFICIENT_EVIDENCE
 Dream may consume one such bounded uncertainty only when a concrete,
 independently settled WorldEvent can distinguish the choices. A domain label
 alone is never enough to author a question.
+
+Dream Grove now shows exactly the career, wealth and relationship questions at
+equal weight under `ATTENTION_WINDOW_ONLY /
+NOT_APPLIED_TO_TREE_CANDIDATES_OR_ORDER`. It does not alter the Grove
+candidate set/order, predict, receive future evidence or write back. Decision
+state is reduced to one boolean; no Ref, Hash, rationale, evidence count,
+timing coordinate, confidence or candidate data crosses into the lens.
+
+The desktop audit confirms all three questions match the loaded Home Reading,
+all three Grove trees remain enabled, no POST is emitted and the document does
+not overflow. The complete backend suite contains 233 passing tests.
 
 ## Lab responsibility
 

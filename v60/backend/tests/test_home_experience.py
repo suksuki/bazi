@@ -250,6 +250,66 @@ def test_home_projection_contains_no_dream_subject_or_mutable_dream_state() -> N
     assert persisted_domains == domains
 
 
+def test_home_source_discussion_receipt_is_shared_and_creates_no_decision() -> None:
+    account_ref = _human_owner_account_ref()
+    service = HomeExperienceService(engine)
+    with engine.connect() as connection:
+        decisions_before = connection.execute(
+            text("SELECT count(*) FROM cognition.decision_records")
+        ).scalar_one()
+
+    first = service.snapshot(account_ref=account_ref)
+    second = service.snapshot(account_ref=account_ref)
+    receipt = first["mingli"]["source_discussion_receipt"]
+    prerequisite = first["mingli"]["source_usability_prerequisite"]
+    reading = first["mingli"]["reading"]
+    source_review = first["mingli"]["source_coordinate_review"]
+
+    with engine.connect() as connection:
+        decisions_after = connection.execute(
+            text("SELECT count(*) FROM cognition.decision_records")
+        ).scalar_one()
+
+    assert receipt == second["mingli"]["source_discussion_receipt"]
+    assert receipt["case_ref"] == reading["case_ref"]
+    assert receipt["chart_version_ref"] == reading["chart_version_ref"]
+    assert (receipt["reading_ref"], receipt["reading_hash"]) == (
+        reading["reading_ref"],
+        reading["reading_hash"],
+    )
+    assert (
+        receipt["source_review_vector_ref"],
+        receipt["source_review_vector_hash"],
+    ) == (source_review["vector_ref"], source_review["vector_hash"])
+    assert (receipt["prerequisite_ref"], receipt["prerequisite_hash"]) == (
+        prerequisite["prerequisite_ref"],
+        prerequisite["prerequisite_hash"],
+    )
+    assert receipt["carrier_refs"] == [
+        item["carrier_ref"] for item in prerequisite["carriers"]
+    ]
+    assert receipt["carrier_count"] == prerequisite["carrier_count"]
+    assert receipt["ready_carrier_count"] == 0
+    assert receipt["abstained_claims"] == [
+        "RELATION_EFFECT",
+        "SOURCE_USABILITY",
+    ]
+    assert receipt["disposition"] == "ABSTAIN"
+    assert receipt["reason"] == "NO_ADMITTED_PROFESSIONAL_RULE_CHAIN"
+    assert receipt["output_mode"] == "FACTS_AND_GAPS_ONLY"
+    assert "PROFESSIONAL_ADMISSION" in receipt["blocking_requirement_ids"]
+    assert receipt["provider_invoked"] is False
+    assert receipt["decision_created"] is False
+    assert receipt["discussion_allowed"] is False
+    assert receipt["professional_verdict_allowed"] is False
+    assert receipt["probability_claim_allowed"] is False
+    assert receipt["canonical_write_allowed"] is False
+    assert receipt["read_only"] is True
+    assert first["lab"]["source_discussion_receipt_ref"] == receipt["receipt_ref"]
+    assert first["lab"]["source_discussion_receipt_hash"] == receipt["receipt_hash"]
+    assert decisions_after == decisions_before
+
+
 def test_home_explanation_is_stable_and_contains_no_outcome_verdict() -> None:
     service = HomeExperienceService(engine)
     first = service.snapshot(account_ref=_human_owner_account_ref())

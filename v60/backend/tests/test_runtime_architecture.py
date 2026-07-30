@@ -7,7 +7,7 @@ from abu_v60.system_manifest import runtime_manifest
 def test_runtime_architecture_has_one_owner_per_schema_and_five_units() -> None:
     architecture = runtime_architecture()
     architecture.validate_boundaries()
-    assert architecture.architecture_version == "v60.runtime-architecture.040"
+    assert architecture.architecture_version == "v60.runtime-architecture.041"
     assert architecture.product_units == (
         "unit-mingli",
         "unit-dream",
@@ -58,7 +58,7 @@ def test_manifest_exposes_world_game_and_localization_reservation() -> None:
     assert manifest["engines"]["context"] == "v60.experience-context.003"
     assert manifest["engines"]["game"] == "v60.dream-game-engine.013"
     assert manifest["engines"]["world"] == "v60.world-continuity-engine.004"
-    assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.019"
+    assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.020"
     assert manifest["engines"]["story"] == "v60.life-story-engine.009"
     source_review = manifest["source_review_profiles"]
     assert len(source_review) == 1
@@ -93,6 +93,11 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     architecture = runtime_architecture()
     modules = {module.module_id: module for module in architecture.modules}
 
+    assert modules["mingli"].version == "v60.mingli-cognitive-engine.020"
+    assert modules["unit-mingli"].version == "v60.unit-mingli.014"
+    assert modules["unit-abu"].version == "v60.unit-abu-says.007"
+    assert modules["unit-lab"].version == "v60.unit-lab.011"
+    assert modules["unit-dream"].version == "v60.unit-dream.013"
     assert "structural_candidate_projection" in modules["mingli"].capabilities
     assert "candidate_qualification_receipt" in modules["mingli"].capabilities
     assert "versioned_reading_envelope" in modules["mingli"].capabilities
@@ -128,6 +133,14 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
         "verified_attention_decision_trace_projection"
         in modules["mingli"].capabilities
     )
+    assert (
+        "versioned_source_discussion_abstention_receipt"
+        in modules["mingli"].capabilities
+    )
+    assert (
+        "professional_rule_chain_fail_closed_abstention"
+        in modules["mingli"].capabilities
+    )
     assert "explicit_active_profile_selection" in modules["knowledge"].capabilities
     assert "hash_locked_quant_foundation_profile" in modules["knowledge"].capabilities
     assert "hash_locked_source_coordinate_review_profile" in modules["knowledge"].capabilities
@@ -147,8 +160,17 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
         "shared_attention_decision_trace_summary"
         in modules["unit-mingli"].capabilities
     )
+    assert (
+        "source_discussion_abstention_summary"
+        in modules["unit-mingli"].capabilities
+    )
     assert "return_to_grove_after_reconciliation" in modules["unit-dream"].capabilities
     assert "pre_outcome_question_basis" in modules["unit-dream"].capabilities
+    assert "read_only_reading_observation_lens" in modules["unit-dream"].capabilities
+    assert (
+        "reading_lens_no_tree_candidate_or_order_mutation"
+        in modules["unit-dream"].capabilities
+    )
     assert "repeatable_grove_cycle" in modules["dream-game"].capabilities
     assert "mingli_reading_expression" in modules["unit-abu"].capabilities
     assert "shared_mingli_explanation_identity" in modules["unit-abu"].capabilities
@@ -165,7 +187,15 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
         in modules["unit-lab"].capabilities
     )
     assert (
+        "source_discussion_receipt_lineage_inspection"
+        in modules["unit-lab"].capabilities
+    )
+    assert (
         "same_reading_decision_trace_handoff"
+        in modules["unit-abu"].capabilities
+    )
+    assert (
+        "same_source_discussion_abstention_handoff"
         in modules["unit-abu"].capabilities
     )
     assert modules["unit-lab"].writes_canonical_state is False

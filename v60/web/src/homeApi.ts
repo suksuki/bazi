@@ -16,6 +16,7 @@ import type {
   HomeSourceCoordinateReview,
   HomeSourceCoordinateReviewVector,
 } from "./homeSourceReviewTypes";
+import type { HomeSourceDiscussionAbstentionReceipt } from "./homeSourceDiscussionTypes";
 import type {
   HomeSourceUsabilityCarrier,
   HomeSourceUsabilityPrerequisiteEnvelope,
@@ -31,6 +32,7 @@ export type {
   HomeSourceCoordinateReview,
   HomeSourceCoordinateReviewVector,
 } from "./homeSourceReviewTypes";
+export type { HomeSourceDiscussionAbstentionReceipt } from "./homeSourceDiscussionTypes";
 export type {
   HomeSourceUsabilityCarrier,
   HomeSourceUsabilityPrerequisiteEnvelope,
@@ -301,6 +303,7 @@ export interface HomeSnapshot {
     quant_foundation: HomeQuantFoundation;
     source_coordinate_review: HomeSourceCoordinateReviewVector;
     source_usability_prerequisite: HomeSourceUsabilityPrerequisiteEnvelope;
+    source_discussion_receipt: HomeSourceDiscussionAbstentionReceipt;
     mechanism_evidence: HomeMechanismEvidence;
     timing_evidence: HomeTimingEvidence;
     life_domains: HomeLifeDomainEvidence;
@@ -338,6 +341,8 @@ export interface HomeSnapshot {
     source_usability_prerequisite_ref: string;
     source_usability_prerequisite_hash: string;
     source_usability_prerequisite_carriers: HomeSourceUsabilityCarrier[];
+    source_discussion_receipt_ref: string;
+    source_discussion_receipt_hash: string;
     mechanism_vector_ref: string;
     mechanism_vector_hash: string;
     timing_vector_ref: string;

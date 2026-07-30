@@ -12,6 +12,7 @@ import { MechanismQualificationMatrix } from "./MechanismQualificationMatrix";
 import { MingliEvidenceExplanation } from "./MingliEvidenceExplanation";
 import { MingliCaseManager } from "./MingliCaseManager";
 import { SourceCoordinateReviewPanel } from "./SourceCoordinateReviewPanel";
+import { SourceDiscussionAbstentionReceipt } from "./SourceDiscussionAbstentionReceipt";
 
 const PILLAR_LABELS: Record<string, string> = {
   year: "年柱",
@@ -109,6 +110,10 @@ export function HomeCompanionRail({
               qualification={home.mingli.mechanism_qualification}
               reading={home.mingli.reading}
             />
+            <SourceDiscussionAbstentionReceipt
+              mode="summary"
+              receipt={home.mingli.source_discussion_receipt}
+            />
             <MingliEvidenceExplanation explanation={home.mingli.explanation} />
             <MechanismEvidenceContrast
               depth={home.mingli.mechanism_evidence_depth}
@@ -169,6 +174,10 @@ export function HomeCompanionRail({
               mode="abu"
               qualification={home.mingli.mechanism_qualification}
               reading={home.mingli.reading}
+            />
+            <SourceDiscussionAbstentionReceipt
+              mode="summary"
+              receipt={home.mingli.source_discussion_receipt}
             />
           </section>
         )}
@@ -235,6 +244,10 @@ export function HomeCompanionRail({
               mode="lab"
               qualification={home.mingli.mechanism_qualification}
               reading={home.mingli.reading}
+            />
+            <SourceDiscussionAbstentionReceipt
+              mode="detailed"
+              receipt={home.mingli.source_discussion_receipt}
             />
             <MechanismEvidenceContrast
               depth={home.mingli.mechanism_evidence_depth}

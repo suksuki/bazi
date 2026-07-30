@@ -130,6 +130,14 @@ from abu_v60.mingli.reading_store import (
     MingliReadingStore,
     MingliReadingStoreError,
 )
+from abu_v60.mingli.source_discussion import (
+    MingliSourceDiscussionAbstentionProjector,
+)
+from abu_v60.mingli.source_discussion_contracts import (
+    SOURCE_DISCUSSION_ABSTAINED_CLAIMS,
+    SOURCE_DISCUSSION_RECEIPT_VERSION,
+    MingliSourceDiscussionAbstentionReceipt,
+)
 from abu_v60.mingli.source_review import (
     MingliSourceCoordinateReviewCompiler,
 )
@@ -188,6 +196,8 @@ __all__ = [
     "MINGLI_EXPLANATION_VERSION",
     "MINGLI_READING_VERSION",
     "QUANT_VECTOR_VERSION",
+    "SOURCE_DISCUSSION_ABSTAINED_CLAIMS",
+    "SOURCE_DISCUSSION_RECEIPT_VERSION",
     "SOURCE_REVIEW_STATE_ORDER",
     "SOURCE_REVIEW_VECTOR_VERSION",
     "SOURCE_USABILITY_PREREQUISITE_VERSION",
@@ -256,6 +266,8 @@ __all__ = [
     "MingliReadingStoreError",
     "MingliSourceCoordinateReviewCompiler",
     "MingliSourceCoordinateReviewVector",
+    "MingliSourceDiscussionAbstentionProjector",
+    "MingliSourceDiscussionAbstentionReceipt",
     "MingliSourceReviewVectorNotFoundError",
     "MingliSourceReviewVectorStore",
     "MingliSourceReviewVectorStoreError",

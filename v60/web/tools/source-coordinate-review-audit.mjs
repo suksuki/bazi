@@ -33,11 +33,18 @@ await context.addCookies([
 ]);
 const page = await context.newPage();
 const failures = [];
+const observedRequests = [];
 
 page.on("console", (message) => {
   if (message.type() === "error") failures.push(`console:${message.text()}`);
 });
 page.on("pageerror", (error) => failures.push(`page:${error.message}`));
+page.on("request", (request) => {
+  observedRequests.push({
+    method: request.method(),
+    url: request.url(),
+  });
+});
 page.on("requestfailed", (request) => {
   failures.push(
     `request:${request.method()} ${request.url()} ${request.failure()?.errorText}`,
@@ -59,6 +66,24 @@ const screenshot = async (name) => {
   await page.screenshot({ path: screenshotPath });
   return screenshotPath;
 };
+const assertNoForbiddenDiscussionClaims = (surface, text) => {
+  for (const forbidden of [
+    "六冲受损",
+    "六合增益",
+    "关系增益",
+    "有效做功已确认",
+    "关系作用已确认",
+    "来源已可用",
+    "来源不可用已确认",
+  ]) {
+    if (text.includes(forbidden)) {
+      failures.push(`${surface}:discussion-forbidden-copy:${forbidden}`);
+    }
+  }
+  if (/(?:概率|置信度)[：:\s]*\d+(?:\.\d+)?%/.test(text)) {
+    failures.push(`${surface}:discussion-forbidden-numeric-authority`);
+  }
+};
 
 await openView("mingli");
 const summaryPanel = page.locator(
@@ -76,6 +101,19 @@ const prerequisiteRef = await summaryReadiness.getAttribute(
 const prerequisiteHash = await summaryReadiness.getAttribute(
   "data-prerequisite-hash",
 );
+const mingliDiscussionReceipt = page.locator(
+  '.source-discussion-abstention[data-mode="summary"]',
+);
+await mingliDiscussionReceipt.waitFor({ state: "visible" });
+const discussionReceiptRef = await mingliDiscussionReceipt.getAttribute(
+  "data-receipt-ref",
+);
+const discussionReceiptHash = await mingliDiscussionReceipt.getAttribute(
+  "data-receipt-hash",
+);
+const discussionDisposition = await mingliDiscussionReceipt.getAttribute(
+  "data-disposition",
+);
 const summaryText = await summaryPanel.innerText();
 for (const expected of [
   "来源坐标复核",
@@ -88,6 +126,19 @@ for (const expected of [
 ]) {
   if (!summaryText.includes(expected)) failures.push(`mingli:missing:${expected}`);
 }
+const mingliDiscussionText = await mingliDiscussionReceipt.innerText();
+for (const expected of [
+  "下游讨论授权",
+  "拒答凭据",
+  "这些来源怎样作用、现在能不能用？",
+  "个明干载体达到门槛",
+  "不判断关系作用，也不判断可用或不可用",
+]) {
+  if (!mingliDiscussionText.includes(expected)) {
+    failures.push(`mingli:discussion-receipt-missing:${expected}`);
+  }
+}
+assertNoForbiddenDiscussionClaims("mingli", mingliDiscussionText);
 
 const homeSnapshot = await page.evaluate(async () => {
   const response = await fetch("/api/v60/experience/home");
@@ -96,6 +147,12 @@ const homeSnapshot = await page.evaluate(async () => {
 });
 const vector = homeSnapshot.mingli?.source_coordinate_review;
 const prerequisite = homeSnapshot.mingli?.source_usability_prerequisite;
+const discussionReceipt = homeSnapshot.mingli?.source_discussion_receipt;
+const initialDecisionIdentity = JSON.stringify({
+  decisionRefs: homeSnapshot.mingli?.reading?.decision_refs ?? [],
+  comparisonDecisionRef:
+    homeSnapshot.lab?.mechanism_comparison?.decision_ref ?? null,
+});
 if (vector?.vector_ref !== vectorRef) {
   failures.push("mingli:dom-api-vector-ref-mismatch");
 }
@@ -104,6 +161,13 @@ if (
   prerequisite?.prerequisite_hash !== prerequisiteHash
 ) {
   failures.push("mingli:dom-api-prerequisite-identity-mismatch");
+}
+if (
+  discussionReceipt?.receipt_ref !== discussionReceiptRef ||
+  discussionReceipt?.receipt_hash !== discussionReceiptHash ||
+  discussionDisposition !== "ABSTAIN"
+) {
+  failures.push("mingli:dom-api-discussion-receipt-identity-mismatch");
 }
 if (
   homeSnapshot.mingli?.reading?.source_review_vector_ref !== vectorRef ||
@@ -122,6 +186,12 @@ if (
   failures.push("mingli:shared-source-usability-identity-mismatch");
 }
 if (
+  homeSnapshot.lab?.source_discussion_receipt_ref !== discussionReceiptRef ||
+  homeSnapshot.lab?.source_discussion_receipt_hash !== discussionReceiptHash
+) {
+  failures.push("mingli:shared-source-discussion-identity-mismatch");
+}
+if (
   prerequisite?.case_ref !== vector?.case_ref ||
   prerequisite?.chart_version_ref !== vector?.chart_version_ref ||
   prerequisite?.quant_vector_ref !== vector?.quant_vector_ref ||
@@ -130,6 +200,52 @@ if (
   prerequisite?.source_review_vector_hash !== vector?.vector_hash
 ) {
   failures.push("mingli:source-usability-lineage-mismatch");
+}
+if (
+  discussionReceipt?.case_ref !== vector?.case_ref ||
+  discussionReceipt?.case_ref !== homeSnapshot.case?.case_ref ||
+  discussionReceipt?.chart_version_ref !== vector?.chart_version_ref ||
+  discussionReceipt?.chart_version_ref !==
+    homeSnapshot.chart?.chart_version_ref ||
+  discussionReceipt?.reading_ref !==
+    homeSnapshot.mingli?.reading?.reading_ref ||
+  discussionReceipt?.reading_hash !==
+    homeSnapshot.mingli?.reading?.reading_hash ||
+  discussionReceipt?.source_review_vector_ref !== vectorRef ||
+  discussionReceipt?.source_review_vector_hash !== vector?.vector_hash ||
+  discussionReceipt?.prerequisite_ref !== prerequisiteRef ||
+  discussionReceipt?.prerequisite_hash !== prerequisiteHash ||
+  discussionReceipt?.carrier_count !== prerequisite?.carrier_count ||
+  discussionReceipt?.ready_carrier_count !==
+    prerequisite?.ready_carrier_count ||
+  JSON.stringify(discussionReceipt?.carrier_refs) !==
+    JSON.stringify(
+      (prerequisite?.carriers ?? []).map((carrier) => carrier.carrier_ref),
+    )
+) {
+  failures.push("mingli:source-discussion-lineage-mismatch");
+}
+if (
+  discussionReceipt?.receipt_version !==
+    "v60.mingli-source-discussion-abstention-receipt.001" ||
+  discussionReceipt?.disposition !== "ABSTAIN" ||
+  discussionReceipt?.reason !== "NO_ADMITTED_PROFESSIONAL_RULE_CHAIN" ||
+  discussionReceipt?.output_mode !== "FACTS_AND_GAPS_ONLY" ||
+  JSON.stringify(discussionReceipt?.abstained_claims) !==
+    JSON.stringify(["RELATION_EFFECT", "SOURCE_USABILITY"])
+) {
+  failures.push("mingli:source-discussion-abstention-contract-mismatch");
+}
+if (
+  discussionReceipt?.provider_invoked !== false ||
+  discussionReceipt?.decision_created !== false ||
+  discussionReceipt?.discussion_allowed !== false ||
+  discussionReceipt?.professional_verdict_allowed !== false ||
+  discussionReceipt?.probability_claim_allowed !== false ||
+  discussionReceipt?.canonical_write_allowed !== false ||
+  discussionReceipt?.read_only !== true
+) {
+  failures.push("mingli:source-discussion-authority-enabled");
 }
 if (
   vector?.source_evidence_count !== 10 ||
@@ -227,6 +343,32 @@ for (const forbidden of ["六冲受损", "六合增益", "可用概率", "有效
 }
 const mingliScreenshot = await screenshot("01-mingli-source-coordinate-review");
 
+await openView("abu");
+const abuDiscussionReceipt = page.locator(
+  '.source-discussion-abstention[data-mode="summary"]',
+);
+await abuDiscussionReceipt.waitFor({ state: "visible" });
+if (
+  (await abuDiscussionReceipt.getAttribute("data-receipt-ref")) !==
+    discussionReceiptRef ||
+  (await abuDiscussionReceipt.getAttribute("data-receipt-hash")) !==
+    discussionReceiptHash ||
+  (await abuDiscussionReceipt.getAttribute("data-disposition")) !== "ABSTAIN"
+) {
+  failures.push("abu:source-discussion-receipt-identity-mismatch");
+}
+const abuDiscussionText = await abuDiscussionReceipt.innerText();
+for (const expected of [
+  "拒答凭据",
+  "这些来源怎样作用、现在能不能用？",
+  "不判断关系作用，也不判断可用或不可用",
+]) {
+  if (!abuDiscussionText.includes(expected)) {
+    failures.push(`abu:discussion-receipt-missing:${expected}`);
+  }
+}
+assertNoForbiddenDiscussionClaims("abu", abuDiscussionText);
+
 await openView("lab");
 const detailedPanel = page.locator(
   '.source-coordinate-review[data-mode="detailed"]',
@@ -244,6 +386,36 @@ if (
   prerequisiteRef
 ) {
   failures.push("lab:prerequisite-ref-mismatch");
+}
+const labDiscussionReceipt = page.locator(
+  '.source-discussion-abstention[data-mode="detailed"]',
+);
+await labDiscussionReceipt.waitFor({ state: "visible" });
+if (
+  (await labDiscussionReceipt.getAttribute("data-receipt-ref")) !==
+    discussionReceiptRef ||
+  (await labDiscussionReceipt.getAttribute("data-receipt-hash")) !==
+    discussionReceiptHash ||
+  (await labDiscussionReceipt.getAttribute("data-disposition")) !== "ABSTAIN"
+) {
+  failures.push("lab:source-discussion-receipt-identity-mismatch");
+}
+const labReceiptDetails = labDiscussionReceipt.locator(
+  ".source-discussion-receipt-detail",
+);
+const labDiscussionText = await labDiscussionReceipt.innerText();
+assertNoForbiddenDiscussionClaims("lab", labDiscussionText);
+if (!(await labReceiptDetails.evaluate((node) => node.open))) {
+  failures.push("lab:source-discussion-receipt-details-not-open");
+}
+const renderedBlockerIds = await labDiscussionReceipt
+  .locator(".source-discussion-blockers code")
+  .allTextContents();
+if (
+  JSON.stringify(renderedBlockerIds) !==
+  JSON.stringify(discussionReceipt?.blocking_requirement_ids ?? [])
+) {
+  failures.push("lab:source-discussion-blocker-ids-mismatch");
 }
 const detailedText = await detailedPanel.innerText();
 for (const expected of [
@@ -295,6 +467,10 @@ const renderedRequirementCount = await detailedReadiness
 if (renderedRequirementCount !== (prerequisite?.carrier_count ?? 0) * 6) {
   failures.push("lab:rendered-requirement-count-mismatch");
 }
+await labDiscussionReceipt.scrollIntoViewIfNeeded();
+const labReceiptScreenshot = await screenshot(
+  "02-lab-source-discussion-receipt",
+);
 await detailedReadiness.evaluate((node) =>
   node.scrollIntoView({ block: "start" }),
 );
@@ -308,6 +484,10 @@ await refreshedDetailedPanel.waitFor({ state: "visible" });
 const refreshedReadiness = refreshedDetailedPanel.locator(
   '.source-usability-prerequisite[data-mode="detailed"]',
 );
+const refreshedDiscussionReceipt = page.locator(
+  '.source-discussion-abstention[data-mode="detailed"]',
+);
+await refreshedDiscussionReceipt.waitFor({ state: "visible" });
 const refreshedSnapshot = await page.evaluate(async () => {
   const response = await fetch("/api/v60/experience/home");
   if (!response.ok) throw new Error(`home-refresh:${response.status}`);
@@ -325,6 +505,32 @@ if (
 ) {
   failures.push("lab:refresh-identity-mismatch");
 }
+if (
+  (await refreshedDiscussionReceipt.getAttribute("data-receipt-ref")) !==
+    discussionReceiptRef ||
+  (await refreshedDiscussionReceipt.getAttribute("data-receipt-hash")) !==
+    discussionReceiptHash ||
+  (await refreshedDiscussionReceipt.getAttribute("data-disposition")) !==
+    "ABSTAIN" ||
+  refreshedSnapshot.mingli?.source_discussion_receipt?.receipt_ref !==
+    discussionReceiptRef ||
+  refreshedSnapshot.mingli?.source_discussion_receipt?.receipt_hash !==
+    discussionReceiptHash ||
+  refreshedSnapshot.lab?.source_discussion_receipt_ref !==
+    discussionReceiptRef ||
+  refreshedSnapshot.lab?.source_discussion_receipt_hash !==
+    discussionReceiptHash
+) {
+  failures.push("lab:refresh-source-discussion-receipt-identity-mismatch");
+}
+const refreshedDecisionIdentity = JSON.stringify({
+  decisionRefs: refreshedSnapshot.mingli?.reading?.decision_refs ?? [],
+  comparisonDecisionRef:
+    refreshedSnapshot.lab?.mechanism_comparison?.decision_ref ?? null,
+});
+if (refreshedDecisionIdentity !== initialDecisionIdentity) {
+  failures.push("experience:source-discussion-created-decision");
+}
 
 const metrics = await page.evaluate(() => ({
   bodyScrollHeight: document.body.scrollHeight,
@@ -338,6 +544,16 @@ if (
 ) {
   failures.push("experience:document-scroll");
 }
+const postRequests = observedRequests.filter(
+  (request) => request.method === "POST",
+);
+if (postRequests.length) {
+  failures.push(
+    `experience:unexpected-post:${postRequests
+      .map((request) => new URL(request.url).pathname)
+      .join(",")}`,
+  );
+}
 
 const audit = {
   targetUrl,
@@ -345,6 +561,26 @@ const audit = {
   vectorHash: vector?.vector_hash,
   prerequisiteRef,
   prerequisiteHash,
+  discussionReceiptRef,
+  discussionReceiptHash,
+  discussionDisposition: discussionReceipt?.disposition,
+  discussionReason: discussionReceipt?.reason,
+  discussionOutputMode: discussionReceipt?.output_mode,
+  discussionAbstainedClaims: discussionReceipt?.abstained_claims,
+  discussionBlockingRequirementIds:
+    discussionReceipt?.blocking_requirement_ids,
+  discussionNonTriggeredRequirementIds:
+    discussionReceipt?.non_triggered_requirement_ids,
+  discussionBoundaries: {
+    providerInvoked: discussionReceipt?.provider_invoked,
+    decisionCreated: discussionReceipt?.decision_created,
+    discussionAllowed: discussionReceipt?.discussion_allowed,
+    professionalVerdictAllowed:
+      discussionReceipt?.professional_verdict_allowed,
+    probabilityClaimAllowed: discussionReceipt?.probability_claim_allowed,
+    canonicalWriteAllowed: discussionReceipt?.canonical_write_allowed,
+    readOnly: discussionReceipt?.read_only,
+  },
   readingRef: homeSnapshot.mingli?.reading?.reading_ref,
   caseRef: vector?.case_ref,
   sourceEvidenceCount: vector?.source_evidence_count,
@@ -368,8 +604,19 @@ const audit = {
   professionalVerdictAllowed: vector?.professional_verdict_allowed,
   probabilityClaimAllowed: vector?.probability_claim_allowed,
   canonicalWriteAllowed: vector?.canonical_write_allowed,
-  refreshStable: !failures.includes("lab:refresh-identity-mismatch"),
-  screenshots: { mingliScreenshot, labScreenshot },
+  refreshStable:
+    !failures.includes("lab:refresh-identity-mismatch") &&
+    !failures.includes(
+      "lab:refresh-source-discussion-receipt-identity-mismatch",
+    ),
+  decisionIdentityStable:
+    refreshedDecisionIdentity === initialDecisionIdentity,
+  postRequestCount: postRequests.length,
+  screenshots: {
+    mingliScreenshot,
+    labReceiptScreenshot,
+    labScreenshot,
+  },
   metrics,
   failures,
 };

@@ -2,6 +2,37 @@
 
 ## 2026-07-30
 
+### Source-discussion abstention receipt and Dream Reading lens
+
+- Added `v60.mingli-source-discussion-abstention-receipt.001`, a downstream
+  read-only sibling that permits only `ABSTAIN / FACTS_AND_GAPS_ONLY`. It is
+  not Gate/Decision authority, invokes no Provider, creates no Decision and
+  authorizes neither relation effect nor source usability.
+- Required any future professional rule to use a new version plus Knowledge
+  admission; `.001` remains a replayable refusal. Facts through Decision,
+  Reading and refusal are auditable, while professional effect/usability are
+  still incomplete.
+- Added an equal-weight career/wealth/relationship Reading lens to Dream Grove.
+  It does not alter the Grove candidate set/order, predict, receive future
+  evidence or write back; Decision state is one boolean and no Ref, Hash,
+  rationale, evidence count, timing coordinate, confidence or candidate data
+  crosses in.
+- Added an SSR contract for exact domains, missing/duplicate fail-closed
+  behavior, fixed boundary copy and non-disclosure.
+- Mingli Calculation, Abu Says and Lab now show the same refusal Receipt
+  Ref/Hash; Lab expands the exact blocker IDs. A real `10/7/3` source-review
+  Case confirms four carriers, zero ready carriers, refresh stability and no
+  read-time POST.
+- Added a real Chrome Dream audit proving three Reading-bound questions, three
+  enabled Grove trees, no candidate/order mutation, no POST and no document
+  overflow. Evidence is in `.artifacts/source-coordinate-review/` and
+  `.artifacts/dream-reading-lens/`.
+- Advanced Mingli to `v60.mingli-cognitive-engine.020`, Runtime Architecture to
+  `.041`, and the Mingli/Abu/Lab/Dream units to `.014/.007/.011/.013`.
+  Foundation and Dream Game remain `.013`. All 233 backend tests, Ruff,
+  TypeScript/Vite build, Runtime Architecture and source-maintainability audits
+  pass.
+
 ### Verifiable Mingli attention Decision trace
 
 - Added `v60.mingli-decision-trace.001`, a server-owned read projection over

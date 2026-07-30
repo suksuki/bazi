@@ -7,6 +7,7 @@ import type {
 import { DreamGroveScene } from "../DreamGroveScene";
 import type { ExperienceScope } from "../experienceNavigation";
 import type { HomeSnapshot } from "../homeApi";
+import { buildDreamReadingObservationLens } from "../homeDreamObservationLens";
 import { LifeTreeScene } from "../LifeTreeScene";
 import { HomeLifeTreeScene as HomeTree } from "./HomeLifeTreeScene";
 
@@ -62,6 +63,10 @@ export function ExperienceStoryCanvas({
           background={media.assets.grove_background}
           busy={busy}
           grove={grove}
+          lens={buildDreamReadingObservationLens({
+            reading_brief: home.mingli.reading_brief,
+            mechanism_comparison: home.lab.mechanism_comparison,
+          })}
           media={media}
           onSelect={onSelectTree}
         />

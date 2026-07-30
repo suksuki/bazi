@@ -1050,6 +1050,41 @@ Status: `IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
   multi-candidate pending messages. Evidence is in
   `.artifacts/mechanism-decision-trace/`.
 
+## Completed Delivery: Source Discussion Refusal And Dream Reading Lens
+
+Status: `IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
+
+- `v60.mingli-source-discussion-abstention-receipt.001` binds the Reading,
+  source review and prerequisite projection, then records
+  `ABSTAIN / FACTS_AND_GAPS_ONLY`. It is a read-only sibling, not Gate or
+  Decision authority; it invokes no Provider, creates no Decision and
+  authorizes neither relation effect nor source usability.
+- A future professional rule requires a new version plus Knowledge admission;
+  `.001` remains replayable as refusal. The fact/candidate/Decision/Reading
+  chain is auditable, while professional relation effect and source usability
+  remain incomplete.
+- Mingli Calculation and Abu Says show the compact refusal; Lab expands its
+  lineage and blocker IDs. All three surfaces share the exact Receipt Ref/Hash.
+  A real `10 source / 7 clear / 3 review` QA Case has four carriers and zero
+  carriers authorized for discussion.
+- Dream Grove now shows equal-weight career, wealth and relationship Reading
+  questions. The lens does not alter the three tree candidates or their order,
+  predict, receive future evidence or write back; Decision state is reduced to
+  one boolean and no Ref, Hash, rationale, evidence count, timing coordinate,
+  confidence or candidate data crosses into it.
+- An independent SSR contract locks the three domains, missing/duplicate
+  fail-closed behavior, fixed boundary copy and non-disclosure.
+- Current identities are `v60.mingli-cognitive-engine.020`,
+  `v60.runtime-architecture.041`, `v60.unit-mingli.014`,
+  `v60.unit-abu-says.007`, `v60.unit-lab.011` and `v60.unit-dream.013`.
+  Foundation remains `v60.foundation.013`; Dream Game remains `.013`.
+- All 233 backend tests, Ruff, TypeScript/Vite build, Runtime Architecture and
+  source-maintainability audits pass. Real Chrome audits confirm shared
+  three-surface refusal identity, refresh stability, zero read-time POSTs,
+  three equal Reading questions, three enabled Grove trees and zero document
+  overflow. Evidence is in `.artifacts/source-coordinate-review/` and
+  `.artifacts/dream-reading-lens/`.
+
 ## Current Product Truth
 
 Already usable locally:
@@ -1066,9 +1101,13 @@ Already usable locally:
   six-clash or six-harmony facts, shared by Mingli and Lab;
 - a shared prerequisite view comparing exact-identity and same-element source
   scopes while exposing the rules still missing before usability discussion;
+- an immutable refusal receipt proving that source discussion stopped at facts
+  and gaps rather than inventing relation effect or usability;
 - bounded Gemma4 ordering of static natal mechanism candidates for
   investigation attention, with a verified Decision identity/evidence trace
   shared by Mingli Calculation, Abu Says and Lab;
+- a three-domain, equal-weight Reading observation lens in Dream Grove that
+  does not alter the tree candidate set/order or receive future evidence;
 - three-tree Dream selection, observation, Seal, World waiting, Reveal,
   reconciliation, return to Grove and another Encounter;
 - refresh and process persistence through server-owned state.
@@ -1077,8 +1116,9 @@ Still honestly incomplete:
 
 - professional admission and calibrated probability for mechanism effect,
   capacity, usability and life-event success;
-- deeper professional models for root usability, seasonal capacity, relation
-  effect and competing-mechanism counter-evidence;
+- professional relation-effect and source-usability rules, plus deeper models
+  for root usability, seasonal capacity and competing-mechanism
+  counter-evidence;
 - broader Dream story coverage and long-term return value;
 - final picture-book Grove tree assets and the final in-tree transition
   composition currently being prepared by design.

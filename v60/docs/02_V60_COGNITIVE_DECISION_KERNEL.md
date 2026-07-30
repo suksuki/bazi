@@ -185,6 +185,24 @@ its selected evidence remains request-bound only. Every trace preserves
 `professional_verdict_allowed=false`, `probability_claim_allowed=false` and
 `canonical_domain_write_allowed=false`.
 
+## Source-discussion abstention sibling receipt
+
+`v60.mingli-source-discussion-abstention-receipt.001` is a downstream,
+read-only sibling over the current Reading, source review and prerequisite
+projection. It is neither an `EpistemicGate` receipt nor a Decision, invokes no
+Provider and creates no DecisionRecord.
+
+It records `ABSTAIN / NO_ADMITTED_PROFESSIONAL_RULE_CHAIN` and permits only
+`FACTS_AND_GAPS_ONLY`; relation effect and source usability remain unauthorized.
+The executable fact -> candidate -> comparison -> Decision -> Reading ->
+refusal chain is now auditable, but those two professional capabilities are
+not implemented. Any future rule requires a new version plus Knowledge
+admission; `.001` remains a refusal.
+
+Mingli Calculation, Abu Says and Lab receive the same Receipt Ref/Hash. The
+receipt does not alter the narrower attention-priority Decision or reinterpret
+its Gate admission.
+
 ## Required decision record contract
 
 Every committed decision preserves:

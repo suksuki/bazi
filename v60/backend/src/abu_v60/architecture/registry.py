@@ -15,7 +15,7 @@ from abu_v60.architecture.contracts import (
 @lru_cache(maxsize=1)
 def runtime_architecture() -> RuntimeArchitecture:
     architecture = RuntimeArchitecture(
-        architecture_version="v60.runtime-architecture.040",
+        architecture_version="v60.runtime-architecture.041",
         modules=(
             RuntimeModule(
                 module_id="identity",
@@ -33,7 +33,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="mingli",
                 kind=ModuleKind.ENGINE,
-                version="v60.mingli-cognitive-engine.019",
+                version="v60.mingli-cognitive-engine.020",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("mingli",),
                 reads_from=("identity",),
@@ -79,6 +79,8 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "versioned_source_usability_prerequisite_projection",
                     "source_scope_competition_and_evidence_gaps",
                     "verified_attention_decision_trace_projection",
+                    "versioned_source_discussion_abstention_receipt",
+                    "professional_rule_chain_fail_closed_abstention",
                 ),
                 writes_canonical_state=True,
             ),
@@ -260,7 +262,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-dream",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-dream.012",
+                version="v60.unit-dream.013",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "media"),
                 capabilities=(
@@ -276,12 +278,14 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "three_distinct_life_domain_entrypoints",
                     "return_to_grove_after_reconciliation",
                     "pre_outcome_question_basis",
+                    "read_only_reading_observation_lens",
+                    "reading_lens_no_tree_candidate_or_order_mutation",
                 ),
             ),
             RuntimeModule(
                 module_id="unit-mingli",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-mingli.013",
+                version="v60.unit-mingli.014",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context",),
                 capabilities=(
@@ -301,12 +305,13 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "source_coordinate_review_summary",
                     "source_usability_prerequisite_summary",
                     "shared_attention_decision_trace_summary",
+                    "source_discussion_abstention_summary",
                 ),
             ),
             RuntimeModule(
                 module_id="unit-abu",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-abu-says.006",
+                version="v60.unit-abu-says.007",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "mingli", "media"),
                 capabilities=(
@@ -316,6 +321,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "shared_mingli_explanation_identity",
                     "shared_mechanism_qualification_identity",
                     "same_reading_decision_trace_handoff",
+                    "same_source_discussion_abstention_handoff",
                 ),
             ),
             RuntimeModule(
@@ -334,7 +340,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-lab",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-lab.010",
+                version="v60.unit-lab.011",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "knowledge", "cognition"),
                 capabilities=(
@@ -350,6 +356,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "source_coordinate_relation_intersection_inspection",
                     "source_scope_competition_inspection",
                     "decision_gate_and_evidence_scope_inspection",
+                    "source_discussion_receipt_lineage_inspection",
                     "research_proposal_requires_knowledge_admission",
                 ),
             ),
