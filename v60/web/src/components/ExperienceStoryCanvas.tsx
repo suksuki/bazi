@@ -22,6 +22,7 @@ interface ExperienceStoryCanvasProps {
   focusedOrganRef: string | null;
   onEnterDream: () => void;
   onSelectTree: (candidateRef: string) => void;
+  onSelectDreamAttention: (observationRef: string) => void;
   onFocus: (organ: TreeOrgan) => void;
   onOrgan: (organ: TreeOrgan) => void;
   onAnswer: (choiceId: string) => void;
@@ -41,6 +42,7 @@ export function ExperienceStoryCanvas({
   focusedOrganRef,
   onEnterDream,
   onSelectTree,
+  onSelectDreamAttention,
   onFocus,
   onOrgan,
   onAnswer,
@@ -72,6 +74,7 @@ export function ExperienceStoryCanvas({
           lens={observationLens}
           media={media}
           onSelect={onSelectTree}
+          onSelectAttention={onSelectDreamAttention}
         />
       ) : (
         snapshot && (

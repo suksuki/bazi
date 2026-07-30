@@ -1,4 +1,8 @@
 import type { DreamReturnEcho } from "./dreamReturnEchoTypes";
+import type {
+  DreamReturnAttentionPrompt,
+  DreamOpeningAttention,
+} from "./dreamAttentionTypes";
 
 export { request } from "./http";
 export {
@@ -13,6 +17,7 @@ export {
   loadDreamEntry,
   loadEncounter,
   returnToDreamGrove,
+  selectDreamNextAttention,
   selectDreamTree,
 } from "./dreamRuntimeApi";
 
@@ -428,6 +433,7 @@ export interface DreamSnapshot {
     label: string | null;
     completed_encounter_count: number;
   };
+  opening_attention?: DreamOpeningAttention | null;
 }
 
 export interface DreamGroveCandidate {
@@ -455,10 +461,11 @@ export interface DreamGroveCandidate {
 }
 
 export interface DreamGrove {
-  grove_version: "v60.dream-grove.002";
+  grove_version: "v60.dream-grove.003";
   selection_status: "AWAITING_TREE_SELECTION";
   candidates: DreamGroveCandidate[];
   return_echo?: DreamReturnEcho | null;
+  next_attention?: DreamReturnAttentionPrompt | null;
   hidden_outcome_included: false;
   hidden_npc_choice_included: false;
 }
@@ -475,4 +482,5 @@ export type DreamCommand =
   | "REVEAL"
   | "RECONCILE"
   | "CONTINUE_ENCOUNTER"
-  | "RETURN_TO_GROVE";
+  | "RETURN_TO_GROVE"
+  | "SELECT_NEXT_ATTENTION";

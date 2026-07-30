@@ -12,10 +12,10 @@ from abu_v60.story.packages import (
 
 PRODUCT_ID: Final = "abu-knows-v60"
 PRODUCT_VERSION: Final = "0.1.0"
-FOUNDATION_VERSION: Final = "v60.foundation.013"
+FOUNDATION_VERSION: Final = "v60.foundation.014"
 EXPERIENCE_CONTEXT_VERSION: Final = "v60.experience-context.003"
 DECISION_POLICY_VERSION: Final = "v60.cognitive-decision-kernel.004"
-DREAM_GAME_ENGINE_VERSION: Final = "v60.dream-game-engine.014"
+DREAM_GAME_ENGINE_VERSION: Final = "v60.dream-game-engine.015"
 WORLD_ENGINE_VERSION: Final = "v60.world-continuity-engine.004"
 MINGLI_ENGINE_VERSION: Final = "v60.mingli-cognitive-engine.022"
 STORY_ENGINE_VERSION: Final = "v60.life-story-engine.009"

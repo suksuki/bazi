@@ -3,6 +3,10 @@ import type {
   DreamEntry,
   DreamSnapshot,
 } from "./api";
+import {
+  isDreamReturnAttentionDisplayable,
+  type DreamReturnAttentionPrompt,
+} from "./dreamAttentionTypes";
 import { request } from "./http";
 
 export function ensureEncounter(): Promise<DreamSnapshot> {
@@ -66,6 +70,41 @@ export function returnToDreamGrove(
         command,
         "none",
       ].join(":"),
+    }),
+  });
+}
+
+export function selectDreamNextAttention(
+  prompt: DreamReturnAttentionPrompt,
+  observationRef: string,
+): Promise<DreamEntry> {
+  if (
+    !isDreamReturnAttentionDisplayable(prompt) ||
+    prompt.status !== "AWAITING_SELECTION" ||
+    !prompt.options.some(
+      (option) => option.observation_ref === observationRef,
+    )
+  ) {
+    return Promise.reject(
+      new Error("dream_return_attention_option_not_server_issued"),
+    );
+  }
+  const command: DreamCommand = "SELECT_NEXT_ATTENTION";
+  return request("/api/v60/dream/command", {
+    method: "POST",
+    body: JSON.stringify({
+      command,
+      encounter_ref: prompt.source_encounter_ref,
+      expected_version: prompt.source_encounter_version,
+      idempotency_key: [
+        "v60-dream-command",
+        prompt.source_encounter_ref,
+        prompt.source_encounter_version,
+        command,
+        observationRef,
+      ].join(":"),
+      target_ref: observationRef,
+      choice_id: null,
     }),
   });
 }

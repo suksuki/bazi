@@ -2,6 +2,38 @@
 
 ## 2026-07-30
 
+### Persistent Dream next attention
+
+- Added `v60.dream-return-attention.001`: two or three deterministic,
+  server-issued observation targets derived from a candidate-backed Return
+  Echo's committed world response and outcome evidence. Candidate-less legacy
+  Echoes remain `null` instead of receiving invented continuity.
+- Added `SELECT_NEXT_ATTENTION` to the existing Dream command envelope and
+  immutable receipt path. Account, Encounter/version, Echo, candidate, tree
+  and option identities are Hash-bound; exact retries are replay-safe and
+  changed reuse fails closed.
+- Added append-only `dream.return_attention_selections` and
+  `dream.return_attention_applications`. A different-tree visit leaves a
+  selection pending; the next source-tree visit emits
+  `v60.dream-opening-attention.001`, stable across refresh, service recreation
+  and Runtime restart.
+- Added visible Grove selection/remembered states and the same-tree opening
+  reminder. Both are `NOT_EVIDENCE`, preserve tree order, Question, Answer,
+  NPC choice and outcome, and permit no Mingli, Cognition/Decision or
+  Knowledge write.
+- Extracted Encounter creation from `DreamService` into a bounded owner and
+  extended Runtime integrity to revalidate both new append-only ledgers.
+- Advanced Foundation to `.014`, Grove to `.003`, Dream Game to `.015`, Unit
+  Dream to `.016`, Runtime Architecture to `.045` and migration head to
+  `0022_dream_return_attention`. Mingli `.022` and Knowledge `.008` are
+  unchanged.
+- Passed all 259 backend tests, Ruff, TypeScript/Vite build, Runtime
+  Architecture, source maintainability and frontend contracts. A real browser
+  verified selection, refresh/restart identity recovery, unchanged candidate
+  order and a different-tree negative control; the same-tree opening is
+  covered by real PostgreSQL and server-rendered UI contracts. Evidence is in
+  `.artifacts/dream-next-attention/`.
+
 ### Relation-effect rule pre-admission review
 
 - Added `v60.mingli-relation-rule-admission-review.001` over the existing

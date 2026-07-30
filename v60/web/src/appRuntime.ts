@@ -44,3 +44,14 @@ export function loggedOutState(current: RuntimeState): RuntimeState {
     snapshot: null,
   };
 }
+
+export function failedRuntimeAction(
+  current: RuntimeState,
+  error: unknown,
+): RuntimeState {
+  return {
+    ...current,
+    busy: false,
+    error: error instanceof Error ? error.message : String(error),
+  };
+}

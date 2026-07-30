@@ -16,6 +16,7 @@ from abu_v60.dream.catalog import (
     EpisodeCatalogError,
 )
 from abu_v60.dream.command_guard import DreamCommandGuard
+from abu_v60.dream.encounter_creation import DreamEncounterCreator
 from abu_v60.dream.errors import DreamStateError
 from abu_v60.dream.grove import (
     DREAM_GROVE_VERSION,
@@ -27,6 +28,7 @@ from abu_v60.dream.opportunity import DreamOpportunityMaterializer
 from abu_v60.dream.outcomes import DreamOutcomeCoordinator
 from abu_v60.dream.persistence import DreamRepository
 from abu_v60.dream.projection import DreamSnapshotProjector
+from abu_v60.dream.return_attention import DreamReturnAttentionCoordinator
 from abu_v60.dream.return_echo import DreamReturnEchoProjector
 from abu_v60.experience import EpisodePublicProjection, ExperienceProjectionComposer
 from abu_v60.game import (
@@ -63,7 +65,16 @@ class DreamService:
         self._return_echo = DreamReturnEchoProjector(
             director=self._director,
         )
+        self._return_attention = DreamReturnAttentionCoordinator(
+            repository=self._repository,
+            return_echo=self._return_echo,
+        )
         self._experience = ExperienceProjectionComposer()
+        self._encounter_creator = DreamEncounterCreator(
+            repository=self._repository,
+            catalog_loader=self._catalog,
+            experience=self._experience,
+        )
         self._public_projection = EpisodePublicProjection()
         self._outcomes = DreamOutcomeCoordinator(
             episodes=self._episodes,
@@ -78,6 +89,7 @@ class DreamService:
             experience=self._experience,
             public_projection=self._public_projection,
             repository=self._repository,
+            return_attention=self._return_attention,
         )
 
     def ensure_encounter(self, *, account_ref: str) -> dict[str, Any]:
@@ -91,7 +103,7 @@ class DreamService:
                 if self._grove.active_candidates(connection):
                     raise DreamStateError("dream_tree_selection_required")
                 entry = self._catalog(connection).entry
-                self._create_encounter(
+                self._encounter_creator.create(
                     connection=connection,
                     account_ref=account_ref,
                     question_ref=entry.question_ref,
@@ -117,6 +129,15 @@ class DreamService:
                         connection,
                         account_ref=account_ref,
                     )
+                    next_attention = (
+                        self._return_attention.project_prompt(
+                            connection,
+                            account_ref=account_ref,
+                            echo=return_echo,
+                        )
+                        if return_echo is not None
+                        else None
+                    )
                     return {
                         "kind": "GROVE",
                         "grove": {
@@ -126,6 +147,11 @@ class DreamService:
                             "return_echo": (
                                 return_echo.model_dump(mode="json")
                                 if return_echo is not None
+                                else None
+                            ),
+                            "next_attention": (
+                                next_attention.model_dump(mode="json")
+                                if next_attention is not None
                                 else None
                             ),
                             "hidden_outcome_included": False,
@@ -150,13 +176,19 @@ class DreamService:
                 candidate_ref=candidate_ref,
             )
             if intent is not None:
-                self._create_encounter(
+                encounter_ref = self._encounter_creator.create(
                     connection=connection,
                     account_ref=account_ref,
                     question_ref=intent.question_ref,
                     actor_ref=intent.actor_ref,
                     tree_ref=intent.tree_ref,
                     causation_id=intent.causation_id,
+                )
+                self._return_attention.apply_pending(
+                    connection,
+                    account_ref=account_ref,
+                    encounter_ref=encounter_ref,
+                    tree_ref=intent.tree_ref,
                 )
         return self.snapshot(account_ref=account_ref)
 
@@ -166,6 +198,13 @@ class DreamService:
         account_ref: str,
         envelope: DreamCommandEnvelope,
     ) -> dict[str, Any]:
+        if envelope.command is DreamCommand.SELECT_NEXT_ATTENTION:
+            self._return_attention.execute_selection(
+                self._engine,
+                account_ref=account_ref,
+                envelope=envelope,
+            )
+            return self.entry(account_ref=account_ref)
         if envelope.command in {
             DreamCommand.OBSERVE_EVIDENCE,
             DreamCommand.OBSERVE_STRUCTURE,
@@ -306,7 +345,7 @@ class DreamService:
                     state=next_episode.tree_state_on_entry,
                     target_version=catalog.tree_entry_version(next_episode.question_ref),
                 )
-                result_encounter_ref = self._create_encounter(
+                result_encounter_ref = self._encounter_creator.create(
                     connection=connection,
                     account_ref=account_ref,
                     question_ref=next_episode.question_ref,
@@ -787,46 +826,6 @@ class DreamService:
 
     def snapshot(self, *, account_ref: str) -> dict[str, Any]:
         return self._snapshot_projector.snapshot(account_ref=account_ref)
-
-    def _create_encounter(
-        self,
-        *,
-        connection: Any,
-        account_ref: str,
-        question_ref: str,
-        actor_ref: str,
-        tree_ref: str,
-        causation_id: str,
-    ) -> str:
-        question = (
-            connection.execute(
-                text(
-                    """
-                SELECT cutoff_tick
-                FROM story.question_instances
-                WHERE question_ref = :question_ref
-                """
-                ),
-                {"question_ref": question_ref},
-            )
-            .mappings()
-            .one()
-        )
-        episode = self._catalog(connection).for_question(question_ref)
-        runtime_metadata = self._experience.question_metadata(
-            question_ref=question_ref,
-            runtime_metadata=episode.runtime_metadata.model_dump(mode="json"),
-        )
-        return self._repository.create_encounter(
-            connection=connection,
-            account_ref=account_ref,
-            question_ref=question_ref,
-            actor_ref=actor_ref,
-            tree_ref=tree_ref,
-            causation_id=causation_id,
-            cutoff_tick=int(question["cutoff_tick"]),
-            npc_choice_id=str(runtime_metadata["npc_choice_id"]),
-        )
 
     def _catalog(self, connection: Any) -> ActiveEpisodeCatalog:
         try:

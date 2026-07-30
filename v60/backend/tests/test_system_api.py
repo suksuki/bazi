@@ -60,8 +60,8 @@ def test_health_binds_database_to_runtime_foundation() -> None:
     assert payload["status"] == "ready"
     assert payload["database"] == {
         "status": "ready",
-        "foundation_version": "v60.foundation.013",
-        "expected_foundation_version": "v60.foundation.013",
+        "foundation_version": "v60.foundation.014",
+        "expected_foundation_version": "v60.foundation.014",
     }
 
 
@@ -79,6 +79,8 @@ def test_runtime_status_exposes_owner_integrity_without_case_content() -> None:
     assert payload["canonical_write_owners"]["dream"] == "dream-game"
     assert payload["integrity"] == {
         "invalid_dream_command_receipts": 0,
+        "invalid_dream_return_attention_applications": 0,
+        "invalid_dream_return_attention_selections": 0,
         "invalid_life_tree_admissions": 0,
         "invalid_world_actor_admissions": 0,
         "invalid_world_event_admissions": 0,

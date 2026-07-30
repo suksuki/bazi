@@ -3,6 +3,7 @@ import type {
   RuntimeAssetDelivery,
   TreeOrgan,
 } from "./api";
+import { DreamOpeningAttention } from "./components/DreamOpeningAttention";
 
 interface LifeTreeSceneProps {
   background: RuntimeAssetDelivery;
@@ -128,11 +129,14 @@ export function LifeTreeScene({
 
       <section className="question-band" aria-live="polite">
         {!snapshot.question && (
-          <div className="question-copy opening-copy">
-            <p className="question-kicker">{snapshot.actor.display_name}的生命现场</p>
-            <h1>{narrative.journey_title}</h1>
-            <p>{narrative.journey_status}</p>
-          </div>
+          <>
+            <DreamOpeningAttention attention={snapshot.opening_attention} />
+            <div className="question-copy opening-copy">
+              <p className="question-kicker">{snapshot.actor.display_name}的生命现场</p>
+              <h1>{narrative.journey_title}</h1>
+              <p>{narrative.journey_status}</p>
+            </div>
+          </>
         )}
 
         {snapshot.question && !snapshot.human_seal && (

@@ -73,7 +73,7 @@ attempt to write canonical state.
 | Decision request, gate receipt, formal decision | Cognition | Submit typed requests |
 | ClockEpoch, WorldEvent, evidence, actor timeline, outbox | World | Consume typed output |
 | QuestionInstance and ScenePlan | Story | Read committed source refs |
-| Encounter, organ progress, AnswerSeal, Fruit, Reveal | Dream Game | Issue commands |
+| Encounter, organ progress, AnswerSeal, Fruit, Reveal, ReturnAttention selection/application | Dream Game | Issue commands |
 | Asset identity, version, hash and Runtime delivery | Media | Resolve by asset ID |
 | Import receipt and source lineage | Migration | No Runtime fallback to V50 |
 
@@ -90,6 +90,8 @@ one application service:
 | `dream.persistence.DreamRepository` | Encounter/Tree optimistic writes and immutable command receipts | command legality, story content, public copy |
 | `dream.projection.DreamSnapshotProjector` | Episode-scoped public read model | canonical writes or state transitions |
 | `dream.outcomes.DreamOutcomeCoordinator` | committed WorldEvent to Fruit/Reveal reconciliation | browser commands or World outcomes |
+| `dream.encounter_creation.DreamEncounterCreator` | one canonical Encounter creation transaction for Grove and graph continuation | command routing, authored content or public projection |
+| `dream.return_attention.DreamReturnAttentionCoordinator` | candidate-bound next-observation selection, replay and same-tree application | Mingli evidence, Knowledge admission, Question/Answer/NPC/outcome mutation |
 | `App` | session, navigation and Runtime composition | login layout, companion-unit internals |
 | `components/*` | bounded presentation responsibilities | canonical product state |
 
@@ -206,9 +208,12 @@ Player gestures follow an equally explicit path:
 ```text
 product gesture
 -> DreamCommandEnvelope
--> DreamGameEngine phase and target validation
+-> Dream command router
+   -> Encounter command: DreamGameEngine phase and target validation
+   -> SELECT_NEXT_ATTENTION: DreamReturnAttentionCoordinator validation
 -> Dream owner transaction
--> committed Encounter version
+-> immutable DreamCommandReceipt
+-> committed Encounter or ReturnAttention identity
 -> shared Experience Context
 ```
 
@@ -268,16 +273,36 @@ OBSERVING
 It validates commands, derives legal actions and projects organ visibility. It
 does not own the world clock or outcome.
 
-All mutable commands enter through the single
-`POST /api/v60/dream/command` boundary. The engine validates that the command
-is legal in the current phase and that an organ target has the required
-semantic role. This keeps React, accessibility controls and later media cues
-on one authoritative gameplay path.
+All Dream mutations enter through the single
+`POST /api/v60/dream/command` boundary. The Dream command router sends
+Encounter commands to the engine, which validates the current phase and organ
+semantic role, and sends `SELECT_NEXT_ATTENTION` to the Return Attention
+coordinator. React, accessibility controls and later media cues therefore
+remain on one authoritative Dream command path without pretending that an
+Echo observation is an Encounter phase transition.
 
 The Dream schema also owns the command receipt ledger. It records no new
 story fact: it proves exactly which command envelope caused which committed
 Encounter version and state Hash. This is the replay boundary for double
 clicks, delayed requests and process recovery.
+
+The same schema owns two separate append-only Return Attention ledgers:
+
+```text
+candidate-backed committed Return Echo
+-> deterministic server observation options
+-> account-private selection + immutable command receipt
+-> other-tree visit: no application
+-> source-tree visit: one opening application
+-> read-only opening projection
+```
+
+Selection binds the exact source Encounter/version, Echo Ref/Hash, Grove
+candidate Ref/Hash, tree and option. Application binds the selection Ref/Hash
+to one later Encounter on the same tree. Runtime integrity revalidates both
+stored payload Hashes and their column, account, candidate and tree lineage.
+The records are `NOT_EVIDENCE`: they cannot change a Question, Answer, NPC
+choice, outcome, owner Reading, Cognition Decision or Knowledge object.
 
 Authored content enters through a complete `DreamEpisodeDefinition`. Runtime
 persists the narrower `DreamEpisodeContract`, its Hash and a separately

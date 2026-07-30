@@ -15,7 +15,7 @@ from abu_v60.architecture.contracts import (
 @lru_cache(maxsize=1)
 def runtime_architecture() -> RuntimeArchitecture:
     architecture = RuntimeArchitecture(
-        architecture_version="v60.runtime-architecture.044",
+        architecture_version="v60.runtime-architecture.045",
         modules=(
             RuntimeModule(
                 module_id="identity",
@@ -183,7 +183,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="dream-game",
                 kind=ModuleKind.ENGINE,
-                version="v60.dream-game-engine.014",
+                version="v60.dream-game-engine.015",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("dream",),
                 reads_from=("identity", "mingli", "world", "story", "cognition"),
@@ -218,6 +218,9 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "completed_history_resurrection_guard",
                     "account_private_return_echo_projection",
                     "return_echo_committed_source_validation",
+                    "append_only_return_attention_selection",
+                    "same_tree_attention_application",
+                    "return_attention_not_owner_evidence",
                 ),
                 writes_canonical_state=True,
             ),
@@ -273,7 +276,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-dream",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-dream.015",
+                version="v60.unit-dream.016",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "media"),
                 capabilities=(
@@ -293,6 +296,8 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "reading_lens_no_tree_candidate_or_order_mutation",
                     "reading_lens_encounter_continuity",
                     "grove_return_echo",
+                    "grove_return_attention_choice",
+                    "same_tree_opening_attention",
                     "dream_outcome_not_owner_mingli_evidence",
                 ),
             ),

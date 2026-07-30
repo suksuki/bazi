@@ -32,6 +32,7 @@ class DreamCommand(StrEnum):
     RECONCILE = "RECONCILE"
     CONTINUE_ENCOUNTER = "CONTINUE_ENCOUNTER"
     RETURN_TO_GROVE = "RETURN_TO_GROVE"
+    SELECT_NEXT_ATTENTION = "SELECT_NEXT_ATTENTION"
 
 
 class DreamCommandEnvelope(BaseModel):
@@ -59,6 +60,11 @@ class DreamCommandEnvelope(BaseModel):
         elif self.command is DreamCommand.SEAL_ANSWER:
             if not self.choice_id or self.target_ref is not None:
                 raise ValueError("seal_answer_requires_only_choice_id")
+        elif self.command is DreamCommand.SELECT_NEXT_ATTENTION:
+            if not self.target_ref or self.choice_id is not None:
+                raise ValueError(
+                    "select_next_attention_requires_only_target_ref"
+                )
         elif self.target_ref is not None or self.choice_id is not None:
             raise ValueError("command_does_not_accept_payload")
         return self

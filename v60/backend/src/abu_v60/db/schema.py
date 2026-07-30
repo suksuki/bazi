@@ -287,6 +287,50 @@ grove_candidates = Table(
     schema="dream",
 )
 
+dream_return_attention_selections = Table(
+    "return_attention_selections",
+    metadata,
+    Column("attention_ref", String(180), primary_key=True),
+    Column("viewer_account_ref", String(160), nullable=False),
+    Column("source_encounter_ref", String(180), nullable=False),
+    Column("source_encounter_version", BigInteger, nullable=False),
+    Column("source_echo_ref", String(180), nullable=False),
+    Column("source_echo_hash", String(64), nullable=False),
+    Column("source_candidate_ref", String(180), nullable=False),
+    Column("source_candidate_hash", String(64), nullable=False),
+    Column("tree_ref", String(180), nullable=False),
+    Column("observation_ref", String(180), nullable=False),
+    Column("idempotency_key", String(180), nullable=False),
+    Column("record_json", JSONB, nullable=False),
+    Column("record_hash", String(64), nullable=False, unique=True),
+    Column(
+        "created_at",
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    ),
+    schema="dream",
+)
+
+dream_return_attention_applications = Table(
+    "return_attention_applications",
+    metadata,
+    Column("application_ref", String(180), primary_key=True),
+    Column("viewer_account_ref", String(160), nullable=False),
+    Column("attention_ref", String(180), nullable=False, unique=True),
+    Column("encounter_ref", String(180), nullable=False, unique=True),
+    Column("tree_ref", String(180), nullable=False),
+    Column("application_json", JSONB, nullable=False),
+    Column("application_hash", String(64), nullable=False, unique=True),
+    Column(
+        "created_at",
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    ),
+    schema="dream",
+)
+
 mingli_quant_foundation_vectors = Table(
     "quant_foundation_vectors",
     metadata,

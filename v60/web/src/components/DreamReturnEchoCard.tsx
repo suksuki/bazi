@@ -1,10 +1,18 @@
+import type { DreamReturnAttentionPrompt } from "../dreamAttentionTypes";
 import type { DreamReturnEcho } from "../dreamReturnEchoTypes";
 import { isDreamReturnEchoDisplayable } from "../dreamReturnEchoTypes";
+import { DreamNextAttentionCard } from "./DreamNextAttentionCard";
 
 export function DreamReturnEchoCard({
+  attention,
+  busy,
   echo,
+  onSelectAttention,
 }: {
+  attention?: DreamReturnAttentionPrompt | null;
+  busy?: boolean;
   echo: DreamReturnEcho | null | undefined;
+  onSelectAttention?: (observationRef: string) => void;
 }) {
   if (!echo) return null;
 
@@ -91,6 +99,13 @@ export function DreamReturnEchoCard({
           </div>
         </dl>
       </details>
+
+      <DreamNextAttentionCard
+        attention={attention}
+        busy={busy ?? false}
+        echo={echo}
+        onSelect={onSelectAttention}
+      />
 
       <p className="dream-return-echo-boundary">
         这张足迹只属于这条梦中生命；不得作为主人的命理证据，不改写命盘，也不改变三棵树的候选或顺序。

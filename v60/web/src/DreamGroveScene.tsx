@@ -82,6 +82,7 @@ export function DreamGroveScene({
   lens,
   media,
   onSelect,
+  onSelectAttention,
 }: {
   background: RuntimeAssetDelivery;
   busy: boolean;
@@ -89,6 +90,7 @@ export function DreamGroveScene({
   lens: DreamReadingObservationLensModel;
   media: RuntimeMediaManifest;
   onSelect: (candidateRef: string) => void;
+  onSelectAttention: (observationRef: string) => void;
 }) {
   const returnEcho = grove.return_echo ?? null;
   const returnEchoDisplayable = isDreamReturnEchoDisplayable(returnEcho);
@@ -137,7 +139,12 @@ export function DreamGroveScene({
           </button>
         ))}
       </div>
-      <DreamReturnEchoCard echo={returnEcho} />
+      <DreamReturnEchoCard
+        attention={grove.next_attention}
+        busy={busy}
+        echo={returnEcho}
+        onSelectAttention={onSelectAttention}
+      />
       <AbuCompanionMotion
         className="dream-grove-abu"
         cueKey={`dream-grove:${grove.grove_version}`}

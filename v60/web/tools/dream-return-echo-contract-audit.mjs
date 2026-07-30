@@ -103,7 +103,7 @@ const candidates = Object.freeze([
 ]);
 
 const baseGrove = {
-  grove_version: "v60.dream-grove.002",
+  grove_version: "v60.dream-grove.003",
   selection_status: "AWAITING_TREE_SELECTION",
   candidates,
   hidden_outcome_included: false,

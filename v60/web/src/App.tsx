@@ -14,6 +14,7 @@ import {
 } from "./api";
 import {
   dreamEntryState,
+  failedRuntimeAction,
   initialRuntimeState,
   loggedOutState,
   type RuntimeState,
@@ -21,6 +22,7 @@ import {
 import { CompanionRail } from "./components/CompanionRail";
 import { ExperienceHeader } from "./components/ExperienceHeader";
 import { ExperienceRuntimeOverlay } from "./components/ExperienceRuntimeOverlay";
+import { createDreamNextAttentionHandler } from "./dreamNextAttentionAction";
 import { ExperienceStoryCanvas } from "./components/ExperienceStoryCanvas";
 import { HomeCompanionRail } from "./components/HomeCompanionRail";
 import { LoginScene } from "./components/LoginScene";
@@ -183,11 +185,7 @@ export function App() {
       const snapshot = await action();
       setRuntime((current) => ({ ...current, snapshot, busy: false }));
     } catch (error) {
-      setRuntime((current) => ({
-        ...current,
-        busy: false,
-        error: error instanceof Error ? error.message : String(error),
-      }));
+      setRuntime((current) => failedRuntimeAction(current, error));
     }
   };
 
@@ -232,11 +230,7 @@ export function App() {
       setFocusRef(null);
       writeNavigation("home", "dream", null, "replace");
     } catch (error) {
-      setRuntime((current) => ({
-        ...current,
-        busy: false,
-        error: error instanceof Error ? error.message : String(error),
-      }));
+      setRuntime((current) => failedRuntimeAction(current, error));
     }
   };
 
@@ -254,11 +248,7 @@ export function App() {
       setFocusRef(null);
       writeNavigation("dream", "dream", null, "push");
     } catch (error) {
-      setRuntime((current) => ({
-        ...current,
-        busy: false,
-        error: error instanceof Error ? error.message : String(error),
-      }));
+      setRuntime((current) => failedRuntimeAction(current, error));
     }
   };
 
@@ -273,11 +263,7 @@ export function App() {
         busy: false,
       }));
     } catch (error) {
-      setRuntime((current) => ({
-        ...current,
-        busy: false,
-        error: error instanceof Error ? error.message : String(error),
-      }));
+      setRuntime((current) => failedRuntimeAction(current, error));
     }
   };
 
@@ -296,11 +282,7 @@ export function App() {
       setFocusRef(null);
       writeNavigation("home", "dream", null, "push");
     } catch (error) {
-      setRuntime((current) => ({
-        ...current,
-        busy: false,
-        error: error instanceof Error ? error.message : String(error),
-      }));
+      setRuntime((current) => failedRuntimeAction(current, error));
     }
   };
 
@@ -317,11 +299,7 @@ export function App() {
       setFocusRef(null);
       writeNavigation("dream", "dream", null, "replace");
     } catch (error) {
-      setRuntime((current) => ({
-        ...current,
-        busy: false,
-        error: error instanceof Error ? error.message : String(error),
-      }));
+      setRuntime((current) => failedRuntimeAction(current, error));
     }
   };
 
@@ -332,11 +310,7 @@ export function App() {
       const home = await loadHomeExperience();
       setRuntime((current) => ({ ...current, home, busy: false }));
     } catch (error) {
-      setRuntime((current) => ({
-        ...current,
-        busy: false,
-        error: error instanceof Error ? error.message : String(error),
-      }));
+      setRuntime((current) => failedRuntimeAction(current, error));
     }
   };
 
@@ -428,6 +402,10 @@ export function App() {
           focusedOrganRef={semanticFocus?.organ.organ_ref ?? null}
           onEnterDream={() => void enterDream()}
           onSelectTree={(candidateRef) => void selectGroveTree(candidateRef)}
+          onSelectDreamAttention={createDreamNextAttentionHandler(
+            runtime,
+            setRuntime,
+          )}
           onFocus={(organ) => {
             setFocusRef(organ.organ_ref);
             writeNavigation("dream", activeUnit, organ.organ_ref, "replace");

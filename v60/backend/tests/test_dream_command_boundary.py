@@ -405,7 +405,7 @@ def test_completed_encounter_returns_to_grove_and_starts_a_new_tree(
     service = DreamService(engine)
     entry = service.entry(account_ref=qa_account)
     assert entry["kind"] == "GROVE"
-    assert entry["grove"]["grove_version"] == "v60.dream-grove.002"
+    assert entry["grove"]["grove_version"] == "v60.dream-grove.003"
     assert entry["grove"]["return_echo"] is None
     candidates = entry["grove"]["candidates"]
     candidate_order = [

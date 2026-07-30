@@ -32,12 +32,51 @@ login
 -> world settlement
 -> fruit reveal and reconciliation
 -> persistent Grove return echo
+-> choose one server-issued next observation
+-> other trees leave that observation pending
+-> same-tree return opens with the remembered observation
 -> return encounter on the same world line
 ```
 
 The same snapshot feeds Dream, Mingli Calculation, Abu, Theater and Lab. The
 current implementation is desktop-first; mobile remains a guardrail until the
 desktop composition is stable.
+
+## Completed Delivery: Persistent Dream Next Attention
+
+Status: `IMPLEMENTED_AND_REAL_BROWSER_CORE_AUDITED_LOCAL`
+
+- A candidate-backed Return Echo now offers two or three deterministic
+  observation targets derived only from its committed world response and
+  outcome-evidence summaries. A legacy Echo without a Grove candidate binding
+  receives no fabricated prompt.
+- Selection reuses the single `POST /api/v60/dream/command` boundary through
+  `SELECT_NEXT_ATTENTION`. The immutable command receipt and selection bind
+  account, source Encounter/version, Echo Ref/Hash, candidate Ref/Hash, tree
+  and one server-issued observation. Exact retry returns the same result;
+  changed reuse conflicts.
+- Selection and application are Hash-locked, append-only Dream records. A
+  visit to another tree does not consume the selection. The next visit to the
+  source tree creates one account-private opening application, and refresh or
+  process restart restores the same identity.
+- Grove visibly changes from `你想继续观察什么？` to `世界已记住`.
+  The same-tree opening repeats the exact server label and summary without
+  changing candidate set/order, Question, Answer, NPC choice or outcome.
+- Both projections are explicitly `NOT_EVIDENCE`. Dream selection and
+  application leave the complete Mingli and Cognition schemas plus the
+  Knowledge registry digest unchanged; no owner Reading or professional
+  conclusion can consume them.
+- Foundation is now `v60.foundation.014`, Grove `.003`, Dream Game `.015`,
+  Unit Dream `.016`, Runtime Architecture `.045` and migration head
+  `0022_dream_return_attention`. Mingli `.022` and Knowledge `.008` are
+  unchanged.
+- All 259 backend tests, Ruff, TypeScript/Vite build, Runtime Architecture,
+  source maintainability and frontend fail-closed contracts pass. A real
+  browser verified selection, exact Ref/Hash recovery after refresh and
+  managed Runtime restart, unchanged three-tree order, and the different-tree
+  non-application control. The same-tree opening and its full visible boundary
+  are additionally locked by real PostgreSQL integration and server-rendered
+  UI contracts. Evidence is in `.artifacts/dream-next-attention/`.
 
 ## Completed Delivery: Relation-Effect Rule Pre-Admission Review
 

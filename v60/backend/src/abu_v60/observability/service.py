@@ -7,6 +7,10 @@ from sqlalchemy.engine import Engine
 
 from abu_v60.architecture import runtime_architecture
 from abu_v60.dream.catalog import DreamEpisodeCatalog, EpisodeCatalogError
+from abu_v60.dream.return_attention_contracts import (
+    DreamReturnAttentionApplication,
+    DreamReturnAttentionRecord,
+)
 from abu_v60.dream.tree_admission import (
     LifeTreeAdmissionError,
     validate_persisted_life_tree_admission,
@@ -68,6 +72,10 @@ class RuntimeIntegrityService:
                         (SELECT count(*) FROM dream.life_trees) AS life_trees,
                         (SELECT count(*) FROM dream.encounters) AS encounters,
                         (SELECT count(*) FROM dream.command_receipts) AS command_receipts,
+                        (SELECT count(*) FROM dream.return_attention_selections)
+                            AS return_attention_selections,
+                        (SELECT count(*) FROM dream.return_attention_applications)
+                            AS return_attention_applications,
                         (SELECT count(*) FROM dream.answer_seals) AS answer_seals,
                         (SELECT count(*) FROM dream.reveals) AS reveals
                     """
@@ -235,6 +243,125 @@ class RuntimeIntegrityService:
                         invalid_dream_command_receipts += 1
                 except ValueError:
                     invalid_dream_command_receipts += 1
+            invalid_dream_return_attention_selections = 0
+            attention_selection_rows = connection.execute(
+                text(
+                    """
+                    SELECT selection.*, encounter.viewer_account_ref
+                               AS encounter_viewer_account_ref,
+                           encounter.tree_ref AS encounter_tree_ref,
+                           candidate.candidate_hash
+                               AS persisted_candidate_hash,
+                           candidate.tree_ref AS candidate_tree_ref
+                    FROM dream.return_attention_selections AS selection
+                    LEFT JOIN dream.encounters AS encounter
+                      ON encounter.encounter_ref =
+                         selection.source_encounter_ref
+                    LEFT JOIN dream.grove_candidates AS candidate
+                      ON candidate.candidate_ref =
+                         selection.source_candidate_ref
+                    """
+                )
+            ).mappings()
+            for selection_row in attention_selection_rows:
+                try:
+                    record = DreamReturnAttentionRecord.model_validate(
+                        selection_row["record_json"]
+                    )
+                    expected = {
+                        "attention_ref": record.attention_ref,
+                        "viewer_account_ref": record.viewer_account_ref,
+                        "source_encounter_ref": record.source_encounter_ref,
+                        "source_encounter_version": (
+                            record.source_encounter_version
+                        ),
+                        "source_echo_ref": record.source_echo_ref,
+                        "source_echo_hash": record.source_echo_hash,
+                        "source_candidate_ref": record.source_candidate_ref,
+                        "source_candidate_hash": (
+                            record.source_candidate_hash
+                        ),
+                        "tree_ref": record.tree_ref,
+                        "observation_ref": (
+                            record.observation.observation_ref
+                        ),
+                        "idempotency_key": record.idempotency_key,
+                        "record_hash": record.attention_hash,
+                    }
+                    if (
+                        any(
+                            selection_row[key] != value
+                            for key, value in expected.items()
+                        )
+                        or selection_row["encounter_viewer_account_ref"]
+                        != record.viewer_account_ref
+                        or selection_row["encounter_tree_ref"]
+                        != record.tree_ref
+                        or selection_row["persisted_candidate_hash"]
+                        != record.source_candidate_hash
+                        or selection_row["candidate_tree_ref"]
+                        != record.tree_ref
+                    ):
+                        invalid_dream_return_attention_selections += 1
+                except ValueError:
+                    invalid_dream_return_attention_selections += 1
+            invalid_dream_return_attention_applications = 0
+            attention_application_rows = connection.execute(
+                text(
+                    """
+                    SELECT application.*, selection.viewer_account_ref
+                               AS selection_viewer_account_ref,
+                           selection.record_hash AS attention_hash,
+                           selection.tree_ref AS selection_tree_ref,
+                           encounter.viewer_account_ref
+                               AS encounter_viewer_account_ref,
+                           encounter.tree_ref AS encounter_tree_ref
+                    FROM dream.return_attention_applications AS application
+                    LEFT JOIN dream.return_attention_selections AS selection
+                      ON selection.attention_ref =
+                         application.attention_ref
+                    LEFT JOIN dream.encounters AS encounter
+                      ON encounter.encounter_ref =
+                         application.encounter_ref
+                    """
+                )
+            ).mappings()
+            for application_row in attention_application_rows:
+                try:
+                    application = (
+                        DreamReturnAttentionApplication.model_validate(
+                            application_row["application_json"]
+                        )
+                    )
+                    expected = {
+                        "application_ref": application.application_ref,
+                        "viewer_account_ref": (
+                            application.viewer_account_ref
+                        ),
+                        "attention_ref": application.attention_ref,
+                        "encounter_ref": application.encounter_ref,
+                        "tree_ref": application.tree_ref,
+                        "application_hash": application.application_hash,
+                    }
+                    if (
+                        any(
+                            application_row[key] != value
+                            for key, value in expected.items()
+                        )
+                        or application_row["selection_viewer_account_ref"]
+                        != application.viewer_account_ref
+                        or application_row["encounter_viewer_account_ref"]
+                        != application.viewer_account_ref
+                        or application_row["selection_tree_ref"]
+                        != application.tree_ref
+                        or application_row["encounter_tree_ref"]
+                        != application.tree_ref
+                        or application_row["attention_hash"]
+                        != application.attention_hash
+                    ):
+                        invalid_dream_return_attention_applications += 1
+                except ValueError:
+                    invalid_dream_return_attention_applications += 1
             inconsistent_reveals = int(
                 connection.execute(
                     text(
@@ -299,6 +426,12 @@ class RuntimeIntegrityService:
             "unadmitted_world_events": unadmitted_world_events,
             "invalid_world_event_admissions": invalid_world_event_admissions,
             "invalid_dream_command_receipts": invalid_dream_command_receipts,
+            "invalid_dream_return_attention_selections": (
+                invalid_dream_return_attention_selections
+            ),
+            "invalid_dream_return_attention_applications": (
+                invalid_dream_return_attention_applications
+            ),
             "reveal_without_settled_world_event": inconsistent_reveals,
         }
         ready = (

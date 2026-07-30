@@ -7,7 +7,7 @@ from sqlalchemy import text
 
 from abu_v60.provenance import canonical_json, content_hash, stable_ref
 
-DREAM_GROVE_VERSION = "v60.dream-grove.002"
+DREAM_GROVE_VERSION = "v60.dream-grove.003"
 THREE_LIFE_POOL_REF = "v60.dream-grove.three-life-qualification.001"
 
 

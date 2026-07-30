@@ -8,6 +8,7 @@ from sqlalchemy.engine import Engine
 from abu_v60.dream.catalog import DreamEpisodeCatalog, EpisodeCatalogError
 from abu_v60.dream.errors import DreamStateError
 from abu_v60.dream.persistence import DreamRepository
+from abu_v60.dream.return_attention import DreamReturnAttentionCoordinator
 from abu_v60.experience import EpisodePublicProjection, ExperienceProjectionComposer
 from abu_v60.game import DreamGameplayDirector
 from abu_v60.system_manifest import DREAM_GAME_ENGINE_VERSION, PRIMARY_WORLD_ID
@@ -25,6 +26,7 @@ class DreamSnapshotProjector:
         experience: ExperienceProjectionComposer,
         public_projection: EpisodePublicProjection,
         repository: DreamRepository,
+        return_attention: DreamReturnAttentionCoordinator,
     ) -> None:
         self._engine = engine
         self._director = director
@@ -32,6 +34,7 @@ class DreamSnapshotProjector:
         self._experience = experience
         self._public_projection = public_projection
         self._repository = repository
+        self._return_attention = return_attention
 
     def snapshot(self, *, account_ref: str) -> dict[str, Any]:
         with self._engine.connect() as connection:
@@ -227,6 +230,11 @@ class DreamSnapshotProjector:
             completed_encounter_count = self._repository.completed_encounter_count(
                 connection,
                 account_ref=account_ref,
+            )
+            opening_attention = self._return_attention.opening_projection(
+                connection,
+                account_ref=account_ref,
+                encounter_ref=str(encounter["encounter_ref"]),
             )
 
         state = encounter["state_json"]
@@ -432,6 +440,11 @@ class DreamSnapshotProjector:
                 "label": scene.continuation_label,
                 "completed_encounter_count": completed_encounter_count,
             },
+            "opening_attention": (
+                opening_attention.model_dump(mode="json")
+                if opening_attention is not None
+                else None
+            ),
         }
 
     def _catalog(self, connection: Any) -> Any:

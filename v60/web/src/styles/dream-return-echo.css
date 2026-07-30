@@ -132,6 +132,121 @@
   line-height: 1.5;
 }
 
+.dream-next-attention {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid rgba(229, 196, 102, 0.28);
+  border-radius: 10px;
+  background: rgba(219, 184, 83, 0.08);
+}
+
+.dream-next-attention > small {
+  color: #dfc67e;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
+
+.dream-next-attention > strong {
+  color: rgba(255, 251, 236, 0.94);
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dream-next-attention > p,
+.dream-next-attention > span,
+.dream-next-attention > em {
+  margin: 0;
+  color: rgba(255, 251, 236, 0.68);
+  font-size: 9px;
+  font-style: normal;
+  line-height: 1.5;
+}
+
+.dream-next-attention-options {
+  display: grid;
+  gap: 6px;
+}
+
+.dream-next-attention-options button {
+  display: grid;
+  gap: 2px;
+  padding: 7px 9px;
+  border: 1px solid rgba(239, 219, 158, 0.2);
+  border-radius: 8px;
+  color: rgba(255, 251, 236, 0.92);
+  background: rgba(247, 240, 210, 0.07);
+  cursor: pointer;
+  text-align: left;
+}
+
+.dream-next-attention-options button:hover,
+.dream-next-attention-options button:focus-visible {
+  border-color: rgba(239, 211, 128, 0.58);
+  background: rgba(247, 229, 171, 0.14);
+}
+
+.dream-next-attention-options button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.dream-next-attention-options button span {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.dream-next-attention-options button small {
+  color: rgba(255, 251, 236, 0.58);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.dream-next-attention-selected {
+  border-color: rgba(171, 216, 156, 0.34);
+  background: rgba(119, 174, 115, 0.12);
+}
+
+.dream-next-attention-withheld {
+  border-color: rgba(239, 219, 158, 0.12);
+  background: rgba(247, 240, 210, 0.04);
+}
+
+.dream-opening-attention {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-left: 2px solid #b99a50;
+  color: var(--ink);
+  background: rgba(235, 229, 192, 0.3);
+}
+
+.dream-opening-attention small {
+  color: #8f7439;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.dream-opening-attention strong {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.dream-opening-attention p,
+.dream-opening-attention span {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.dream-opening-attention span {
+  color: rgba(78, 82, 65, 0.62);
+}
+
 .dream-return-echo-boundary,
 .dream-return-echo-withheld p {
   margin: 9px 0 0;
