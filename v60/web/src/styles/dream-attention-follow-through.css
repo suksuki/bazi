@@ -1,0 +1,255 @@
+.dream-pending-attention-badge {
+  position: absolute;
+  z-index: 6;
+  right: auto;
+  bottom: 92px;
+  left: 50%;
+  display: grid;
+  width: min(190px, 88%);
+  gap: 3px;
+  padding: 9px 10px;
+  border: 1px solid rgba(242, 215, 137, 0.54);
+  border-radius: 10px;
+  color: rgba(255, 251, 232, 0.94);
+  background: rgba(31, 65, 47, 0.82);
+  box-shadow: 0 12px 28px rgba(18, 43, 30, 0.28);
+  text-align: left;
+  text-shadow: none;
+  pointer-events: none;
+  transform: translateX(-50%);
+  backdrop-filter: blur(10px);
+}
+
+.dream-pending-attention-badge small {
+  color: #e5ca7e;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+}
+
+.dream-pending-attention-badge strong {
+  overflow: hidden;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 12px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dream-pending-attention-badge span,
+.dream-pending-attention-badge em {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: rgba(255, 251, 232, 0.7);
+  font-size: 9px;
+  font-style: normal;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.dream-pending-attention-badge em {
+  color: #ead28d;
+  font-weight: 650;
+  -webkit-line-clamp: 1;
+}
+
+.grove-tree-choice[data-pending-attention="true"] .grove-tree-art {
+  filter:
+    hue-rotate(var(--grove-hue))
+    saturate(calc(var(--grove-saturation) + 0.08))
+    brightness(calc(var(--grove-lightness) + 0.04))
+    drop-shadow(0 20px 26px rgba(231, 201, 119, 0.36));
+}
+
+.dream-attention-follow-through {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid rgba(188, 157, 82, 0.24);
+  border-left: 3px solid #b99a50;
+  border-radius: 7px;
+  color: var(--ink);
+  background: rgba(235, 229, 192, 0.24);
+}
+
+.dream-attention-follow-through header {
+  display: grid;
+  gap: 2px;
+}
+
+.dream-attention-follow-through header small {
+  color: #8f7439;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.dream-attention-follow-through header strong {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.dream-attention-follow-through > p,
+.dream-attention-follow-through > em,
+.dream-attention-status-detail {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 9px;
+  font-style: normal;
+  line-height: 1.45;
+}
+
+.dream-attention-follow-through > em {
+  color: rgba(78, 82, 65, 0.62);
+}
+
+.dream-attention-progress {
+  display: grid;
+  grid-template-columns: auto minmax(70px, 1fr);
+  align-items: center;
+  gap: 9px;
+}
+
+.dream-attention-progress > span {
+  color: #755f2f;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dream-attention-progress > i {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(117, 95, 47, 0.14);
+}
+
+.dream-attention-progress > i > b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #b99a50;
+  transition: width 240ms ease;
+}
+
+.dream-attention-world-response {
+  display: grid;
+  gap: 4px;
+  padding: 8px 9px;
+  border: 1px solid rgba(67, 111, 87, 0.16);
+  border-radius: 6px;
+  background: rgba(235, 243, 233, 0.5);
+}
+
+.dream-attention-world-response small {
+  color: #567463;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.dream-attention-world-response strong {
+  color: #294d3e;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.dream-attention-world-response ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding-left: 15px;
+}
+
+.dream-attention-world-response li {
+  color: var(--ink-soft);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.question-band:has(.dream-attention-follow-through) {
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.dream-attention-follow-through-grove {
+  margin-top: 9px;
+  border-color: rgba(177, 218, 164, 0.25);
+  border-left-color: #9cc88e;
+  color: rgba(255, 251, 236, 0.92);
+  background: rgba(119, 174, 115, 0.1);
+}
+
+.dream-attention-follow-through-grove header small,
+.dream-attention-follow-through-grove
+  .dream-attention-progress
+  > span {
+  color: #c6dfa9;
+}
+
+.dream-attention-follow-through-grove header strong {
+  color: rgba(255, 251, 236, 0.94);
+}
+
+.dream-attention-follow-through-grove > p,
+.dream-attention-follow-through-grove > em,
+.dream-attention-follow-through-grove
+  .dream-attention-status-detail {
+  color: rgba(255, 251, 236, 0.66);
+}
+
+.dream-attention-follow-through-grove
+  .dream-attention-progress
+  > i {
+  background: rgba(220, 238, 202, 0.14);
+}
+
+.dream-attention-follow-through-grove
+  .dream-attention-progress
+  > i
+  > b {
+  background: #a9ce96;
+}
+
+.dream-attention-follow-through-grove
+  .dream-attention-world-response {
+  border-color: rgba(216, 236, 197, 0.14);
+  background: rgba(225, 239, 207, 0.06);
+}
+
+.dream-attention-follow-through-grove
+  .dream-attention-world-response
+  small {
+  color: #c6dfa9;
+}
+
+.dream-attention-follow-through-grove
+  .dream-attention-world-response
+  strong,
+.dream-attention-follow-through-grove
+  .dream-attention-world-response
+  li {
+  color: rgba(255, 251, 236, 0.76);
+}
+
+@media (max-width: 760px) {
+  .dream-pending-attention-badge {
+    right: auto;
+    bottom: 78px;
+    left: 50%;
+    width: min(150px, 78%);
+    padding: 7px 8px;
+  }
+
+  .dream-pending-attention-badge span {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dream-attention-progress > i > b {
+    transition: none;
+  }
+}

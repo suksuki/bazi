@@ -1,17 +1,23 @@
 import type { DreamReturnAttentionPrompt } from "../dreamAttentionTypes";
+import type { DreamAttentionFollowThrough } from "../dreamAttentionFollowThroughTypes";
 import type { DreamReturnEcho } from "../dreamReturnEchoTypes";
 import { isDreamReturnEchoDisplayable } from "../dreamReturnEchoTypes";
+import { DreamReturnedAttentionSummary } from "./DreamAttentionFollowThroughCard";
 import { DreamNextAttentionCard } from "./DreamNextAttentionCard";
 
 export function DreamReturnEchoCard({
   attention,
   busy,
+  candidateRefs,
   echo,
+  followThrough,
   onSelectAttention,
 }: {
   attention?: DreamReturnAttentionPrompt | null;
   busy?: boolean;
+  candidateRefs?: readonly string[];
   echo: DreamReturnEcho | null | undefined;
+  followThrough?: DreamAttentionFollowThrough | null;
   onSelectAttention?: (observationRef: string) => void;
 }) {
   if (!echo) return null;
@@ -99,6 +105,11 @@ export function DreamReturnEchoCard({
           </div>
         </dl>
       </details>
+
+      <DreamReturnedAttentionSummary
+        candidateRefs={candidateRefs ?? []}
+        followThrough={followThrough}
+      />
 
       <DreamNextAttentionCard
         attention={attention}

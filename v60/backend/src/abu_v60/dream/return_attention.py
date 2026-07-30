@@ -230,6 +230,73 @@ class DreamReturnAttentionCoordinator:
         account_ref: str,
         encounter_ref: str,
     ) -> DreamOpeningAttention | None:
+        binding = self.applied_binding(
+            connection,
+            account_ref=account_ref,
+            encounter_ref=encounter_ref,
+        )
+        if binding is None:
+            return None
+        record, application = binding
+        try:
+            return DreamOpeningAttention.issue(
+                record=record,
+                application=application,
+            )
+        except ValueError as exc:
+            raise DreamStateError(
+                "dream_opening_attention_lineage_invalid"
+            ) from exc
+
+    def oldest_pending_record(
+        self,
+        connection: Any,
+        *,
+        account_ref: str,
+    ) -> DreamReturnAttentionRecord | None:
+        row = (
+            connection.execute(
+                text(
+                    """
+                    SELECT selection.attention_ref,
+                           selection.viewer_account_ref,
+                           selection.source_encounter_ref,
+                           selection.source_encounter_version,
+                           selection.source_echo_ref,
+                           selection.source_echo_hash,
+                           selection.source_candidate_ref,
+                           selection.source_candidate_hash,
+                           selection.tree_ref,
+                           selection.observation_ref,
+                           selection.idempotency_key,
+                           selection.record_json,
+                           selection.record_hash
+                    FROM dream.return_attention_selections AS selection
+                    LEFT JOIN dream.return_attention_applications AS application
+                      ON application.attention_ref = selection.attention_ref
+                    WHERE selection.viewer_account_ref = :account_ref
+                      AND application.attention_ref IS NULL
+                    ORDER BY selection.created_at, selection.attention_ref
+                    LIMIT 1
+                    """
+                ),
+                {"account_ref": account_ref},
+            )
+            .mappings()
+            .one_or_none()
+        )
+        return self._validate_record(row) if row is not None else None
+
+    def applied_binding(
+        self,
+        connection: Any,
+        *,
+        account_ref: str,
+        encounter_ref: str,
+    ) -> tuple[
+        DreamReturnAttentionRecord,
+        DreamReturnAttentionApplication,
+    ] | None:
         row = (
             connection.execute(
                 text(
@@ -291,15 +358,7 @@ class DreamReturnAttentionCoordinator:
             raise DreamStateError(
                 "dream_opening_attention_target_identity_mismatch"
             )
-        try:
-            return DreamOpeningAttention.issue(
-                record=record,
-                application=application,
-            )
-        except ValueError as exc:
-            raise DreamStateError(
-                "dream_opening_attention_lineage_invalid"
-            ) from exc
+        return record, application
 
     @staticmethod
     def _issue_prompt(

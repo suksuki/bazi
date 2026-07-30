@@ -8,7 +8,12 @@ import type {
   RuntimeMediaManifest,
 } from "./api";
 import { DreamReadingObservationLens } from "./components/DreamReadingObservationLens";
+import { DreamPendingAttentionBadge } from "./components/DreamPendingAttentionBadge";
 import { DreamReturnEchoCard } from "./components/DreamReturnEchoCard";
+import {
+  isDreamPendingAttentionDisplayable,
+  isDreamPendingAttentionSupplied,
+} from "./dreamAttentionFollowThroughTypes";
 import { isDreamReturnEchoDisplayable } from "./dreamReturnEchoTypes";
 import type { DreamReadingObservationLensModel } from "./homeDreamObservationLens";
 
@@ -94,6 +99,16 @@ export function DreamGroveScene({
 }) {
   const returnEcho = grove.return_echo ?? null;
   const returnEchoDisplayable = isDreamReturnEchoDisplayable(returnEcho);
+  const candidateRefs = grove.candidates.map(({ candidate_ref }) => candidate_ref);
+  const pendingSupplied = isDreamPendingAttentionSupplied(
+    grove.pending_attention,
+  );
+  const pending = isDreamPendingAttentionDisplayable(
+    grove.pending_attention,
+    { candidateRefs },
+  )
+    ? grove.pending_attention
+    : null;
 
   return (
     <div
@@ -123,6 +138,9 @@ export function DreamGroveScene({
             className="grove-tree-choice"
             data-candidate-ref={candidate.candidate_ref}
             data-domain={candidate.domain}
+            data-pending-attention={
+              pending?.source_candidate_ref === candidate.candidate_ref
+            }
             data-tree-version={candidate.tree.version}
             disabled={busy}
             key={candidate.candidate_ref}
@@ -130,6 +148,10 @@ export function DreamGroveScene({
             style={treeStyle(candidate)}
             type="button"
           >
+            <DreamPendingAttentionBadge
+              candidateRef={candidate.candidate_ref}
+              pending={pending}
+            />
             <PhenotypeTree candidate={candidate} />
             <span className="grove-tree-copy">
               <strong>{candidate.public_alias}</strong>
@@ -140,9 +162,11 @@ export function DreamGroveScene({
         ))}
       </div>
       <DreamReturnEchoCard
-        attention={grove.next_attention}
+        attention={pendingSupplied ? null : grove.next_attention}
         busy={busy}
         echo={returnEcho}
+        followThrough={grove.attention_follow_through}
+        candidateRefs={candidateRefs}
         onSelectAttention={onSelectAttention}
       />
       <AbuCompanionMotion

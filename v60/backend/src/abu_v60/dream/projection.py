@@ -5,6 +5,9 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
+from abu_v60.dream.attention_follow_through import (
+    DreamAttentionFollowThroughProjector,
+)
 from abu_v60.dream.catalog import DreamEpisodeCatalog, EpisodeCatalogError
 from abu_v60.dream.errors import DreamStateError
 from abu_v60.dream.persistence import DreamRepository
@@ -27,6 +30,7 @@ class DreamSnapshotProjector:
         public_projection: EpisodePublicProjection,
         repository: DreamRepository,
         return_attention: DreamReturnAttentionCoordinator,
+        attention_follow_through: DreamAttentionFollowThroughProjector,
     ) -> None:
         self._engine = engine
         self._director = director
@@ -35,6 +39,7 @@ class DreamSnapshotProjector:
         self._public_projection = public_projection
         self._repository = repository
         self._return_attention = return_attention
+        self._attention_follow_through = attention_follow_through
 
     def snapshot(self, *, account_ref: str) -> dict[str, Any]:
         with self._engine.connect() as connection:
@@ -200,7 +205,8 @@ class DreamSnapshotProjector:
                 connection.execute(
                     text(
                         """
-                        SELECT reveal_ref, result, reveal_json
+                        SELECT reveal_ref, encounter_ref, world_event_ref,
+                               result, reveal_json, reveal_hash
                         FROM dream.reveals
                         WHERE encounter_ref = :encounter_ref
                         """
@@ -214,7 +220,8 @@ class DreamSnapshotProjector:
                 connection.execute(
                     text(
                         """
-                        SELECT evidence_ref, committed_at_tick, evidence_json
+                        SELECT evidence_ref, world_event_ref,
+                               committed_at_tick, evidence_json, evidence_hash
                         FROM world.event_evidence
                         WHERE world_event_ref = :event_ref
                         ORDER BY evidence_ref
@@ -235,6 +242,23 @@ class DreamSnapshotProjector:
                 connection,
                 account_ref=account_ref,
                 encounter_ref=str(encounter["encounter_ref"]),
+            )
+            attention_follow_through = (
+                self._attention_follow_through.active_projection(
+                    connection,
+                    account_ref=account_ref,
+                    encounter=encounter,
+                    organ_set=dict(root["organ_set_json"]),
+                    world_event_ref=str(root["world_event_ref"]),
+                    reveal=(
+                        dict(reveal)
+                        if reveal is not None
+                        else None
+                    ),
+                    revealed_evidence=tuple(
+                        dict(item) for item in revealed_evidence
+                    ),
+                )
             )
 
         state = encounter["state_json"]
@@ -443,6 +467,11 @@ class DreamSnapshotProjector:
             "opening_attention": (
                 opening_attention.model_dump(mode="json")
                 if opening_attention is not None
+                else None
+            ),
+            "attention_follow_through": (
+                attention_follow_through.model_dump(mode="json")
+                if attention_follow_through is not None
                 else None
             ),
         }

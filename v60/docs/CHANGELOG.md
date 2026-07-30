@@ -2,6 +2,41 @@
 
 ## 2026-07-30
 
+### Dream attention follow-through
+
+- Added `v60.dream-pending-attention.001` and
+  `v60.dream-attention-follow-through.001` as read-only projections over the
+  existing append-only Return Attention selection/application ledgers.
+- Grove now marks the exact source tree for the oldest pending observation and
+  its UI withholds a parallel new choice until that observation is applied,
+  even if the supplied pending projection fails display validation. Other
+  trees do not consume it.
+- Kept one application visible through exact two-leaf/one-branch progress,
+  AnswerSeal, World waiting, Reveal, reconciliation and Grove return.
+- Rebuilt and revalidated the source Encounter Echo on every projection, then
+  exact-checked source candidate/actor/question/tree/observation and target
+  state, organ set, Reveal and committed evidence lineage.
+- Withheld all world-response material before Reveal. After Reveal, exposed
+  only the actual event and stable evidence list with
+  `SEMANTIC_MATCH_NOT_EVALUATED`; matching text is not classified as a hit,
+  validation, probability or evidence.
+- Preserved the `NOT_EVIDENCE` boundary and all false mutation/write flags:
+  no candidate-order, Question, Answer, NPC, outcome, Mingli, Decision or
+  Knowledge change, and no new command, table or migration.
+- Advanced Dream Game to `.016`, Unit Dream to `.017` and Runtime
+  Architecture to `.049`. Foundation `.016`, migration head
+  `0024_relation_effect_material`, Mingli `.025`, Knowledge `.008` and
+  Cognition `.004` are unchanged.
+- Passed all 284 backend tests, Ruff, TypeScript/Vite build, Runtime
+  Architecture, source maintainability, diff checking and the dedicated
+  frontend mutation contract.
+- A real browser completed the existing Wenxi `馆页树` follow-through from
+  `0/3` to returned Grove. A deliberately independent AnswerSeal stayed
+  independent; pre-Reveal material remained hidden, post-Reveal material
+  remained unassessed, exact identities survived refresh and managed Runtime
+  restart, and the browser logged no warnings/errors. Evidence is in
+  `.artifacts/dream-attention-follow-through/`.
+
 ### Persistent relation-effect bibliography candidate
 
 - Added `v60.mingli-relation-effect-evidence-material.001` as an

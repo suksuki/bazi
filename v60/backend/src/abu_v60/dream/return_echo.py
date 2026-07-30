@@ -81,6 +81,35 @@ class DreamReturnEchoProjector:
         except (KeyError, TypeError, ValidationError, ValueError) as exc:
             raise DreamStateError("dream_return_echo_lineage_invalid") from exc
 
+    def project_for_encounter(
+        self,
+        connection: Any,
+        *,
+        account_ref: str,
+        encounter_ref: str,
+    ) -> DreamReturnEcho | None:
+        """Rebuild one exact departed Echo instead of trusting a stored ref."""
+
+        encounter = self._departed_encounter(
+            connection,
+            account_ref=account_ref,
+            encounter_ref=encounter_ref,
+        )
+        if encounter is None:
+            return None
+        try:
+            return self._project_validated(
+                connection,
+                account_ref=account_ref,
+                encounter=encounter,
+            )
+        except DreamStateError:
+            raise
+        except (KeyError, TypeError, ValidationError, ValueError) as exc:
+            raise DreamStateError(
+                "dream_return_echo_lineage_invalid"
+            ) from exc
+
     @staticmethod
     def _latest_departed_encounter(
         connection: Any,
@@ -103,6 +132,38 @@ class DreamReturnEchoProjector:
                     """
                 ),
                 {"account_ref": account_ref},
+            )
+            .mappings()
+            .one_or_none()
+        )
+        return dict(row) if row is not None else None
+
+    @staticmethod
+    def _departed_encounter(
+        connection: Any,
+        *,
+        account_ref: str,
+        encounter_ref: str,
+    ) -> dict[str, Any] | None:
+        row = (
+            connection.execute(
+                text(
+                    """
+                    SELECT encounter_ref, viewer_account_ref, actor_ref,
+                           tree_ref, question_ref, status, version,
+                           state_json, state_hash, updated_at
+                    FROM dream.encounters
+                    WHERE viewer_account_ref = :account_ref
+                      AND encounter_ref = :encounter_ref
+                      AND status = 'COMPLETED'
+                      AND state_json
+                            @> '{"departed_to_grove": true}'::jsonb
+                    """
+                ),
+                {
+                    "account_ref": account_ref,
+                    "encounter_ref": encounter_ref,
+                },
             )
             .mappings()
             .one_or_none()

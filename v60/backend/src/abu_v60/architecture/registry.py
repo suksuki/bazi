@@ -15,7 +15,7 @@ from abu_v60.architecture.contracts import (
 @lru_cache(maxsize=1)
 def runtime_architecture() -> RuntimeArchitecture:
     architecture = RuntimeArchitecture(
-        architecture_version="v60.runtime-architecture.048",
+        architecture_version="v60.runtime-architecture.049",
         modules=(
             RuntimeModule(
                 module_id="identity",
@@ -192,7 +192,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="dream-game",
                 kind=ModuleKind.ENGINE,
-                version="v60.dream-game-engine.015",
+                version="v60.dream-game-engine.016",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("dream",),
                 reads_from=("identity", "mingli", "world", "story", "cognition"),
@@ -230,6 +230,9 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "append_only_return_attention_selection",
                     "same_tree_attention_application",
                     "return_attention_not_owner_evidence",
+                    "pending_return_attention_projection",
+                    "source_echo_revalidated_attention_lineage",
+                    "read_only_attention_follow_through",
                 ),
                 writes_canonical_state=True,
             ),
@@ -285,7 +288,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-dream",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-dream.016",
+                version="v60.unit-dream.017",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "media"),
                 capabilities=(
@@ -307,6 +310,9 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "grove_return_echo",
                     "grove_return_attention_choice",
                     "same_tree_opening_attention",
+                    "grove_pending_attention_marker",
+                    "full_phase_attention_follow_through",
+                    "post_reveal_attention_material_contrast",
                     "dream_outcome_not_owner_mingli_evidence",
                 ),
             ),

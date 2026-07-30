@@ -6,6 +6,13 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 from abu_v60.db import engine
+from abu_v60.dream.attention_follow_through import (
+    DreamAttentionFollowThroughProjector,
+)
+from abu_v60.dream.attention_follow_through_contracts import (
+    DreamAttentionFollowThrough,
+    DreamPendingAttention,
+)
 from abu_v60.dream.errors import DreamConflictError, DreamStateError
 from abu_v60.dream.grove import GroveCandidateDefinition
 from abu_v60.dream.return_attention import DreamReturnAttentionCoordinator
@@ -29,7 +36,7 @@ from abu_v60.dream.seed import SEED_BATCH_REF
 from abu_v60.dream.service import DreamService
 from abu_v60.game import DreamCommand, DreamCommandEnvelope
 from abu_v60.knowledge import KnowledgeAuthority
-from abu_v60.provenance import content_hash
+from abu_v60.provenance import content_hash, stable_ref
 from abu_v60.world import WorldContinuityEngine
 from pydantic import ValidationError
 from sqlalchemy import inspect, text
@@ -187,6 +194,49 @@ def test_return_attention_contracts_lock_identity_and_same_tree_application() ->
             record=record,
             application=application.model_copy(
                 update={"tree_ref": "v60-tree-wrong-target"}
+            ),
+        )
+
+    reveal_payload = {
+        "actual_event": "共同修复完成。",
+        "actual_evidence": [
+            {
+                "evidence_ref": "v60-evidence-attention-event-binding",
+                "summary": "完成记录保留共同署名。",
+            }
+        ],
+    }
+    reveal_hash = content_hash(reveal_payload)
+    with pytest.raises(
+        DreamStateError,
+        match="dream_attention_reveal_invalid",
+    ):
+        DreamAttentionFollowThroughProjector._active_world_response(
+            encounter={
+                "encounter_ref": application.encounter_ref,
+            },
+            world_event_ref="v60-world-event-expected",
+            status="WORLD_RESPONSE_AVAILABLE",
+            reveal={
+                "encounter_ref": application.encounter_ref,
+                "world_event_ref": "v60-world-event-wrong",
+                "reveal_ref": stable_ref("v60-reveal", reveal_hash),
+                "reveal_hash": reveal_hash,
+                "reveal_json": reveal_payload,
+            },
+            revealed_evidence=(
+                {
+                    "evidence_ref": (
+                        "v60-evidence-attention-event-binding"
+                    ),
+                    "world_event_ref": "v60-world-event-wrong",
+                    "evidence_hash": content_hash(
+                        reveal_payload["actual_evidence"][0]
+                    ),
+                    "evidence_json": reveal_payload[
+                        "actual_evidence"
+                    ][0],
+                },
             ),
         )
 
@@ -579,6 +629,14 @@ def test_return_attention_is_replay_safe_private_and_applies_only_same_tree(
     )["grove"]["next_attention"]["selection"] == (
         selections[0].model_dump(mode="json")
     )
+    pending = DreamPendingAttention.model_validate(
+        service.entry(account_ref=account_ref)["grove"][
+            "pending_attention"
+        ]
+    )
+    assert pending.attention_ref == selections[0].attention_ref
+    assert pending.source_candidate_ref == first_candidate["candidate_ref"]
+    assert pending.tree_ref == first_tree_ref
     assert _schema_digest("mingli") == mingli_before
     assert _schema_digest("cognition") == cognition_before
     assert _knowledge_digest() == knowledge_before
@@ -639,6 +697,7 @@ def test_return_attention_is_replay_safe_private_and_applies_only_same_tree(
     )
     different_tree_ref = different_snapshot["tree"]["tree_ref"]
     assert different_snapshot["opening_attention"] is None
+    assert different_snapshot["attention_follow_through"] is None
     with engine.connect() as connection:
         assert (
             connection.execute(
@@ -661,6 +720,28 @@ def test_return_attention_is_replay_safe_private_and_applies_only_same_tree(
     assert second_grove["grove"]["next_attention"]["tree_ref"] == (
         different_tree_ref
     )
+    pending_after_other_tree = DreamPendingAttention.model_validate(
+        second_grove["grove"]["pending_attention"]
+    )
+    assert pending_after_other_tree == pending
+    assert second_grove["grove"]["attention_follow_through"] is None
+    different_prompt = DreamReturnAttentionPrompt.model_validate(
+        second_grove["grove"]["next_attention"]
+    )
+    assert different_prompt.status == "AWAITING_SELECTION"
+    multiple_pending_entry = service.execute_command(
+        account_ref=account_ref,
+        envelope=DreamCommandEnvelope(
+            command=DreamCommand.SELECT_NEXT_ATTENTION,
+            encounter_ref=different_prompt.source_encounter_ref,
+            expected_version=different_prompt.source_encounter_version,
+            idempotency_key="qa:return-attention:select:different-tree",
+            target_ref=different_prompt.options[0].observation_ref,
+        ),
+    )
+    assert DreamPendingAttention.model_validate(
+        multiple_pending_entry["grove"]["pending_attention"]
+    ) == pending
 
     mingli_before_application = _schema_digest("mingli")
     cognition_before_application = _schema_digest("cognition")
@@ -678,12 +759,22 @@ def test_return_attention_is_replay_safe_private_and_applies_only_same_tree(
     assert opening.target_encounter_ref == (
         same_tree_snapshot["encounter"]["encounter_ref"]
     )
+    follow_through = DreamAttentionFollowThrough.model_validate(
+        same_tree_snapshot["attention_follow_through"]
+    )
+    assert follow_through.application_ref == opening.application_ref
+    assert follow_through.status == "OBSERVING"
+    assert follow_through.progress.observed_count == 0
+    assert follow_through.world_response is None
     assert _schema_digest("mingli") == mingli_before_application
     assert _schema_digest("cognition") == cognition_before_application
     assert _knowledge_digest() == knowledge_before_application
     assert DreamService(engine).snapshot(account_ref=account_ref)[
         "opening_attention"
     ] == opening.model_dump(mode="json")
+    assert DreamService(engine).snapshot(account_ref=account_ref)[
+        "attention_follow_through"
+    ] == follow_through.model_dump(mode="json")
     assert DreamService(engine).snapshot(account_ref=account_ref)[
         "opening_attention"
     ] == opening.model_dump(mode="json")
@@ -701,6 +792,128 @@ def test_return_attention_is_replay_safe_private_and_applies_only_same_tree(
             ).scalar_one()
             == 1
         )
+
+    snapshot = same_tree_snapshot
+    for expected_count, (key, command) in enumerate(
+        (
+            ("evidence_leaf_world", DreamCommand.OBSERVE_EVIDENCE),
+            (
+                "evidence_leaf_structure",
+                DreamCommand.OBSERVE_EVIDENCE,
+            ),
+            ("structure_branch", DreamCommand.OBSERVE_STRUCTURE),
+        ),
+        start=1,
+    ):
+        snapshot = service.execute_command(
+            account_ref=account_ref,
+            envelope=_command(
+                snapshot,
+                command,
+                target_ref=str(_organ(snapshot, key)["organ_ref"]),
+            ),
+        )
+        follow_through = DreamAttentionFollowThrough.model_validate(
+            snapshot["attention_follow_through"]
+        )
+        assert follow_through.progress.observed_count == expected_count
+        assert follow_through.status == (
+            "OBSERVATIONS_COMPLETE"
+            if expected_count == 3
+            else "OBSERVING"
+        )
+        assert follow_through.world_response is None
+
+    snapshot = service.execute_command(
+        account_ref=account_ref,
+        envelope=_command(
+            snapshot,
+            DreamCommand.OPEN_QUESTION,
+            target_ref=str(
+                _organ(snapshot, "question_flower")["organ_ref"]
+            ),
+        ),
+    )
+    assert snapshot["attention_follow_through"]["status"] == (
+        "OBSERVATIONS_COMPLETE"
+    )
+    question = snapshot["question"]
+    snapshot = service.execute_command(
+        account_ref=account_ref,
+        envelope=_command(
+            snapshot,
+            DreamCommand.SEAL_ANSWER,
+            choice_id=str(question["options"][0]["choice_id"]),
+        ),
+    )
+    assert snapshot["attention_follow_through"]["status"] == (
+        "AWAITING_WORLD_RESPONSE"
+    )
+    lineage = snapshot["lineage"]
+    with engine.connect() as connection:
+        event_ref = str(
+            connection.execute(
+                text(
+                    """
+                    SELECT world_event_ref
+                    FROM story.question_instances
+                    WHERE question_ref = :question_ref
+                    """
+                ),
+                {"question_ref": lineage["question_ref"]},
+            ).scalar_one()
+        )
+    with engine.begin() as connection:
+        WorldContinuityEngine().advance_and_settle(
+            connection=connection,
+            event_ref=event_ref,
+        )
+    assert service.synchronize_settled_world_events(
+        event_refs=[event_ref]
+    ) == 1
+    snapshot = service.snapshot(account_ref=account_ref)
+    hidden = DreamAttentionFollowThrough.model_validate(
+        snapshot["attention_follow_through"]
+    )
+    assert hidden.status == "WORLD_RESPONSE_READY_HIDDEN"
+    assert hidden.world_response is None
+    snapshot = service.execute_command(
+        account_ref=account_ref,
+        envelope=_command(snapshot, DreamCommand.REVEAL),
+    )
+    visible = DreamAttentionFollowThrough.model_validate(
+        snapshot["attention_follow_through"]
+    )
+    assert visible.status == "WORLD_RESPONSE_AVAILABLE"
+    assert visible.world_response is not None
+    assert visible.world_response.material_count == 2
+    assert visible.semantic_match_status == (
+        "SEMANTIC_MATCH_NOT_EVALUATED"
+    )
+    snapshot = service.execute_command(
+        account_ref=account_ref,
+        envelope=_command(snapshot, DreamCommand.RECONCILE),
+    )
+    assert snapshot["attention_follow_through"]["status"] == (
+        "RECONCILED_NOT_EVALUATED"
+    )
+    returned = service.execute_command(
+        account_ref=account_ref,
+        envelope=_command(snapshot, DreamCommand.RETURN_TO_GROVE),
+    )
+    returned_follow_through = DreamAttentionFollowThrough.model_validate(
+        returned["grove"]["attention_follow_through"]
+    )
+    assert returned_follow_through.status == "RETURNED_NOT_EVALUATED"
+    assert returned_follow_through.world_response == visible.world_response
+    remaining_pending = DreamPendingAttention.model_validate(
+        returned["grove"]["pending_attention"]
+    )
+    assert remaining_pending.source_candidate_ref == (
+        different_candidate["candidate_ref"]
+    )
+    assert remaining_pending.tree_ref == different_tree_ref
+
     assert DreamService(engine).entry(account_ref=other_account_ref)[
         "grove"
     ]["next_attention"] is None

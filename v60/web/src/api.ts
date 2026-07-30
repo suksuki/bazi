@@ -3,6 +3,10 @@ import type {
   DreamReturnAttentionPrompt,
   DreamOpeningAttention,
 } from "./dreamAttentionTypes";
+import type {
+  DreamAttentionFollowThrough,
+  DreamPendingAttention,
+} from "./dreamAttentionFollowThroughTypes";
 
 export { request } from "./http";
 export {
@@ -434,6 +438,7 @@ export interface DreamSnapshot {
     completed_encounter_count: number;
   };
   opening_attention?: DreamOpeningAttention | null;
+  attention_follow_through?: DreamAttentionFollowThrough | null;
 }
 
 export interface DreamGroveCandidate {
@@ -466,6 +471,8 @@ export interface DreamGrove {
   candidates: DreamGroveCandidate[];
   return_echo?: DreamReturnEcho | null;
   next_attention?: DreamReturnAttentionPrompt | null;
+  pending_attention?: DreamPendingAttention | null;
+  attention_follow_through?: DreamAttentionFollowThrough | null;
   hidden_outcome_included: false;
   hidden_npc_choice_included: false;
 }

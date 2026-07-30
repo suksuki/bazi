@@ -3,6 +3,7 @@ import type {
   RuntimeAssetDelivery,
   TreeOrgan,
 } from "./api";
+import { DreamAttentionFollowThroughCard } from "./components/DreamAttentionFollowThroughCard";
 import { DreamOpeningAttention } from "./components/DreamOpeningAttention";
 
 interface LifeTreeSceneProps {
@@ -66,6 +67,9 @@ export function LifeTreeScene({
   const worldTicksRemaining = snapshot.question
     ? Math.max(0, snapshot.question.due_tick - snapshot.world.current_tick)
     : 0;
+  const followThroughSupplied =
+    snapshot.attention_follow_through !== null &&
+    snapshot.attention_follow_through !== undefined;
 
   return (
     <div
@@ -128,9 +132,15 @@ export function LifeTreeScene({
       </div>
 
       <section className="question-band" aria-live="polite">
+        <DreamAttentionFollowThroughCard
+          followThrough={snapshot.attention_follow_through}
+          snapshot={snapshot}
+        />
         {!snapshot.question && (
           <>
-            <DreamOpeningAttention attention={snapshot.opening_attention} />
+            {!followThroughSupplied && (
+              <DreamOpeningAttention attention={snapshot.opening_attention} />
+            )}
             <div className="question-copy opening-copy">
               <p className="question-kicker">{snapshot.actor.display_name}的生命现场</p>
               <h1>{narrative.journey_title}</h1>

@@ -92,6 +92,7 @@ one application service:
 | `dream.outcomes.DreamOutcomeCoordinator` | committed WorldEvent to Fruit/Reveal reconciliation | browser commands or World outcomes |
 | `dream.encounter_creation.DreamEncounterCreator` | one canonical Encounter creation transaction for Grove and graph continuation | command routing, authored content or public projection |
 | `dream.return_attention.DreamReturnAttentionCoordinator` | candidate-bound next-observation selection, replay and same-tree application | Mingli evidence, Knowledge admission, Question/Answer/NPC/outcome mutation |
+| `dream.attention_follow_through.DreamAttentionFollowThroughProjector` | revalidated pending, active and returned read-only attention projection | canonical writes, semantic-match decisions or professional evidence |
 | `mingli.relation_effect_request.RelationEffectEvidenceRequestStore` | account-private, append-only preparation-request receipt derived from one canonical packet | material intake, professional evidence, review, Knowledge or Decision |
 | `mingli.relation_effect_history.MingliRelationEffectHistoricalPacketResolver` | reconstruct one packet from immutable Reading/Quant/Source Review lineage for integrity checks | current-Case selection or receipt mutation |
 | `App` | session, navigation and Runtime composition | login layout, companion-unit internals |
@@ -170,8 +171,9 @@ insufficient evidence
 
 The LLM cannot create chart facts, permissions, world outcomes or global
 knowledge. A provider-neutral bounded Reasoner Host and strict structured
-output adapter are executable, while the current local provider configuration
-remains disabled:
+output adapter are executable. The managed local profile currently reports
+`READY`; an incomplete or disabled provider profile reports `NOT_CONFIGURED`
+and cannot substitute a hidden model or generated answer:
 
 ```text
 multiple qualified candidates
@@ -186,9 +188,8 @@ multiple qualified candidates
 The Host stamps provider, model, prompt, provider-response and context
 identities, and retries first recover an existing immutable record instead of
 calling the model again. The Gate receipt permits only the DecisionRecord.
-Domain owners must still apply their own typed command, and current Runtime
-configuration exposes `NOT_CONFIGURED` rather than substituting a hidden model
-or generated answer.
+Domain owners must still apply their own typed command. Provider readiness
+does not broaden the evidence contract or grant professional rule authority.
 
 The executable decision path is:
 
@@ -360,16 +361,30 @@ candidate-backed committed Return Echo
 -> deterministic server observation options
 -> account-private selection + immutable command receipt
 -> other-tree visit: no application
+-> Grove marks the exact source tree
 -> source-tree visit: one opening application
--> read-only opening projection
+-> read-only 0/3 through 3/3 progress across the full Encounter
+-> pre-Reveal world response withheld
+-> post-Reveal committed materials, semantic match not evaluated
+-> unassessed returned summary in the Grove
 ```
 
 Selection binds the exact source Encounter/version, Echo Ref/Hash, Grove
 candidate Ref/Hash, tree and option. Application binds the selection Ref/Hash
 to one later Encounter on the same tree. Runtime integrity revalidates both
 stored payload Hashes and their column, account, candidate and tree lineage.
-The records are `NOT_EVIDENCE`: they cannot change a Question, Answer, NPC
-choice, outcome, owner Reading, Cognition Decision or Knowledge object.
+Every pending or follow-through projection additionally rebuilds the source
+Encounter's exact Echo and revalidates its candidate, actor, question, tree
+and server-issued observation. Target progress is an exact ordered subset of
+the two leaves and one branch. World response is absent before Reveal and,
+after Reveal, contains only the actual event plus stable committed evidence.
+It remains `SEMANTIC_MATCH_NOT_EVALUATED`, including after reconciliation and
+Grove return.
+
+The records and projections are `NOT_EVIDENCE`: they cannot change a Question,
+Answer, NPC choice, outcome, owner Reading, Cognition Decision or Knowledge
+object. They do not decide whether the remembered observation semantically
+matches the later material.
 
 Authored content enters through a complete `DreamEpisodeDefinition`. Runtime
 persists the narrower `DreamEpisodeContract`, its Hash and a separately

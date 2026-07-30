@@ -10,6 +10,9 @@ from abu_v60.decision import (
     CognitiveDecisionLedger,
     EvidenceReconciliationEngine,
 )
+from abu_v60.dream.attention_follow_through import (
+    DreamAttentionFollowThroughProjector,
+)
 from abu_v60.dream.catalog import (
     ActiveEpisodeCatalog,
     DreamEpisodeCatalog,
@@ -69,6 +72,10 @@ class DreamService:
             repository=self._repository,
             return_echo=self._return_echo,
         )
+        self._attention_follow_through = DreamAttentionFollowThroughProjector(
+            coordinator=self._return_attention,
+            return_echo=self._return_echo,
+        )
         self._experience = ExperienceProjectionComposer()
         self._encounter_creator = DreamEncounterCreator(
             repository=self._repository,
@@ -90,8 +97,8 @@ class DreamService:
             public_projection=self._public_projection,
             repository=self._repository,
             return_attention=self._return_attention,
+            attention_follow_through=self._attention_follow_through,
         )
-
     def ensure_encounter(self, *, account_ref: str) -> dict[str, Any]:
         with self._engine.begin() as connection:
             existing = self._repository.current_encounter(
@@ -129,6 +136,13 @@ class DreamService:
                         connection,
                         account_ref=account_ref,
                     )
+                    attention_projections = (
+                        self._attention_follow_through.grove_projections(
+                            connection,
+                            account_ref=account_ref,
+                            echo=return_echo,
+                        )
+                    )
                     next_attention = (
                         self._return_attention.project_prompt(
                             connection,
@@ -154,6 +168,7 @@ class DreamService:
                                 if next_attention is not None
                                 else None
                             ),
+                            **attention_projections,
                             "hidden_outcome_included": False,
                             "hidden_npc_choice_included": False,
                         },

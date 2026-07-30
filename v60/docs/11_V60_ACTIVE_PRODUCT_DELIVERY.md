@@ -34,13 +34,60 @@ login
 -> persistent Grove return echo
 -> choose one server-issued next observation
 -> other trees leave that observation pending
--> same-tree return opens with the remembered observation
+-> Grove marks the exact source tree
+-> same-tree return creates one persistent application
+-> the same observation follows 0/3 -> 3/3 -> Seal -> waiting
+-> Reveal exposes world materials without claiming semantic correspondence
+-> the unassessed comparison returns to the Grove
 -> return encounter on the same world line
 ```
 
 The same snapshot feeds Dream, Mingli Calculation, Abu, Theater and Lab. The
 current implementation is desktop-first; mobile remains a guardrail until the
 desktop composition is stable.
+
+## Completed Delivery: Dream Attention Follow-Through
+
+Status: `IMPLEMENTED_AND_REAL_BROWSER_AUDITED_LOCAL`
+
+- A pending Return Attention is now visible on its exact Grove source tree.
+  While that older observation remains pending, the Grove UI suppresses a
+  parallel new selection, including when the supplied pending projection
+  fails display validation. Visiting another tree does not consume it;
+  visiting the source tree creates exactly one persistent application.
+- The same application remains visible through the complete target Encounter:
+  two leaves and one branch produce exact `0 / 3` through `3 / 3` progress,
+  then the observation stays beside the independently chosen AnswerSeal,
+  World waiting, Reveal, reconciliation and Grove return.
+- Every projection rebuilds and revalidates the exact source Return Echo,
+  selection, candidate, actor, question, tree and server-issued observation.
+  It also verifies the target Encounter state, exact three-organ set, Reveal
+  and committed World evidence. Invalid lineage fails closed.
+- Before Reveal, the world response is absent and semantic status is
+  `NOT_AVAILABLE_BEFORE_REVEAL`. After Reveal, the actual event and stable
+  evidence list become visible only as
+  `SEMANTIC_MATCH_NOT_EVALUATED`. Reconciliation and Grove return preserve the
+  same unassessed status; matching words are not presented as validation,
+  probability, useful evidence or professional truth.
+- The follow-through is read-only and explicitly `NOT_EVIDENCE`. It cannot
+  alter the Grove candidate set/order, Question, Answer, NPC choice or World
+  outcome, and it permits no Mingli, Cognition Decision or Knowledge write.
+  No command, table or migration was added.
+- Foundation remains `v60.foundation.016` with migration head
+  `0024_relation_effect_material`. Dream Game is now `.016`, Unit Dream
+  `.017` and Runtime Architecture `.049`; Mingli `.025`, Knowledge `.008` and
+  Cognition `.004` are unchanged.
+- All 284 backend tests, Ruff, TypeScript/Vite build, Runtime Architecture,
+  source maintainability, diff checking and the dedicated frontend
+  follow-through mutation contract pass.
+- The real browser followed the existing Wenxi `馆页树` observation
+  `再看结果如何落地` across an exact `0/3 -> 3/3` cycle. A deliberately
+  independent `独立主持` AnswerSeal was not changed by the remembered
+  `共同职责与共同署名` result. Reveal exposed two committed materials while
+  keeping `SEMANTIC_MATCH_NOT_EVALUATED`; refresh, managed Runtime restart and
+  returned-Grove refresh recovered the same Attention, Application and target
+  Encounter identities. Browser warnings/errors were empty. Evidence is in
+  `.artifacts/dream-attention-follow-through/`.
 
 ## Completed Delivery: Persistent Relation-Effect Bibliography Candidate
 
