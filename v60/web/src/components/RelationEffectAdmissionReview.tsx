@@ -231,15 +231,18 @@ function AdmissionAssessment({
                 </em>
               </span>
               <p>{dimension.gap}</p>
-              <div aria-label={`${DIMENSION_LABELS[dimension.dimension_id]}当前凭据`}>
+              <div
+                aria-label={`${DIMENSION_LABELS[dimension.dimension_id]}当前运行基底，非专业证据`}
+              >
                 {dimension.current_basis_refs.length ? (
                   dimension.current_basis_refs.map((ref) => (
                     <code key={ref}>{ref}</code>
                   ))
                 ) : (
-                  <small>当前没有可绑定凭据</small>
+                  <small>当前没有可绑定运行基底</small>
                 )}
               </div>
+              <small>以上仅是上下文与边界，不计作专业证据材料。</small>
             </article>
           ))}
         </div>

@@ -421,6 +421,107 @@ def test_home_relation_effect_admission_review_is_shared_and_creates_no_decision
     assert decisions_after == decisions_before
 
 
+def test_home_relation_effect_evidence_packet_is_shared_and_creates_no_decision() -> None:
+    account_ref = _human_owner_account_ref()
+    service = HomeExperienceService(engine)
+    with engine.connect() as connection:
+        decisions_before = connection.execute(
+            text("SELECT count(*) FROM cognition.decision_records")
+        ).scalar_one()
+
+    first = service.snapshot(account_ref=account_ref)
+    second = service.snapshot(account_ref=account_ref)
+    packet = first["mingli"]["relation_effect_evidence_packet"]
+    reading = first["mingli"]["reading"]
+    frontier = first["mingli"]["relation_effect_frontier"]
+    review = first["mingli"]["relation_effect_admission_review"]
+    source_review = first["mingli"]["source_coordinate_review"]
+
+    with engine.connect() as connection:
+        decisions_after = connection.execute(
+            text("SELECT count(*) FROM cognition.decision_records")
+        ).scalar_one()
+
+    assert packet == second["mingli"]["relation_effect_evidence_packet"]
+    assert source_review["source_evidence_count"] == 10
+    assert source_review["clear_coordinate_count"] == 7
+    assert source_review["review_required_count"] == 3
+    assert (packet["case_ref"], packet["chart_version_ref"]) == (
+        reading["case_ref"],
+        reading["chart_version_ref"],
+    )
+    assert (packet["reading_ref"], packet["reading_hash"]) == (
+        reading["reading_ref"],
+        reading["reading_hash"],
+    )
+    assert (packet["frontier_ref"], packet["frontier_hash"]) == (
+        frontier["frontier_ref"],
+        frontier["frontier_hash"],
+    )
+    assert (
+        packet["admission_review_ref"],
+        packet["admission_review_hash"],
+    ) == (review["review_ref"], review["review_hash"])
+    assert packet["demand_packet_count"] == (
+        review["reviewed_demand_count"]
+    )
+    assert packet["demand_packet_count"] == 1
+    assert packet["required_dimension_slot_count"] == 6
+    assert packet["ready_dimension_slot_count"] == 0
+    assert packet["professional_evidence_count"] == 0
+    assert packet["status"] == "EVIDENCE_INTAKE_REQUIRED"
+    assert packet["projection_semantics"] == (
+        "PROFESSIONAL_EVIDENCE_READINESS_NOT_DECISION"
+    )
+    assert packet["decision_path_semantics"] == (
+        "READINESS_PATH_NOT_DECISION"
+    )
+    assert packet["decision_path"] == [
+        "DETERMINISTIC_RELATION_FACT_AVAILABLE",
+        "PROFESSIONAL_RULE_EVIDENCE_BLOCKED",
+        "OWNER_PROFESSIONAL_REVIEW_NOT_INVOKED",
+        "KNOWLEDGE_ADMISSION_NOT_ELIGIBLE",
+        "READING_RULE_PROFILE_QUALIFICATION_NOT_AUTHORIZED",
+        "EFFECT_DECISION_WITHHELD",
+    ]
+    assert packet["required_professional_path_semantics"] == (
+        "FUTURE_AUTHORITY_PATH_NOT_EXECUTED"
+    )
+    assert packet["required_professional_path"] == [
+        "COMPLETE_PROFESSIONAL_EVIDENCE_PACKET",
+        "OWNER_PROFESSIONAL_REVIEW_APPROVED",
+        "KNOWLEDGE_IMMUTABLE_RULE_PROFILE_ADMITTED",
+        "NEW_READING_BINDS_ADMITTED_RULE_PROFILE",
+        "DETERMINISTIC_RULE_APPLICATION_OR_UNRESOLVED",
+    ]
+    assert packet["effect_decision_status"] == "WITHHELD"
+    assert all(
+        item["professional_evidence_refs"] == []
+        and item["professional_evidence_count"] == 0
+        and item["ready"] is False
+        for demand_packet in packet["demand_packets"]
+        for item in demand_packet["dimension_slots"]
+    )
+    current_basis_refs = {
+        basis_ref
+        for demand_packet in packet["demand_packets"]
+        for item in demand_packet["dimension_slots"]
+        for basis_ref in item["current_basis_refs"]
+    }
+    assert current_basis_refs.isdisjoint(reading["decision_refs"])
+    assert '"decision_ref"' not in canonical_json(packet)
+    assert first["lab"]["relation_effect_evidence_packet_ref"] == (
+        packet["packet_ref"]
+    )
+    assert first["lab"]["relation_effect_evidence_packet_hash"] == (
+        packet["packet_hash"]
+    )
+    assert reading["decision_refs"] == second["mingli"]["reading"][
+        "decision_refs"
+    ]
+    assert decisions_after == decisions_before
+
+
 def test_home_explanation_is_stable_and_contains_no_outcome_verdict() -> None:
     service = HomeExperienceService(engine)
     first = service.snapshot(account_ref=_human_owner_account_ref())

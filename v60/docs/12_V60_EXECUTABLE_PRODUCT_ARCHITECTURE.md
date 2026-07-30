@@ -203,6 +203,43 @@ contains the complete routed request and result, SHA-256, authority, method,
 correlation and causation. The same decision identity accepts only an exact
 replay. `decision.service` is the sole writer to the Cognition schema.
 
+This generic Decision path is not professional Mingli rule admission. In
+particular, an LLM proposal followed by the Epistemic Gate can establish only
+that a bounded DecisionRequest was answered within its evidence and candidate
+contract. It cannot certify a relation-effect rule, source usability or
+professional correctness.
+
+The executable relation-effect boundary therefore stops at a versioned
+evidence-readiness packet today:
+
+```text
+deterministic relation membership and source coordinate
+-> research Frontier
+-> shortcut pre-admission Review
+-> professional evidence readiness packet
+-> effect and source usability remain UNRESOLVED
+```
+
+Runtime facts, coordinate refs, Policy and Proposal refs in that packet are
+`RUNTIME_CONTEXT_ONLY_NOT_PROFESSIONAL_EVIDENCE`. They identify the precise
+question and missing dimensions; they do not satisfy those dimensions.
+
+Any future professional relation-effect Decision requires a separate
+authority chain:
+
+```text
+complete professional evidence packet
+-> Owner professional review approves exact proposition and scope
+-> Knowledge admits a new immutable rule Profile
+-> a new Reading binds that exact Profile Ref + Hash
+-> Mingli applies the admitted deterministic rule
+-> typed effect result, or still UNRESOLVED
+```
+
+The current packet does not execute this chain. It creates no DecisionRequest,
+Gate receipt, DecisionRecord, Knowledge promotion request or canonical write,
+and existing Readings cannot acquire a newly admitted Profile retroactively.
+
 Player gestures follow an equally explicit path:
 
 ```text
@@ -433,6 +470,14 @@ therefore server-verifiable rather than component conventions.
 A relationship fact is not automatically effective work. Unknown capacity or
 professional status remains visibly `UNRESOLVED`.
 
+For the current narrow Zi-Wu question, Lab also projects a six-dimensional
+professional evidence intake contract: applicability context, effect
+direction, completion conditions, blocking conditions, counter-evidence and
+professional provenance. Existing runtime basis refs remain separate from
+the empty professional-evidence channel. Mingli Calculation shows only the
+readiness summary; Lab may inspect requested artifact types, but neither unit
+may accept them or publish a rule.
+
 The executable candidate chain is:
 
 ```text
@@ -548,6 +593,8 @@ The executable architecture is ready; the content breadth is not:
 - one bounded Mingli fact in the current slice;
 - one executable, Hash-locked Bazi foundation profile that is not yet
   professionally reviewed;
+- one versioned relation-effect professional evidence packet with six empty
+  readiness dimensions and no effect or source-usability verdict;
 - no production LLM orchestration;
 - no large NPC population or content factory;
 - desktop composition validated; mobile visual design deferred;

@@ -11,8 +11,7 @@ import { MechanismEvidenceContrast } from "./MechanismEvidenceContrast";
 import { MechanismQualificationMatrix } from "./MechanismQualificationMatrix";
 import { MingliEvidenceExplanation } from "./MingliEvidenceExplanation";
 import { MingliCaseManager } from "./MingliCaseManager";
-import { RelationEffectAdmissionReview } from "./RelationEffectAdmissionReview";
-import { RelationEffectResearchFrontier } from "./RelationEffectResearchFrontier";
+import { RelationEffectReviewStack } from "./RelationEffectReviewStack";
 import { SourceCoordinateReviewPanel } from "./SourceCoordinateReviewPanel";
 import { SourceDiscussionAbstentionReceipt } from "./SourceDiscussionAbstentionReceipt";
 
@@ -116,14 +115,7 @@ export function HomeCompanionRail({
               mode="summary"
               receipt={home.mingli.source_discussion_receipt}
             />
-            <RelationEffectResearchFrontier
-              frontier={home.mingli.relation_effect_frontier}
-              mode="summary"
-            />
-            <RelationEffectAdmissionReview
-              home={home}
-              mode="summary"
-            />
+            <RelationEffectReviewStack home={home} mode="summary" />
             <MingliEvidenceExplanation explanation={home.mingli.explanation} />
             <MechanismEvidenceContrast
               depth={home.mingli.mechanism_evidence_depth}
@@ -259,14 +251,7 @@ export function HomeCompanionRail({
               mode="detailed"
               receipt={home.mingli.source_discussion_receipt}
             />
-            <RelationEffectResearchFrontier
-              frontier={home.mingli.relation_effect_frontier}
-              mode="detailed"
-            />
-            <RelationEffectAdmissionReview
-              home={home}
-              mode="detailed"
-            />
+            <RelationEffectReviewStack home={home} mode="detailed" />
             <MechanismEvidenceContrast
               depth={home.mingli.mechanism_evidence_depth}
               mode="detailed"

@@ -2,6 +2,40 @@
 
 ## 2026-07-30
 
+### Relation-effect professional evidence readiness
+
+- Added `v60.mingli-relation-effect-evidence-packet.001` over the canonical
+  Reading, research Frontier, pre-admission Review, Knowledge Policy and
+  research Proposal identities.
+- The real `10/7/3` source-review sample now produces one exact-identity
+  evidence demand with six fixed professional dimensions, `0/6` ready slots
+  and zero professional evidence. The two match-scope demands remain deferred
+  and do not receive fabricated packets.
+- Separated `current_basis_refs` from `professional_evidence_refs`. Runtime
+  facts, coordinates, refusal policy and proposal context locate a research
+  gap but are explicitly not professional evidence or Knowledge admission.
+- Added a compact Mingli readiness view and detailed Lab inspection. The
+  current six-step withholding path is labelled `READINESS_PATH_NOT_DECISION`;
+  the future five-step authority path requires complete evidence, Owner
+  professional review, immutable Knowledge admission, a new Reading binding
+  and deterministic rule application or continued `UNRESOLVED`.
+- Kept LLM, Provider, Reasoner, DecisionRequest, Owner review, Knowledge
+  promotion, Gate, Ledger, Decision, selection authority, professional
+  verdict, probability and canonical writes disabled. A clear Case emits zero
+  demand packets and no empty conclusion path.
+- Revalidated Case/Chart/Reading/Frontier/Review/Policy/Proposal lineage and
+  canonical authority, and added backend forgery tests plus a 56-mutation
+  frontend fail-closed contract.
+- Advanced Mingli to `v60.mingli-cognitive-engine.023`, Unit Mingli/Lab to
+  `.017/.014` and Runtime Architecture to `.046`. Knowledge `.008`,
+  Foundation `.014`, Dream Game `.015` and migration head
+  `0022_dream_return_attention` are unchanged.
+- Passed all 267 backend tests, Ruff, TypeScript/Vite build, Runtime
+  Architecture, source maintainability and relation frontend contracts. A
+  real browser verified shared identity, six detailed evidence slots, refresh
+  stability and zero console errors. Evidence is in
+  `.artifacts/relation-effect-evidence-packet/`.
+
 ### Persistent Dream next attention
 
 - Added `v60.dream-return-attention.001`: two or three deterministic,

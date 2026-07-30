@@ -22,6 +22,7 @@ from abu_v60.mingli import (
     MingliReadingProjector,
     MingliReadingStore,
     MingliRelationEffectAdmissionProjector,
+    MingliRelationEffectEvidencePacketProjector,
     MingliRelationEffectResearchFrontierProjector,
     MingliSourceCoordinateReviewCompiler,
     MingliSourceDiscussionAbstentionProjector,
@@ -64,6 +65,9 @@ class HomeExperienceService:
         relation_effect_admission: (
             MingliRelationEffectAdmissionProjector | None
         ) = None,
+        relation_effect_evidence: (
+            MingliRelationEffectEvidencePacketProjector | None
+        ) = None,
         mechanism_compiler: MingliMechanismEvidenceCompiler | None = None,
         mechanism_store: MingliMechanismVectorStore | None = None,
         mechanism_comparison: MingliMechanismComparisonService | None = None,
@@ -100,6 +104,10 @@ class HomeExperienceService:
         self._relation_effect_admission = (
             relation_effect_admission
             or MingliRelationEffectAdmissionProjector()
+        )
+        self._relation_effect_evidence = (
+            relation_effect_evidence
+            or MingliRelationEffectEvidencePacketProjector()
         )
         self._mechanism_compiler = mechanism_compiler or MingliMechanismEvidenceCompiler()
         self._mechanism_store = mechanism_store or MingliMechanismVectorStore(engine)
@@ -224,6 +232,13 @@ class HomeExperienceService:
                 frontier=relation_effect_frontier,
             )
         )
+        relation_effect_evidence_packet = (
+            self._relation_effect_evidence.project(
+                reading=reading,
+                frontier=relation_effect_frontier,
+                admission_review=relation_effect_admission_review,
+            )
+        )
         explanation = self._explanations.project(
             reading=reading,
             facts=facts,
@@ -337,6 +352,9 @@ class HomeExperienceService:
                 "relation_effect_admission_review": (
                     relation_effect_admission_review.model_dump(mode="json")
                 ),
+                "relation_effect_evidence_packet": (
+                    relation_effect_evidence_packet.model_dump(mode="json")
+                ),
                 "mechanism_evidence": mechanism_vector.model_dump(mode="json"),
                 "timing_evidence": timing_vector.model_dump(mode="json"),
                 "life_domains": life_domain_vector.model_dump(mode="json"),
@@ -416,6 +434,12 @@ class HomeExperienceService:
                 ),
                 "relation_effect_admission_review_hash": (
                     relation_effect_admission_review.review_hash
+                ),
+                "relation_effect_evidence_packet_ref": (
+                    relation_effect_evidence_packet.packet_ref
+                ),
+                "relation_effect_evidence_packet_hash": (
+                    relation_effect_evidence_packet.packet_hash
                 ),
                 "source_usability_prerequisite_carriers": [
                     item.model_dump(mode="json")

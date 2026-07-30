@@ -42,6 +42,47 @@ The same snapshot feeds Dream, Mingli Calculation, Abu, Theater and Lab. The
 current implementation is desktop-first; mobile remains a guardrail until the
 desktop composition is stable.
 
+## Completed Delivery: Relation-Effect Professional Evidence Readiness
+
+Status: `IMPLEMENTED_AND_REAL_BROWSER_AUDITED_LOCAL`
+
+- Added `v60.mingli-relation-effect-evidence-packet.001` as a read-only,
+  Hash-locked readiness projection after the existing deterministic relation
+  facts, research Frontier and shortcut pre-admission Review.
+- The real `10 candidates / 7 clear / 3 review` Case produces exactly one
+  exact-identity professional evidence demand. Its six fixed dimensions are
+  all blocked at `0 / 6 ready` with zero bound professional materials. The two
+  same-element/different-identity demands remain outside this packet until
+  match-scope authority exists.
+- Current fact, coordinate, policy, proposal and rejection refs are now
+  labelled `RUNTIME_CONTEXT_ONLY_NOT_PROFESSIONAL_EVIDENCE`. They locate the
+  question and its gaps; they are not silently promoted into professional
+  evidence.
+- Mingli Calculation visibly shows the compact readiness result and six-step
+  withholding path. Lab expands the exact Year-Ji / Hour-Wu / Month-Zi demand,
+  six evidence slots, requested artifact kinds and the future authority path:
+  complete professional evidence, Owner professional review, immutable
+  Knowledge rule admission, a new Reading bound to that rule profile, then
+  deterministic application or continued `UNRESOLVED`.
+- The readiness path is explicitly not a Decision. It does not invoke an LLM,
+  Provider, Reasoner, DecisionRequest, Owner review, Knowledge promotion,
+  Gate, Ledger or Decision writer, and it permits no professional verdict,
+  probability claim or canonical write.
+- A clear Case produces zero demand packets and no fabricated empty evidence
+  path. Case, Chart, Reading, Frontier, Review, Policy and Proposal identities
+  are revalidated end to end; rehashed lineage, coordinate, version or
+  authority drift fails closed.
+- Mingli is now `v60.mingli-cognitive-engine.023`, Unit Mingli `.017`, Unit
+  Lab `.014` and Runtime Architecture `.046`. Knowledge remains `.008`,
+  Foundation `.014`, Dream Game `.015` and migration head
+  `0022_dream_return_attention`.
+- All 267 backend tests, Ruff, TypeScript/Vite build, Runtime Architecture,
+  source maintainability, existing relation contracts and the new 56-case
+  frontend fail-closed matrix pass. A real browser verified the shared packet
+  identity, compact/detailed projections, six evidence slots, refresh
+  stability and zero console errors. Evidence is in
+  `.artifacts/relation-effect-evidence-packet/`.
+
 ## Completed Delivery: Persistent Dream Next Attention
 
 Status: `IMPLEMENTED_AND_REAL_BROWSER_CORE_AUDITED_LOCAL`

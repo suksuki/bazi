@@ -140,6 +140,17 @@ from abu_v60.mingli.relation_effect_admission_contracts import (
     RelationEffectDimensionAssessment,
     RelationEffectRuleAdmissionAssessment,
 )
+from abu_v60.mingli.relation_effect_evidence import (
+    MingliRelationEffectEvidencePacketProjector,
+)
+from abu_v60.mingli.relation_effect_evidence_contracts import (
+    RELATION_EFFECT_EVIDENCE_DECISION_PATH,
+    RELATION_EFFECT_EVIDENCE_PACKET_VERSION,
+    RELATION_EFFECT_REQUIRED_PROFESSIONAL_PATH,
+    MingliRelationEffectEvidencePacketEnvelope,
+    RelationEffectDemandEvidencePacket,
+    RelationEffectEvidenceDimensionSlot,
+)
 from abu_v60.mingli.relation_effect_frontier import (
     MingliRelationEffectResearchFrontierProjector,
 )
@@ -216,6 +227,9 @@ __all__ = [
     "MINGLI_READING_VERSION",
     "QUANT_VECTOR_VERSION",
     "RELATION_EFFECT_ADMISSION_REVIEW_VERSION",
+    "RELATION_EFFECT_EVIDENCE_DECISION_PATH",
+    "RELATION_EFFECT_EVIDENCE_PACKET_VERSION",
+    "RELATION_EFFECT_REQUIRED_PROFESSIONAL_PATH",
     "RELATION_EFFECT_REQUIRED_RULE_DIMENSIONS",
     "RELATION_EFFECT_RESEARCH_FRONTIER_VERSION",
     "SOURCE_DISCUSSION_ABSTAINED_CLAIMS",
@@ -288,6 +302,8 @@ __all__ = [
     "MingliReadingStoreError",
     "MingliRelationEffectAdmissionProjector",
     "MingliRelationEffectAdmissionReviewEnvelope",
+    "MingliRelationEffectEvidencePacketEnvelope",
+    "MingliRelationEffectEvidencePacketProjector",
     "MingliRelationEffectResearchFrontierEnvelope",
     "MingliRelationEffectResearchFrontierProjector",
     "MingliSourceCoordinateReviewCompiler",
@@ -308,7 +324,9 @@ __all__ = [
     "OwnerCaseInput",
     "PolarityMembershipMeasurement",
     "RelationEffectCompetingInterpretation",
+    "RelationEffectDemandEvidencePacket",
     "RelationEffectDimensionAssessment",
+    "RelationEffectEvidenceDimensionSlot",
     "RelationEffectRuleAdmissionAssessment",
     "RelationEffectRuleDemand",
     "SourceCarrierUsabilityPrerequisite",
