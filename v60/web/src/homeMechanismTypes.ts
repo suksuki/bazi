@@ -175,7 +175,73 @@ export interface HomeMechanismComparison {
   selected_candidate_ref: string | null;
   rationale_summary: string | null;
   evidence_refs_used: string[];
+  decision_trace: HomeMechanismDecisionTrace | null;
   meaning: "ATTENTION_PRIORITY_ONLY";
   professional_verdict: false;
   canonical_mingli_write_allowed: false;
+}
+
+export interface HomeMechanismDecisionTrace {
+  trace_version: string;
+  trace_integrity_status: "VERIFIED";
+  decision_ref: string;
+  decision_hash: string;
+  kernel_version: string;
+  request_id: string;
+  subject_ref: string;
+  authority: "RULE_ENGINE" | "LLM_REASONER";
+  status: "RESOLVED";
+  route_reason: string;
+  selected_candidate_ref: string;
+  attention_candidate_refs: string[];
+  reviewed_candidate_refs: string[];
+  candidate_coverage_complete: boolean;
+  candidate_coverage_semantics:
+    | "PROVIDER_REVIEWED_ATTENTION_CANDIDATES"
+    | "RULE_ENGINE_SINGLE_ATTENTION_CANDIDATE";
+  bound_evidence_refs: string[];
+  evidence_refs_used: string[];
+  evidence_use_semantics:
+    | "PROVIDER_CITED_BOUND_EVIDENCE"
+    | "REQUEST_BOUND_NOT_PROVIDER_USED";
+  selected_evidence_bound: true;
+  selected_evidence_use_semantics:
+    | "PROVIDER_CITED_BOUND_EVIDENCE"
+    | "REQUEST_BOUND_RULE_NOT_PROVIDER_CITED";
+  provider_counter_evidence_refs: string[];
+  proposal_ref: string | null;
+  gate_receipt_ref: string | null;
+  gate_version: string | null;
+  gate_disposition: "ADMITTED" | "NOT_REQUIRED";
+  gate_reason: string;
+  decision_record_allowed: true;
+  canonical_domain_write_allowed: false;
+  reasoner_runtime_ref: string | null;
+  provider_id: string | null;
+  model_ref: string | null;
+  model_profile_ref: string | null;
+  model_profile_hash: string | null;
+  prompt_ref: string | null;
+  provider_response_ref: string | null;
+  context_hash: string | null;
+  attention_scope: "STATIC_NATAL_MECHANISM_CANDIDATE_PRIORITY_ONLY";
+  admitted_input_scopes: Array<"MECHANISM_CANDIDATE_EVIDENCE">;
+  unbound_input_scopes: Array<
+    | "SOURCE_USABILITY"
+    | "TIMING_ACTIVATION"
+    | "MECHANISM_QUALIFICATION"
+    | "PROFESSIONAL_ADMISSION"
+    | "CALIBRATION"
+  >;
+  counter_evidence_semantics: "BOUND_REF_ONLY_NOT_PROFESSIONALLY_ADMITTED";
+  selection_rationale_contract:
+    | "FREE_TEXT_NO_DISTINCT_SELECTION_BASIS_FIELD"
+    | "DETERMINISTIC_SINGLE_CANDIDATE_ROUTE_REASON_ONLY";
+  provider_confidence_semantics:
+    | "RECORDED_UNCALIBRATED_NOT_PRODUCT_AUTHORITY"
+    | "NOT_RECORDED_RULE_ENGINE_ROUTE";
+  professional_selection_qualified: false;
+  professional_verdict_allowed: false;
+  probability_claim_allowed: false;
+  read_only: true;
 }

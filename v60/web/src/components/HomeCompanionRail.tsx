@@ -5,6 +5,8 @@ import {
   unitTitle,
 } from "../experienceUnits";
 import { HomeReadingBrief } from "./HomeReadingBrief";
+import { MechanismComparisonCommand } from "./MechanismComparisonCommand";
+import { MechanismDecisionTrace } from "./MechanismDecisionTrace";
 import { MechanismEvidenceContrast } from "./MechanismEvidenceContrast";
 import { MechanismQualificationMatrix } from "./MechanismQualificationMatrix";
 import { MingliEvidenceExplanation } from "./MingliEvidenceExplanation";
@@ -101,6 +103,12 @@ export function HomeCompanionRail({
               }
               onCompare={onCompareMechanisms}
             />
+            <MechanismDecisionTrace
+              comparison={home.lab.mechanism_comparison}
+              mode="mingli"
+              qualification={home.mingli.mechanism_qualification}
+              reading={home.mingli.reading}
+            />
             <MingliEvidenceExplanation explanation={home.mingli.explanation} />
             <MechanismEvidenceContrast
               depth={home.mingli.mechanism_evidence_depth}
@@ -156,6 +164,12 @@ export function HomeCompanionRail({
                 <dd>没有。这里绑定的是命理页正在显示的同一份版本化读取。</dd>
               </div>
             </dl>
+            <MechanismDecisionTrace
+              comparison={home.lab.mechanism_comparison}
+              mode="abu"
+              qualification={home.mingli.mechanism_qualification}
+              reading={home.mingli.reading}
+            />
           </section>
         )}
 
@@ -216,6 +230,12 @@ export function HomeCompanionRail({
             ) : (
               <p>当前真实命盘没有达到本版候选路径的最低结构门槛。</p>
             )}
+            <MechanismDecisionTrace
+              comparison={home.lab.mechanism_comparison}
+              mode="lab"
+              qualification={home.mingli.mechanism_qualification}
+              reading={home.mingli.reading}
+            />
             <MechanismEvidenceContrast
               depth={home.mingli.mechanism_evidence_depth}
               mode="detailed"
@@ -228,6 +248,9 @@ export function HomeCompanionRail({
             <MechanismQualificationMatrix
               detailed
               qualification={home.mingli.mechanism_qualification}
+              selectedCandidateRef={
+                home.lab.mechanism_comparison.selected_candidate_ref
+              }
             />
             <MechanismComparisonCommand
               busy={busy}
@@ -272,44 +295,6 @@ export function HomeCompanionRail({
         <p>当前观察：{home.profile.display_name}的私密生命线</p>
       </footer>
     </aside>
-  );
-}
-
-function MechanismComparisonCommand({
-  busy,
-  home,
-  onCompare,
-}: {
-  busy: boolean;
-  home: HomeSnapshot;
-  onCompare: () => void;
-}) {
-  const comparison = home.lab.mechanism_comparison;
-  if (comparison.decision_ref) {
-    return (
-      <p className="home-mechanism-decision">
-        已形成一次有证据边界的关注排序；它不是有效做功裁决。
-      </p>
-    );
-  }
-  const multiple = comparison.candidate_count > 1;
-  const ready =
-    !multiple || comparison.reasoner_runtime.status === "READY";
-  return (
-    <div className="home-mechanism-command">
-      <button
-        disabled={!ready || busy || comparison.candidate_count === 0}
-        onClick={onCompare}
-        type="button"
-      >
-        {busy ? "正在比较…" : "比较候选路径"}
-      </button>
-      <span>
-        {multiple && !ready
-          ? "LLM 尚未配置，真实模型比较未运行"
-          : "只决定下一步关注哪条，不写入命理真相"}
-      </span>
-    </div>
   );
 }
 

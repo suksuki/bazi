@@ -1,6 +1,6 @@
 # V60 Mingli Core and Quantitative Model
 
-Status: `SOURCE_USABILITY_PREREQUISITE_V1_IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
+Status: `MINGLI_DECISION_TRACE_V1_IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
 
 ## Product decision
 
@@ -45,6 +45,7 @@ must not be reported as real-world accuracy.
 | Whole-chart portrait and life-domain verdicts | Missing | V50 LLM drafts are not canonical facts |
 | Cognitive Decision Kernel | Executable | Routes authority and records immutable decisions |
 | Network LLM Reasoner | Executable | dblife Ollama `gemma4:latest`; hash-locked structured-decision profile; attention priority only |
+| Mingli Decision evidence trace | Executable read projection | Verifies immutable identity and reference coverage; not professional correctness or admission |
 | Statistical calibration | Missing | No production probability may be displayed |
 
 ## Implemented quantitative foundation v1
@@ -236,6 +237,102 @@ Chrome audit confirms the four-carrier `6/5/1` versus `10/7/3` scope contrast,
 shared Mingli/Lab identity, refresh stability, zero console/network failures
 and zero document overflow.
 
+## Implemented verifiable attention-Decision trace v1
+
+The persisted mechanism comparison has always been narrower than a professional
+Mingli selection. V60 now makes that exact boundary inspectable rather than
+leaving the word `Decision` to imply more authority:
+
+```text
+persisted Cognition DecisionRecord
++ rebuilt static natal mechanism comparison request
+-> verify record Hash and request identity
+-> verify route authority and resolved status
+-> verify complete attention-candidate coverage
+-> verify selected-candidate evidence coverage
+-> verify Proposal and Epistemic Gate identity
+-> read-only Mingli Decision Trace
+
+Decision Trace
++ current Reading binding
++ current mechanism qualification projection
+-> Mingli Calculation compact handoff
+-> Abu Says same-Reading handoff
+-> Lab expanded identity, coverage and evidence-gap inspection
+```
+
+The trace version is `v60.mingli-decision-trace.001`. It does not create a new
+Decision or reinterpret provider output. A record Hash mismatch, changed
+canonical request, invalid route, incomplete candidate review, unbound
+evidence citation or mismatched Proposal/Gate identity fails closed.
+
+The current Decision input admits exactly one scope:
+
+```text
+MECHANISM_CANDIDATE_EVIDENCE
+```
+
+Its product-visible but Decision-unbound scopes are:
+
+```text
+SOURCE_USABILITY
+TIMING_ACTIVATION
+MECHANISM_QUALIFICATION
+PROFESSIONAL_ADMISSION
+CALIBRATION
+```
+
+The scope is therefore
+`STATIC_NATAL_MECHANISM_CANDIDATE_PRIORITY_ONLY`. In this request,
+`comparison_eligible=true` means only that a versioned mechanism candidate may
+enter attention ordering. It is not equivalent to
+`professional_selection_qualified`, professional admission, source usability
+or effective work. The recorded priority is not a relation-effect,
+source-usability, timing-activation, strength, auspiciousness, life-outcome or
+probability verdict.
+
+For an LLM route, the trace verifier rebuilds and exact-compares the canonical
+Kernel route. `EpistemicGate` separately checks that the LLM route is authorized
+and request-associated, that every eligible candidate was reviewed, that the
+selected candidate is eligible and that evidence references stay within the
+request. Provider/model/profile/prompt/response/context identities are
+constructed by the Reasoner Proposal and bound by its Hash and stable Ref; the
+trace verifies the Proposal identity and canonical Gate receipt. `ADMITTED`
+authorizes an immutable Decision record only. It does not evaluate the
+professional truth of the rationale. Provider
+`counter_evidence_refs` prove only that those references belonged to the
+bounded request; because the counter-evidence model remains `NOT_ADMITTED`,
+they are not professionally adopted counter-evidence.
+
+On an LLM route, provider confidence is retained inside the historical
+Proposal but remains uncalibrated model output. The trace labels it
+`RECORDED_UNCALIBRATED_NOT_PRODUCT_AUTHORITY`, and the product does not expose
+the numeric value as probability, professional confidence or measured decision
+quality. A single-candidate `RULE_ENGINE` route records no Provider Proposal,
+confidence or evidence citation; the candidate evidence remains request-bound
+and is not reported as provider-used.
+
+Mingli Calculation, Abu Says and Lab consume the same Decision Ref/Hash and
+Reading binding. The qualification matrix is shown beside that handoff to
+explain why the selected attention candidate still cannot be professionally
+decided; it was not retroactively added to the original Reasoner input. The
+trace remains read-only, preserves
+`canonical_domain_write_allowed=false` and required no database migration.
+Current identities are `v60.mingli-cognitive-engine.019`,
+`v60.runtime-architecture.040`, `v60.unit-mingli.013`,
+`v60.unit-abu-says.006` and `v60.unit-lab.010`.
+
+The full 227-test backend suite and all static/build audits pass. Automated
+Chrome verification over a persisted four-candidate Decision confirms 4/4
+candidate review and evidence use, one Ref/Hash across Mingli Calculation, Abu
+Says and Lab, refresh stability, no comparison POST during reads, zero
+console/network failures and zero document overflow. A second interactive
+Chrome review over the active owner Reading confirms the same three-surface
+identity, selected-candidate qualification marker and immutable credential
+expansion. A separate persisted four-candidate Reading confirms the visible
+`NOT_RUN` state without a comparison mutation. Evidence is in
+`.artifacts/mechanism-decision-trace/`.
+
 ## Implemented timing evidence v1
 
 The third evidence layer adds real Mingli time coordinates without mutating
@@ -358,6 +455,12 @@ This is stricter than “the system cannot decide, so let the LLM decide.” The
 system must first enumerate and qualify the candidates and bind all visible
 evidence. The LLM may compare only that set. It may not invent a candidate,
 fact, rule or outcome, and it never receives canonical write authority.
+
+For the current Mingli mechanism request, “qualified” has the deliberately
+narrow meaning `attention comparison eligible`. It does not refer to the
+eight-part mechanism qualification projection or professional admission.
+Those scopes are not Decision inputs today and remain explicitly unbound in
+the Decision trace.
 
 ## Quantitative Mingli model
 
@@ -533,6 +636,11 @@ the matrix into a probability. Mixed Case, Chart or source-vector lineage
 fails closed. A read-only corpus test currently covers four persisted real
 owner Cases and confirms deterministic but case-sensitive projections.
 
+The matrix is displayed beside the attention Decision after the Decision has
+been read. It is not currently an input to that static natal comparison and
+cannot be used to reinterpret its recorded rationale as professional
+selection.
+
 ## Delivery sequence
 
 1. **V50 capability inventory:** completed for the capabilities needed by the
@@ -554,7 +662,10 @@ owner Cases and confirms deterministic but case-sensitive projections.
 8. **Bounded Reasoner activation:** completed against the existing
    dblife-hosted Ollama service; unsupported or partial provider configuration
    still fails closed.
-9. **Product expression:** Abu explains the exact Reading, Dream makes a
+9. **Decision evidence trace:** completed for server verification of the
+   immutable static-natal attention Decision and one shared Mingli/Abu/Lab
+   handoff with explicit unbound input scopes.
+10. **Product expression:** Abu explains the exact Reading, Dream makes a
    bounded uncertainty playable, Lab exposes the evidence, and Theater adapts
    only approved source packages.
 

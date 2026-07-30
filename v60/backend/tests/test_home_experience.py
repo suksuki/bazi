@@ -141,11 +141,32 @@ def test_home_projection_contains_no_dream_subject_or_mutable_dream_state() -> N
         set(candidate["evidence_refs"]) <= fact_refs
         for candidate in snapshot["lab"]["candidate_paths"]
     )
-    comparison_decision_ref = snapshot["lab"]["mechanism_comparison"]["decision_ref"]
+    comparison = snapshot["lab"]["mechanism_comparison"]
+    comparison_decision_ref = comparison["decision_ref"]
+    decision_trace = comparison["decision_trace"]
     reading_focus = snapshot["mingli"]["reading_brief"]["focus"]
     assert snapshot["mingli"]["reading"]["decision_refs"] == (
         [comparison_decision_ref] if comparison_decision_ref is not None else []
     )
+    if comparison_decision_ref is None:
+        assert decision_trace is None
+    else:
+        assert decision_trace["decision_ref"] == comparison_decision_ref
+        assert decision_trace["decision_hash"] == comparison["decision_hash"]
+        assert decision_trace["selected_candidate_ref"] == (
+            comparison["selected_candidate_ref"]
+        )
+        assert decision_trace["trace_integrity_status"] == "VERIFIED"
+        assert decision_trace["candidate_coverage_complete"] is True
+        assert decision_trace["selected_evidence_bound"] is True
+        assert decision_trace["selected_evidence_use_semantics"] in {
+            "PROVIDER_CITED_BOUND_EVIDENCE",
+            "REQUEST_BOUND_RULE_NOT_PROVIDER_CITED",
+        }
+        assert decision_trace["professional_selection_qualified"] is False
+        assert decision_trace["professional_verdict_allowed"] is False
+        assert decision_trace["probability_claim_allowed"] is False
+        assert decision_trace["canonical_domain_write_allowed"] is False
     if reading_focus["candidate_ref"] is None:
         assert reading_focus["support"] is None
     else:

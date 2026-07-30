@@ -2,6 +2,49 @@
 
 ## 2026-07-30
 
+### Verifiable Mingli attention Decision trace
+
+- Added `v60.mingli-decision-trace.001`, a server-owned read projection over
+  the existing immutable Cognition DecisionRecord. It verifies the stored
+  record Hash, rebuilt request identity, route authority/status, complete
+  attention-candidate coverage, selected-candidate evidence coverage and
+  Proposal/Gate identity; any mismatch fails closed.
+- Made the Decision scope explicit as
+  `STATIC_NATAL_MECHANISM_CANDIDATE_PRIORITY_ONLY`. Attention-comparison
+  eligibility is not professional admission and does not establish relation
+  effect, source usability, timing activation, effective work, probability,
+  auspiciousness or life outcome.
+- Disclosed that the current Decision admits only mechanism-candidate evidence.
+  Source usability, timing activation, the mechanism qualification matrix,
+  professional admission and calibration are visible product context but are
+  not bound Decision inputs.
+- Clarified that the trace verifier rebuilds the canonical Kernel route while
+  `EpistemicGate` checks bounded LLM route authorization, request association,
+  candidate review and evidence-reference coverage. Provider/model/prompt/
+  context identity belongs to the Hash-bound Reasoner Proposal, and none of
+  these layers certifies professional correctness. Provider
+  `counter_evidence_refs` remain request-bound references rather than
+  professionally admitted counter-evidence. LLM confidence remains
+  uncalibrated and hidden; a Rule Engine route records no Provider confidence
+  or evidence citation and requires no Gate.
+- Mingli Calculation, Abu Says and Lab now hand off the same Decision Ref/Hash,
+  Reading binding, evidence coverage and unresolved qualification conditions.
+  Lab expands the missing conditions while all three surfaces preserve the
+  same non-verdict boundary.
+- Added no canonical Mingli write and no database migration. Advanced Mingli to
+  `v60.mingli-cognitive-engine.019`, the product units to
+  `v60.unit-mingli.013`, `v60.unit-abu-says.006` and
+  `v60.unit-lab.010`, and Runtime Architecture to
+  `v60.runtime-architecture.040`.
+- Passed the full 227-test backend suite, Ruff, TypeScript/Vite build, Runtime
+  Architecture, source maintainability and real Chrome audits. The persisted
+  QA Decision proves 4/4 candidate and evidence coverage, stable refresh,
+  identical three-surface identity and no read-time comparison write. A second
+  four-candidate Reading proves the visible `NOT_RUN` state without triggering
+  comparison. A server-rendered contract also locks Rule Engine output and
+  zero-, one- and multi-candidate pending presentation. Visual evidence is in
+  `.artifacts/mechanism-decision-trace/`.
+
 ### Source-usability discussion prerequisites
 
 - Added one immutable, read-only prerequisite projection over the persisted

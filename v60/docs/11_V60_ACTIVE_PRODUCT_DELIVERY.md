@@ -995,6 +995,61 @@ Status: `IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
   stability, zero console/network failures and zero document overflow.
   Evidence remains in `.artifacts/source-coordinate-review/`.
 
+## Completed Delivery: Verifiable Mingli Decision Evidence Trace
+
+Status: `IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
+
+- The current mechanism comparison now returns one server-verified trace over
+  the existing immutable Cognition DecisionRecord. The trace recomputes the
+  canonical comparison request and verifies the record Hash, route
+  authority/status, selected candidate, complete attention-candidate coverage,
+  bound evidence coverage and Proposal/Gate identities. Invalid history fails
+  closed instead of being summarized by the browser.
+- Its scope is exactly
+  `STATIC_NATAL_MECHANISM_CANDIDATE_PRIORITY_ONLY`. A candidate marked eligible
+  for this comparison has enough versioned mechanism material to enter an
+  attention-ordering request; it is not professionally admitted and has not
+  been proven effective, usable, timely, favorable or predictive.
+- The trace names its only admitted input scope:
+  `MECHANISM_CANDIDATE_EVIDENCE`. It also exposes the currently unbound scopes:
+  source usability, timing activation, mechanism qualification, professional
+  admission and calibration. Showing those gaps beside a Decision does not
+  imply that they were supplied to the Reasoner.
+- The trace verifier rebuilds and exact-compares the canonical Kernel route.
+  `EpistemicGate` separately verifies LLM route authorization and request
+  association, complete eligible-candidate review, selected-candidate
+  membership and request-bound evidence references. Provider/model/prompt/
+  context identities belong to the Hash-bound Reasoner Proposal. `ADMITTED`
+  means that the immutable Decision record was allowed, not that a professional
+  interpretation was approved. Provider `counter_evidence_refs` are only bound
+  request references until a formal counter-evidence model is admitted.
+- On an LLM route, provider confidence remains recorded, uncalibrated model
+  output; the product does not display its numeric value as probability,
+  professional confidence or decision quality. A single-candidate Rule Engine
+  route records no Provider proposal, confidence or evidence citation and is
+  labeled separately.
+- Mingli Calculation gives the compact handoff, Abu Says continues the exact
+  same Reading and Decision, and Lab expands candidate coverage, immutable
+  identities and every remaining qualification condition. All three surfaces
+  share the server payload; none recomputes a ranking or produces another
+  interpretation.
+- The trace is read-only and creates no second Decision, no professional
+  admission and no canonical Mingli write. It required no database migration.
+- Current identities are `v60.mingli-cognitive-engine.019`,
+  `v60.runtime-architecture.040`, `v60.unit-mingli.013`,
+  `v60.unit-abu-says.006` and `v60.unit-lab.010`. Foundation remains
+  `v60.foundation.013`.
+- The full 227-test backend suite, Ruff, TypeScript/Vite build, Runtime
+  Architecture, source maintainability and real Chrome audits pass. The decided
+  QA Case proves 4/4 candidate review, 4/4 bound-evidence use, identical
+  Decision identity across all three surfaces, refresh stability, no comparison
+  mutation during reads, zero console/network failures and zero document
+  overflow. A second persisted four-candidate Case verifies the visible
+  `NOT_RUN` boundary without triggering comparison. A server-rendered component
+  contract separately locks Rule Engine presentation and the zero-, one- and
+  multi-candidate pending messages. Evidence is in
+  `.artifacts/mechanism-decision-trace/`.
+
 ## Current Product Truth
 
 Already usable locally:
@@ -1011,7 +1066,9 @@ Already usable locally:
   six-clash or six-harmony facts, shared by Mingli and Lab;
 - a shared prerequisite view comparing exact-identity and same-element source
   scopes while exposing the rules still missing before usability discussion;
-- bounded Gemma4 comparison when deterministic rules cannot rank candidates;
+- bounded Gemma4 ordering of static natal mechanism candidates for
+  investigation attention, with a verified Decision identity/evidence trace
+  shared by Mingli Calculation, Abu Says and Lab;
 - three-tree Dream selection, observation, Seal, World waiting, Reveal,
   reconciliation, return to Grove and another Encounter;
 - refresh and process persistence through server-owned state.

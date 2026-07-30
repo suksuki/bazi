@@ -15,7 +15,7 @@ from abu_v60.architecture.contracts import (
 @lru_cache(maxsize=1)
 def runtime_architecture() -> RuntimeArchitecture:
     architecture = RuntimeArchitecture(
-        architecture_version="v60.runtime-architecture.039",
+        architecture_version="v60.runtime-architecture.040",
         modules=(
             RuntimeModule(
                 module_id="identity",
@@ -33,7 +33,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="mingli",
                 kind=ModuleKind.ENGINE,
-                version="v60.mingli-cognitive-engine.018",
+                version="v60.mingli-cognitive-engine.019",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("mingli",),
                 reads_from=("identity",),
@@ -78,6 +78,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "carrier_source_timing_competition_contrast",
                     "versioned_source_usability_prerequisite_projection",
                     "source_scope_competition_and_evidence_gaps",
+                    "verified_attention_decision_trace_projection",
                 ),
                 writes_canonical_state=True,
             ),
@@ -280,7 +281,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-mingli",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-mingli.012",
+                version="v60.unit-mingli.013",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context",),
                 capabilities=(
@@ -299,12 +300,13 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "candidate_evidence_contrast",
                     "source_coordinate_review_summary",
                     "source_usability_prerequisite_summary",
+                    "shared_attention_decision_trace_summary",
                 ),
             ),
             RuntimeModule(
                 module_id="unit-abu",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-abu-says.005",
+                version="v60.unit-abu-says.006",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "mingli", "media"),
                 capabilities=(
@@ -313,6 +315,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "mingli_reading_expression",
                     "shared_mingli_explanation_identity",
                     "shared_mechanism_qualification_identity",
+                    "same_reading_decision_trace_handoff",
                 ),
             ),
             RuntimeModule(
@@ -331,7 +334,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-lab",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-lab.009",
+                version="v60.unit-lab.010",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "knowledge", "cognition"),
                 capabilities=(
@@ -346,6 +349,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "role_source_timing_competition_inspection",
                     "source_coordinate_relation_intersection_inspection",
                     "source_scope_competition_inspection",
+                    "decision_gate_and_evidence_scope_inspection",
                     "research_proposal_requires_knowledge_admission",
                 ),
             ),

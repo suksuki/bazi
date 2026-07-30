@@ -125,6 +125,66 @@ or partially configured provider leaves interpretation unresolved instead of
 silently falling back to generated prose. Historical Qwen records remain
 append-only research/trial evidence; Qwen is not the active V60 product model.
 
+## Verifiable Mingli attention-Decision trace
+
+The current Mingli comparison is one bounded use of the constitutional Kernel,
+not a general whole-chart verdict. Its executable scope is:
+
+```text
+STATIC_NATAL_MECHANISM_CANDIDATE_PRIORITY_ONLY
+```
+
+For this request, a candidate with `qualified=true` is qualified only to enter
+attention comparison. The source field is
+`MechanismCandidateEvidence.comparison_eligible`; it is deliberately distinct
+from `professional_selection_qualified` and from the later eight-part
+professional qualification projection. One attention-eligible candidate may
+route to `RULE_ENGINE`; multiple attention-eligible candidates may route to the
+bounded Reasoner. Neither route promotes the candidate to professional
+admission.
+
+Version `v60.mingli-decision-trace.001` reconstructs the exact canonical
+request and verifies an existing immutable DecisionRecord before projecting it
+to Mingli Calculation, Abu Says and Lab:
+
+- stored record Hash equals the canonical record payload Hash;
+- stored request equals the rebuilt mechanism-comparison request;
+- route request, authority and resolved status agree with indexed columns;
+- every attention-eligible candidate was reviewed;
+- every cited reference belongs to the bounded request and the selected
+  candidate's required evidence is covered;
+- Proposal and Gate identities, Hashes and dispositions agree.
+
+Any mismatch fails closed. The trace is a read-only projection; it neither
+creates a second Decision nor reruns the provider.
+
+The current admitted input scope is only
+`MECHANISM_CANDIDATE_EVIDENCE`. Source usability, timing activation,
+mechanism qualification, professional admission and calibration are not bound
+to this Decision. The product may display those missing scopes beside the
+Decision, but it must not imply that the Reasoner reviewed them.
+
+The trace verifier rebuilds and exact-compares the canonical Kernel route.
+`EpistemicGate` separately checks that an LLM route is authorized and belongs
+to the request, that every eligible candidate was reviewed, that the selected
+candidate is eligible and that every cited evidence reference is request-bound.
+Provider, model, profile, prompt, response and context identities are
+constructed in the Reasoner Proposal and bound by its Hash and stable Ref. An
+`ADMITTED` receipt means the Proposal may be preserved in the immutable
+Decision ledger. It does not certify the professional correctness of the
+selection or rationale. Likewise, provider `counter_evidence_refs` are only
+validated as request-bound references; until a formal counter-evidence model
+is admitted, they are not professionally adopted counter-evidence.
+
+On an `LLM_REASONER` route, provider confidence remains an uncalibrated
+Proposal field. It is not a probability, professional confidence or measured
+decision quality and is not displayed as product authority. A `RULE_ENGINE`
+route records no Proposal, provider confidence or provider evidence citation;
+its selected evidence remains request-bound only. Every trace preserves
+`professional_selection_qualified=false`,
+`professional_verdict_allowed=false`, `probability_claim_allowed=false` and
+`canonical_domain_write_allowed=false`.
+
 ## Required decision record contract
 
 Every committed decision preserves:

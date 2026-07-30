@@ -58,6 +58,7 @@ from abu_v60.mingli.mechanism_contracts import (
 )
 from abu_v60.mingli.mechanism_decision import (
     MECHANISM_COMPARISON_VERSION,
+    MECHANISM_DECISION_TRACE_VERSION,
     MechanismComparisonUnavailableError,
     MingliMechanismComparisonService,
 )
@@ -176,6 +177,7 @@ __all__ = [
     "LIFE_DOMAIN_EVIDENCE_POLICY_REF",
     "LIFE_DOMAIN_VECTOR_VERSION",
     "MECHANISM_COMPARISON_VERSION",
+    "MECHANISM_DECISION_TRACE_VERSION",
     "MECHANISM_EVIDENCE_CHANNEL_ORDER",
     "MECHANISM_EVIDENCE_COMPILER_VERSION",
     "MECHANISM_EVIDENCE_DEPTH_VERSION",
