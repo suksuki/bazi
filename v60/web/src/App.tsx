@@ -141,11 +141,16 @@ export function App() {
 
   useEffect(() => {
     const encounter = runtime.snapshot?.encounter;
+    const question = runtime.snapshot?.question;
+    const watchingOpenQuestion =
+      encounter?.status === "QUESTION_OPEN" &&
+      question?.answer_window_status === "OPEN";
     if (
       !runtime.session ||
       scope !== "dream" ||
       !encounter ||
-      encounter.status !== "WAITING_FOR_WORLD"
+      (encounter.status !== "WAITING_FOR_WORLD" &&
+        !watchingOpenQuestion)
     ) {
       return;
     }
@@ -177,6 +182,7 @@ export function App() {
     scope,
     runtime.snapshot?.encounter.encounter_ref,
     runtime.snapshot?.encounter.status,
+    runtime.snapshot?.question?.answer_window_status,
   ]);
 
   const runAction = async (action: () => Promise<DreamSnapshot>) => {

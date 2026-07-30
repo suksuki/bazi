@@ -6,8 +6,12 @@ from pydantic import ValidationError
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
+from abu_v60.dream.catalog import DreamEpisodeCatalog
 from abu_v60.dream.errors import DreamConflictError, DreamStateError
 from abu_v60.dream.grove import GroveCandidateDefinition
+from abu_v60.dream.grove_candidate_lineage import (
+    candidate_source_lineage_is_valid,
+)
 from abu_v60.dream.persistence import DreamRepository
 from abu_v60.dream.return_attention_contracts import (
     DreamOpeningAttention,
@@ -33,6 +37,7 @@ class DreamReturnAttentionCoordinator:
     ) -> None:
         self._repository = repository
         self._return_echo = return_echo
+        self._episodes = DreamEpisodeCatalog()
 
     def project_prompt(
         self,
@@ -71,6 +76,27 @@ class DreamReturnAttentionCoordinator:
         if envelope.command is not DreamCommand.SELECT_NEXT_ATTENTION:
             raise DreamStateError("dream_return_attention_command_invalid")
         with engine.begin() as connection:
+            self._lock_account(
+                connection,
+                account_ref=account_ref,
+            )
+            if self._repository.command_replayed(
+                connection=connection,
+                account_ref=account_ref,
+                envelope=envelope,
+            ):
+                return
+            if (
+                self._repository.current_encounter(
+                    connection,
+                    account_ref=account_ref,
+                    for_update=False,
+                )
+                is not None
+            ):
+                raise DreamConflictError(
+                    "dream_return_attention_requires_grove"
+                )
             source = self._source_context(
                 connection,
                 account_ref=account_ref,
@@ -82,12 +108,6 @@ class DreamReturnAttentionCoordinator:
                 raise DreamStateError(
                     "dream_return_attention_source_candidate_invalid"
                 )
-            if self._repository.command_replayed(
-                connection=connection,
-                account_ref=account_ref,
-                envelope=envelope,
-            ):
-                return
             if int(source["version"]) != envelope.expected_version:
                 raise DreamConflictError("dream_command_version_conflict")
             echo = self._return_echo.project(
@@ -143,6 +163,22 @@ class DreamReturnAttentionCoordinator:
                 envelope=envelope,
                 result_encounter_ref=envelope.encounter_ref,
             )
+
+    @staticmethod
+    def _lock_account(connection: Any, *, account_ref: str) -> None:
+        locked = connection.execute(
+            text(
+                """
+                SELECT account_ref
+                FROM identity.accounts
+                WHERE account_ref = :account_ref
+                FOR UPDATE
+                """
+            ),
+            {"account_ref": account_ref},
+        ).scalar_one_or_none()
+        if locked is None:
+            raise DreamStateError("dream_return_attention_account_not_found")
 
     def apply_pending(
         self,
@@ -474,8 +510,8 @@ class DreamReturnAttentionCoordinator:
             for kind, label, summary in candidates
         )
 
-    @staticmethod
     def _source_context(
+        self,
         connection: Any,
         *,
         account_ref: str,
@@ -498,17 +534,27 @@ class DreamReturnAttentionCoordinator:
                            COALESCE(
                                event.event_json ->> 'source_question_ref',
                                encounter.question_ref
-                           ) AS source_question_ref
+                           ) AS source_question_ref,
+                           event.event_json
                     FROM dream.encounters AS encounter
                     JOIN story.question_instances AS question
                       ON question.question_ref = encounter.question_ref
                     JOIN world.events AS event
                       ON event.world_event_ref = question.world_event_ref
                     LEFT JOIN dream.grove_candidates AS candidate
-                      ON candidate.question_ref = COALESCE(
-                          event.event_json ->> 'source_question_ref',
-                          encounter.question_ref
-                      )
+                      ON (
+                            candidate.candidate_ref = event.event_json
+                                ->> 'source_candidate_ref'
+                            OR (
+                                event.event_json
+                                    ->> 'source_candidate_ref' IS NULL
+                                AND candidate.question_ref = COALESCE(
+                                    event.event_json
+                                        ->> 'source_question_ref',
+                                    encounter.question_ref
+                                )
+                            )
+                         )
                      AND candidate.tree_ref = encounter.tree_ref
                      AND candidate.actor_ref = encounter.actor_ref
                      AND candidate.runtime_status = 'ACTIVE'
@@ -558,8 +604,13 @@ class DreamReturnAttentionCoordinator:
         if (
             row["candidate"].tree_ref != row["tree_ref"]
             or row["candidate"].actor_ref != row["actor_ref"]
-            or row["candidate"].question_ref != row["source_question_ref"]
             or row["candidate"].runtime_status != "ACTIVE"
+            or not candidate_source_lineage_is_valid(
+                catalog=self._episodes.load(connection),
+                candidate=row["candidate"],
+                source_question_ref=str(row["source_question_ref"]),
+                event_payload=dict(row["event_json"]),
+            )
         ):
             if allow_missing_candidate:
                 return None

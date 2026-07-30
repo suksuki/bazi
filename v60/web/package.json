@@ -27,6 +27,7 @@
     "audit:dream-return-echo": "node tools/dream-return-echo-audit.mjs",
     "audit:dream-next-attention-contract": "node tools/dream-next-attention-contract-audit.mjs",
     "audit:dream-attention-follow-through-contract": "node tools/dream-attention-follow-through-contract-audit.mjs",
+    "audit:dream-same-tree-chapter-contract": "node tools/dream-same-tree-chapter-contract-audit.mjs",
     "audit:dream-next-attention": "node tools/dream-next-attention-audit.mjs",
     "audit:relation-effect-frontier-contract": "node tools/relation-effect-frontier-contract-audit.mjs",
     "audit:relation-effect-admission-contract": "node tools/relation-effect-admission-contract-audit.mjs",

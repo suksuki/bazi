@@ -15,7 +15,7 @@ from abu_v60.architecture.contracts import (
 @lru_cache(maxsize=1)
 def runtime_architecture() -> RuntimeArchitecture:
     architecture = RuntimeArchitecture(
-        architecture_version="v60.runtime-architecture.049",
+        architecture_version="v60.runtime-architecture.050",
         modules=(
             RuntimeModule(
                 module_id="identity",
@@ -170,7 +170,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="story",
                 kind=ModuleKind.ENGINE,
-                version="v60.life-story-engine.009",
+                version="v60.life-story-engine.010",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("story",),
                 reads_from=("mingli", "world", "cognition"),
@@ -180,6 +180,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "source_bound_world_event_definitions",
                     "source_bound_episode_graph",
                     "registry_owned_external_episode_transitions",
+                    "canonical_same_tree_chapter_transition",
                     "multi_root_episode_catalog",
                     "independent_qualification_episode_sources",
                     "append_only_episode_transition",
@@ -192,7 +193,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="dream-game",
                 kind=ModuleKind.ENGINE,
-                version="v60.dream-game-engine.016",
+                version="v60.dream-game-engine.017",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("dream",),
                 reads_from=("identity", "mingli", "world", "story", "cognition"),
@@ -233,6 +234,14 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "pending_return_attention_projection",
                     "source_echo_revalidated_attention_lineage",
                     "read_only_attention_follow_through",
+                    "account_history_grove_chapter_routing",
+                    "canonical_graph_route_authority",
+                    "continuation_opportunity_root_materialization",
+                    "attention_independent_chapter_routing",
+                    "terminal_chapter_wait",
+                    "expired_unsealed_opportunity_departure",
+                    "account_serialized_attention_and_chapter_entry",
+                    "candidate_bound_historical_echo",
                 ),
                 writes_canonical_state=True,
             ),
@@ -288,7 +297,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-dream",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-dream.017",
+                version="v60.unit-dream.018",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "media"),
                 capabilities=(
@@ -313,6 +322,10 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "grove_pending_attention_marker",
                     "full_phase_attention_follow_through",
                     "post_reveal_attention_material_contrast",
+                    "same_tree_new_chapter_preview",
+                    "attention_independent_chapter_entry",
+                    "terminal_story_wait_state",
+                    "visible_question_window_recovery",
                     "dream_outcome_not_owner_mingli_evidence",
                 ),
             ),

@@ -2,6 +2,46 @@
 
 ## 2026-07-30
 
+### Canonical same-tree Dream second chapter
+
+- Added the Hash-locked `wenxi-index-convention` source package and one
+  explicit active Story transition from Wenxi's first Question. Source
+  Registry `.002` now contains four packages and one canonical transition;
+  historical seed and Case provenance remain pinned.
+- Added `v60.dream-grove-chapter-route.001`. Grove `.004` derives each
+  candidate's first missing authored chapter from the canonical Episode graph
+  plus the account's reconciled/departed history, exposes exact route lineage
+  and stops at a visible `STORY_CURRENTLY_COMPLETE` terminal state.
+- Materialized chapter two as a fresh Opportunity bound to the candidate,
+  transition and exact settled predecessor event. Authored entry evidence is
+  cloned at the new cutoff; event payload flags prove Attention did not select
+  the route or mutate Question, Answer, NPC choice or outcome.
+- Added authoritative `OPEN / SEALED / CLOSED_UNSEALED` answer-window
+  projection and a visible missed-opportunity recovery. Expired attempts keep
+  their original `QUESTION_OPEN` status plus departure/expiration facts, zero
+  human Seal, zero Reveal and zero completed-count credit; retry creates new
+  immutable Question/Event/Encounter identities for the same chapter.
+- Fixed current-Encounter recovery so an older departed uncompleted attempt
+  cannot mask a newer completed Encounter. Extracted Grove departure into its
+  own coordinator to keep `DreamService` within the executable source budget.
+- Serialized Attention selection and chapter entry on the account row,
+  rejected stale post-entry selections while preserving exact receipt replay,
+  and bound historical Echo/Attention to the candidate persisted on its
+  WorldEvent. Added sequential and concurrent regression coverage.
+- Hardened the frontend against duplicate candidate refs, stale opening
+  applications, non-exact projection shapes and repeated terminal copy. The
+  same-tree contract now rejects 29 invalid mutations.
+- Advanced Story to `.010`, Dream Game to `.017`, Grove to `.004`, Unit Dream
+  to `.018` and Runtime Architecture to `.050`. Foundation `.016`, migration
+  head `0024_relation_effect_material`, Mingli `.025`, Knowledge `.008` and
+  Cognition `.004` are unchanged.
+- Passed all 289 backend tests, Ruff, TypeScript/Vite build, Runtime
+  Architecture, source maintainability and Dream frontend contracts. The real
+  browser preserved an expired unsealed attempt, completed the retried second
+  chapter, reached terminal Grove, and recovered the exact route identity
+  after refresh and managed Runtime restart. Evidence is in
+  `.artifacts/dream-second-chapter/`.
+
 ### Dream attention follow-through
 
 - Added `v60.dream-pending-attention.001` and

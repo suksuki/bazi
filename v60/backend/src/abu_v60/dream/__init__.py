@@ -11,6 +11,11 @@ from abu_v60.dream.grove import (
     DreamGroveRepository,
     GroveCandidateDefinition,
 )
+from abu_v60.dream.grove_chapter_routing import (
+    DREAM_GROVE_CHAPTER_ROUTE_VERSION,
+    DreamGroveChapterRoute,
+    DreamGroveChapterRouter,
+)
 from abu_v60.dream.return_echo_contracts import (
     DREAM_RETURN_ECHO_VERSION,
     DreamReturnEcho,
@@ -24,6 +29,7 @@ from abu_v60.dream.tree_admission import (
 )
 
 __all__ = [
+    "DREAM_GROVE_CHAPTER_ROUTE_VERSION",
     "DREAM_GROVE_VERSION",
     "DREAM_RETURN_ECHO_VERSION",
     "FIRST_ACTOR_REF",
@@ -31,6 +37,8 @@ __all__ = [
     "FIRST_TREE_REF",
     "THREE_LIFE_POOL_REF",
     "DreamGroveAdmissionService",
+    "DreamGroveChapterRoute",
+    "DreamGroveChapterRouter",
     "DreamGroveError",
     "DreamGroveRepository",
     "DreamReturnEcho",

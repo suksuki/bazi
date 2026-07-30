@@ -240,6 +240,8 @@ try {
   const openingMarkup = renderToStaticMarkup(
     React.createElement(DreamOpeningAttention, {
       attention: openingAttention,
+      targetEncounterRef: openingAttention.target_encounter_ref,
+      targetTreeRef: openingAttention.target_tree_ref,
     }),
   );
   for (const expected of [
@@ -267,7 +269,9 @@ try {
     assertIncludes("opening", openingMarkup, expected);
   }
   for (const [field, value] of [
+    ["extra_key", true],
     ["contract_version", "unsafe"],
+    ["application_hash", "z".repeat(64)],
     ["semantics", "OWNER_MINGLI_EVIDENCE"],
     ["target_tree_ref", "tree-wealth"],
     ["evidence_role", "OWNER_EVIDENCE"],
@@ -283,6 +287,8 @@ try {
     const markup = renderToStaticMarkup(
       React.createElement(DreamOpeningAttention, {
         attention: { ...openingAttention, [field]: value },
+        targetEncounterRef: openingAttention.target_encounter_ref,
+        targetTreeRef: openingAttention.target_tree_ref,
       }),
     );
     assertEqual(`unsafe-opening-${field}`, markup, "");

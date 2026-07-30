@@ -67,6 +67,8 @@ export function LifeTreeScene({
   const worldTicksRemaining = snapshot.question
     ? Math.max(0, snapshot.question.due_tick - snapshot.world.current_tick)
     : 0;
+  const answerWindowClosed =
+    snapshot.question?.answer_window_status === "CLOSED_UNSEALED";
   const followThroughSupplied =
     snapshot.attention_follow_through !== null &&
     snapshot.attention_follow_through !== undefined;
@@ -74,6 +76,11 @@ export function LifeTreeScene({
   return (
     <div
       className="life-tree-experience"
+      data-chapter={snapshot.encounter.chapter}
+      data-episode-ref={snapshot.game.episode_ref}
+      data-answer-window-status={
+        snapshot.question?.answer_window_status ?? "NOT_OPEN"
+      }
       data-state={snapshot.encounter.status.toLowerCase()}
     >
       <div className="tree-stage" aria-label={`${snapshot.actor.display_name}的生命树`}>
@@ -132,6 +139,12 @@ export function LifeTreeScene({
       </div>
 
       <section className="question-band" aria-live="polite">
+        <p
+          className="dream-chapter-marker"
+          data-dream-chapter-marker={snapshot.encounter.chapter}
+        >
+          再次相遇 · 新事件
+        </p>
         <DreamAttentionFollowThroughCard
           followThrough={snapshot.attention_follow_through}
           snapshot={snapshot}
@@ -139,7 +152,11 @@ export function LifeTreeScene({
         {!snapshot.question && (
           <>
             {!followThroughSupplied && (
-              <DreamOpeningAttention attention={snapshot.opening_attention} />
+              <DreamOpeningAttention
+                attention={snapshot.opening_attention}
+                targetEncounterRef={snapshot.encounter.encounter_ref}
+                targetTreeRef={snapshot.tree.tree_ref}
+              />
             )}
             <div className="question-copy opening-copy">
               <p className="question-kicker">{snapshot.actor.display_name}的生命现场</p>
@@ -149,12 +166,15 @@ export function LifeTreeScene({
           </>
         )}
 
-        {snapshot.question && !snapshot.human_seal && (
+        {snapshot.question && !snapshot.human_seal && !answerWindowClosed && (
           <>
             <div className="question-copy">
               <p className="question-kicker">{flowerName}</p>
               <h1>{snapshot.question.prompt}</h1>
               <p>已发生的线索对所有选项相同，后来会怎样仍然未知。选择会立即封存。</p>
+              <p className="world-wait-mark">
+                本次机会还剩 {worldTicksRemaining} 个世界刻；过期不会补写答案，可回雾林重新等待。
+              </p>
               <details className="dream-question-basis">
                 <summary>为什么这朵花会出现</summary>
                 <ul>
@@ -178,6 +198,32 @@ export function LifeTreeScene({
                 </button>
               ))}
             </div>
+          </>
+        )}
+
+        {snapshot.question && !snapshot.human_seal && answerWindowClosed && (
+          <>
+            <div className="question-copy">
+              <p className="question-kicker">
+                {flowerName} · 本次封存窗口已结束
+              </p>
+              <h1>这次没有留下判断，后来发生的事也不会倒推替你作答。</h1>
+              <p>
+                这次错过会原样留在梦境历史中；回到雾林后，可为同一章节取得一个新的真实时间窗口。
+              </p>
+            </div>
+            <button
+              className="secondary-command grove-return-command"
+              type="button"
+              disabled={
+                busy ||
+                !snapshot.game.available_commands.includes("RETURN_TO_GROVE")
+              }
+              onClick={onReturnToGrove}
+            >
+              留下这次错过，回到雾林
+              <span aria-hidden="true">→</span>
+            </button>
           </>
         )}
 

@@ -7,7 +7,7 @@ from abu_v60.system_manifest import runtime_manifest
 def test_runtime_architecture_has_one_owner_per_schema_and_five_units() -> None:
     architecture = runtime_architecture()
     architecture.validate_boundaries()
-    assert architecture.architecture_version == "v60.runtime-architecture.049"
+    assert architecture.architecture_version == "v60.runtime-architecture.050"
     assert architecture.product_units == (
         "unit-mingli",
         "unit-dream",
@@ -56,10 +56,10 @@ def test_manifest_exposes_world_game_and_localization_reservation() -> None:
     manifest = runtime_manifest()
     assert manifest["engines"]["decision"] == "v60.cognitive-decision-kernel.004"
     assert manifest["engines"]["context"] == "v60.experience-context.003"
-    assert manifest["engines"]["game"] == "v60.dream-game-engine.016"
+    assert manifest["engines"]["game"] == "v60.dream-game-engine.017"
     assert manifest["engines"]["world"] == "v60.world-continuity-engine.004"
     assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.025"
-    assert manifest["engines"]["story"] == "v60.life-story-engine.009"
+    assert manifest["engines"]["story"] == "v60.life-story-engine.010"
     source_review = manifest["source_review_profiles"]
     assert len(source_review) == 1
     assert source_review[0]["active"] is True
@@ -89,8 +89,8 @@ def test_manifest_exposes_world_game_and_localization_reservation() -> None:
     assert len(sources["canonical_story"]["packages"]) == 5
     assert len(sources["canonical_story"]["transitions"]) == 4
     assert sources["three_life_qualification"]["runtime_access"] == "ADMISSION_ONLY"
-    assert len(sources["three_life_qualification"]["packages"]) == 3
-    assert sources["three_life_qualification"]["transitions"] == []
+    assert len(sources["three_life_qualification"]["packages"]) == 4
+    assert len(sources["three_life_qualification"]["transitions"]) == 1
     assert manifest["architecture"]["localization_status"] == "RESERVED"
     assert manifest["architecture"]["default_locale"] == "zh-CN"
     assert manifest["reasoner_runtime"] == {
@@ -115,7 +115,7 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     assert modules["unit-mingli"].version == "v60.unit-mingli.019"
     assert modules["unit-abu"].version == "v60.unit-abu-says.007"
     assert modules["unit-lab"].version == "v60.unit-lab.016"
-    assert modules["unit-dream"].version == "v60.unit-dream.017"
+    assert modules["unit-dream"].version == "v60.unit-dream.018"
     assert "structural_candidate_projection" in modules["mingli"].capabilities
     assert "candidate_qualification_receipt" in modules["mingli"].capabilities
     assert "versioned_reading_envelope" in modules["mingli"].capabilities
@@ -318,6 +318,23 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
         "read_only_attention_follow_through"
         in modules["dream-game"].capabilities
     )
+    assert (
+        "account_history_grove_chapter_routing"
+        in modules["dream-game"].capabilities
+    )
+    assert (
+        "canonical_graph_route_authority"
+        in modules["dream-game"].capabilities
+    )
+    assert (
+        "continuation_opportunity_root_materialization"
+        in modules["dream-game"].capabilities
+    )
+    assert (
+        "attention_independent_chapter_routing"
+        in modules["dream-game"].capabilities
+    )
+    assert "terminal_chapter_wait" in modules["dream-game"].capabilities
     assert "grove_return_echo" in modules["unit-dream"].capabilities
     assert "grove_return_attention_choice" in modules["unit-dream"].capabilities
     assert "same_tree_opening_attention" in modules["unit-dream"].capabilities
@@ -330,6 +347,12 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
         "post_reveal_attention_material_contrast"
         in modules["unit-dream"].capabilities
     )
+    assert "same_tree_new_chapter_preview" in modules["unit-dream"].capabilities
+    assert (
+        "attention_independent_chapter_entry"
+        in modules["unit-dream"].capabilities
+    )
+    assert "terminal_story_wait_state" in modules["unit-dream"].capabilities
     assert "mingli_reading_expression" in modules["unit-abu"].capabilities
     assert "shared_mingli_explanation_identity" in modules["unit-abu"].capabilities
     assert "shared_mechanism_qualification_identity" in modules["unit-abu"].capabilities

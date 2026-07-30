@@ -34,7 +34,7 @@ export function ExperienceHeader({
           <span aria-hidden="true">←</span>
           <span>梦境中的生命线</span>
           <strong>
-            {snapshot?.projections.dream.journey_title ?? "三棵陌生生命树"}
+            {snapshot?.projections.dream.journey_title ?? "三棵生命树"}
           </strong>
         </button>
       ) : (

@@ -399,13 +399,55 @@ def test_concurrent_exact_command_replay_commits_once(qa_account: str) -> None:
     assert receipt_count == 1
 
 
+def test_concurrent_grove_selection_creates_one_current_encounter(
+    qa_account: str,
+) -> None:
+    service = DreamService(engine)
+    entry = service.entry(account_ref=qa_account)
+    candidate_ref = entry["grove"]["candidates"][0]["candidate_ref"]
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        snapshots = list(
+            executor.map(
+                lambda _: service.start_grove_encounter(
+                    account_ref=qa_account,
+                    candidate_ref=candidate_ref,
+                ),
+                range(2),
+            )
+        )
+
+    encounter_refs = {
+        snapshot["encounter"]["encounter_ref"] for snapshot in snapshots
+    }
+    assert len(encounter_refs) == 1
+    with engine.connect() as connection:
+        assert (
+            connection.execute(
+                text(
+                    """
+                    SELECT count(*)
+                    FROM dream.encounters
+                    WHERE viewer_account_ref = :account_ref
+                      AND COALESCE(
+                          state_json ->> 'departed_to_grove',
+                          'false'
+                      ) <> 'true'
+                    """
+                ),
+                {"account_ref": qa_account},
+            ).scalar_one()
+            == 1
+        )
+
+
 def test_completed_encounter_returns_to_grove_and_starts_a_new_tree(
     qa_account: str,
 ) -> None:
     service = DreamService(engine)
     entry = service.entry(account_ref=qa_account)
     assert entry["kind"] == "GROVE"
-    assert entry["grove"]["grove_version"] == "v60.dream-grove.003"
+    assert entry["grove"]["grove_version"] == "v60.dream-grove.004"
     assert entry["grove"]["return_echo"] is None
     candidates = entry["grove"]["candidates"]
     candidate_order = [

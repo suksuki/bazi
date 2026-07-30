@@ -48,30 +48,72 @@ class DreamOpportunityMaterializer:
         connection: Any,
         *,
         source_question_ref: str,
+        source_candidate_ref: str | None = None,
+        source_candidate_hash: str | None = None,
+        source_transition_ref: str | None = None,
+        source_transition_hash: str | None = None,
+        preceding_world_event_ref: str | None = None,
     ) -> DreamEpisodeContract:
+        if (source_candidate_ref is None) != (source_candidate_hash is None):
+            raise DreamOpportunityError(
+                "dream_opportunity_candidate_lineage_incomplete"
+            )
+        if (source_transition_ref is None) != (source_transition_hash is None):
+            raise DreamOpportunityError(
+                "dream_opportunity_transition_lineage_incomplete"
+            )
         source = self._source(connection, source_question_ref=source_question_ref)
         source_episode = DreamEpisodeContract.model_validate(
             source["episode_contract_json"]
         )
         if source["event_json"].get("source_question_ref") is not None:
             raise DreamOpportunityError("dream_opportunity_source_must_be_template")
+        preceding_event = self._validated_preceding_event(
+            connection,
+            source_episode=source_episode,
+            preceding_world_event_ref=preceding_world_event_ref,
+        )
+        if source_episode.entrypoint and source_transition_ref is not None:
+            raise DreamOpportunityError(
+                "dream_opportunity_entrypoint_transition_forbidden"
+            )
+        if not source_episode.entrypoint and source_transition_ref is None:
+            raise DreamOpportunityError(
+                "dream_opportunity_continuation_transition_missing"
+            )
         current_tick = self._world.current_tick(connection)
         reusable = self._reusable(
             connection,
             source_question_ref=source_question_ref,
             current_tick=current_tick,
+            source_candidate_ref=source_candidate_ref,
+            source_candidate_hash=source_candidate_hash,
+            source_transition_ref=source_transition_ref,
+            source_transition_hash=source_transition_hash,
+            preceding_world_event_ref=preceding_world_event_ref,
         )
         if reusable is not None:
             return reusable
 
         cutoff_tick = current_tick
         due_tick = cutoff_tick + OPPORTUNITY_WINDOW_TICKS
+        cycle_identity: dict[str, Any] = {
+            "source_question_ref": source_question_ref,
+            "cutoff_tick": cutoff_tick,
+        }
+        if source_candidate_ref is not None:
+            cycle_identity.update(
+                {
+                    "source_candidate_ref": source_candidate_ref,
+                    "source_candidate_hash": source_candidate_hash,
+                    "source_transition_ref": source_transition_ref,
+                    "source_transition_hash": source_transition_hash,
+                    "preceding_world_event_ref": preceding_world_event_ref,
+                }
+            )
         cycle_ref = stable_ref(
             "v60-dream-opportunity-cycle",
-            {
-                "source_question_ref": source_question_ref,
-                "cutoff_tick": cutoff_tick,
-            },
+            cycle_identity,
         )
         baseline_event_ref = stable_ref(
             "v60-dream-opportunity-baseline",
@@ -84,26 +126,46 @@ class DreamOpportunityMaterializer:
         question_ref = stable_ref("v60-dream-opportunity-question", cycle_ref)
         episode_ref = stable_ref("v60-dream-opportunity-episode", cycle_ref)
 
-        baseline_evidence, baseline_ref_map = self._clone_baseline_evidence(
-            connection,
-            source_event_ref=source_episode.baseline_event_ref,
-            cycle_ref=cycle_ref,
-            cutoff_tick=cutoff_tick,
-        )
-        baseline_event = self._event(
-            connection,
-            event_ref=source_episode.baseline_event_ref,
-        )
+        if source_episode.entrypoint:
+            baseline_evidence, baseline_ref_map = self._clone_baseline_evidence(
+                connection,
+                source_event_ref=source_episode.baseline_event_ref,
+                cycle_ref=cycle_ref,
+                cutoff_tick=cutoff_tick,
+            )
+            baseline_event = self._event(
+                connection,
+                event_ref=source_episode.baseline_event_ref,
+            )
+            baseline_event_type = str(baseline_event["event_type"])
+            baseline_event_summary = str(baseline_event["event_json"]["summary"])
+            baseline_caused_by_ref = cycle_ref
+            baseline_world_ref = str(baseline_event["world_ref"])
+        else:
+            entry_event = source_episode.entry_world_event
+            assert entry_event is not None
+            assert preceding_event is not None
+            baseline_evidence, baseline_ref_map = (
+                self._clone_authored_baseline_evidence(
+                    source=entry_event.evidence,
+                    cycle_ref=cycle_ref,
+                    cutoff_tick=cutoff_tick,
+                )
+            )
+            baseline_event_type = entry_event.event_type
+            baseline_event_summary = entry_event.summary
+            baseline_caused_by_ref = str(preceding_event["world_event_ref"])
+            baseline_world_ref = str(preceding_event["world_ref"])
         self._world.commit_historical_event(
             connection=connection,
             event_ref=baseline_event_ref,
             actor_ref=source_episode.actor_ref,
-            event_type=f"{baseline_event['event_type']}_OPPORTUNITY",
-            summary=str(baseline_event["event_json"]["summary"]),
-            caused_by_event_ref=cycle_ref,
+            event_type=f"{baseline_event_type}_OPPORTUNITY",
+            summary=baseline_event_summary,
+            caused_by_event_ref=baseline_caused_by_ref,
             evidence=baseline_evidence,
             actor_state_delta={},
-            world_ref=str(baseline_event["world_ref"]),
+            world_ref=baseline_world_ref,
         )
 
         outcome_event = self._event(
@@ -118,6 +180,11 @@ class DreamOpportunityMaterializer:
             **dict(outcome_event["event_json"]),
             "due_tick": due_tick,
             "source_question_ref": source_episode.question_ref,
+            "source_episode_ref": source_episode.episode_ref,
+            "source_episode_version": source_episode.episode_version,
+            "source_episode_contract_hash": str(
+                source["episode_contract_hash"]
+            ),
             "source_world_event_ref": source_episode.world_event_ref,
             "opportunity_cycle_ref": cycle_ref,
             "caused_by_event_ref": baseline_event_ref,
@@ -126,7 +193,19 @@ class DreamOpportunityMaterializer:
                 for source_ref, cloned_ref in sorted(baseline_ref_map.items())
             },
             "tree_projection_scope": "ENCOUNTER",
+            "attention_ref_used": False,
+            "attention_changed_route": False,
         }
+        if source_candidate_ref is not None:
+            event_payload.update(
+                {
+                    "source_candidate_ref": source_candidate_ref,
+                    "source_candidate_hash": source_candidate_hash,
+                    "source_transition_ref": source_transition_ref,
+                    "source_transition_hash": source_transition_hash,
+                    "preceding_world_event_ref": preceding_world_event_ref,
+                }
+            )
         self._event_admission.admit(
             connection,
             definition=WorldEventDefinition(
@@ -239,11 +318,51 @@ class DreamOpportunityMaterializer:
         *,
         source_question_ref: str,
         current_tick: int,
+        source_candidate_ref: str | None,
+        source_candidate_hash: str | None,
+        source_transition_ref: str | None,
+        source_transition_hash: str | None,
+        preceding_world_event_ref: str | None,
     ) -> DreamEpisodeContract | None:
+        lineage_filter = ""
+        parameters: dict[str, Any] = {
+            "source_question_ref": source_question_ref,
+            "minimum_due_tick": (
+                current_tick + OPPORTUNITY_REUSE_MINIMUM_TICKS
+            ),
+        }
+        if source_candidate_ref is not None:
+            lineage_filter = """
+                      AND event.event_json
+                              ->> 'source_candidate_ref' = :source_candidate_ref
+                      AND event.event_json
+                              ->> 'source_candidate_hash' = :source_candidate_hash
+                      AND COALESCE(
+                              event.event_json ->> 'source_transition_ref',
+                              ''
+                          ) = COALESCE(:source_transition_ref, '')
+                      AND COALESCE(
+                              event.event_json ->> 'source_transition_hash',
+                              ''
+                          ) = COALESCE(:source_transition_hash, '')
+                      AND COALESCE(
+                              event.event_json ->> 'preceding_world_event_ref',
+                              ''
+                          ) = COALESCE(:preceding_world_event_ref, '')
+            """
+            parameters.update(
+                {
+                    "source_candidate_ref": source_candidate_ref,
+                    "source_candidate_hash": source_candidate_hash,
+                    "source_transition_ref": source_transition_ref,
+                    "source_transition_hash": source_transition_hash,
+                    "preceding_world_event_ref": preceding_world_event_ref,
+                }
+            )
         row = (
             connection.execute(
                 text(
-                    """
+                    f"""
                     SELECT question.episode_contract_json
                     FROM story.question_instances AS question
                     JOIN world.events AS event
@@ -252,16 +371,12 @@ class DreamOpportunityMaterializer:
                               ->> 'source_question_ref' = :source_question_ref
                       AND event.status = 'SCHEDULED'
                       AND question.due_tick >= :minimum_due_tick
+                      {lineage_filter}
                     ORDER BY question.cutoff_tick DESC, question.question_ref
                     LIMIT 1
                     """
                 ),
-                {
-                    "source_question_ref": source_question_ref,
-                    "minimum_due_tick": (
-                        current_tick + OPPORTUNITY_REUSE_MINIMUM_TICKS
-                    ),
-                },
+                parameters,
             )
             .mappings()
             .one_or_none()
@@ -269,6 +384,44 @@ class DreamOpportunityMaterializer:
         if row is None:
             return None
         return DreamEpisodeContract.model_validate(row["episode_contract_json"])
+
+    @classmethod
+    def _validated_preceding_event(
+        cls,
+        connection: Any,
+        *,
+        source_episode: DreamEpisodeContract,
+        preceding_world_event_ref: str | None,
+    ) -> dict[str, Any] | None:
+        if source_episode.entrypoint:
+            if preceding_world_event_ref is not None:
+                raise DreamOpportunityError(
+                    "dream_opportunity_entrypoint_predecessor_forbidden"
+                )
+            return None
+        if preceding_world_event_ref is None:
+            raise DreamOpportunityError(
+                "dream_opportunity_continuation_predecessor_missing"
+            )
+        entry_event = source_episode.entry_world_event
+        if entry_event is None:
+            raise DreamOpportunityError(
+                "dream_opportunity_continuation_entry_missing"
+            )
+        preceding = cls._event(
+            connection,
+            event_ref=preceding_world_event_ref,
+        )
+        if (
+            preceding["status"] != "SETTLED"
+            or preceding["actor_ref"] != source_episode.actor_ref
+            or preceding["event_json"].get("source_world_event_ref")
+            != entry_event.caused_by_event_ref
+        ):
+            raise DreamOpportunityError(
+                "dream_opportunity_continuation_predecessor_invalid"
+            )
+        return preceding
 
     @staticmethod
     def _clone_baseline_evidence(
@@ -311,6 +464,36 @@ class DreamOpportunityMaterializer:
                     "observed_at_tick": cutoff_tick,
                     "epistemic_role": "DECISION_BASELINE_NO_CREDIT",
                 }
+            )
+        return tuple(evidence), ref_map
+
+    @staticmethod
+    def _clone_authored_baseline_evidence(
+        *,
+        source: tuple[dict[str, Any], ...],
+        cycle_ref: str,
+        cutoff_tick: int,
+    ) -> tuple[tuple[dict[str, Any], ...], dict[str, str]]:
+        evidence: list[dict[str, Any]] = []
+        ref_map: dict[str, str] = {}
+        for item in source:
+            source_ref = str(item["evidence_ref"])
+            evidence_ref = stable_ref(
+                "v60-dream-opportunity-baseline-evidence",
+                {"cycle_ref": cycle_ref, "source_evidence_ref": source_ref},
+            )
+            ref_map[source_ref] = evidence_ref
+            evidence.append(
+                {
+                    "evidence_ref": evidence_ref,
+                    "summary": str(item["summary"]),
+                    "observed_at_tick": cutoff_tick,
+                    "epistemic_role": "DECISION_BASELINE_NO_CREDIT",
+                }
+            )
+        if not evidence:
+            raise DreamOpportunityError(
+                "dream_opportunity_baseline_evidence_missing"
             )
         return tuple(evidence), ref_map
 
@@ -389,6 +572,7 @@ class DreamOpportunityMaterializer:
                 "world_event_ref": world_event_ref,
                 "cutoff_tick": cutoff_tick,
                 "due_tick": due_tick,
+                "entrypoint": True,
                 "runtime_metadata": runtime_metadata,
                 "narrative": narrative,
                 "continuation_question_ref": None,

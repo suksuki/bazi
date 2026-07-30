@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from sqlalchemy import text
 
 from abu_v60.provenance import canonical_json, content_hash, stable_ref
 
-DREAM_GROVE_VERSION = "v60.dream-grove.003"
+DREAM_GROVE_VERSION = "v60.dream-grove.004"
 THREE_LIFE_POOL_REF = "v60.dream-grove.three-life-qualification.001"
 
 
@@ -178,6 +178,8 @@ class DreamGroveRepository:
             candidates.append(
                 {
                     "candidate_ref": row["candidate_ref"],
+                    "candidate_hash": row["candidate_hash"],
+                    "tree_ref": row["tree_ref"],
                     "domain": row["domain"],
                     "public_alias": row["public_alias"],
                     "premise": row["premise"],
@@ -199,17 +201,45 @@ class DreamGroveRepository:
         candidate_ref: str,
         pool_ref: str = THREE_LIFE_POOL_REF,
     ) -> dict[str, Any] | None:
+        definition = DreamGroveRepository.candidate_definition(
+            connection,
+            candidate_ref=candidate_ref,
+            pool_ref=pool_ref,
+            for_update=True,
+        )
+        if definition is None:
+            return None
+        return definition.model_dump(
+            mode="python",
+            include={
+                "candidate_ref",
+                "question_ref",
+                "actor_ref",
+                "tree_ref",
+                "candidate_hash",
+            },
+        )
+
+    @staticmethod
+    def candidate_definition(
+        connection: Any,
+        *,
+        candidate_ref: str,
+        pool_ref: str = THREE_LIFE_POOL_REF,
+        for_update: bool,
+    ) -> GroveCandidateDefinition | None:
+        lock_clause = "FOR UPDATE" if for_update else ""
         row = (
             connection.execute(
                 text(
-                    """
+                    f"""
                     SELECT candidate_ref, question_ref, actor_ref, tree_ref,
-                           candidate_hash
+                           candidate_json, candidate_hash
                     FROM dream.grove_candidates
                     WHERE candidate_ref = :candidate_ref
                       AND pool_ref = :pool_ref
                       AND runtime_status = 'ACTIVE'
-                    FOR UPDATE
+                    {lock_clause}
                     """
                 ),
                 {"candidate_ref": candidate_ref, "pool_ref": pool_ref},
@@ -217,4 +247,24 @@ class DreamGroveRepository:
             .mappings()
             .one_or_none()
         )
-        return dict(row) if row is not None else None
+        if row is None:
+            return None
+        try:
+            definition = GroveCandidateDefinition.model_validate(
+                {
+                    **row["candidate_json"],
+                    "candidate_hash": row["candidate_hash"],
+                }
+            )
+        except (ValidationError, ValueError) as exc:
+            raise DreamGroveError("dream_grove_candidate_invalid") from exc
+        if (
+            definition.candidate_ref != row["candidate_ref"]
+            or definition.question_ref != row["question_ref"]
+            or definition.actor_ref != row["actor_ref"]
+            or definition.tree_ref != row["tree_ref"]
+        ):
+            raise DreamGroveError(
+                "dream_grove_candidate_column_mismatch"
+            )
+        return definition

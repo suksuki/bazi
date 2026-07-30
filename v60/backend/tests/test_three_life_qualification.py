@@ -5,7 +5,19 @@ from abu_v60.db.engine import engine
 from abu_v60.decision import CognitiveDecisionLedger
 from abu_v60.dream import THREE_LIFE_POOL_REF, DreamGroveRepository
 from abu_v60.dream.opportunity import DreamOpportunityMaterializer
-from abu_v60.dream.qualification_seed import seed_three_life_qualification
+from abu_v60.dream.qualification_seed import (
+    THREE_LIFE_CHAPTER_TWO_SEED_BATCH_REF,
+    THREE_LIFE_LEGACY_SOURCE_REGISTRY_HASH,
+    WENXI_CHAPTER_TWO_PACKAGE_HASH,
+    WENXI_CHAPTER_TWO_PACKAGE_REF,
+    WENXI_CHAPTER_TWO_QUESTION_REF,
+    WENXI_CHAPTER_TWO_TRANSITION_HASH,
+    WENXI_CHAPTER_TWO_TRANSITION_REF,
+    WENXI_CHAPTER_TWO_WORLD_EVENT_REF,
+    seed_three_life_qualification,
+)
+from abu_v60.provenance import content_hash
+from abu_v60.story import QUALIFICATION_EPISODE_SOURCE_REGISTRY_HASH
 from abu_v60.world import WorldContinuityEngine
 from sqlalchemy import text
 
@@ -16,6 +28,18 @@ def test_three_life_seed_is_idempotent_and_grove_projection_is_safe() -> None:
 
     assert first == second
     assert first["llm_calls"] == 0
+    assert (
+        first["source_registry_hash"]
+        == QUALIFICATION_EPISODE_SOURCE_REGISTRY_HASH
+    )
+    assert (
+        first["legacy_source_registry_hash"]
+        == THREE_LIFE_LEGACY_SOURCE_REGISTRY_HASH
+    )
+    assert (
+        first["chapter_two_seed_batch_ref"]
+        == THREE_LIFE_CHAPTER_TWO_SEED_BATCH_REF
+    )
     assert len(first["candidates"]) == 3
     assert {item["domain"] for item in first["candidates"]} == {
         "career",
@@ -63,6 +87,85 @@ def test_three_life_seed_is_idempotent_and_grove_projection_is_safe() -> None:
                 ],
             },
         ).mappings().one()
+        chapter_two = (
+            connection.execute(
+                text(
+                    """
+                    SELECT question.question_ref, question.actor_ref,
+                           question.episode_contract_json,
+                           event.world_event_ref, event.event_json
+                    FROM story.question_instances AS question
+                    JOIN world.events AS event
+                      ON event.world_event_ref = question.world_event_ref
+                    WHERE question.question_ref = :question_ref
+                    """
+                ),
+                {"question_ref": WENXI_CHAPTER_TWO_QUESTION_REF},
+            )
+            .mappings()
+            .one()
+        )
+        transition = (
+            connection.execute(
+                text(
+                    """
+                    SELECT transition_ref, from_question_ref, to_question_ref,
+                           transition_json, transition_hash
+                    FROM story.episode_transitions
+                    WHERE transition_ref = :transition_ref
+                    """
+                ),
+                {"transition_ref": WENXI_CHAPTER_TWO_TRANSITION_REF},
+            )
+            .mappings()
+            .one()
+        )
+        extension_batch = (
+            connection.execute(
+                text(
+                    """
+                    SELECT manifest_json, manifest_hash
+                    FROM platform.migration_batches
+                    WHERE batch_ref = :batch_ref
+                    """
+                ),
+                {"batch_ref": THREE_LIFE_CHAPTER_TWO_SEED_BATCH_REF},
+            )
+            .mappings()
+            .one()
+        )
+        legacy_batch_hash = connection.execute(
+            text(
+                """
+                SELECT manifest_json ->> 'source_registry_hash'
+                FROM platform.migration_batches
+                WHERE batch_ref = 'v60-seed-batch-three-life-qualification-v1'
+                """
+            )
+        ).scalar_one()
+        case_source_hashes = (
+            connection.execute(
+                text(
+                    """
+                    SELECT DISTINCT chart.source_manifest_json
+                                      ->> 'source_registry_hash'
+                    FROM mingli.cases AS cases
+                    JOIN mingli.chart_versions AS chart
+                      ON chart.case_ref = cases.case_ref
+                    WHERE cases.case_ref = ANY(:case_refs)
+                    """
+                ),
+                {
+                    "case_refs": [
+                        "v60-synthetic-case-wenxi-v1",
+                        "v60-synthetic-case-heyang-v1",
+                        "v60-synthetic-case-zhaoning-v1",
+                    ]
+                },
+            )
+            .scalars()
+            .all()
+        )
 
     assert len(candidates) == 3
     assert dict(counts) == {
@@ -71,16 +174,56 @@ def test_three_life_seed_is_idempotent_and_grove_projection_is_safe() -> None:
         "tree_count": 3,
         "question_count": 3,
     }
+    runtime = chapter_two["episode_contract_json"]
+    assert chapter_two["actor_ref"] == "v60-actor-wenxi-v1"
+    assert chapter_two["world_event_ref"] == WENXI_CHAPTER_TWO_WORLD_EVENT_REF
+    assert runtime["entrypoint"] is False
+    assert runtime["chapter"] == "RETURN_VISIT"
+    assert runtime["entry_world_event"]["caused_by_event_ref"] == (
+        "v60-world-event-wenxi-archive-role-v1"
+    )
+    assert chapter_two["event_json"]["summary"] == (
+        "观察共同修复后形成的新索引会怎样进入下一册工作。"
+    )
+    assert transition["from_question_ref"] == (
+        "v60-question-wenxi-archive-trial-v1"
+    )
+    assert transition["to_question_ref"] == WENXI_CHAPTER_TWO_QUESTION_REF
+    assert transition["transition_hash"] == WENXI_CHAPTER_TWO_TRANSITION_HASH
+    assert content_hash(transition["transition_json"]) == (
+        WENXI_CHAPTER_TWO_TRANSITION_HASH
+    )
+    expected_extension_manifest = {
+        "seed_id": "v60.dream-three-life-wenxi-chapter-two.v1",
+        "parent_batch_ref": "v60-seed-batch-three-life-qualification-v1",
+        "source_origin": "V60_OWNER_APPROVED_SYNTHETIC_CONTENT",
+        "source_registry_hash": QUALIFICATION_EPISODE_SOURCE_REGISTRY_HASH,
+        "package_ref": WENXI_CHAPTER_TWO_PACKAGE_REF,
+        "package_hash": WENXI_CHAPTER_TWO_PACKAGE_HASH,
+        "question_ref": WENXI_CHAPTER_TWO_QUESTION_REF,
+        "world_event_ref": WENXI_CHAPTER_TWO_WORLD_EVENT_REF,
+        "transition_ref": WENXI_CHAPTER_TWO_TRANSITION_REF,
+        "transition_hash": WENXI_CHAPTER_TWO_TRANSITION_HASH,
+        "llm_calls": 0,
+    }
+    assert extension_batch["manifest_json"] == expected_extension_manifest
+    assert extension_batch["manifest_hash"] == content_hash(
+        expected_extension_manifest
+    )
+    assert legacy_batch_hash == THREE_LIFE_LEGACY_SOURCE_REGISTRY_HASH
+    assert case_source_hashes == [THREE_LIFE_LEGACY_SOURCE_REGISTRY_HASH]
     serialized = str(candidates)
     assert "sealed_outcome" not in serialized
     assert "npc_choice" not in serialized
     assert "evidence" not in serialized
     assert all(
-        set(candidate) == {
-            "candidate_ref",
-            "domain",
-            "public_alias",
-            "premise",
+            set(candidate) == {
+                "candidate_ref",
+                "candidate_hash",
+                "tree_ref",
+                "domain",
+                "public_alias",
+                "premise",
             "display_order",
             "tree",
         }

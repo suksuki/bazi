@@ -81,6 +81,34 @@ class ActiveEpisodeCatalog:
             return None
         return self.for_question(transition.to_question_ref), transition.label
 
+    def chain_from_entry(
+        self,
+        question_ref: str,
+    ) -> tuple[DreamEpisodeContract, ...]:
+        current = self.for_question(question_ref)
+        if (
+            not current.entrypoint
+            or current.episode_ref not in self.active_episode_refs
+        ):
+            raise EpisodeCatalogError("dream_episode_chain_root_not_active")
+        chain: list[DreamEpisodeContract] = []
+        while True:
+            chain.append(current)
+            transition = self.transition_after(current.question_ref)
+            if transition is None:
+                return tuple(chain)
+            current = self.for_question(transition.to_question_ref)
+
+    def is_reachable(
+        self,
+        entry_question_ref: str,
+        question_ref: str,
+    ) -> bool:
+        return any(
+            episode.question_ref == question_ref
+            for episode in self.chain_from_entry(entry_question_ref)
+        )
+
     def _tree_sequence_index(self, question_ref: str) -> int:
         try:
             return dict(self.question_sequence_indexes)[question_ref]

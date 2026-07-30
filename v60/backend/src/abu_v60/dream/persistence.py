@@ -267,8 +267,10 @@ class DreamRepository:
         for_update: bool,
     ) -> dict[str, Any] | None:
         lock_clause = "FOR UPDATE" if for_update else ""
-        # Apply the departure fence after choosing the account's active-first
-        # timeline tip so an older completed Encounter cannot become current.
+        # Apply the departure fence after choosing the account's latest
+        # timeline tip so an older non-departed Encounter cannot resurrect.
+        # Expired opportunities remain non-completed history, so status must
+        # not outrank the newer current Encounter.
         row = (
             connection.execute(
                 text(
@@ -277,10 +279,7 @@ class DreamRepository:
                         SELECT encounter_ref
                         FROM dream.encounters
                         WHERE viewer_account_ref = :account_ref
-                        ORDER BY
-                            CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END,
-                            updated_at DESC,
-                            encounter_ref DESC
+                        ORDER BY updated_at DESC, encounter_ref DESC
                         LIMIT 1
                     )
                     SELECT encounter.*
@@ -326,6 +325,7 @@ class DreamRepository:
                     FROM dream.encounters
                     WHERE viewer_account_ref = :account_ref
                       AND status = 'COMPLETED'
+                      AND state_json @> '{"reconciled": true}'::jsonb
                     """
                 ),
                 {"account_ref": account_ref},

@@ -35,16 +35,66 @@ login
 -> choose one server-issued next observation
 -> other trees leave that observation pending
 -> Grove marks the exact source tree
--> same-tree return creates one persistent application
+-> canonical account history routes that tree to its next authored chapter
+-> same-tree return creates one persistent application without owning the route
 -> the same observation follows 0/3 -> 3/3 -> Seal -> waiting
 -> Reveal exposes world materials without claiming semantic correspondence
 -> the unassessed comparison returns to the Grove
--> return encounter on the same world line
+-> an unsealed expired opportunity is preserved and can be retried
+-> completed authored history reaches a visible terminal wait state
 ```
 
 The same snapshot feeds Dream, Mingli Calculation, Abu, Theater and Lab. The
 current implementation is desktop-first; mobile remains a guardrail until the
 desktop composition is stable.
+
+## Completed Delivery: Canonical Same-Tree Dream Second Chapter
+
+Status: `IMPLEMENTED_AND_REAL_BROWSER_AUDITED_LOCAL`
+
+- Wenxi's `馆页树` now has a real second authored chapter,
+  `wenxi-index-convention`, admitted through source Registry `.002`. The
+  Registry contains four Hash-locked packages and one explicit active
+  transition from the first Wenxi Question to the new one; existing package,
+  seed and Case provenance remain pinned to their historical identities.
+- Grove `.004` projects one Hash-locked chapter route per candidate. The
+  server combines the canonical Episode graph with that account's reconciled,
+  departed history to expose `ENTRYPOINT`, `CANONICAL_TRANSITION` or
+  `TERMINAL_CHAPTER`. The three-tree set and order do not change. A completed
+  Wenxi second chapter is disabled as `STORY_CURRENTLY_COMPLETE` instead of
+  silently replaying chapter one.
+- Entering chapter two materializes a fresh canonical Opportunity Question,
+  Episode and WorldEvent while binding the exact candidate, transition and
+  settled predecessor event. The new baseline is cloned from authored entry
+  evidence at the current cutoff. Its World payload proves that Return
+  Attention did not select the chapter or alter its Question, Answer, NPC
+  choice or outcome.
+- An unsealed Opportunity whose answer window closes is now visibly
+  recoverable. The UI stops showing answer buttons, polls the authoritative
+  window status and offers a single return-to-Grove action. The old Encounter
+  remains `QUESTION_OPEN` with persisted expiration/departure facts, no
+  human seal, no Reveal and no completed-count credit; a retry receives new
+  Question/Event/Encounter identities for the same canonical chapter.
+- Current-Encounter selection now follows the newest timeline tip before
+  applying the departure fence, so an older expired Encounter cannot mask a
+  later completed one. Attention selection and chapter entry share the same
+  account lock, and historical Echo/Attention reads bind the candidate
+  persisted on the World event. Stale attention cannot leak into a future
+  chapter; exact receipt replay remains valid.
+- Story is `.010`, Dream Game `.017`, Grove `.004`, Unit Dream `.018` and
+  Runtime Architecture `.050`. Foundation remains `.016` with migration head
+  `0024_relation_effect_material`; no table or migration was added.
+- All 289 backend tests, Ruff, TypeScript/Vite build, Runtime Architecture,
+  source maintainability and the 29-mutation same-tree frontend contract pass.
+  Runtime integrity reports zero defects.
+- The signed-in browser first preserved a genuinely expired, unsealed Wenxi
+  attempt and returned to the Grove without backfilling an answer. It then
+  completed the new chapter through three observations, an independent
+  `pilot_shared` seal, World settlement, Reveal and reconciliation. The result
+  was “共同试用，尚未成规”; the Grove then showed Wenxi's exact terminal route.
+  Candidate, tree, target Episode/Question and terminal route Hash remained
+  identical across refresh and managed Runtime restart. Evidence is in
+  `.artifacts/dream-second-chapter/`.
 
 ## Completed Delivery: Dream Attention Follow-Through
 

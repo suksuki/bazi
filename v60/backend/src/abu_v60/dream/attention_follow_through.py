@@ -12,8 +12,12 @@ from abu_v60.dream.attention_follow_through_contracts import (
     DreamAttentionWorldResponse,
     DreamPendingAttention,
 )
+from abu_v60.dream.catalog import DreamEpisodeCatalog
 from abu_v60.dream.errors import DreamStateError
 from abu_v60.dream.grove import GroveCandidateDefinition
+from abu_v60.dream.grove_candidate_lineage import (
+    candidate_source_lineage_is_valid,
+)
 from abu_v60.dream.return_attention import DreamReturnAttentionCoordinator
 from abu_v60.dream.return_attention_contracts import (
     DreamReturnAttentionApplication,
@@ -51,6 +55,7 @@ class DreamAttentionFollowThroughProjector:
     ) -> None:
         self._coordinator = coordinator
         self._return_echo = return_echo
+        self._episodes = DreamEpisodeCatalog()
 
     def pending_projection(
         self,
@@ -274,6 +279,7 @@ class DreamAttentionFollowThroughProjector:
                                event.event_json ->> 'source_question_ref',
                                question.question_ref
                            ) AS source_question_ref,
+                           event.event_json,
                            candidate.candidate_json,
                            candidate.candidate_hash
                     FROM dream.encounters AS encounter
@@ -331,7 +337,12 @@ class DreamAttentionFollowThroughProjector:
             or candidate.candidate_hash != record.source_candidate_hash
             or candidate.tree_ref != record.tree_ref
             or candidate.actor_ref != source["actor_ref"]
-            or candidate.question_ref != source["source_question_ref"]
+            or not candidate_source_lineage_is_valid(
+                catalog=self._episodes.load(connection),
+                candidate=candidate,
+                source_question_ref=str(source["source_question_ref"]),
+                event_payload=dict(source["event_json"]),
+            )
             or selected is None
             or selected != record.observation
         ):

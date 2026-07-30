@@ -91,6 +91,8 @@ one application service:
 | `dream.projection.DreamSnapshotProjector` | Episode-scoped public read model | canonical writes or state transitions |
 | `dream.outcomes.DreamOutcomeCoordinator` | committed WorldEvent to Fruit/Reveal reconciliation | browser commands or World outcomes |
 | `dream.encounter_creation.DreamEncounterCreator` | one canonical Encounter creation transaction for Grove and graph continuation | command routing, authored content or public projection |
+| `dream.grove_chapter_routing.DreamGroveChapterRouter` | account-history frontier over one candidate's canonical Episode chain | authoring transitions, Attention routing or Encounter writes |
+| `dream.grove_departure.DreamGroveDepartureCoordinator` | replay-safe departure of reconciled or expired-unsealed Opportunities | outcome settlement, retrospective AnswerSeal or chapter selection |
 | `dream.return_attention.DreamReturnAttentionCoordinator` | candidate-bound next-observation selection, replay and same-tree application | Mingli evidence, Knowledge admission, Question/Answer/NPC/outcome mutation |
 | `dream.attention_follow_through.DreamAttentionFollowThroughProjector` | revalidated pending, active and returned read-only attention projection | canonical writes, semantic-match decisions or professional evidence |
 | `mingli.relation_effect_request.RelationEffectEvidenceRequestStore` | account-private, append-only preparation-request receipt derived from one canonical packet | material intake, professional evidence, review, Knowledge or Decision |
@@ -386,6 +388,31 @@ Answer, NPC choice, outcome, owner Reading, Cognition Decision or Knowledge
 object. They do not decide whether the remembered observation semantically
 matches the later material.
 
+Grove chapter routing is a separate read authority:
+
+```text
+Grove candidate root + exact candidate Hash
+-> canonical Story Episode chain
+-> account's reconciled + departed source-question prefix
+-> first missing chapter and incoming transition
+-> fresh Opportunity bound to candidate + transition + predecessor event
+-> completed chain: terminal wait, never implicit replay
+```
+
+The Route contract includes its own Hash and explicit false flags for
+Attention, candidate-order, Question, Answer, NPC-choice and outcome
+mutation. Return Attention may be applied to the selected same-tree
+Encounter, but it is not an input to the chapter router.
+
+Dynamic Opportunities expose an authoritative answer-window status. When an
+unsealed window closes, `SEAL_ANSWER` remains rejected. The only available
+command archives expiration/departure facts and returns to the Grove; it does
+not mark the Encounter reconciled, create a Seal or Reveal, or advance the
+completed-history prefix. The next selection materializes a new immutable
+Question/Event/Encounter identity. `DreamRepository.current_encounter`
+chooses the newest timeline tip before applying its departure fence, which
+keeps both expired history and completed-current recovery truthful.
+
 Authored content enters through a complete `DreamEpisodeDefinition`. Runtime
 persists the narrower `DreamEpisodeContract`, its Hash and a separately
 compiled admission manifest beside the QuestionInstance. The Director rejects
@@ -394,7 +421,7 @@ three active visits use this same path; Dream Service has no authored
 Question-ID branches.
 
 The complete definition is compiled from a hash-locked source package owned by
-Story. `content/dream/episodes/registry.json` binds each package identity,
+Story. `content/dream/qualification/registry.json` binds each package identity,
 relative path, SHA-256 and explicit transition graph. Each package also carries
 the WorldEvent definitions required by its Episode. Package compilation proves
 the event Actor, type, due Tick, summary and sealed outcome match the Episode,
@@ -408,6 +435,13 @@ Episode ordering is not mutable Episode content. Story persists an independent
 `EpisodeTransitionContract` in `story.episode_transitions`. The active graph
 requires these explicit, hash-checked edges; legacy continuation fields remain
 read-only historical payload and are not a Runtime fallback.
+
+Attention selection and Grove chapter entry serialize on the same account row.
+A previously committed selection may replay by exact receipt after entry, but
+a new stale selection is rejected once a current Encounter exists. Historical
+Echo and Attention reconstruction bind the candidate identity persisted on
+the dynamic WorldEvent; actor/tree equality alone is not treated as candidate
+identity.
 
 The source Registry is also the only authoring truth. Legacy Python slice
 modules resolve compatibility values by compiling the Registry package; they

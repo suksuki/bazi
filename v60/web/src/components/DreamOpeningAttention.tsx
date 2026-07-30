@@ -3,10 +3,21 @@ import { isDreamOpeningAttentionDisplayable } from "../dreamAttentionTypes";
 
 export function DreamOpeningAttention({
   attention,
+  targetEncounterRef,
+  targetTreeRef,
 }: {
   attention: OpeningAttention | null | undefined;
+  targetEncounterRef: string;
+  targetTreeRef: string;
 }) {
-  if (!isDreamOpeningAttentionDisplayable(attention)) return null;
+  if (
+    !isDreamOpeningAttentionDisplayable(attention, {
+      targetEncounterRef,
+      targetTreeRef,
+    })
+  ) {
+    return null;
+  }
 
   return (
     <aside
@@ -38,7 +49,9 @@ export function DreamOpeningAttention({
       <small>上次留下的观察目标 · 世界已记住</small>
       <strong>{attention.label}</strong>
       <p>{attention.summary}</p>
-      <span>它只提醒这条梦中生命接下来值得观察什么，不预告答案。</span>
+      <span>
+        它只提醒这条梦中生命接下来值得观察什么；不预告答案，不选择本章，也不改变问题、答案或世界结果。
+      </span>
     </aside>
   );
 }

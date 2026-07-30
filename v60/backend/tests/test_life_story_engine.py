@@ -36,6 +36,6 @@ def test_revealed_story_beat_is_bound_to_committed_decision() -> None:
         decision_refs=("decision:1",),
     )
 
-    assert plan.story_version == "v60.life-story-engine.009"
+    assert plan.story_version == "v60.life-story-engine.010"
     assert plan.beats[-1].kind.value == "REVEAL"
     assert plan.beats[-1].source_ref == "decision:1"

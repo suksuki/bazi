@@ -10,9 +10,7 @@ from abu_v60.decision import (
     CognitiveDecisionLedger,
     EvidenceReconciliationEngine,
 )
-from abu_v60.dream.attention_follow_through import (
-    DreamAttentionFollowThroughProjector,
-)
+from abu_v60.dream.attention_follow_through import DreamAttentionFollowThroughProjector
 from abu_v60.dream.catalog import (
     ActiveEpisodeCatalog,
     DreamEpisodeCatalog,
@@ -21,11 +19,9 @@ from abu_v60.dream.catalog import (
 from abu_v60.dream.command_guard import DreamCommandGuard
 from abu_v60.dream.encounter_creation import DreamEncounterCreator
 from abu_v60.dream.errors import DreamStateError
-from abu_v60.dream.grove import (
-    DREAM_GROVE_VERSION,
-    DreamGroveError,
-    DreamGroveRepository,
-)
+from abu_v60.dream.grove import DREAM_GROVE_VERSION, DreamGroveError, DreamGroveRepository
+from abu_v60.dream.grove_chapter_routing import DreamGroveChapterRouter
+from abu_v60.dream.grove_departure import DreamGroveDepartureCoordinator
 from abu_v60.dream.grove_selection import DreamGroveEncounterSelector
 from abu_v60.dream.opportunity import DreamOpportunityMaterializer
 from abu_v60.dream.outcomes import DreamOutcomeCoordinator
@@ -58,12 +54,19 @@ class DreamService:
         self._decisions = CognitiveDecisionLedger()
         self._world = WorldContinuityEngine(self._decisions)
         self._repository = DreamRepository()
+        self._grove_departure = DreamGroveDepartureCoordinator(
+            repository=self._repository,
+            command_guard=self._command_guard,
+            game=self._game,
+            world=self._world,
+        )
         self._grove = DreamGroveRepository()
         self._grove_selector = DreamGroveEncounterSelector(
             repository=self._repository,
             grove=self._grove,
             catalog_loader=self._catalog,
             opportunities=DreamOpportunityMaterializer(world=self._world),
+            chapter_router=DreamGroveChapterRouter(),
         )
         self._return_echo = DreamReturnEchoProjector(
             director=self._director,
@@ -128,7 +131,11 @@ class DreamService:
                 for_update=False,
             )
             if encounter is None:
-                candidates = self._grove.active_candidates(connection)
+                candidates = self._grove_selector.project_candidates(
+                    connection,
+                    account_ref=account_ref,
+                    candidates=self._grove.active_candidates(connection),
+                )
                 if candidates:
                     if len(candidates) != 3:
                         raise DreamStateError("dream_grove_requires_exactly_three_trees")
@@ -245,46 +252,11 @@ class DreamService:
         envelope: DreamCommandEnvelope,
     ) -> dict[str, Any]:
         with self._engine.begin() as connection:
-            if not self._repository.command_replayed(
-                connection=connection,
+            self._grove_departure.execute(
+                connection,
                 account_ref=account_ref,
                 envelope=envelope,
-            ):
-                encounter = self._repository.locked_encounter(
-                    connection,
-                    account_ref=account_ref,
-                )
-                self._command_guard.assert_identity(
-                    encounter=encounter,
-                    envelope=envelope,
-                )
-                self._command_guard.assert_version(
-                    encounter=encounter,
-                    envelope=envelope,
-                )
-                if encounter["status"] != "COMPLETED":
-                    raise DreamStateError("return_to_grove_requires_completed_encounter")
-                self._command_guard.assert_available(
-                    connection=connection,
-                    encounter=encounter,
-                    envelope=envelope,
-                    organ_key=None,
-                )
-                progress = self._game.progress(encounter["state_json"]).model_copy(
-                    update={"departed_to_grove": True}
-                )
-                self._repository.write_encounter_state(
-                    connection=connection,
-                    encounter=encounter,
-                    status="COMPLETED",
-                    state=progress.as_state_json(),
-                )
-                self._repository.record_command_receipt(
-                    connection=connection,
-                    account_ref=account_ref,
-                    envelope=envelope,
-                    result_encounter_ref=encounter["encounter_ref"],
-                )
+            )
         return self.entry(account_ref=account_ref)
 
     def _continue_encounter(

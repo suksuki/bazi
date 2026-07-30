@@ -1,3 +1,10 @@
+import {
+  hasOnlyKeys,
+  isHash,
+  isRecord,
+  isRef,
+} from "./projectionValidation";
+
 export const DREAM_RETURN_ATTENTION_VERSION =
   "v60.dream-return-attention.001" as const;
 export const DREAM_OPENING_ATTENTION_VERSION =
@@ -68,6 +75,37 @@ export interface DreamOpeningAttention {
   read_only: true;
 }
 
+interface DreamOpeningAttentionBindings {
+  targetEncounterRef?: string;
+  targetTreeRef?: string;
+}
+
+const OPENING_ATTENTION_KEYS = [
+  "contract_version",
+  "application_ref",
+  "application_hash",
+  "attention_ref",
+  "attention_hash",
+  "source_echo_ref",
+  "source_tree_ref",
+  "target_tree_ref",
+  "target_encounter_ref",
+  "observation_ref",
+  "label",
+  "summary",
+  "semantics",
+  "evidence_role",
+  "tree_candidate_set_or_order_changed",
+  "question_changed",
+  "answer_changed",
+  "npc_choice_changed",
+  "outcome_changed",
+  "mingli_write_allowed",
+  "decision_write_allowed",
+  "knowledge_write_allowed",
+  "read_only",
+] as const;
+
 export function isDreamReturnAttentionDisplayable(
   attention: DreamReturnAttentionPrompt | null | undefined,
 ): attention is DreamReturnAttentionPrompt {
@@ -133,22 +171,29 @@ export function isDreamReturnAttentionDisplayable(
 }
 
 export function isDreamOpeningAttentionDisplayable(
-  attention: DreamOpeningAttention | null | undefined,
+  attention: unknown,
+  bindings: DreamOpeningAttentionBindings = {},
 ): attention is DreamOpeningAttention {
+  if (
+    !isRecord(attention) ||
+    !hasOnlyKeys(attention, OPENING_ATTENTION_KEYS)
+  ) {
+    return false;
+  }
   return (
-    attention?.contract_version === DREAM_OPENING_ATTENTION_VERSION &&
-    Boolean(attention.application_ref) &&
-    attention.application_hash?.length === 64 &&
-    Boolean(attention.attention_ref) &&
-    attention.attention_hash?.length === 64 &&
-    Boolean(attention.source_echo_ref) &&
-    Boolean(attention.source_tree_ref) &&
-    Boolean(attention.target_tree_ref) &&
+    attention.contract_version === DREAM_OPENING_ATTENTION_VERSION &&
+    isRef(attention.application_ref) &&
+    isHash(attention.application_hash) &&
+    isRef(attention.attention_ref) &&
+    isHash(attention.attention_hash) &&
+    isRef(attention.source_echo_ref) &&
+    isRef(attention.source_tree_ref) &&
+    isRef(attention.target_tree_ref) &&
     attention.source_tree_ref === attention.target_tree_ref &&
-    Boolean(attention.target_encounter_ref) &&
-    Boolean(attention.observation_ref) &&
-    Boolean(attention.label) &&
-    Boolean(attention.summary) &&
+    isRef(attention.target_encounter_ref) &&
+    isRef(attention.observation_ref) &&
+    isRef(attention.label) &&
+    isRef(attention.summary) &&
     attention.semantics === "DREAM_RETURN_ATTENTION_ONLY" &&
     attention.evidence_role === "NOT_EVIDENCE" &&
     attention.tree_candidate_set_or_order_changed === false &&
@@ -159,6 +204,10 @@ export function isDreamOpeningAttentionDisplayable(
     attention.mingli_write_allowed === false &&
     attention.decision_write_allowed === false &&
     attention.knowledge_write_allowed === false &&
-    attention.read_only === true
+    attention.read_only === true &&
+    (bindings.targetEncounterRef === undefined ||
+      attention.target_encounter_ref === bindings.targetEncounterRef) &&
+    (bindings.targetTreeRef === undefined ||
+      attention.target_tree_ref === bindings.targetTreeRef)
   );
 }

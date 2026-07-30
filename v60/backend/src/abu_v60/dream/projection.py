@@ -13,7 +13,7 @@ from abu_v60.dream.errors import DreamStateError
 from abu_v60.dream.persistence import DreamRepository
 from abu_v60.dream.return_attention import DreamReturnAttentionCoordinator
 from abu_v60.experience import EpisodePublicProjection, ExperienceProjectionComposer
-from abu_v60.game import DreamGameplayDirector
+from abu_v60.game import DreamCommand, DreamGameplayDirector
 from abu_v60.system_manifest import DREAM_GAME_ENGINE_VERSION, PRIMARY_WORLD_ID
 
 
@@ -64,6 +64,7 @@ class DreamSnapshotProjector:
                                q.organ_set_json, q.organ_set_hash,
                                q.episode_ref, q.episode_version,
                                q.episode_contract_json, q.episode_contract_hash,
+                               future.event_json AS future_event_json,
                                lc.case_ref, lc.life_case_revision_ref,
                                cv.chart_version_ref, cv.pillars_json,
                                cs.scene_ref, cs.scene_json,
@@ -72,6 +73,8 @@ class DreamSnapshotProjector:
                         JOIN dream.life_trees AS t ON t.actor_ref = a.actor_ref
                         JOIN story.question_instances AS q
                           ON q.actor_ref = a.actor_ref
+                        JOIN world.events AS future
+                          ON future.world_event_ref = q.world_event_ref
                         JOIN mingli.life_case_revisions AS lc
                           ON lc.life_case_revision_ref = q.life_case_revision_ref
                         JOIN mingli.chart_versions AS cv
@@ -262,6 +265,11 @@ class DreamSnapshotProjector:
             )
 
         state = encounter["state_json"]
+        answer_window_status = self._answer_window_status(
+            root=root,
+            state=state,
+            human_seal=human_seal,
+        )
         scene = self._director.scene(
             episode=episode,
             state=state,
@@ -277,6 +285,7 @@ class DreamSnapshotProjector:
             root=root,
             runtime_metadata=runtime_metadata,
             question_visible=state["question_visible"],
+            answer_window_status=answer_window_status,
         )
         reveal_payload = dict(reveal) if reveal is not None else None
         decision_refs = (
@@ -414,7 +423,14 @@ class DreamSnapshotProjector:
                 "episode_version": scene.episode_version,
                 "content_key": scene.content_key,
                 "phase": scene.phase.value,
-                "available_commands": [command.value for command in scene.available_commands],
+                "available_commands": (
+                    [DreamCommand.RETURN_TO_GROVE.value]
+                    if answer_window_status == "CLOSED_UNSEALED"
+                    else [
+                        command.value
+                        for command in scene.available_commands
+                    ]
+                ),
             },
             "actor": {
                 "actor_ref": root["actor_ref"],
@@ -488,6 +504,7 @@ class DreamSnapshotProjector:
         root: Any,
         runtime_metadata: dict[str, Any],
         question_visible: bool,
+        answer_window_status: str,
     ) -> dict[str, Any] | None:
         if not question_visible:
             return None
@@ -502,4 +519,23 @@ class DreamSnapshotProjector:
             "cutoff_tick": root["cutoff_tick"],
             "due_tick": root["due_tick"],
             "flower_name": runtime_metadata["flower_name"],
+            "answer_window_status": answer_window_status,
         }
+
+    @staticmethod
+    def _answer_window_status(
+        *,
+        root: Any,
+        state: dict[str, Any],
+        human_seal: Any,
+    ) -> str:
+        if human_seal is not None or state.get("answer_sealed") is True:
+            return "SEALED"
+        if (
+            state.get("question_visible") is True
+            and root["future_event_json"].get("opportunity_cycle_ref")
+            is not None
+            and int(root["current_tick"]) >= int(root["due_tick"])
+        ):
+            return "CLOSED_UNSEALED"
+        return "OPEN"

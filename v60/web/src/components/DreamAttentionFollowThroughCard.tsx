@@ -178,7 +178,7 @@ function FollowThroughMarkup({
       <span className="dream-attention-status-detail">{copy.detail}</span>
       {response && <WorldResponse response={response} />}
       <em>
-        只继续这条梦中观察；不改变问题、答案或世界结果，也不写入命理。
+        只继续这条梦中观察；不选择本章，不改变问题、答案或世界结果，也不写入命理。
       </em>
     </aside>
   );

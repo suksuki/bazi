@@ -15,7 +15,25 @@
       "package_ref": "v60.episode-package.zhaoning-lantern-roster.v1",
       "path": "zhaoning-lantern-roster-v1.json",
       "package_hash": "d8a1b21b01e5ceffa737d61ba16d232c5c38c0d28bbdb7f8c92b80096719d424"
+    },
+    {
+      "package_ref": "v60.episode-package.wenxi-index-convention.v1",
+      "path": "wenxi-index-convention-v1.json",
+      "package_hash": "6e0af51871d116eb5b9ed49e236b047b99bb4ae50b4767bab0ac8f216f466284"
     }
   ],
-  "transitions": []
+  "transitions": [
+    {
+      "from_package_ref": "v60.episode-package.wenxi-archive-trial.v1",
+      "to_package_ref": "v60.episode-package.wenxi-index-convention.v1",
+      "definition": {
+        "transition_ref": "v60-episode-transition-64b0804f1fdb3d1093fa",
+        "transition_version": 1,
+        "from_question_ref": "v60-question-wenxi-archive-trial-v1",
+        "to_question_ref": "v60-question-wenxi-index-convention-v1",
+        "label": "共同修复之后，再看一张新索引",
+        "runtime_status": "ACTIVE"
+      }
+    }
+  ]
 }

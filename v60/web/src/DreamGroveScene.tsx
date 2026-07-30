@@ -8,12 +8,14 @@ import type {
   RuntimeMediaManifest,
 } from "./api";
 import { DreamReadingObservationLens } from "./components/DreamReadingObservationLens";
+import { DreamGroveChapterRouteSummary } from "./components/DreamGroveChapterRoute";
 import { DreamPendingAttentionBadge } from "./components/DreamPendingAttentionBadge";
 import { DreamReturnEchoCard } from "./components/DreamReturnEchoCard";
 import {
   isDreamPendingAttentionDisplayable,
   isDreamPendingAttentionSupplied,
 } from "./dreamAttentionFollowThroughTypes";
+import { isDreamGroveChapterRouteDisplayable } from "./dreamChapterRouteTypes";
 import { isDreamReturnEchoDisplayable } from "./dreamReturnEchoTypes";
 import type { DreamReadingObservationLensModel } from "./homeDreamObservationLens";
 
@@ -100,6 +102,11 @@ export function DreamGroveScene({
   const returnEcho = grove.return_echo ?? null;
   const returnEchoDisplayable = isDreamReturnEchoDisplayable(returnEcho);
   const candidateRefs = grove.candidates.map(({ candidate_ref }) => candidate_ref);
+  const duplicateCandidateRefs = new Set(
+    candidateRefs.filter(
+      (candidateRef, index) => candidateRefs.indexOf(candidateRef) !== index,
+    ),
+  );
   const pendingSupplied = isDreamPendingAttentionSupplied(
     grove.pending_attention,
   );
@@ -131,35 +138,50 @@ export function DreamGroveScene({
       <div
         className="dream-grove-trees"
         role="group"
-        aria-label="选择一棵陌生生命树"
+        aria-label="选择一棵生命树"
       >
-        {grove.candidates.map((candidate) => (
-          <button
-            className="grove-tree-choice"
-            data-candidate-ref={candidate.candidate_ref}
-            data-domain={candidate.domain}
-            data-pending-attention={
-              pending?.source_candidate_ref === candidate.candidate_ref
-            }
-            data-tree-version={candidate.tree.version}
-            disabled={busy}
-            key={candidate.candidate_ref}
-            onClick={() => onSelect(candidate.candidate_ref)}
-            style={treeStyle(candidate)}
-            type="button"
-          >
-            <DreamPendingAttentionBadge
-              candidateRef={candidate.candidate_ref}
-              pending={pending}
-            />
-            <PhenotypeTree candidate={candidate} />
-            <span className="grove-tree-copy">
-              <strong>{candidate.public_alias}</strong>
-              <small>{DOMAIN_LABELS[candidate.domain]}</small>
-              <em>{candidate.premise}</em>
-            </span>
-          </button>
-        ))}
+        {grove.candidates.map((candidate) => {
+          const route =
+            !duplicateCandidateRefs.has(candidate.candidate_ref) &&
+            isDreamGroveChapterRouteDisplayable(candidate.chapter_route, {
+              candidateRef: candidate.candidate_ref,
+              candidateHash: candidate.candidate_hash,
+              treeRef: candidate.tree_ref,
+            })
+              ? candidate.chapter_route
+              : null;
+          const selectable = route?.status === "AVAILABLE";
+          return (
+            <button
+              className="grove-tree-choice"
+              data-candidate-ref={candidate.candidate_ref}
+              data-candidate-hash={candidate.candidate_hash}
+              data-tree-ref={candidate.tree_ref}
+              data-domain={candidate.domain}
+              data-chapter-route-status={route?.status ?? "WITHHELD"}
+              data-pending-attention={
+                pending?.source_candidate_ref === candidate.candidate_ref
+              }
+              data-tree-version={candidate.tree.version}
+              disabled={busy || !selectable}
+              key={`${candidate.candidate_ref}:${candidate.candidate_hash}:${candidate.tree_ref}`}
+              onClick={() => onSelect(candidate.candidate_ref)}
+              style={treeStyle(candidate)}
+              type="button"
+            >
+              <DreamPendingAttentionBadge
+                candidateRef={candidate.candidate_ref}
+                pending={pending}
+              />
+              <PhenotypeTree candidate={candidate} />
+              <span className="grove-tree-copy">
+                <strong>{candidate.public_alias}</strong>
+                <small>{DOMAIN_LABELS[candidate.domain]}</small>
+                <DreamGroveChapterRouteSummary route={route} />
+              </span>
+            </button>
+          );
+        })}
       </div>
       <DreamReturnEchoCard
         attention={pendingSupplied ? null : grove.next_attention}

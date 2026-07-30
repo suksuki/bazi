@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 
 import pytest
 from abu_v60.db import engine
@@ -14,7 +15,11 @@ from abu_v60.dream.attention_follow_through_contracts import (
     DreamPendingAttention,
 )
 from abu_v60.dream.errors import DreamConflictError, DreamStateError
-from abu_v60.dream.grove import GroveCandidateDefinition
+from abu_v60.dream.grove import (
+    DreamGroveAdmissionService,
+    GroveCandidateDefinition,
+)
+from abu_v60.dream.opportunity import OPPORTUNITY_WINDOW_TICKS
 from abu_v60.dream.return_attention import DreamReturnAttentionCoordinator
 from abu_v60.dream.return_attention_contracts import (
     DREAM_OPENING_ATTENTION_VERSION,
@@ -515,6 +520,500 @@ def _complete_and_return(
     )
 
 
+def test_expired_second_chapter_is_archived_and_rematerialized(
+    attention_accounts: tuple[str, str],
+) -> None:
+    account_ref, _ = attention_accounts
+    service = DreamService(engine)
+    entry = service.entry(account_ref=account_ref)
+    first_candidate = entry["grove"]["candidates"][0]
+    first_snapshot = service.start_grove_encounter(
+        account_ref=account_ref,
+        candidate_ref=first_candidate["candidate_ref"],
+    )
+    second_chapter_grove = _complete_and_return(
+        service,
+        account_ref=account_ref,
+        snapshot=first_snapshot,
+    )
+    second_route = next(
+        candidate["chapter_route"]
+        for candidate in second_chapter_grove["grove"]["candidates"]
+        if candidate["candidate_ref"] == first_candidate["candidate_ref"]
+    )
+    assert second_route["basis"] == "CANONICAL_TRANSITION"
+    assert second_route["target_chapter"] == "RETURN_VISIT"
+
+    snapshot = service.start_grove_encounter(
+        account_ref=account_ref,
+        candidate_ref=first_candidate["candidate_ref"],
+    )
+    assert snapshot["encounter"]["chapter"] == "RETURN_VISIT"
+    expired_encounter_ref = snapshot["encounter"]["encounter_ref"]
+    expired_question_ref = snapshot["lineage"]["question_ref"]
+    expired_world_event_ref = snapshot["lineage"]["world_event_ref"]
+    for key, command in (
+        ("evidence_leaf_world", DreamCommand.OBSERVE_EVIDENCE),
+        ("evidence_leaf_structure", DreamCommand.OBSERVE_EVIDENCE),
+        ("structure_branch", DreamCommand.OBSERVE_STRUCTURE),
+        ("question_flower", DreamCommand.OPEN_QUESTION),
+    ):
+        snapshot = service.execute_command(
+            account_ref=account_ref,
+            envelope=_command(
+                snapshot,
+                command,
+                target_ref=str(_organ(snapshot, key)["organ_ref"]),
+            ),
+        )
+    assert snapshot["question"]["answer_window_status"] == "OPEN"
+
+    with engine.begin() as connection:
+        WorldContinuityEngine().advance_and_settle(
+            connection=connection,
+            event_ref=expired_world_event_ref,
+        )
+    expired_snapshot = service.snapshot(account_ref=account_ref)
+    assert expired_snapshot["encounter"]["status"] == "QUESTION_OPEN"
+    assert expired_snapshot["question"]["answer_window_status"] == (
+        "CLOSED_UNSEALED"
+    )
+    assert expired_snapshot["game"]["available_commands"] == [
+        "RETURN_TO_GROVE"
+    ]
+    with pytest.raises(
+        DreamStateError,
+        match="dream_question_window_closed",
+    ):
+        service.execute_command(
+            account_ref=account_ref,
+            envelope=_command(
+                expired_snapshot,
+                DreamCommand.SEAL_ANSWER,
+                choice_id=str(
+                    expired_snapshot["question"]["options"][0]["choice_id"]
+                ),
+            ),
+        )
+
+    recovery_command = _command(
+        expired_snapshot,
+        DreamCommand.RETURN_TO_GROVE,
+    )
+    returned = service.execute_command(
+        account_ref=account_ref,
+        envelope=recovery_command,
+    )
+    assert returned["kind"] == "GROVE"
+    retry_route = next(
+        candidate["chapter_route"]
+        for candidate in returned["grove"]["candidates"]
+        if candidate["candidate_ref"] == first_candidate["candidate_ref"]
+    )
+    assert retry_route["basis"] == "CANONICAL_TRANSITION"
+    assert retry_route["target_source_question_ref"] == second_route[
+        "target_source_question_ref"
+    ]
+    with engine.connect() as connection:
+        archived = (
+            connection.execute(
+                text(
+                    """
+                    SELECT status, version, state_json, state_hash
+                    FROM dream.encounters
+                    WHERE encounter_ref = :encounter_ref
+                    """
+                ),
+                {"encounter_ref": expired_encounter_ref},
+            )
+            .mappings()
+            .one()
+        )
+        assert archived["status"] == "QUESTION_OPEN"
+        assert archived["state_json"]["departed_to_grove"] is True
+        assert archived["state_json"]["expired_unsealed"] is True
+        assert archived["state_json"]["expiration_reason"] == (
+            "QUESTION_WINDOW_CLOSED"
+        )
+        assert content_hash(archived["state_json"]) == archived["state_hash"]
+        receipt = (
+            connection.execute(
+                text(
+                    """
+                    SELECT result_status, result_version,
+                           result_state_hash
+                    FROM dream.command_receipts
+                    WHERE viewer_account_ref = :account_ref
+                      AND idempotency_key = :idempotency_key
+                    """
+                ),
+                {
+                    "account_ref": account_ref,
+                    "idempotency_key": recovery_command.idempotency_key,
+                },
+            )
+            .mappings()
+            .one()
+        )
+        assert receipt["result_status"] == "QUESTION_OPEN"
+        assert receipt["result_version"] == archived["version"]
+        assert receipt["result_state_hash"] == archived["state_hash"]
+        assert (
+            connection.execute(
+                text(
+                    """
+                    SELECT count(*)
+                    FROM dream.answer_seals
+                    WHERE encounter_ref = :encounter_ref
+                      AND actor_role = 'HUMAN'
+                    """
+                ),
+                {"encounter_ref": expired_encounter_ref},
+            ).scalar_one()
+            == 0
+        )
+        assert (
+            connection.execute(
+                text(
+                    """
+                    SELECT count(*)
+                    FROM dream.encounters
+                    WHERE viewer_account_ref = :account_ref
+                      AND status = 'COMPLETED'
+                    """
+                ),
+                {"account_ref": account_ref},
+            ).scalar_one()
+            == 1
+        )
+
+    retried = service.start_grove_encounter(
+        account_ref=account_ref,
+        candidate_ref=first_candidate["candidate_ref"],
+    )
+    assert retried["encounter"]["chapter"] == "RETURN_VISIT"
+    assert retried["encounter"]["encounter_ref"] != expired_encounter_ref
+    assert retried["lineage"]["question_ref"] != expired_question_ref
+    assert retried["lineage"]["world_event_ref"] != expired_world_event_ref
+    assert retried["continuation"]["completed_encounter_count"] == 1
+    with engine.connect() as connection:
+        retry_window = (
+            connection.execute(
+                text(
+                    """
+                    SELECT cutoff_tick, due_tick
+                    FROM story.question_instances
+                    WHERE question_ref = :question_ref
+                    """
+                ),
+                {"question_ref": retried["lineage"]["question_ref"]},
+            )
+            .mappings()
+            .one()
+        )
+        assert (
+            int(retry_window["due_tick"])
+            - int(retry_window["cutoff_tick"])
+            == OPPORTUNITY_WINDOW_TICKS
+        )
+        assert OPPORTUNITY_WINDOW_TICKS == 5
+        assert (
+            connection.execute(
+                text(
+                    """
+                    SELECT count(*)
+                    FROM dream.encounters
+                    WHERE viewer_account_ref = :account_ref
+                      AND COALESCE(
+                          state_json ->> 'departed_to_grove',
+                          'false'
+                      ) <> 'true'
+                    """
+                ),
+                {"account_ref": account_ref},
+            ).scalar_one()
+            == 1
+        )
+    for key, command in (
+        ("evidence_leaf_world", DreamCommand.OBSERVE_EVIDENCE),
+        ("evidence_leaf_structure", DreamCommand.OBSERVE_EVIDENCE),
+        ("structure_branch", DreamCommand.OBSERVE_STRUCTURE),
+        ("question_flower", DreamCommand.OPEN_QUESTION),
+    ):
+        retried = service.execute_command(
+            account_ref=account_ref,
+            envelope=_command(
+                retried,
+                command,
+                target_ref=str(_organ(retried, key)["organ_ref"]),
+            ),
+        )
+    retried = service.execute_command(
+        account_ref=account_ref,
+        envelope=_command(
+            retried,
+            DreamCommand.SEAL_ANSWER,
+            choice_id=str(retried["question"]["options"][0]["choice_id"]),
+        ),
+    )
+    with engine.begin() as connection:
+        WorldContinuityEngine().advance_and_settle(
+            connection=connection,
+            event_ref=str(retried["lineage"]["world_event_ref"]),
+        )
+    assert (
+        service.synchronize_settled_world_events(
+            event_refs=[str(retried["lineage"]["world_event_ref"])]
+        )
+        == 1
+    )
+    retried = service.snapshot(account_ref=account_ref)
+    for command in (DreamCommand.REVEAL, DreamCommand.RECONCILE):
+        retried = service.execute_command(
+            account_ref=account_ref,
+            envelope=_command(retried, command),
+        )
+    assert retried["encounter"]["encounter_ref"] != expired_encounter_ref
+    assert retried["encounter"]["status"] == "COMPLETED"
+    assert retried["encounter"]["state"]["reconciled"] is True
+
+
+def test_historical_echo_binds_persisted_candidate_when_same_tree_candidates_coexist(
+    attention_accounts: tuple[str, str],
+) -> None:
+    account_ref, _ = attention_accounts
+    service = DreamService(engine)
+    entry = service.entry(account_ref=account_ref)
+    first_candidate = entry["grove"]["candidates"][0]
+    first_snapshot = service.start_grove_encounter(
+        account_ref=account_ref,
+        candidate_ref=first_candidate["candidate_ref"],
+    )
+    returned = _complete_and_return(
+        service,
+        account_ref=account_ref,
+        snapshot=first_snapshot,
+    )
+    source_encounter_ref = returned["grove"]["return_echo"][
+        "encounter_ref"
+    ]
+
+    with engine.connect() as connection:
+        transaction = connection.begin()
+        try:
+            actor_ref = str(
+                connection.execute(
+                    text(
+                        """
+                        SELECT actor_ref
+                        FROM dream.grove_candidates
+                        WHERE candidate_ref = :candidate_ref
+                        """
+                    ),
+                    {"candidate_ref": first_candidate["candidate_ref"]},
+                ).scalar_one()
+            )
+            competing_candidate = GroveCandidateDefinition.issue(
+                pool_ref="v60.dream-grove.same-tree-regression.001",
+                question_ref="v60-question-wenxi-index-convention-v1",
+                actor_ref=actor_ref,
+                tree_ref=str(first_snapshot["tree"]["tree_ref"]),
+                domain="career",
+                public_alias="未来馆页树",
+                premise="同一生命树未来可能出现的另一条候选记录。",
+                display_order=1,
+            )
+            DreamGroveAdmissionService().admit(
+                connection,
+                definition=competing_candidate,
+            )
+            echo = service._return_echo.project_for_encounter(
+                connection,
+                account_ref=account_ref,
+                encounter_ref=source_encounter_ref,
+            )
+            source = service._return_attention._source_context(
+                connection,
+                account_ref=account_ref,
+                encounter_ref=source_encounter_ref,
+                for_update=False,
+                allow_missing_candidate=False,
+            )
+            assert echo is not None
+            assert source is not None
+            assert source["candidate"].candidate_ref == first_candidate[
+                "candidate_ref"
+            ]
+            assert echo.public_alias == first_candidate["public_alias"]
+        finally:
+            transaction.rollback()
+
+
+def test_stale_attention_is_rejected_after_start_while_exact_replay_survives(
+    attention_accounts: tuple[str, str],
+) -> None:
+    account_ref, stale_account_ref = attention_accounts
+    service = DreamService(engine)
+
+    def prepare(
+        owner_ref: str,
+        *,
+        idempotency_key: str,
+    ) -> tuple[dict[str, object], DreamCommandEnvelope]:
+        entry = service.entry(account_ref=owner_ref)
+        candidate = entry["grove"]["candidates"][0]
+        snapshot = service.start_grove_encounter(
+            account_ref=owner_ref,
+            candidate_ref=candidate["candidate_ref"],
+        )
+        returned = _complete_and_return(
+            service,
+            account_ref=owner_ref,
+            snapshot=snapshot,
+        )
+        prompt = DreamReturnAttentionPrompt.model_validate(
+            returned["grove"]["next_attention"]
+        )
+        return candidate, DreamCommandEnvelope(
+            command=DreamCommand.SELECT_NEXT_ATTENTION,
+            encounter_ref=prompt.source_encounter_ref,
+            expected_version=prompt.source_encounter_version,
+            idempotency_key=idempotency_key,
+            target_ref=prompt.options[0].observation_ref,
+        )
+
+    candidate, replay_envelope = prepare(
+        account_ref,
+        idempotency_key="qa:return-attention:replay-after-start",
+    )
+    service.execute_command(
+        account_ref=account_ref,
+        envelope=replay_envelope,
+    )
+    started = service.start_grove_encounter(
+        account_ref=account_ref,
+        candidate_ref=str(candidate["candidate_ref"]),
+    )
+    replayed = service.execute_command(
+        account_ref=account_ref,
+        envelope=replay_envelope,
+    )
+    assert replayed["kind"] == "ENCOUNTER"
+    assert replayed["snapshot"]["encounter"]["encounter_ref"] == (
+        started["encounter"]["encounter_ref"]
+    )
+
+    stale_candidate, stale_envelope = prepare(
+        stale_account_ref,
+        idempotency_key="qa:return-attention:stale-after-start",
+    )
+    service.start_grove_encounter(
+        account_ref=stale_account_ref,
+        candidate_ref=str(stale_candidate["candidate_ref"]),
+    )
+    with pytest.raises(
+        DreamConflictError,
+        match="dream_return_attention_requires_grove",
+    ):
+        service.execute_command(
+            account_ref=stale_account_ref,
+            envelope=stale_envelope,
+        )
+    with engine.connect() as connection:
+        assert (
+            connection.execute(
+                text(
+                    """
+                    SELECT count(*)
+                    FROM dream.return_attention_selections
+                    WHERE viewer_account_ref = :account_ref
+                    """
+                ),
+                {"account_ref": stale_account_ref},
+            ).scalar_one()
+            == 0
+        )
+
+
+def test_concurrent_attention_and_chapter_start_never_leave_unapplied_selection(
+    attention_accounts: tuple[str, str],
+) -> None:
+    account_ref, _ = attention_accounts
+    service = DreamService(engine)
+    entry = service.entry(account_ref=account_ref)
+    candidate = entry["grove"]["candidates"][0]
+    snapshot = service.start_grove_encounter(
+        account_ref=account_ref,
+        candidate_ref=candidate["candidate_ref"],
+    )
+    returned = _complete_and_return(
+        service,
+        account_ref=account_ref,
+        snapshot=snapshot,
+    )
+    prompt = DreamReturnAttentionPrompt.model_validate(
+        returned["grove"]["next_attention"]
+    )
+    envelope = DreamCommandEnvelope(
+        command=DreamCommand.SELECT_NEXT_ATTENTION,
+        encounter_ref=prompt.source_encounter_ref,
+        expected_version=prompt.source_encounter_version,
+        idempotency_key="qa:return-attention:concurrent-with-start",
+        target_ref=prompt.options[0].observation_ref,
+    )
+    barrier = Barrier(2)
+
+    def select_attention() -> str:
+        barrier.wait()
+        try:
+            service.execute_command(
+                account_ref=account_ref,
+                envelope=envelope,
+            )
+        except DreamConflictError as exc:
+            return str(exc)
+        return "SELECTED"
+
+    def start_chapter() -> dict[str, object]:
+        barrier.wait()
+        return service.start_grove_encounter(
+            account_ref=account_ref,
+            candidate_ref=str(candidate["candidate_ref"]),
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        selection_future = executor.submit(select_attention)
+        chapter_future = executor.submit(start_chapter)
+        selection_result = selection_future.result()
+        chapter_snapshot = chapter_future.result()
+
+    current_encounter_ref = chapter_snapshot["encounter"]["encounter_ref"]
+    with engine.connect() as connection:
+        binding = (
+            connection.execute(
+                text(
+                    """
+                    SELECT selection.attention_ref,
+                           application.encounter_ref
+                    FROM dream.return_attention_selections AS selection
+                    LEFT JOIN dream.return_attention_applications AS application
+                      ON application.attention_ref = selection.attention_ref
+                    WHERE selection.viewer_account_ref = :account_ref
+                    """
+                ),
+                {"account_ref": account_ref},
+            )
+            .mappings()
+            .one_or_none()
+        )
+    if selection_result == "SELECTED":
+        assert binding is not None
+        assert binding["encounter_ref"] == current_encounter_ref
+    else:
+        assert selection_result == "dream_return_attention_requires_grove"
+        assert binding is None
+
+
 def _schema_digest(schema_name: str) -> tuple[tuple[str, int, str], ...]:
     table_names = inspect(engine).get_table_names(schema=schema_name)
     assert all(re.fullmatch(r"[a-z_][a-z0-9_]*", name) for name in table_names)
@@ -583,6 +1082,7 @@ def test_return_attention_is_replay_safe_private_and_applies_only_same_tree(
         account_ref=account_ref,
         candidate_ref=first_candidate["candidate_ref"],
     )
+    first_question_ref = first_snapshot["lineage"]["question_ref"]
     first_tree_ref = first_snapshot["tree"]["tree_ref"]
     first_grove = _complete_and_return(
         service,
@@ -593,7 +1093,32 @@ def test_return_attention_is_replay_safe_private_and_applies_only_same_tree(
     prompt = DreamReturnAttentionPrompt.model_validate(prompt_payload)
     assert prompt.status == "AWAITING_SELECTION"
     assert prompt.tree_ref == first_tree_ref
-    assert first_grove["grove"]["grove_version"] == "v60.dream-grove.003"
+    assert first_grove["grove"]["grove_version"] == "v60.dream-grove.004"
+    next_chapter_route = next(
+        candidate["chapter_route"]
+        for candidate in first_grove["grove"]["candidates"]
+        if candidate["candidate_ref"] == first_candidate["candidate_ref"]
+    )
+    assert next_chapter_route["status"] == "AVAILABLE"
+    assert next_chapter_route["basis"] == "CANONICAL_TRANSITION"
+    assert next_chapter_route["target_chapter"] == "RETURN_VISIT"
+    assert next_chapter_route["target_source_question_ref"] == (
+        "v60-question-wenxi-index-convention-v1"
+    )
+    assert next_chapter_route["routing_authority"] == (
+        "CANONICAL_EPISODE_GRAPH"
+    )
+    assert next_chapter_route["attention_routing_allowed"] is False
+    assert next_chapter_route["attention_ref_used"] is False
+    assert next_chapter_route["question_changed"] is False
+    assert next_chapter_route["answer_changed"] is False
+    assert next_chapter_route["npc_choice_changed"] is False
+    assert next_chapter_route["outcome_changed"] is False
+    other_account_route = DreamService(engine).entry(
+        account_ref=other_account_ref
+    )["grove"]["candidates"][0]["chapter_route"]
+    assert other_account_route["basis"] == "ENTRYPOINT"
+    assert other_account_route["target_chapter"] == "FIRST_VISIT"
 
     envelope = DreamCommandEnvelope(
         command=DreamCommand.SELECT_NEXT_ATTENTION,
@@ -634,6 +1159,14 @@ def test_return_attention_is_replay_safe_private_and_applies_only_same_tree(
             "pending_attention"
         ]
     )
+    route_after_attention_selection = next(
+        candidate["chapter_route"]
+        for candidate in service.entry(account_ref=account_ref)["grove"][
+            "candidates"
+        ]
+        if candidate["candidate_ref"] == first_candidate["candidate_ref"]
+    )
+    assert route_after_attention_selection == next_chapter_route
     assert pending.attention_ref == selections[0].attention_ref
     assert pending.source_candidate_ref == first_candidate["candidate_ref"]
     assert pending.tree_ref == first_tree_ref
@@ -749,6 +1282,78 @@ def test_return_attention_is_replay_safe_private_and_applies_only_same_tree(
     same_tree_snapshot = service.start_grove_encounter(
         account_ref=account_ref,
         candidate_ref=first_candidate["candidate_ref"],
+    )
+    assert same_tree_snapshot["encounter"]["chapter"] == "RETURN_VISIT"
+    assert same_tree_snapshot["lineage"]["question_ref"] != first_question_ref
+    with engine.connect() as connection:
+        chapter_rows = (
+            connection.execute(
+                text(
+                    """
+                    SELECT question.question_ref, question.prompt,
+                           question.options_json,
+                           question.episode_contract_json,
+                           event.world_event_ref, event.event_json,
+                           event.sealed_outcome_json,
+                           baseline.event_json AS baseline_event_json
+                    FROM story.question_instances AS question
+                    JOIN world.events AS event
+                      ON event.world_event_ref = question.world_event_ref
+                    LEFT JOIN world.events AS baseline
+                      ON baseline.world_event_ref =
+                         question.episode_contract_json
+                             ->> 'baseline_event_ref'
+                    WHERE question.question_ref = ANY(:question_refs)
+                    """
+                ),
+                {
+                    "question_refs": [
+                        same_tree_snapshot["lineage"]["question_ref"],
+                        next_chapter_route[
+                            "target_source_question_ref"
+                        ],
+                        first_question_ref,
+                    ]
+                },
+            )
+            .mappings()
+            .all()
+        )
+    by_question = {
+        str(row["question_ref"]): dict(row) for row in chapter_rows
+    }
+    dynamic_second = by_question[
+        str(same_tree_snapshot["lineage"]["question_ref"])
+    ]
+    static_second = by_question[
+        str(next_chapter_route["target_source_question_ref"])
+    ]
+    dynamic_first = by_question[str(first_question_ref)]
+    assert dynamic_second["prompt"] == static_second["prompt"]
+    assert dynamic_second["options_json"] == static_second["options_json"]
+    assert dynamic_second["episode_contract_json"]["entrypoint"] is True
+    assert dynamic_second["episode_contract_json"]["chapter"] == (
+        "RETURN_VISIT"
+    )
+    assert dynamic_second["event_json"]["source_question_ref"] == (
+        next_chapter_route["target_source_question_ref"]
+    )
+    assert dynamic_second["event_json"]["source_candidate_ref"] == (
+        first_candidate["candidate_ref"]
+    )
+    assert dynamic_second["event_json"]["source_transition_ref"] == (
+        next_chapter_route["transition_ref"]
+    )
+    assert dynamic_second["event_json"]["attention_ref_used"] is False
+    assert dynamic_second["event_json"]["attention_changed_route"] is False
+    assert dynamic_second["sealed_outcome_json"][
+        "resolved_proposition"
+    ] == static_second["sealed_outcome_json"]["resolved_proposition"]
+    assert dynamic_second["sealed_outcome_json"]["actual_event"] == (
+        static_second["sealed_outcome_json"]["actual_event"]
+    )
+    assert dynamic_second["baseline_event_json"]["caused_by_event_ref"] == (
+        dynamic_first["world_event_ref"]
     )
     opening = DreamOpeningAttention.model_validate(
         same_tree_snapshot["opening_attention"]
@@ -913,6 +1518,26 @@ def test_return_attention_is_replay_safe_private_and_applies_only_same_tree(
         different_candidate["candidate_ref"]
     )
     assert remaining_pending.tree_ref == different_tree_ref
+    terminal_route = next(
+        candidate["chapter_route"]
+        for candidate in returned["grove"]["candidates"]
+        if candidate["candidate_ref"] == first_candidate["candidate_ref"]
+    )
+    assert terminal_route["status"] == "STORY_CURRENTLY_COMPLETE"
+    assert terminal_route["basis"] == "TERMINAL_CHAPTER"
+    assert terminal_route["previous_source_question_ref"] == (
+        terminal_route["target_source_question_ref"]
+    )
+    assert terminal_route["transition_ref"] is None
+    assert terminal_route["transition_hash"] is None
+    with pytest.raises(
+        DreamStateError,
+        match="dream_grove_story_currently_complete",
+    ):
+        service.start_grove_encounter(
+            account_ref=account_ref,
+            candidate_ref=first_candidate["candidate_ref"],
+        )
 
     assert DreamService(engine).entry(account_ref=other_account_ref)[
         "grove"

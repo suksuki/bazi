@@ -7,6 +7,7 @@ import type {
   DreamAttentionFollowThrough,
   DreamPendingAttention,
 } from "./dreamAttentionFollowThroughTypes";
+import type { DreamGroveChapterRoute } from "./dreamChapterRouteTypes";
 
 export { request } from "./http";
 export {
@@ -228,6 +229,7 @@ export interface DreamSnapshot {
     cutoff_tick: number;
     due_tick: number;
     flower_name: string;
+    answer_window_status: "OPEN" | "SEALED" | "CLOSED_UNSEALED";
   };
   human_seal: null | {
     answer_seal_ref: string;
@@ -443,10 +445,13 @@ export interface DreamSnapshot {
 
 export interface DreamGroveCandidate {
   candidate_ref: string;
+  candidate_hash: string;
+  tree_ref: string;
   domain: "career" | "wealth" | "relationship";
   public_alias: string;
   premise: string;
   display_order: number;
+  chapter_route: DreamGroveChapterRoute | null;
   tree: {
     state: string;
     version: number;
@@ -466,7 +471,7 @@ export interface DreamGroveCandidate {
 }
 
 export interface DreamGrove {
-  grove_version: "v60.dream-grove.003";
+  grove_version: "v60.dream-grove.004";
   selection_status: "AWAITING_TREE_SELECTION";
   candidates: DreamGroveCandidate[];
   return_echo?: DreamReturnEcho | null;

@@ -148,15 +148,37 @@ def test_three_life_qualification_registry_is_hash_locked_and_public_safe() -> N
 
     assert manifest["registry_hash"] == QUALIFICATION_EPISODE_SOURCE_REGISTRY_HASH
     assert manifest["runtime_access"] == "ADMISSION_ONLY"
-    assert len(manifest["packages"]) == 3
-    assert manifest["transitions"] == []
+    assert len(manifest["packages"]) == 4
+    assert manifest["transitions"] == [
+        {
+            "transition_ref": "v60-episode-transition-64b0804f1fdb3d1093fa",
+            "transition_hash": (
+                "74d92439d60a74c41623951bfff4e73e52680959a8251d25e88aa70c78ee9fbe"
+            ),
+            "from_package_ref": (
+                "v60.episode-package.wenxi-archive-trial.v1"
+            ),
+            "to_package_ref": (
+                "v60.episode-package.wenxi-index-convention.v1"
+            ),
+        }
+    ]
     assert {
         package["package_ref"] for package in manifest["packages"]
     } == {
         "v60.episode-package.wenxi-archive-trial.v1",
+        "v60.episode-package.wenxi-index-convention.v1",
         "v60.episode-package.heyang-dyed-cloth.v1",
         "v60.episode-package.zhaoning-lantern-roster.v1",
     }
+    assert next(
+        package
+        for package in manifest["packages"]
+        if package["package_ref"]
+        == "v60.episode-package.wenxi-index-convention.v1"
+    )["package_hash"] == (
+        "6e0af51871d116eb5b9ed49e236b047b99bb4ae50b4767bab0ac8f216f466284"
+    )
     serialized = json.dumps(manifest)
     assert "prompt" not in serialized
     assert "sealed_outcome" not in serialized
@@ -183,10 +205,44 @@ def test_three_life_qualification_registry_is_hash_locked_and_public_safe() -> N
                 "relationship_life_domain_vector_ref": "domain:relationship",
             },
         ),
+        registry.compile_package(
+            "v60.episode-package.wenxi-index-convention.v1",
+            bindings={
+                "career_structure_fact_ref": "fact:career",
+                "career_life_domain_vector_ref": "domain:career",
+            },
+        ),
     )
     assert len({item.definition.actor_ref for item in compiled}) == 3
     assert len({item.definition.tree_ref for item in compiled}) == 3
-    assert all(item.definition.runtime.entrypoint for item in compiled)
+    entrypoints = [
+        item for item in compiled if item.definition.runtime.entrypoint
+    ]
+    assert len(entrypoints) == 3
+
+    returning = compiled[-1]
+    runtime = returning.definition.runtime
+    assert runtime.chapter.value == "RETURN_VISIT"
+    assert runtime.entrypoint is False
+    assert runtime.cutoff_tick == 48
+    assert runtime.due_tick == 96
+    assert runtime.entry_world_event is not None
+    assert runtime.entry_world_event.caused_by_event_ref == (
+        "v60-world-event-wenxi-archive-role-v1"
+    )
+    assert runtime.entry_world_event.evidence == returning.definition.baseline_evidence
+    assert [event.world_event_ref for event in returning.world_event_definitions] == [
+        "v60-world-event-wenxi-index-adoption-v1"
+    ]
+    assert runtime.baseline_event_ref not in {
+        event.world_event_ref for event in returning.world_event_definitions
+    }
+    assert returning.definition.organ_set[
+        "question_flower"
+    ].source_refs == (runtime.question_ref,)
+    assert returning.definition.organ_set[
+        "outcome_fruit"
+    ].source_refs == (runtime.world_event_ref,)
 
 
 def test_first_episode_package_preserves_existing_contract() -> None:

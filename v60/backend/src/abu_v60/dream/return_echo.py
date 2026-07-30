@@ -5,8 +5,12 @@ from typing import Any
 from pydantic import ValidationError
 from sqlalchemy import text
 
+from abu_v60.dream.catalog import ActiveEpisodeCatalog, DreamEpisodeCatalog
 from abu_v60.dream.errors import DreamStateError
 from abu_v60.dream.grove import GroveCandidateDefinition
+from abu_v60.dream.grove_candidate_lineage import (
+    candidate_source_lineage_is_valid,
+)
 from abu_v60.dream.return_echo_contracts import (
     DreamReturnEcho,
     DreamReturnEchoAbuRecap,
@@ -57,6 +61,7 @@ class DreamReturnEchoProjector:
         director: DreamGameplayDirector | None = None,
     ) -> None:
         self._director = director or DreamGameplayDirector()
+        self._episodes = DreamEpisodeCatalog(self._director)
 
     def project(
         self,
@@ -126,7 +131,9 @@ class DreamReturnEchoProjector:
                     FROM dream.encounters
                     WHERE viewer_account_ref = :account_ref
                       AND status = 'COMPLETED'
-                      AND state_json @> '{"departed_to_grove": true}'::jsonb
+                      AND state_json @>
+                          '{"reconciled": true,
+                            "departed_to_grove": true}'::jsonb
                     ORDER BY updated_at DESC, encounter_ref DESC
                     LIMIT 1
                     """
@@ -207,6 +214,7 @@ class DreamReturnEchoProjector:
         public_alias = self._validated_public_alias(
             encounter=encounter,
             sources=sources,
+            catalog=self._episodes.load(connection),
         )
 
         seals = self._answer_seals(
@@ -314,6 +322,7 @@ class DreamReturnEchoProjector:
         *,
         encounter: dict[str, Any],
         sources: dict[str, Any],
+        catalog: ActiveEpisodeCatalog | None = None,
     ) -> str:
         actor = validate_persisted_world_actor_admission(
             {
@@ -351,10 +360,19 @@ class DreamReturnEchoProjector:
                 "candidate_hash": sources["candidate_hash"],
             }
         )
+        if catalog is None:
+            raise DreamStateError(
+                "dream_return_echo_candidate_catalog_missing"
+            )
         if (
-            candidate.question_ref != sources["source_question_ref"]
-            or candidate.actor_ref != encounter["actor_ref"]
+            candidate.actor_ref != encounter["actor_ref"]
             or candidate.tree_ref != encounter["tree_ref"]
+            or not candidate_source_lineage_is_valid(
+                catalog=catalog,
+                candidate=candidate,
+                source_question_ref=str(sources["source_question_ref"]),
+                event_payload=dict(sources["event_json"]),
+            )
         ):
             raise DreamStateError(
                 "dream_return_echo_candidate_identity_mismatch"
@@ -448,10 +466,22 @@ class DreamReturnEchoProjector:
                     JOIN world.actors AS actor
                       ON actor.actor_ref = question.actor_ref
                     LEFT JOIN dream.grove_candidates AS candidate
-                      ON candidate.question_ref = COALESCE(
-                          event.event_json ->> 'source_question_ref',
-                          question.question_ref
-                      )
+                      ON (
+                            candidate.candidate_ref = event.event_json
+                                ->> 'source_candidate_ref'
+                            OR (
+                                event.event_json
+                                    ->> 'source_candidate_ref' IS NULL
+                                AND candidate.question_ref = COALESCE(
+                                    event.event_json
+                                        ->> 'source_question_ref',
+                                    question.question_ref
+                                )
+                            )
+                         )
+                     AND candidate.tree_ref = :tree_ref
+                     AND candidate.actor_ref = :actor_ref
+                     AND candidate.runtime_status = 'ACTIVE'
                     WHERE seal.encounter_ref = :encounter_ref
                       AND seal.actor_role = 'HUMAN'
                       AND seal.actor_ref = :account_ref
@@ -460,6 +490,8 @@ class DreamReturnEchoProjector:
                 {
                     "encounter_ref": encounter["encounter_ref"],
                     "account_ref": account_ref,
+                    "tree_ref": encounter["tree_ref"],
+                    "actor_ref": encounter["actor_ref"],
                 },
             )
             .mappings()

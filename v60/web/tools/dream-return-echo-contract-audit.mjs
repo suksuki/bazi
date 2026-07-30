@@ -66,35 +66,72 @@ const returnEcho = {
   canonical_write_allowed: false,
 };
 
-const candidate = (candidateRef, domain, alias, displayOrder) => ({
-  candidate_ref: candidateRef,
-  domain,
-  public_alias: alias,
-  premise: `${alias}的独立梦中问题`,
-  display_order: displayOrder,
-  tree: {
-    state: "READY",
-    version: 1,
-    phenotype: {
-      profile_version: "phenotype.001",
-      fact_basis: "contract fixture",
-      element_membership_ratios: {
-        wood: 0.2,
-        fire: 0.2,
-        earth: 0.2,
-        metal: 0.2,
-        water: 0.2,
-      },
-      crown_spread: 1,
-      branch_lift: 0.84,
-      root_spread: 1,
-      bark_definition: 0.86,
-      surface_moisture: 0.9,
-      semantic_status: "VISUAL_METAPHOR_ONLY",
+const candidate = (candidateRef, domain, alias, displayOrder) => {
+  const candidateHash = String(displayOrder).repeat(64);
+  const treeRef = `tree-${candidateRef}`;
+  const questionRef = `question-${candidateRef}`;
+  const episodeRef = `episode-${candidateRef}`;
+  return {
+    candidate_ref: candidateRef,
+    candidate_hash: candidateHash,
+    tree_ref: treeRef,
+    domain,
+    public_alias: alias,
+    premise: `${alias}的独立梦中问题`,
+    display_order: displayOrder,
+    chapter_route: {
+      contract_version: "v60.dream-grove-chapter-route.001",
+      route_hash: String(displayOrder + 3).repeat(64),
+      status: "AVAILABLE",
+      basis: "ENTRYPOINT",
+      candidate_ref: candidateRef,
+      candidate_hash: candidateHash,
+      tree_ref: treeRef,
+      previous_source_question_ref: null,
+      previous_source_episode_ref: null,
+      target_source_question_ref: questionRef,
+      target_source_episode_ref: episodeRef,
+      target_source_episode_version: 1,
+      target_chapter: "FIRST_VISIT",
+      transition_ref: null,
+      transition_hash: null,
+      title: `${alias}的第一章`,
+      premise: `${alias}的独立梦中问题`,
+      chapter_label: "初次相遇",
+      routing_authority: "CANONICAL_EPISODE_GRAPH",
+      attention_routing_allowed: false,
+      attention_ref_used: false,
+      tree_candidate_set_or_order_changed: false,
+      question_changed: false,
+      answer_changed: false,
+      npc_choice_changed: false,
+      outcome_changed: false,
+      read_only: true,
     },
-    scene_hash: `${candidateRef}-scene-hash`,
-  },
-});
+    tree: {
+      state: "READY",
+      version: 1,
+      phenotype: {
+        profile_version: "phenotype.001",
+        fact_basis: "contract fixture",
+        element_membership_ratios: {
+          wood: 0.2,
+          fire: 0.2,
+          earth: 0.2,
+          metal: 0.2,
+          water: 0.2,
+        },
+        crown_spread: 1,
+        branch_lift: 0.84,
+        root_spread: 1,
+        bark_definition: 0.86,
+        surface_moisture: 0.9,
+        semantic_status: "VISUAL_METAPHOR_ONLY",
+      },
+      scene_hash: `${candidateRef}-scene-hash`,
+    },
+  };
+};
 
 const candidates = Object.freeze([
   Object.freeze(candidate("candidate-career", "career", "闻溪", 1)),
@@ -103,7 +140,7 @@ const candidates = Object.freeze([
 ]);
 
 const baseGrove = {
-  grove_version: "v60.dream-grove.003",
+  grove_version: "v60.dream-grove.004",
   selection_status: "AWAITING_TREE_SELECTION",
   candidates,
   hidden_outcome_included: false,

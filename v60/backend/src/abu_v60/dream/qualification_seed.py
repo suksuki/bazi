@@ -43,6 +43,7 @@ from abu_v60.story import (
     QUALIFICATION_EPISODE_SOURCE_REGISTRY_HASH,
     EpisodeSourceCompilation,
     StoryEpisodeAdmissionService,
+    StoryEpisodeTransitionAdmissionService,
     qualification_episode_source_registry,
 )
 from abu_v60.system_manifest import PRIMARY_WORLD_ID
@@ -54,6 +55,33 @@ from abu_v60.world import (
 )
 
 THREE_LIFE_SEED_BATCH_REF = "v60-seed-batch-three-life-qualification-v1"
+THREE_LIFE_CHAPTER_TWO_SEED_BATCH_REF = (
+    "v60-seed-batch-three-life-wenxi-chapter-two-v1"
+)
+THREE_LIFE_LEGACY_SOURCE_REGISTRY_HASH = (
+    "11a060ced3ae7413a99f9d2b3aaa41156aac5fbc05e27d54ba35b08a6a182b34"
+)
+WENXI_CHAPTER_TWO_PACKAGE_REF = (
+    "v60.episode-package.wenxi-index-convention.v1"
+)
+WENXI_CHAPTER_TWO_PACKAGE_HASH = (
+    "6e0af51871d116eb5b9ed49e236b047b99bb4ae50b4767bab0ac8f216f466284"
+)
+WENXI_CHAPTER_TWO_QUESTION_REF = "v60-question-wenxi-index-convention-v1"
+WENXI_CHAPTER_TWO_WORLD_EVENT_REF = (
+    "v60-world-event-wenxi-index-adoption-v1"
+)
+WENXI_CHAPTER_TWO_TRANSITION_REF = (
+    "v60-episode-transition-64b0804f1fdb3d1093fa"
+)
+WENXI_CHAPTER_TWO_TRANSITION_HASH = (
+    "74d92439d60a74c41623951bfff4e73e52680959a8251d25e88aa70c78ee9fbe"
+)
+_CONTINUATION_PACKAGE_REFS = {
+    "v60.episode-package.wenxi-archive-trial.v1": (
+        WENXI_CHAPTER_TWO_PACKAGE_REF,
+    ),
+}
 
 
 def seed_three_life_qualification(engine: Engine) -> dict[str, Any]:
@@ -64,15 +92,29 @@ def seed_three_life_qualification(engine: Engine) -> dict[str, Any]:
         "pool_ref": THREE_LIFE_POOL_REF,
         "actor_kind": "CANONICAL_SYNTHETIC",
         "source_origin": "V60_OWNER_APPROVED_SYNTHETIC_CONTENT",
-        "source_registry_hash": QUALIFICATION_EPISODE_SOURCE_REGISTRY_HASH,
+        "source_registry_hash": THREE_LIFE_LEGACY_SOURCE_REGISTRY_HASH,
         "llm_calls": 0,
         "case_refs": [item["spec"].case_ref for item in prepared],
         "question_refs": [
             item["source"].definition.runtime.question_ref for item in prepared
         ],
     }
+    chapter_two_manifest = {
+        "seed_id": "v60.dream-three-life-wenxi-chapter-two.v1",
+        "parent_batch_ref": THREE_LIFE_SEED_BATCH_REF,
+        "source_origin": "V60_OWNER_APPROVED_SYNTHETIC_CONTENT",
+        "source_registry_hash": QUALIFICATION_EPISODE_SOURCE_REGISTRY_HASH,
+        "package_ref": WENXI_CHAPTER_TWO_PACKAGE_REF,
+        "package_hash": WENXI_CHAPTER_TWO_PACKAGE_HASH,
+        "question_ref": WENXI_CHAPTER_TWO_QUESTION_REF,
+        "world_event_ref": WENXI_CHAPTER_TWO_WORLD_EVENT_REF,
+        "transition_ref": WENXI_CHAPTER_TWO_TRANSITION_REF,
+        "transition_hash": WENXI_CHAPTER_TWO_TRANSITION_HASH,
+        "llm_calls": 0,
+    }
     with engine.begin() as connection:
-        MigrationBatchAdmissionService().admit(
+        batch_admission = MigrationBatchAdmissionService()
+        batch_admission.admit(
             connection,
             definition=MigrationBatchDefinition(
                 batch_ref=THREE_LIFE_SEED_BATCH_REF,
@@ -82,12 +124,30 @@ def seed_three_life_qualification(engine: Engine) -> dict[str, Any]:
                 manifest=seed_manifest,
             ),
         )
+        batch_admission.admit(
+            connection,
+            definition=MigrationBatchDefinition(
+                batch_ref=THREE_LIFE_CHAPTER_TWO_SEED_BATCH_REF,
+                source_system="V60",
+                source_database="qiazhi_v60",
+                status="COMPLETED",
+                manifest=chapter_two_manifest,
+            ),
+        )
         for item in prepared:
             _admit_prepared(connection, engine=engine, item=item)
+        transition_admission = StoryEpisodeTransitionAdmissionService()
+        for transition in qualification_episode_source_registry().transitions():
+            transition_admission.admit(
+                connection,
+                definition=transition,
+            )
 
     return {
         "pool_ref": THREE_LIFE_POOL_REF,
         "source_registry_hash": QUALIFICATION_EPISODE_SOURCE_REGISTRY_HASH,
+        "legacy_source_registry_hash": THREE_LIFE_LEGACY_SOURCE_REGISTRY_HASH,
+        "chapter_two_seed_batch_ref": THREE_LIFE_CHAPTER_TWO_SEED_BATCH_REF,
         "llm_calls": 0,
         "candidates": [
             {
@@ -145,12 +205,14 @@ def _prepare_spec(spec: ThreeLifeQualificationSpec) -> dict[str, Any]:
         mechanism_vector=mechanism_vector,
         timing_vector=timing_vector,
     )
-    source = qualification_episode_source_registry().compile_package(
+    source_registry = qualification_episode_source_registry()
+    bindings = {
+        spec.binding_fact_key: structure_fact["fact_ref"],
+        spec.binding_domain_key: life_domain_vector.vector_ref,
+    }
+    source = source_registry.compile_package(
         spec.package_ref,
-        bindings={
-            spec.binding_fact_key: structure_fact["fact_ref"],
-            spec.binding_domain_key: life_domain_vector.vector_ref,
-        },
+        bindings=bindings,
     )
     if (
         source.definition.actor_ref != spec.actor_ref
@@ -158,6 +220,20 @@ def _prepare_spec(spec: ThreeLifeQualificationSpec) -> dict[str, Any]:
         or not source.definition.runtime.entrypoint
     ):
         raise ValueError("three_life_qualification_source_identity_mismatch")
+    continuation_sources = tuple(
+        source_registry.compile_package(
+            package_ref,
+            bindings=bindings,
+        )
+        for package_ref in _CONTINUATION_PACKAGE_REFS.get(spec.package_ref, ())
+    )
+    if any(
+        continuation.definition.actor_ref != spec.actor_ref
+        or continuation.definition.tree_ref != spec.tree_ref
+        or continuation.definition.runtime.entrypoint
+        for continuation in continuation_sources
+    ):
+        raise ValueError("three_life_qualification_continuation_identity_mismatch")
     return {
         "spec": spec,
         "birth_input": birth_input,
@@ -168,6 +244,7 @@ def _prepare_spec(spec: ThreeLifeQualificationSpec) -> dict[str, Any]:
         "timing_vector": timing_vector,
         "life_domain_vector": life_domain_vector,
         "source": source,
+        "continuation_sources": continuation_sources,
     }
 
 
@@ -207,7 +284,7 @@ def _admit_prepared(
             source_manifest={
                 "source_origin": "V60_OWNER_APPROVED_SYNTHETIC_CONTENT",
                 "seed_batch_ref": THREE_LIFE_SEED_BATCH_REF,
-                "source_registry_hash": QUALIFICATION_EPISODE_SOURCE_REGISTRY_HASH,
+                "source_registry_hash": THREE_LIFE_LEGACY_SOURCE_REGISTRY_HASH,
                 "llm_calls": 0,
             },
         ),
@@ -230,6 +307,8 @@ def _admit_prepared(
     )
     _admit_actor(connection, spec=spec, source=source)
     _admit_world_events(connection, source=source)
+    for continuation in item["continuation_sources"]:
+        _admit_world_events(connection, source=continuation)
     LifeTreeAdmissionService().admit(
         connection,
         definition=LifeTreeDefinition(
@@ -245,6 +324,12 @@ def _admit_prepared(
         life_case_revision_ref=compiled.life_case_revision_ref,
         definition=source.definition,
     )
+    for continuation in item["continuation_sources"]:
+        StoryEpisodeAdmissionService().admit(
+            connection,
+            life_case_revision_ref=compiled.life_case_revision_ref,
+            definition=continuation.definition,
+        )
     DreamGroveAdmissionService().admit(
         connection,
         definition=GroveCandidateDefinition.issue(

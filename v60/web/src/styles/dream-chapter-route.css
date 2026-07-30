@@ -1,0 +1,126 @@
+.grove-tree-art {
+  height: calc(100% - 128px);
+}
+
+.grove-tree-copy {
+  min-height: 122px;
+}
+
+.dream-grove-chapter-route {
+  display: grid;
+  width: min(260px, 96%);
+  justify-items: center;
+  gap: 3px;
+  margin-top: 5px;
+}
+
+.dream-grove-chapter-route > small {
+  margin: 0;
+  padding: 2px 7px;
+  border: 1px solid rgba(235, 207, 128, 0.34);
+  border-radius: 999px;
+  color: #f1d98e;
+  background: rgba(32, 67, 47, 0.46);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.dream-grove-chapter-route > strong {
+  color: #fff8df;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.dream-grove-chapter-route > span,
+.dream-grove-chapter-route > em {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: rgba(255, 250, 229, 0.72);
+  font-size: 9px;
+  font-style: normal;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.dream-grove-chapter-route > em {
+  color: #ead28d;
+  font-weight: 700;
+  -webkit-line-clamp: 1;
+}
+
+.dream-grove-chapter-route-withheld > small {
+  border-color: rgba(255, 237, 197, 0.18);
+  color: rgba(255, 245, 218, 0.62);
+  background: rgba(41, 55, 46, 0.42);
+}
+
+.dream-grove-chapter-route-withheld > strong,
+.dream-grove-chapter-route-withheld > em {
+  color: rgba(255, 247, 222, 0.58);
+}
+
+.dream-grove-chapter-route-complete > small {
+  border-color: rgba(207, 224, 190, 0.26);
+  color: #c8dbae;
+}
+
+.grove-tree-choice[data-chapter-route-status="WITHHELD"]:disabled,
+.grove-tree-choice[data-chapter-route-status="STORY_CURRENTLY_COMPLETE"]:disabled {
+  cursor: not-allowed;
+}
+
+.grove-tree-choice[data-chapter-route-status="WITHHELD"] .grove-tree-art,
+.grove-tree-choice[data-chapter-route-status="STORY_CURRENTLY_COMPLETE"]
+  .grove-tree-art {
+  opacity: 0.72;
+  filter:
+    hue-rotate(var(--grove-hue))
+    saturate(calc(var(--grove-saturation) - 0.16))
+    brightness(calc(var(--grove-lightness) - 0.08))
+    drop-shadow(0 12px 16px rgba(25, 49, 35, 0.28));
+}
+
+.dream-pending-attention-badge {
+  bottom: 136px;
+}
+
+.dream-chapter-marker {
+  display: none;
+  margin: 0;
+  padding-left: 42px;
+  color: #8f7439;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+}
+
+.life-tree-experience[data-chapter^="RETURN"] .dream-chapter-marker {
+  display: block;
+}
+
+@media (max-width: 760px) {
+  .grove-tree-art {
+    height: calc(100% - 112px);
+  }
+
+  .grove-tree-copy {
+    min-height: 106px;
+  }
+
+  .dream-grove-chapter-route > span {
+    -webkit-line-clamp: 1;
+  }
+
+  .dream-pending-attention-badge {
+    bottom: 118px;
+  }
+
+  .dream-chapter-marker {
+    padding-left: 38px;
+  }
+}

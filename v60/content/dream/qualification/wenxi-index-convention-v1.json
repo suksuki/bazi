@@ -1,0 +1,305 @@
+{
+  "package_version": "v60.episode-source-package.002",
+  "package_ref": "v60.episode-package.wenxi-index-convention.v1",
+  "binding_keys": [
+    "career_structure_fact_ref",
+    "career_life_domain_vector_ref"
+  ],
+  "definition_template": {
+    "runtime": {
+      "episode_ref": "v60-dream-episode-wenxi-index-convention-v1",
+      "episode_version": 1,
+      "runtime_status": "ACTIVE",
+      "gameplay_id": "life_tree_question_v1",
+      "content_key": "dream.qualification.wenxi-index-convention",
+      "chapter": "RETURN_VISIT",
+      "entrypoint": false,
+      "actor_ref": "v60-actor-wenxi-v1",
+      "tree_ref": "v60-life-tree-wenxi-v1",
+      "question_ref": "v60-question-wenxi-index-convention-v1",
+      "baseline_event_ref": "v60-world-event-wenxi-index-draft-v1",
+      "world_event_ref": "v60-world-event-wenxi-index-adoption-v1",
+      "cutoff_tick": 48,
+      "due_tick": 96,
+      "resolution_rule_hash": "0bd2e25321abef26d891d330fdb1b776416708848e68024dd391ac0185fa24c3",
+      "runtime_metadata": {
+        "baseline_event_ref": "v60-world-event-wenxi-index-draft-v1",
+        "npc_choice_id": "standard_named",
+        "flower_name": "索引试用花",
+        "fruit_name": "共编索引果",
+        "return_label": null
+      },
+      "narrative": {
+        "narrative_version": "v60.episode-narrative.001",
+        "scene_ref": "v60-theater-scene-wenxi-index-convention-v1",
+        "moments": [
+          {
+            "phase": "OBSERVING",
+            "content_key": "dream.qualification.wenxi-index-convention.observing",
+            "title": "新索引铺上了长桌",
+            "status_line": "先看共同修复后的两条新事实",
+            "theater_beat": "闻溪把统一索引铺在共同修复的两册旁，馆员同意先在下一册试用。",
+            "abu_line": "共同署名已经发生；现在只看这张新索引怎样进入下一册。",
+            "disclosure": "BASELINE_ONLY"
+          },
+          {
+            "phase": "QUESTION_OPEN",
+            "content_key": "dream.qualification.wenxi-index-convention.question-open",
+            "title": "这张索引会走到哪里",
+            "status_line": "正式规程、共同试用与个人记录都仍可能",
+            "theater_beat": "下一册尚未开修，索引的采用范围和维护人都没有落定。",
+            "abu_line": "别把上一次共同署名当成这一次被采用的保证。",
+            "disclosure": "BASELINE_ONLY"
+          },
+          {
+            "phase": "WAITING_FOR_WORLD",
+            "content_key": "dream.qualification.wenxi-index-convention.waiting-for-world",
+            "title": "新判断已经封进花心",
+            "status_line": "下一册修复按自己的时间继续",
+            "theater_beat": "判断留在花心，索引会不会被采用不受答案推动。",
+            "abu_line": "先让馆员和下一册自己留下事实。",
+            "disclosure": "SEALED_NO_OUTCOME"
+          },
+          {
+            "phase": "REVEAL_READY",
+            "content_key": "dream.qualification.wenxi-index-convention.reveal-ready",
+            "title": "索引的现实回应已经抵达",
+            "status_line": "共编索引果已经成熟，内容仍保持遮蔽",
+            "theater_beat": "下一册已经留下新的使用记录，但尚未展开。",
+            "abu_line": "打开果实时，只核对采用范围与维护方式。",
+            "disclosure": "WORLD_COMMITTED_HIDDEN"
+          },
+          {
+            "phase": "REVEALED",
+            "content_key": "dream.qualification.wenxi-index-convention.revealed",
+            "title": "共同试用，尚未成规",
+            "status_line": "逐项对照采用范围与维护方式",
+            "theater_beat": "新索引进入下一册共同试用，但尚未成为正式规程，并由闻溪与馆员共同补充。",
+            "abu_line": "这一次的新证据只说明试用和共同补充，不把它升级成制度。",
+            "disclosure": "OUTCOME_REVEALED"
+          },
+          {
+            "phase": "COMPLETED",
+            "content_key": "dream.qualification.wenxi-index-convention.completed",
+            "title": "共编索引果已经记入生命线",
+            "status_line": "第二次复盘已经完成",
+            "theater_beat": "共编索引果记下试用范围与共同维护两项事实。",
+            "abu_line": "同一棵树长出了新事件，但上一枚果实没有替这一枚作答。",
+            "disclosure": "OUTCOME_REVEALED"
+          }
+        ]
+      },
+      "continuation_question_ref": null,
+      "continuation_label": null,
+      "entry_world_event": {
+        "event_ref": "v60-world-event-wenxi-index-draft-v1",
+        "event_type": "ARCHIVE_INDEX_PILOT_BASELINE",
+        "summary": "闻溪整理出一张统一索引，馆员同意先在下一册共同试用。",
+        "caused_by_event_ref": "v60-world-event-wenxi-archive-role-v1",
+        "evidence": [
+          {
+            "evidence_ref": "v60-evidence-wenxi-index-draft-v1",
+            "observed_at_tick": 48,
+            "summary": "共同修复两册后，闻溪把破损位置、补纸批次和复核人整理成一张统一索引。",
+            "epistemic_role": "DECISION_BASELINE_NO_CREDIT"
+          },
+          {
+            "evidence_ref": "v60-evidence-wenxi-index-pilot-open-v1",
+            "observed_at_tick": 48,
+            "summary": "馆员同意在下一册试用这张索引，但尚未决定是否写入馆内规程。",
+            "epistemic_role": "DECISION_BASELINE_NO_CREDIT"
+          }
+        ],
+        "actor_state_delta": {
+          "activity": "waiting-for-index-pilot-result",
+          "last_committed_event_ref": "v60-world-event-wenxi-index-draft-v1"
+        }
+      },
+      "tree_state_on_entry": "INDEX_PILOT_PROPOSED",
+      "tree_state_after_settlement": "INDEX_PILOT_FRUIT_MATURED"
+    },
+    "actor_ref": "v60-actor-wenxi-v1",
+    "tree_ref": "v60-life-tree-wenxi-v1",
+    "question_version": 1,
+    "prompt": "共同署名之后，闻溪整理的新索引会先落到哪一种现实形态？",
+    "options": [
+      {
+        "choice_id": "standard_named",
+        "label": "写入馆内正式规程，并由闻溪负责维护",
+        "proposition": {
+          "adoption_scope": "standard",
+          "stewardship": "named"
+        }
+      },
+      {
+        "choice_id": "pilot_shared",
+        "label": "先在一册共同试用，由闻溪与馆员共同补充",
+        "proposition": {
+          "adoption_scope": "pilot",
+          "stewardship": "shared"
+        }
+      },
+      {
+        "choice_id": "personal_note",
+        "label": "只留作闻溪自己的工作记录",
+        "proposition": {
+          "adoption_scope": "personal",
+          "stewardship": "individual"
+        }
+      }
+    ],
+    "baseline_evidence": [
+      {
+        "evidence_ref": "v60-evidence-wenxi-index-draft-v1",
+        "observed_at_tick": 48,
+        "summary": "共同修复两册后，闻溪把破损位置、补纸批次和复核人整理成一张统一索引。",
+        "epistemic_role": "DECISION_BASELINE_NO_CREDIT"
+      },
+      {
+        "evidence_ref": "v60-evidence-wenxi-index-pilot-open-v1",
+        "observed_at_tick": 48,
+        "summary": "馆员同意在下一册试用这张索引，但尚未决定是否写入馆内规程。",
+        "epistemic_role": "DECISION_BASELINE_NO_CREDIT"
+      }
+    ],
+    "resolution_rule": {
+      "rule_version": "v60.atom-reconciliation.v1",
+      "compare_atoms": [
+        "adoption_scope",
+        "stewardship"
+      ],
+      "baseline_evidence_credit": false,
+      "exact_match": "SUPPORTED",
+      "mixed_match": "PARTIAL",
+      "no_match": "NOT_SUPPORTED",
+      "baseline_event_ref": "v60-world-event-wenxi-index-draft-v1",
+      "npc_choice_id": "standard_named",
+      "flower_name": "索引试用花",
+      "fruit_name": "共编索引果",
+      "theater_scene_ref": "v60-theater-scene-wenxi-index-convention-v1",
+      "theater_beat": "闻溪把统一索引铺在共同修复的两册旁，馆员同意先在下一册试用。",
+      "return_label": null
+    },
+    "sealed_outcome": {
+      "outcome_id": "shared_index_pilot",
+      "resolved_proposition": {
+        "adoption_scope": "pilot",
+        "stewardship": "shared"
+      },
+      "evidence": [
+        {
+          "evidence_ref": "v60-evidence-wenxi-index-one-volume-v1",
+          "summary": "下一册修复启用这张索引，但馆方没有把它写入正式规程。",
+          "atom": {
+            "adoption_scope": "pilot"
+          }
+        },
+        {
+          "evidence_ref": "v60-evidence-wenxi-index-shared-update-v1",
+          "summary": "索引页由闻溪与原馆员共同补充，没有指定单独维护人。",
+          "atom": {
+            "stewardship": "shared"
+          }
+        }
+      ],
+      "actual_event": "新索引进入下一册共同试用，但尚未成为正式规程，并由闻溪与馆员共同补充。"
+    },
+    "world_event_type": "ARCHIVE_INDEX_ADOPTION_OUTCOME",
+    "world_event_summary": "观察共同修复后形成的新索引会怎样进入下一册工作。",
+    "organ_set": {
+      "evidence_leaf_world": {
+        "organ_ref": "v60-wenxi-index-convention-organ-world-leaf-v1",
+        "role": "EVIDENCE_LEAF",
+        "source_refs": [
+          "v60-evidence-wenxi-index-draft-v1"
+        ],
+        "label": "共同修复后出现的新现实线索"
+      },
+      "evidence_leaf_structure": {
+        "organ_ref": "v60-wenxi-index-convention-organ-structure-leaf-v1",
+        "role": "EVIDENCE_LEAF",
+        "source_refs": [
+          {
+            "$binding": "career_structure_fact_ref"
+          },
+          {
+            "$binding": "career_life_domain_vector_ref"
+          }
+        ],
+        "label": "career命纹留下的观察线索"
+      },
+      "structure_branch": {
+        "organ_ref": "v60-wenxi-index-convention-organ-branch-v1",
+        "role": "STRUCTURE_BRANCH",
+        "source_refs": [
+          "v60-evidence-wenxi-index-draft-v1",
+          {
+            "$binding": "career_structure_fact_ref"
+          },
+          {
+            "$binding": "career_life_domain_vector_ref"
+          }
+        ],
+        "label": "新索引行动与命纹之间的观察主脉"
+      },
+      "question_flower": {
+        "organ_ref": "v60-wenxi-index-convention-organ-flower-v1",
+        "role": "QUESTION_FLOWER",
+        "source_refs": [
+          "v60-question-wenxi-index-convention-v1"
+        ],
+        "label": "索引试用花"
+      },
+      "outcome_fruit": {
+        "organ_ref": "v60-wenxi-index-convention-organ-fruit-v1",
+        "role": "OUTCOME_FRUIT",
+        "source_refs": [
+          "v60-world-event-wenxi-index-adoption-v1"
+        ],
+        "label": "共编索引果"
+      }
+    }
+  },
+  "world_event_definitions": [
+    {
+      "world_event_ref": "v60-world-event-wenxi-index-adoption-v1",
+      "world_ref": "abu-dream-world-v1",
+      "actor_ref": "v60-actor-wenxi-v1",
+      "event_type": "ARCHIVE_INDEX_ADOPTION_OUTCOME",
+      "due_tick": 96,
+      "initial_status": "SCHEDULED",
+      "event_payload": {
+        "summary": "观察共同修复后形成的新索引会怎样进入下一册工作。",
+        "due_tick": 96,
+        "resolution_owner": "V60_WORLD_ENGINE",
+        "answer_can_affect_outcome": false
+      },
+      "sealed_outcome": {
+        "outcome_id": "shared_index_pilot",
+        "resolved_proposition": {
+          "adoption_scope": "pilot",
+          "stewardship": "shared"
+        },
+        "evidence": [
+          {
+            "evidence_ref": "v60-evidence-wenxi-index-one-volume-v1",
+            "summary": "下一册修复启用这张索引，但馆方没有把它写入正式规程。",
+            "atom": {
+              "adoption_scope": "pilot"
+            }
+          },
+          {
+            "evidence_ref": "v60-evidence-wenxi-index-shared-update-v1",
+            "summary": "索引页由闻溪与原馆员共同补充，没有指定单独维护人。",
+            "atom": {
+              "stewardship": "shared"
+            }
+          }
+        ],
+        "actual_event": "新索引进入下一册共同试用，但尚未成为正式规程，并由闻溪与馆员共同补充。"
+      },
+      "settled_at_tick": null,
+      "initial_evidence": []
+    }
+  ]
+}
