@@ -15,7 +15,7 @@ from abu_v60.architecture.contracts import (
 @lru_cache(maxsize=1)
 def runtime_architecture() -> RuntimeArchitecture:
     architecture = RuntimeArchitecture(
-        architecture_version="v60.runtime-architecture.042",
+        architecture_version="v60.runtime-architecture.043",
         modules=(
             RuntimeModule(
                 module_id="identity",
@@ -177,7 +177,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="dream-game",
                 kind=ModuleKind.ENGINE,
-                version="v60.dream-game-engine.013",
+                version="v60.dream-game-engine.014",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("dream",),
                 reads_from=("identity", "mingli", "world", "story", "cognition"),
@@ -209,6 +209,9 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "existing_encounter_before_grove_selection",
                     "completed_encounter_departure",
                     "repeatable_grove_cycle",
+                    "completed_history_resurrection_guard",
+                    "account_private_return_echo_projection",
+                    "return_echo_committed_source_validation",
                 ),
                 writes_canonical_state=True,
             ),
@@ -264,7 +267,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-dream",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-dream.014",
+                version="v60.unit-dream.015",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "media"),
                 capabilities=(
@@ -283,6 +286,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "read_only_reading_observation_lens",
                     "reading_lens_no_tree_candidate_or_order_mutation",
                     "reading_lens_encounter_continuity",
+                    "grove_return_echo",
                     "dream_outcome_not_owner_mingli_evidence",
                 ),
             ),

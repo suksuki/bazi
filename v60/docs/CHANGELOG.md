@@ -2,6 +2,35 @@
 
 ## 2026-07-30
 
+### Persistent Dream return echo
+
+- Added `v60.dream-return-echo.001`, an account-private read projection over
+  the latest completed and departed Dream Encounter.
+- The Grove now shows the player's sealed judgment, the committed world
+  response, the exact outcome-evidence summaries and a bounded next
+  observation. Abu's expandable recap asks what the result means, what it
+  cannot mean and what to inspect next.
+- Revalidated the persisted Episode admission, question and organ Hashes,
+  HUMAN and NPC AnswerSeals, reconciled Fruit, Reveal, admitted WorldEvent
+  manifest/Actor/World identity, settlement Tick and exact event-evidence set
+  before issuing a stable Echo Ref/Hash. Corrupted lineage fails closed.
+- Kept the echo entirely outside owner Mingli, Knowledge and Cognition writes.
+  It invokes no Provider, creates no Decision, changes no canonical state and
+  explicitly says that a synthetic Dream result is not owner Mingli evidence.
+- Preserved the exact three Grove candidate identities and order. Tightened
+  current-Encounter selection so older completed records cannot resurface
+  after the latest Encounter has departed to the Grove.
+- Advanced Grove to `v60.dream-grove.002`, Dream Game to
+  `v60.dream-game-engine.014`, Unit Dream to `.015` and Runtime Architecture
+  to `.043`. Foundation `.013`, Mingli `.021` and migration head `0021` are
+  unchanged.
+- Passed all 243 backend tests, Ruff, TypeScript/Vite build, Runtime
+  Architecture, source maintainability and frontend contracts. A real
+  `SUPPORTED` review is stable across refresh and restart, keeps Home
+  Case/Chart/LifeCase/Reading identities unchanged, emits zero read-time POST
+  requests and passes signed-in real Chrome inspection. Evidence is in
+  `.artifacts/dream-return-echo/`.
+
 ### Relation-effect research frontier and Dream lens continuity
 
 - Added `v60.mingli-relation-effect-research-frontier.001`, a read-only map

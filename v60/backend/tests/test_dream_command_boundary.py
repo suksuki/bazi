@@ -6,14 +6,14 @@ from unittest.mock import patch
 
 import pytest
 from abu_v60.db import engine
-from abu_v60.dream.errors import DreamConflictError
+from abu_v60.dream.errors import DreamConflictError, DreamStateError
 from abu_v60.dream.first_slice import SEALED_FUTURE_OUTCOME
 from abu_v60.dream.grove import DreamGroveRepository
 from abu_v60.dream.return_slice import RETURN_SEALED_FUTURE_OUTCOME
 from abu_v60.dream.seed import SEED_BATCH_REF
 from abu_v60.dream.service import DreamService
 from abu_v60.game import DreamCommand, DreamCommandEnvelope
-from abu_v60.provenance import canonical_json
+from abu_v60.provenance import canonical_json, content_hash
 from abu_v60.world import WorldContinuityEngine
 from sqlalchemy import text
 
@@ -405,7 +405,12 @@ def test_completed_encounter_returns_to_grove_and_starts_a_new_tree(
     service = DreamService(engine)
     entry = service.entry(account_ref=qa_account)
     assert entry["kind"] == "GROVE"
+    assert entry["grove"]["grove_version"] == "v60.dream-grove.002"
+    assert entry["grove"]["return_echo"] is None
     candidates = entry["grove"]["candidates"]
+    candidate_order = [
+        candidate["candidate_ref"] for candidate in candidates
+    ]
     first_candidate = candidates[0]
     next_candidate = candidates[1]
     snapshot = service.start_grove_encounter(
@@ -414,6 +419,56 @@ def test_completed_encounter_returns_to_grove_and_starts_a_new_tree(
     )
     first_encounter_ref = snapshot["encounter"]["encounter_ref"]
     first_question_ref = snapshot["lineage"]["question_ref"]
+    legacy_state = {
+        "observed_organs": [],
+        "question_visible": True,
+        "answer_sealed": True,
+        "world_settled": True,
+        "revealed": True,
+        "reconciled": True,
+        "departed_to_grove": False,
+    }
+    with engine.begin() as connection:
+        legacy_source = (
+            connection.execute(
+                text(
+                    """
+                    SELECT question_ref, actor_ref, tree_ref
+                    FROM dream.grove_candidates
+                    WHERE candidate_ref = :candidate_ref
+                    """
+                ),
+                {"candidate_ref": candidates[2]["candidate_ref"]},
+            )
+            .mappings()
+            .one()
+        )
+        connection.execute(
+            text(
+                """
+                INSERT INTO dream.encounters
+                    (encounter_ref, viewer_account_ref, actor_ref, tree_ref,
+                     question_ref, status, version, correlation_id,
+                     causation_id, state_json, state_hash, updated_at)
+                VALUES
+                    (:encounter_ref, :account_ref, :actor_ref, :tree_ref,
+                     :question_ref, 'COMPLETED', 1, :correlation_id,
+                     :causation_id, CAST(:state_json AS jsonb), :state_hash,
+                     now() - interval '7 days')
+                """
+            ),
+            {
+                "encounter_ref": "v60-encounter-legacy-completed-history",
+                "account_ref": qa_account,
+                "actor_ref": legacy_source["actor_ref"],
+                "tree_ref": legacy_source["tree_ref"],
+                "question_ref": legacy_source["question_ref"],
+                "correlation_id": "v60-correlation-legacy-completed-history",
+                "causation_id": "v60-causation-legacy-completed-history",
+                "state_json": canonical_json(legacy_state),
+                "state_hash": content_hash(legacy_state),
+            },
+        )
 
     for key, command in (
         ("evidence_leaf_world", DreamCommand.OBSERVE_EVIDENCE),
@@ -468,11 +523,217 @@ def test_completed_encounter_returns_to_grove_and_starts_a_new_tree(
         envelope=return_command,
     )
     assert grove_entry["kind"] == "GROVE"
-    assert service.execute_command(
+    assert [
+        candidate["candidate_ref"]
+        for candidate in grove_entry["grove"]["candidates"]
+    ] == candidate_order
+    echo = grove_entry["grove"]["return_echo"]
+    assert echo["contract_version"] == "v60.dream-return-echo.001"
+    assert echo["encounter_ref"] == first_encounter_ref
+    assert echo["public_alias"] == first_candidate["public_alias"]
+    assert echo["episode_title"]
+    assert echo["judgment"]["choice_label"]
+    assert echo["judgment"]["summary"]
+    assert echo["world_response"]["summary"]
+    assert echo["world_response"]["evidence_summaries"]
+    assert echo["still_to_observe"]["summary"]
+    assert set(echo["abu_recap"]) == {
+        "meaning",
+        "boundary",
+        "next_attention",
+    }
+    assert echo["semantics"] == "DREAM_LIFE_RETURN_ECHO_ONLY"
+    assert echo["owner_mingli_evidence_allowed"] is False
+    assert echo["dream_outcome_admitted_as_owner_evidence"] is False
+    assert echo["tree_candidate_set_or_order_changed"] is False
+    assert echo["mingli_write_allowed"] is False
+    assert echo["decision_write_allowed"] is False
+    assert echo["knowledge_write_allowed"] is False
+    assert echo["canonical_write_allowed"] is False
+    assert echo["read_only"] is True
+    echo_json = canonical_json(echo)
+    for forbidden in (
+        "decision_ref",
+        "chart_version_ref",
+        "mingli_reading",
+        "knowledge_profile",
+        "probability",
+    ):
+        assert forbidden not in echo_json
+
+    with engine.connect() as connection:
+        decision_count_before_reads = connection.execute(
+            text(
+                """
+                SELECT count(*)
+                FROM cognition.decision_records
+                WHERE subject_ref = :encounter_ref
+                """
+            ),
+            {"encounter_ref": first_encounter_ref},
+        ).scalar_one()
+        source_rows = connection.execute(
+            text(
+                """
+                SELECT seal.answer_seal_ref, seal.seal_hash,
+                       reveal.reveal_ref, reveal.reveal_hash,
+                       reveal.world_event_ref,
+                       event.actor_ref AS event_actor_ref
+                FROM dream.answer_seals AS seal
+                JOIN dream.reveals AS reveal
+                  ON reveal.encounter_ref = seal.encounter_ref
+                JOIN world.events AS event
+                  ON event.world_event_ref = reveal.world_event_ref
+                WHERE seal.encounter_ref = :encounter_ref
+                  AND seal.actor_role = 'HUMAN'
+                """
+            ),
+            {"encounter_ref": first_encounter_ref},
+        ).mappings().one()
+        evidence_rows = connection.execute(
+            text(
+                """
+                SELECT evidence_ref, evidence_hash,
+                       evidence_json ->> 'summary' AS summary
+                FROM world.event_evidence
+                WHERE world_event_ref = :world_event_ref
+                ORDER BY evidence_ref
+                """
+            ),
+            {"world_event_ref": source_rows["world_event_ref"]},
+        ).mappings().all()
+        alternate_actor_ref = connection.execute(
+            text(
+                """
+                SELECT actor_ref
+                FROM world.actors
+                WHERE actor_ref <> :actor_ref
+                ORDER BY actor_ref
+                LIMIT 1
+                """
+            ),
+            {"actor_ref": source_rows["event_actor_ref"]},
+        ).scalar_one()
+    assert echo["lineage"]["answer_seal_ref"] == source_rows[
+        "answer_seal_ref"
+    ]
+    assert echo["lineage"]["answer_seal_hash"] == source_rows["seal_hash"]
+    assert echo["lineage"]["reveal_ref"] == source_rows["reveal_ref"]
+    assert echo["lineage"]["reveal_hash"] == source_rows["reveal_hash"]
+    assert echo["lineage"]["committed_evidence_refs"] == [
+        row["evidence_ref"] for row in evidence_rows
+    ]
+    assert echo["lineage"]["committed_evidence_hashes"] == [
+        row["evidence_hash"] for row in evidence_rows
+    ]
+    assert echo["world_response"]["evidence_summaries"] == [
+        row["summary"] for row in evidence_rows
+    ]
+
+    replayed_grove = service.execute_command(
         account_ref=qa_account,
         envelope=return_command,
-    )["kind"] == "GROVE"
-    assert service.entry(account_ref=qa_account)["kind"] == "GROVE"
+    )
+    refreshed_grove = service.entry(account_ref=qa_account)
+    restarted_grove = DreamService(engine).entry(account_ref=qa_account)
+    assert replayed_grove["grove"]["return_echo"] == echo
+    assert refreshed_grove["grove"]["return_echo"] == echo
+    assert restarted_grove["grove"]["return_echo"] == echo
+    other_account_entry = DreamService(engine).entry(
+        account_ref="v60-account-return-echo-isolation-check"
+    )
+    assert other_account_entry["kind"] == "GROVE"
+    assert other_account_entry["grove"]["return_echo"] is None
+    with engine.connect() as connection:
+        assert (
+            connection.execute(
+                text(
+                    """
+                    SELECT count(*)
+                    FROM cognition.decision_records
+                    WHERE subject_ref = :encounter_ref
+                    """
+                ),
+                {"encounter_ref": first_encounter_ref},
+            ).scalar_one()
+            == decision_count_before_reads
+        )
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    """
+                    UPDATE dream.reveals
+                    SET reveal_hash = :invalid_hash
+                    WHERE reveal_ref = :reveal_ref
+                    """
+                ),
+                {
+                    "invalid_hash": "0" * 64,
+                    "reveal_ref": source_rows["reveal_ref"],
+                },
+            )
+        with pytest.raises(
+            DreamStateError,
+            match="dream_return_echo_reveal_invalid",
+        ):
+            DreamService(engine).entry(account_ref=qa_account)
+    finally:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    """
+                    UPDATE dream.reveals
+                    SET reveal_hash = :reveal_hash
+                    WHERE reveal_ref = :reveal_ref
+                    """
+                ),
+                {
+                    "reveal_hash": source_rows["reveal_hash"],
+                    "reveal_ref": source_rows["reveal_ref"],
+                },
+            )
+    assert DreamService(engine).entry(account_ref=qa_account)[
+        "grove"
+    ]["return_echo"] == echo
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    """
+                    UPDATE world.events
+                    SET actor_ref = :actor_ref
+                    WHERE world_event_ref = :world_event_ref
+                    """
+                ),
+                {
+                    "actor_ref": alternate_actor_ref,
+                    "world_event_ref": source_rows["world_event_ref"],
+                },
+            )
+        with pytest.raises(
+            DreamStateError,
+            match="dream_return_echo_world_event_admission_invalid",
+        ):
+            DreamService(engine).entry(account_ref=qa_account)
+    finally:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    """
+                    UPDATE world.events
+                    SET actor_ref = :actor_ref
+                    WHERE world_event_ref = :world_event_ref
+                    """
+                ),
+                {
+                    "actor_ref": source_rows["event_actor_ref"],
+                    "world_event_ref": source_rows["world_event_ref"],
+                },
+            )
+    assert DreamService(engine).entry(account_ref=qa_account)[
+        "grove"
+    ]["return_echo"] == echo
 
     next_snapshot = service.start_grove_encounter(
         account_ref=qa_account,

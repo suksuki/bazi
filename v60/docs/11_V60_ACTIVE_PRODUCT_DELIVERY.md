@@ -31,6 +31,7 @@ login
 -> independent AnswerSeals
 -> world settlement
 -> fruit reveal and reconciliation
+-> persistent Grove return echo
 -> return encounter on the same world line
 ```
 
@@ -94,6 +95,41 @@ Status: `PLAYABLE_AND_PROCESS_RESTART_AUDITED_LOCAL`
 - The three current stories are authored canonical synthetic lives. They prove
   the game kernel and persistence, not a scalable content factory or real
   prediction accuracy.
+
+## Completed Delivery: Persistent Dream Return Echo
+
+Status: `IMPLEMENTED_AND_REAL_CHROME_AUDITED_LOCAL`
+
+- Returning from a completed Dream Encounter now leaves an account-private,
+  persistent echo in the Grove. It shows the sealed judgment, the committed
+  world response and what remains worth observing, then expands into Abu's
+  three-question recap.
+- `v60.dream-return-echo.001` is rebuilt only from the latest completed and
+  departed Encounter's persisted Episode admission, HUMAN and NPC AnswerSeals,
+  Reveal, reconciled Fruit, admitted WorldEvent manifest/Actor/World identity,
+  exact event evidence and completed narrative. Every identity, Hash, Tick,
+  choice label and evidence membership is checked; drift fails closed instead
+  of producing a partial story.
+- The echo is a read projection. It invokes no Provider, creates no Decision,
+  writes no Knowledge or Mingli state and cannot enter the owner's Reading.
+  Its visible boundary says that the result belongs only to the synthetic
+  Dream life.
+- Grove still exposes exactly three candidates in the same server-owned order.
+  Historical completed Encounters older than the latest timeline record no
+  longer resurface as the current Encounter after departure.
+- The current real review sample preserves one supported judgment against two
+  committed outcome facts: the player chose to complete the water-allocation
+  time and wet-mark record and post it for review; the world recorded both the
+  posted record and its added details. Refresh and process restart reproduce
+  the same Echo Ref/Hash.
+- Grove is now `v60.dream-grove.002`, Dream Game
+  `v60.dream-game-engine.014`, Unit Dream `v60.unit-dream.015` and Runtime
+  Architecture `.043`. Foundation remains `.013`, Mingli remains `.021` and
+  migration head remains `0021_source_coordinate_review`.
+- All 243 backend tests, Ruff, TypeScript/Vite build, Runtime Architecture,
+  source maintainability, frontend contracts, repeatable Chrome audit and
+  signed-in real Chrome inspection pass. Evidence is in
+  `.artifacts/dream-return-echo/`.
 
 ## Completed Delivery: Executable Product Architecture
 

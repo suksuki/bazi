@@ -7,7 +7,7 @@ from abu_v60.system_manifest import runtime_manifest
 def test_runtime_architecture_has_one_owner_per_schema_and_five_units() -> None:
     architecture = runtime_architecture()
     architecture.validate_boundaries()
-    assert architecture.architecture_version == "v60.runtime-architecture.042"
+    assert architecture.architecture_version == "v60.runtime-architecture.043"
     assert architecture.product_units == (
         "unit-mingli",
         "unit-dream",
@@ -56,7 +56,7 @@ def test_manifest_exposes_world_game_and_localization_reservation() -> None:
     manifest = runtime_manifest()
     assert manifest["engines"]["decision"] == "v60.cognitive-decision-kernel.004"
     assert manifest["engines"]["context"] == "v60.experience-context.003"
-    assert manifest["engines"]["game"] == "v60.dream-game-engine.013"
+    assert manifest["engines"]["game"] == "v60.dream-game-engine.014"
     assert manifest["engines"]["world"] == "v60.world-continuity-engine.004"
     assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.021"
     assert manifest["engines"]["story"] == "v60.life-story-engine.009"
@@ -97,7 +97,7 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     assert modules["unit-mingli"].version == "v60.unit-mingli.015"
     assert modules["unit-abu"].version == "v60.unit-abu-says.007"
     assert modules["unit-lab"].version == "v60.unit-lab.012"
-    assert modules["unit-dream"].version == "v60.unit-dream.014"
+    assert modules["unit-dream"].version == "v60.unit-dream.015"
     assert "structural_candidate_projection" in modules["mingli"].capabilities
     assert "candidate_qualification_receipt" in modules["mingli"].capabilities
     assert "versioned_reading_envelope" in modules["mingli"].capabilities
@@ -192,6 +192,19 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
         in modules["unit-dream"].capabilities
     )
     assert "repeatable_grove_cycle" in modules["dream-game"].capabilities
+    assert (
+        "completed_history_resurrection_guard"
+        in modules["dream-game"].capabilities
+    )
+    assert (
+        "account_private_return_echo_projection"
+        in modules["dream-game"].capabilities
+    )
+    assert (
+        "return_echo_committed_source_validation"
+        in modules["dream-game"].capabilities
+    )
+    assert "grove_return_echo" in modules["unit-dream"].capabilities
     assert "mingli_reading_expression" in modules["unit-abu"].capabilities
     assert "shared_mingli_explanation_identity" in modules["unit-abu"].capabilities
     assert "shared_mechanism_qualification_identity" in modules["unit-abu"].capabilities

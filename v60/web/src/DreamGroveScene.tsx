@@ -8,6 +8,8 @@ import type {
   RuntimeMediaManifest,
 } from "./api";
 import { DreamReadingObservationLens } from "./components/DreamReadingObservationLens";
+import { DreamReturnEchoCard } from "./components/DreamReturnEchoCard";
+import { isDreamReturnEchoDisplayable } from "./dreamReturnEchoTypes";
 import type { DreamReadingObservationLensModel } from "./homeDreamObservationLens";
 
 const DOMAIN_LABELS = {
@@ -88,8 +90,14 @@ export function DreamGroveScene({
   media: RuntimeMediaManifest;
   onSelect: (candidateRef: string) => void;
 }) {
+  const returnEcho = grove.return_echo ?? null;
+  const returnEchoDisplayable = isDreamReturnEchoDisplayable(returnEcho);
+
   return (
-    <div className="dream-grove-scene">
+    <div
+      className="dream-grove-scene"
+      data-return-echo={returnEchoDisplayable}
+    >
       <img
         className="dream-grove-background"
         data-asset-ref={background.asset_ref}
@@ -111,6 +119,7 @@ export function DreamGroveScene({
         {grove.candidates.map((candidate) => (
           <button
             className="grove-tree-choice"
+            data-candidate-ref={candidate.candidate_ref}
             data-domain={candidate.domain}
             data-tree-version={candidate.tree.version}
             disabled={busy}
@@ -128,6 +137,7 @@ export function DreamGroveScene({
           </button>
         ))}
       </div>
+      <DreamReturnEchoCard echo={returnEcho} />
       <AbuCompanionMotion
         className="dream-grove-abu"
         cueKey={`dream-grove:${grove.grove_version}`}

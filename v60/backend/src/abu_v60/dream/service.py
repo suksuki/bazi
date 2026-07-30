@@ -17,12 +17,17 @@ from abu_v60.dream.catalog import (
 )
 from abu_v60.dream.command_guard import DreamCommandGuard
 from abu_v60.dream.errors import DreamStateError
-from abu_v60.dream.grove import DreamGroveError, DreamGroveRepository
+from abu_v60.dream.grove import (
+    DREAM_GROVE_VERSION,
+    DreamGroveError,
+    DreamGroveRepository,
+)
 from abu_v60.dream.grove_selection import DreamGroveEncounterSelector
 from abu_v60.dream.opportunity import DreamOpportunityMaterializer
 from abu_v60.dream.outcomes import DreamOutcomeCoordinator
 from abu_v60.dream.persistence import DreamRepository
 from abu_v60.dream.projection import DreamSnapshotProjector
+from abu_v60.dream.return_echo import DreamReturnEchoProjector
 from abu_v60.experience import EpisodePublicProjection, ExperienceProjectionComposer
 from abu_v60.game import (
     DreamCommand,
@@ -54,6 +59,9 @@ class DreamService:
             grove=self._grove,
             catalog_loader=self._catalog,
             opportunities=DreamOpportunityMaterializer(world=self._world),
+        )
+        self._return_echo = DreamReturnEchoProjector(
+            director=self._director,
         )
         self._experience = ExperienceProjectionComposer()
         self._public_projection = EpisodePublicProjection()
@@ -105,12 +113,21 @@ class DreamService:
                 if candidates:
                     if len(candidates) != 3:
                         raise DreamStateError("dream_grove_requires_exactly_three_trees")
+                    return_echo = self._return_echo.project(
+                        connection,
+                        account_ref=account_ref,
+                    )
                     return {
                         "kind": "GROVE",
                         "grove": {
-                            "grove_version": "v60.dream-grove.001",
+                            "grove_version": DREAM_GROVE_VERSION,
                             "selection_status": "AWAITING_TREE_SELECTION",
                             "candidates": candidates,
+                            "return_echo": (
+                                return_echo.model_dump(mode="json")
+                                if return_echo is not None
+                                else None
+                            ),
                             "hidden_outcome_included": False,
                             "hidden_npc_choice_included": False,
                         },

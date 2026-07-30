@@ -1,3 +1,5 @@
+import type { DreamReturnEcho } from "./dreamReturnEchoTypes";
+
 export { request } from "./http";
 export {
   loadBootstrap,
@@ -453,9 +455,10 @@ export interface DreamGroveCandidate {
 }
 
 export interface DreamGrove {
-  grove_version: "v60.dream-grove.001";
+  grove_version: "v60.dream-grove.002";
   selection_status: "AWAITING_TREE_SELECTION";
   candidates: DreamGroveCandidate[];
+  return_echo?: DreamReturnEcho | null;
   hidden_outcome_included: false;
   hidden_npc_choice_included: false;
 }

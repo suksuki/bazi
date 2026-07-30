@@ -267,22 +267,30 @@ class DreamRepository:
         for_update: bool,
     ) -> dict[str, Any] | None:
         lock_clause = "FOR UPDATE" if for_update else ""
+        # Apply the departure fence after choosing the account's active-first
+        # timeline tip so an older completed Encounter cannot become current.
         row = (
             connection.execute(
                 text(
                     f"""
-                    SELECT *
-                    FROM dream.encounters
-                    WHERE viewer_account_ref = :account_ref
-                      AND COALESCE(
-                            state_json ->> 'departed_to_grove',
+                    WITH latest_encounter AS (
+                        SELECT encounter_ref
+                        FROM dream.encounters
+                        WHERE viewer_account_ref = :account_ref
+                        ORDER BY
+                            CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END,
+                            updated_at DESC,
+                            encounter_ref DESC
+                        LIMIT 1
+                    )
+                    SELECT encounter.*
+                    FROM dream.encounters AS encounter
+                    JOIN latest_encounter AS latest
+                      ON latest.encounter_ref = encounter.encounter_ref
+                    WHERE COALESCE(
+                            encounter.state_json ->> 'departed_to_grove',
                             'false'
                           ) <> 'true'
-                    ORDER BY
-                        CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END,
-                        updated_at DESC,
-                        encounter_ref DESC
-                    LIMIT 1
                     {lock_clause}
                     """
                 ),
