@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -84,6 +85,14 @@ const source = {
     provider_confidence: 0.97,
   },
 };
+const domainSequence = (markup) =>
+  [...markup.matchAll(/data-domain="([^"]+)"/g)]
+    .map((match) => match[1])
+    .join(",");
+const observationListMarkup = (markup) =>
+  markup.match(
+    /<div class="dream-reading-observation-list">.*?<\/div>/s,
+  )?.[0] ?? "";
 
 try {
   const { buildDreamReadingObservationLens } = await vite.ssrLoadModule(
@@ -191,9 +200,22 @@ try {
   );
 
   const serializedLens = JSON.stringify(lens);
-  const markup = renderToStaticMarkup(
-    React.createElement(DreamReadingObservationLens, { lens }),
+  const groveMarkup = renderToStaticMarkup(
+    React.createElement(DreamReadingObservationLens, {
+      lens,
+      mode: "grove",
+    }),
   );
+  const encounterMarkup = renderToStaticMarkup(
+    React.createElement(DreamReadingObservationLens, {
+      lens,
+      mode: "encounter",
+    }),
+  );
+  const markups = [
+    ["grove", groveMarkup],
+    ["encounter", encounterMarkup],
+  ];
   for (const secret of [
     "brief-ref-secret",
     "brief-hash-secret",
@@ -211,7 +233,9 @@ try {
     "statement-secret",
   ]) {
     assertExcludes("serialized-lens", serializedLens, secret);
-    assertExcludes("rendered-lens", markup, secret);
+    for (const [mode, markup] of markups) {
+      assertExcludes(`rendered-${mode}`, markup, secret);
+    }
   }
   for (const forbiddenAttribute of [
     "data-decision-ref",
@@ -222,31 +246,85 @@ try {
     "data-timing",
     "data-confidence",
   ]) {
-    assertExcludes("rendered-attributes", markup, forbiddenAttribute);
+    for (const [mode, markup] of markups) {
+      assertExcludes(`rendered-${mode}-attributes`, markup, forbiddenAttribute);
+    }
   }
   for (const expected of [
     'data-semantics="ATTENTION_WINDOW_ONLY"',
     'data-decision-role="NOT_APPLIED_TO_TREE_CANDIDATES_OR_ORDER"',
     'data-attention-order-recorded="true"',
     'data-tree-candidate-set-or-order-changed="false"',
+    'data-dream-answer-or-outcome-input="false"',
+    'data-dream-outcome-admitted-as-owner-evidence="false"',
     'data-future-evidence-included="false"',
     'data-canonical-write-allowed="false"',
     'data-domain="career"',
     'data-domain="wealth"',
     'data-domain="relationship"',
     "三条等权",
-    "系统不会据此改动三棵树的候选或顺序，也不预测结果、不回写命理。",
   ]) {
-    assertIncludes("rendered-contract", markup, expected);
+    for (const [mode, markup] of markups) {
+      assertIncludes(`rendered-${mode}-contract`, markup, expected);
+    }
+  }
+  assertIncludes("grove-mode", groveMarkup, 'data-mode="grove"');
+  assertIncludes(
+    "grove-boundary",
+    groveMarkup,
+    "系统不会据此改动三棵树的候选或顺序，也不预测结果、不回写命理。",
+  );
+  assertIncludes("encounter-mode", encounterMarkup, 'data-mode="encounter"');
+  for (const expected of [
+    "把三个现实问题留在树边",
+    "系统不把它们写入树中问题、封印或结果",
+    "不用梦中结果验证你的命理",
+    "不预测、不回写",
+  ]) {
+    assertIncludes("encounter-boundary", encounterMarkup, expected);
   }
   assertEqual(
-    "rendered-domain-count",
-    (markup.match(/data-domain=/g) ?? []).length,
-    3,
+    "grove-encounter-domain-order",
+    domainSequence(groveMarkup),
+    domainSequence(encounterMarkup),
   );
-  assertExcludes("rendered-ranking", markup, "selected");
-  assertExcludes("rendered-ranking", markup, "primary");
-  assertExcludes("rendered-ranking", markup, "rank");
+  assertEqual(
+    "grove-encounter-observation-copy",
+    observationListMarkup(groveMarkup),
+    observationListMarkup(encounterMarkup),
+  );
+  for (const [mode, markup] of markups) {
+    assertEqual(
+      `${mode}-rendered-domain-count`,
+      (markup.match(/data-domain=/g) ?? []).length,
+      3,
+    );
+    assertEqual(
+      `${mode}-rendered-domain-order`,
+      domainSequence(markup),
+      "career,wealth,relationship",
+    );
+    assertExcludes(`${mode}-rendered-ranking`, markup, "selected");
+    assertExcludes(`${mode}-rendered-ranking`, markup, "primary");
+    assertExcludes(`${mode}-rendered-ranking`, markup, "rank");
+  }
+
+  const styles = await readFile(
+    path.join(webRoot, "src/styles/dream-reading-observation-lens.css"),
+    "utf8",
+  );
+  if (
+    !/\.dream-reading-observation-lens\s*\{[^}]*pointer-events:\s*none;/s.test(
+      styles,
+    )
+  ) {
+    fail("styles:pointer-events-not-none");
+  }
+  assertIncludes(
+    "styles",
+    styles,
+    '.dream-reading-observation-lens[data-mode="encounter"]',
+  );
 } finally {
   await vite.close();
 }
@@ -259,6 +337,7 @@ console.log(
       missingDomain: "FAIL_CLOSED",
       duplicateDomain: "FAIL_CLOSED",
       decisionProjection: "BOOLEAN_ONLY",
+      presentationModes: ["grove", "encounter"],
       renderLeakage: "NONE",
       failures,
     },

@@ -310,6 +310,63 @@ def test_home_source_discussion_receipt_is_shared_and_creates_no_decision() -> N
     assert decisions_after == decisions_before
 
 
+def test_home_relation_effect_frontier_is_shared_and_creates_no_decision() -> None:
+    account_ref = _human_owner_account_ref()
+    service = HomeExperienceService(engine)
+    with engine.connect() as connection:
+        decisions_before = connection.execute(
+            text("SELECT count(*) FROM cognition.decision_records")
+        ).scalar_one()
+
+    first = service.snapshot(account_ref=account_ref)
+    second = service.snapshot(account_ref=account_ref)
+    frontier = first["mingli"]["relation_effect_frontier"]
+    reading = first["mingli"]["reading"]
+    source_review = first["mingli"]["source_coordinate_review"]
+    prerequisite = first["mingli"]["source_usability_prerequisite"]
+    refusal = first["mingli"]["source_discussion_receipt"]
+
+    with engine.connect() as connection:
+        decisions_after = connection.execute(
+            text("SELECT count(*) FROM cognition.decision_records")
+        ).scalar_one()
+
+    assert frontier == second["mingli"]["relation_effect_frontier"]
+    assert (frontier["reading_ref"], frontier["reading_hash"]) == (
+        reading["reading_ref"],
+        reading["reading_hash"],
+    )
+    assert (
+        frontier["source_review_vector_ref"],
+        frontier["source_review_vector_hash"],
+    ) == (source_review["vector_ref"], source_review["vector_hash"])
+    assert (frontier["prerequisite_ref"], frontier["prerequisite_hash"]) == (
+        prerequisite["prerequisite_ref"],
+        prerequisite["prerequisite_hash"],
+    )
+    assert (
+        frontier["refusal_receipt_ref"],
+        frontier["refusal_receipt_hash"],
+    ) == (refusal["receipt_ref"], refusal["receipt_hash"])
+    assert source_review["source_evidence_count"] == 10
+    assert source_review["clear_coordinate_count"] == 7
+    assert source_review["review_required_count"] == 3
+    assert frontier["demand_count"] == 3
+    assert frontier["scope_invariant_rule_demand_count"] == 1
+    assert frontier["match_scope_rule_first_count"] == 2
+    assert frontier["admitted_effect_rule_count"] == 0
+    assert frontier["source_discussion_disposition"] == "ABSTAIN"
+    assert frontier["provider_invoked"] is False
+    assert frontier["decision_created"] is False
+    assert frontier["gate_invoked"] is False
+    assert frontier["professional_verdict_allowed"] is False
+    assert frontier["probability_claim_allowed"] is False
+    assert frontier["canonical_write_allowed"] is False
+    assert first["lab"]["relation_effect_frontier_ref"] == frontier["frontier_ref"]
+    assert first["lab"]["relation_effect_frontier_hash"] == frontier["frontier_hash"]
+    assert decisions_after == decisions_before
+
+
 def test_home_explanation_is_stable_and_contains_no_outcome_verdict() -> None:
     service = HomeExperienceService(engine)
     first = service.snapshot(account_ref=_human_owner_account_ref())

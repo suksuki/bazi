@@ -21,6 +21,7 @@ from abu_v60.mingli import (
     MingliQuantVectorStore,
     MingliReadingProjector,
     MingliReadingStore,
+    MingliRelationEffectResearchFrontierProjector,
     MingliSourceCoordinateReviewCompiler,
     MingliSourceDiscussionAbstentionProjector,
     MingliSourceReviewVectorStore,
@@ -56,6 +57,9 @@ class HomeExperienceService:
         source_review_store: MingliSourceReviewVectorStore | None = None,
         source_usability: MingliSourceUsabilityPrerequisiteProjector | None = None,
         source_discussion: MingliSourceDiscussionAbstentionProjector | None = None,
+        relation_effect_frontier: (
+            MingliRelationEffectResearchFrontierProjector | None
+        ) = None,
         mechanism_compiler: MingliMechanismEvidenceCompiler | None = None,
         mechanism_store: MingliMechanismVectorStore | None = None,
         mechanism_comparison: MingliMechanismComparisonService | None = None,
@@ -84,6 +88,10 @@ class HomeExperienceService:
         )
         self._source_discussion = (
             source_discussion or MingliSourceDiscussionAbstentionProjector()
+        )
+        self._relation_effect_frontier = (
+            relation_effect_frontier
+            or MingliRelationEffectResearchFrontierProjector()
         )
         self._mechanism_compiler = mechanism_compiler or MingliMechanismEvidenceCompiler()
         self._mechanism_store = mechanism_store or MingliMechanismVectorStore(engine)
@@ -197,6 +205,12 @@ class HomeExperienceService:
             reading=reading,
             prerequisite=source_usability_prerequisite,
         )
+        relation_effect_frontier = self._relation_effect_frontier.project(
+            reading=reading,
+            source_review_vector=source_review_vector,
+            prerequisite=source_usability_prerequisite,
+            refusal=source_discussion_receipt,
+        )
         explanation = self._explanations.project(
             reading=reading,
             facts=facts,
@@ -304,6 +318,9 @@ class HomeExperienceService:
                 "source_discussion_receipt": (
                     source_discussion_receipt.model_dump(mode="json")
                 ),
+                "relation_effect_frontier": (
+                    relation_effect_frontier.model_dump(mode="json")
+                ),
                 "mechanism_evidence": mechanism_vector.model_dump(mode="json"),
                 "timing_evidence": timing_vector.model_dump(mode="json"),
                 "life_domains": life_domain_vector.model_dump(mode="json"),
@@ -371,6 +388,12 @@ class HomeExperienceService:
                 ),
                 "source_discussion_receipt_hash": (
                     source_discussion_receipt.receipt_hash
+                ),
+                "relation_effect_frontier_ref": (
+                    relation_effect_frontier.frontier_ref
+                ),
+                "relation_effect_frontier_hash": (
+                    relation_effect_frontier.frontier_hash
                 ),
                 "source_usability_prerequisite_carriers": [
                     item.model_dump(mode="json")

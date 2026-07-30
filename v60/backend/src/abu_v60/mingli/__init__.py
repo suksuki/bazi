@@ -130,6 +130,15 @@ from abu_v60.mingli.reading_store import (
     MingliReadingStore,
     MingliReadingStoreError,
 )
+from abu_v60.mingli.relation_effect_frontier import (
+    MingliRelationEffectResearchFrontierProjector,
+)
+from abu_v60.mingli.relation_effect_frontier_contracts import (
+    RELATION_EFFECT_REQUIRED_RULE_DIMENSIONS,
+    RELATION_EFFECT_RESEARCH_FRONTIER_VERSION,
+    MingliRelationEffectResearchFrontierEnvelope,
+    RelationEffectRuleDemand,
+)
 from abu_v60.mingli.source_discussion import (
     MingliSourceDiscussionAbstentionProjector,
 )
@@ -196,6 +205,8 @@ __all__ = [
     "MINGLI_EXPLANATION_VERSION",
     "MINGLI_READING_VERSION",
     "QUANT_VECTOR_VERSION",
+    "RELATION_EFFECT_REQUIRED_RULE_DIMENSIONS",
+    "RELATION_EFFECT_RESEARCH_FRONTIER_VERSION",
     "SOURCE_DISCUSSION_ABSTAINED_CLAIMS",
     "SOURCE_DISCUSSION_RECEIPT_VERSION",
     "SOURCE_REVIEW_STATE_ORDER",
@@ -264,6 +275,8 @@ __all__ = [
     "MingliReadingStatus",
     "MingliReadingStore",
     "MingliReadingStoreError",
+    "MingliRelationEffectResearchFrontierEnvelope",
+    "MingliRelationEffectResearchFrontierProjector",
     "MingliSourceCoordinateReviewCompiler",
     "MingliSourceCoordinateReviewVector",
     "MingliSourceDiscussionAbstentionProjector",
@@ -281,6 +294,7 @@ __all__ = [
     "OwnerCaseError",
     "OwnerCaseInput",
     "PolarityMembershipMeasurement",
+    "RelationEffectRuleDemand",
     "SourceCarrierUsabilityPrerequisite",
     "SourceCoordinateReviewEvidence",
     "SourceManifestationEvidence",

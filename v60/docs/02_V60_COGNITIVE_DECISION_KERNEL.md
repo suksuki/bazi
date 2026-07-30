@@ -203,6 +203,35 @@ Mingli Calculation, Abu Says and Lab receive the same Receipt Ref/Hash. The
 receipt does not alter the narrower attention-priority Decision or reinterpret
 its Gate admission.
 
+## Relation-effect research frontier
+
+`v60.mingli-relation-effect-research-frontier.001` turns the refusal into an
+actionable research dependency map without turning it into a new decision.
+It exact-binds the current Reading, persisted source-coordinate review,
+source-usability prerequisite and abstention Receipt, then classifies every
+actual relation intersection:
+
+```text
+present in exact and inclusive source scopes
+-> SCOPE_INVARIANT_RULE_DEMAND
+-> next missing authority is a configuration-specific relation-effect rule
+
+present only in the inclusive same-element scope
+-> MATCH_SCOPE_RULE_FIRST
+-> source-match authority must be admitted before effect can be considered
+```
+
+Every demand names six required rule dimensions: applicability context, effect
+direction, completion conditions, blocking conditions, counter-evidence and
+professional provenance. The frontier admits zero effect rules and leaves both
+relation effect and source usability `UNRESOLVED`.
+
+This projection does not invoke the Provider, Kernel, Gate or Ledger because
+there is no authorized selection request to resolve. It creates no Decision
+and has no selection, professional-verdict, probability or canonical-write
+authority. A future rule can enter decision routing only after a separately
+versioned Knowledge admission supplies the missing authority.
+
 ## Required decision record contract
 
 Every committed decision preserves:

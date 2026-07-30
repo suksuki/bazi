@@ -9,6 +9,7 @@ import type { ExperienceScope } from "../experienceNavigation";
 import type { HomeSnapshot } from "../homeApi";
 import { buildDreamReadingObservationLens } from "../homeDreamObservationLens";
 import { LifeTreeScene } from "../LifeTreeScene";
+import { DreamReadingObservationLens } from "./DreamReadingObservationLens";
 import { HomeLifeTreeScene as HomeTree } from "./HomeLifeTreeScene";
 
 interface ExperienceStoryCanvasProps {
@@ -48,6 +49,11 @@ export function ExperienceStoryCanvas({
   onContinue,
   onReturnToGrove,
 }: ExperienceStoryCanvasProps) {
+  const observationLens = buildDreamReadingObservationLens({
+    reading_brief: home.mingli.reading_brief,
+    mechanism_comparison: home.lab.mechanism_comparison,
+  });
+
   return (
     <section className="story-canvas" aria-label="生命树故事现场">
       {scope === "home" ? (
@@ -63,28 +69,31 @@ export function ExperienceStoryCanvas({
           background={media.assets.grove_background}
           busy={busy}
           grove={grove}
-          lens={buildDreamReadingObservationLens({
-            reading_brief: home.mingli.reading_brief,
-            mechanism_comparison: home.lab.mechanism_comparison,
-          })}
+          lens={observationLens}
           media={media}
           onSelect={onSelectTree}
         />
       ) : (
         snapshot && (
-          <LifeTreeScene
-            background={media.assets.life_world_background}
-            snapshot={snapshot}
-            busy={busy}
-            focusedOrganRef={focusedOrganRef}
-            onFocus={onFocus}
-            onOrgan={onOrgan}
-            onAnswer={onAnswer}
-            onReveal={onReveal}
-            onReconcile={onReconcile}
-            onContinue={onContinue}
-            onReturnToGrove={onReturnToGrove}
-          />
+          <>
+            <LifeTreeScene
+              background={media.assets.life_world_background}
+              snapshot={snapshot}
+              busy={busy}
+              focusedOrganRef={focusedOrganRef}
+              onFocus={onFocus}
+              onOrgan={onOrgan}
+              onAnswer={onAnswer}
+              onReveal={onReveal}
+              onReconcile={onReconcile}
+              onContinue={onContinue}
+              onReturnToGrove={onReturnToGrove}
+            />
+            <DreamReadingObservationLens
+              lens={observationLens}
+              mode="encounter"
+            />
+          </>
         )
       )}
       <div className="scene-lineage">

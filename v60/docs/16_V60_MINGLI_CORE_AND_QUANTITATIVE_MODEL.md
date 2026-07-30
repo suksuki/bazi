@@ -1,6 +1,6 @@
 # V60 Mingli Core and Quantitative Model
 
-Status: `MINGLI_DECISION_TRACE_V1_IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
+Status: `RELATION_EFFECT_RESEARCH_FRONTIER_V1_IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
 
 ## Product decision
 
@@ -36,6 +36,7 @@ must not be reported as real-world accuracy.
 | Source / manifestation evidence | Partial executable | Exact and same-element cross-layer evidence only; effect unresolved |
 | Source usability discussion prerequisites | Executable | Competing source scopes and missing rules only; no scope selection or usability verdict |
 | Source discussion abstention receipt | Executable read projection | Facts and gaps only; not Gate/Decision authority |
+| Relation-effect research frontier | Executable read projection | Orders match-scope versus effect-rule demands; admits no rule or verdict |
 | Root usability and seasonal capacity | Missing | V50 research exists but is not admitted |
 | Relation effect and transformation | Missing | Relation membership is not effect |
 | Mechanism candidate evidence | Executable | Five versioned patterns; candidate presence only |
@@ -47,7 +48,7 @@ must not be reported as real-world accuracy.
 | Cognitive Decision Kernel | Executable | Routes authority and records immutable decisions |
 | Network LLM Reasoner | Executable | dblife Ollama `gemma4:latest`; hash-locked structured-decision profile; attention priority only |
 | Mingli Decision evidence trace | Executable read projection | Verifies immutable identity and reference coverage; not professional correctness or admission |
-| Dream Grove Reading observation lens | Executable read projection | Three equal domains; does not alter tree candidates/order or write back |
+| Dream Reading observation lens | Executable read projection | Same three equal domains through Grove and Encounter; no AnswerSeal/result input or write-back |
 | Statistical calibration | Missing | No production probability may be displayed |
 
 ## Implemented quantitative foundation v1
@@ -256,6 +257,56 @@ in place.
 The same Receipt Ref/Hash is visible in Mingli Calculation, Abu Says and Lab.
 A real Chrome replay over the `10 source / 7 clear / 3 review` QA Case confirms
 four carriers, zero ready carriers, refresh stability and no read-time POST.
+
+## Implemented relation-effect research frontier v1
+
+The abstention Receipt proves that no professional rule chain is admitted. The
+new Frontier makes the next authority dependency inspectable without claiming
+that a rule exists:
+
+```text
+Reading v6
++ persisted Source Coordinate Review
++ source-usability prerequisite
++ source-discussion abstention Receipt
+-> one demand per actual relation intersection
+-> scope-invariant effect-rule demand
+   or match-scope-rule-first demand
+-> Mingli summary + Lab inspection
+```
+
+`SCOPE_INVARIANT_RULE_DEMAND` means the same exact-identity relation
+intersection survives both source scopes, so the next missing authority is a
+configuration-specific effect rule. `MATCH_SCOPE_RULE_FIRST` means the
+intersection exists only after same-element/different-identity sources are
+included, so V60 must settle and admit that matching scope before discussing
+effect.
+
+Every demand requires exactly six rule dimensions: applicability context,
+effect direction, completion conditions, blocking conditions,
+counter-evidence and professional provenance. The Frontier does not infer any
+of them. It keeps `effect_status=UNRESOLVED`,
+`usability_status=UNRESOLVED` and `admitted_effect_rule_count=0`.
+
+For the persisted QA Reading with ten source candidates, seven clear
+coordinates and three relation intersections, the Frontier produces three
+demands: one scope-invariant effect-rule demand and two match-scope-first
+demands. Reversing upstream fact order preserves the same stable identity;
+mixed versions, hashes, lineage, carrier bindings or scope membership fail
+closed.
+
+Mingli Calculation and Lab consume the same Frontier Ref/Hash. The projection
+is read-only, invokes no Provider, Kernel, Gate or Decision writer, and has no
+selection, professional-verdict, probability or canonical-write authority.
+No database migration was required. Current identities are
+`v60.mingli-cognitive-engine.021`, `v60.runtime-architecture.042`,
+`v60.unit-mingli.015` and `v60.unit-lab.012`.
+
+The complete backend suite contains 239 passing tests. Ruff, TypeScript/Vite
+build, Runtime Architecture, source maintainability and component contracts
+pass. A real Chrome replay verifies `10/7/3 -> 3 -> 1/2/0`, shared
+Mingli/Lab identity, refresh stability, zero read-time POSTs and no authority
+leak. Evidence is in `.artifacts/source-coordinate-review/`.
 
 ## Implemented verifiable attention-Decision trace v1
 

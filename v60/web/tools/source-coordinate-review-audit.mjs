@@ -114,6 +114,16 @@ const discussionReceiptHash = await mingliDiscussionReceipt.getAttribute(
 const discussionDisposition = await mingliDiscussionReceipt.getAttribute(
   "data-disposition",
 );
+const mingliRelationFrontier = page.locator(
+  '.relation-effect-frontier[data-mode="summary"]',
+);
+await mingliRelationFrontier.waitFor({ state: "visible" });
+const relationFrontierRef = await mingliRelationFrontier.getAttribute(
+  "data-frontier-ref",
+);
+const relationFrontierHash = await mingliRelationFrontier.getAttribute(
+  "data-frontier-hash",
+);
 const summaryText = await summaryPanel.innerText();
 for (const expected of [
   "来源坐标复核",
@@ -139,6 +149,24 @@ for (const expected of [
   }
 }
 assertNoForbiddenDiscussionClaims("mingli", mingliDiscussionText);
+const mingliRelationFrontierText = await mingliRelationFrontier.innerText();
+for (const expected of [
+  "关系作用规则需求",
+  "研究顺序，不是结论",
+  "跨口径作用规则",
+  "先补匹配口径",
+  "已准入作用规则",
+  "关系作用与来源可用性仍为",
+  "UNRESOLVED",
+]) {
+  if (!mingliRelationFrontierText.includes(expected)) {
+    failures.push(`mingli:relation-frontier-missing:${expected}`);
+  }
+}
+assertNoForbiddenDiscussionClaims(
+  "mingli-frontier",
+  mingliRelationFrontierText,
+);
 
 const homeSnapshot = await page.evaluate(async () => {
   const response = await fetch("/api/v60/experience/home");
@@ -148,6 +176,7 @@ const homeSnapshot = await page.evaluate(async () => {
 const vector = homeSnapshot.mingli?.source_coordinate_review;
 const prerequisite = homeSnapshot.mingli?.source_usability_prerequisite;
 const discussionReceipt = homeSnapshot.mingli?.source_discussion_receipt;
+const relationFrontier = homeSnapshot.mingli?.relation_effect_frontier;
 const initialDecisionIdentity = JSON.stringify({
   decisionRefs: homeSnapshot.mingli?.reading?.decision_refs ?? [],
   comparisonDecisionRef:
@@ -190,6 +219,14 @@ if (
   homeSnapshot.lab?.source_discussion_receipt_hash !== discussionReceiptHash
 ) {
   failures.push("mingli:shared-source-discussion-identity-mismatch");
+}
+if (
+  relationFrontier?.frontier_ref !== relationFrontierRef ||
+  relationFrontier?.frontier_hash !== relationFrontierHash ||
+  homeSnapshot.lab?.relation_effect_frontier_ref !== relationFrontierRef ||
+  homeSnapshot.lab?.relation_effect_frontier_hash !== relationFrontierHash
+) {
+  failures.push("mingli:shared-relation-frontier-identity-mismatch");
 }
 if (
   prerequisite?.case_ref !== vector?.case_ref ||
@@ -246,6 +283,94 @@ if (
   discussionReceipt?.read_only !== true
 ) {
   failures.push("mingli:source-discussion-authority-enabled");
+}
+if (
+  relationFrontier?.frontier_version !==
+    "v60.mingli-relation-effect-research-frontier.001" ||
+  relationFrontier?.research_semantics !==
+    "MEMBERSHIP_DEPENDENCY_AND_RULE_GAPS_ONLY" ||
+  relationFrontier?.source_discussion_disposition !== "ABSTAIN" ||
+  relationFrontier?.effect_status !== "UNRESOLVED" ||
+  relationFrontier?.usability_status !== "UNRESOLVED" ||
+  relationFrontier?.demand_count !== 3 ||
+  relationFrontier?.scope_invariant_rule_demand_count !== 1 ||
+  relationFrontier?.match_scope_rule_first_count !== 2 ||
+  relationFrontier?.admitted_effect_rule_count !== 0
+) {
+  failures.push("mingli:relation-frontier-contract-mismatch");
+}
+if (
+  relationFrontier?.case_ref !== vector?.case_ref ||
+  relationFrontier?.chart_version_ref !== vector?.chart_version_ref ||
+  relationFrontier?.reading_ref !==
+    homeSnapshot.mingli?.reading?.reading_ref ||
+  relationFrontier?.reading_hash !==
+    homeSnapshot.mingli?.reading?.reading_hash ||
+  relationFrontier?.source_review_vector_ref !== vectorRef ||
+  relationFrontier?.source_review_vector_hash !== vector?.vector_hash ||
+  relationFrontier?.prerequisite_ref !== prerequisiteRef ||
+  relationFrontier?.prerequisite_hash !== prerequisiteHash ||
+  relationFrontier?.refusal_receipt_ref !== discussionReceiptRef ||
+  relationFrontier?.refusal_receipt_hash !== discussionReceiptHash
+) {
+  failures.push("mingli:relation-frontier-lineage-mismatch");
+}
+if (
+  relationFrontier?.provider_invoked !== false ||
+  relationFrontier?.decision_created !== false ||
+  relationFrontier?.gate_invoked !== false ||
+  relationFrontier?.selection_authority !== false ||
+  relationFrontier?.professional_verdict_allowed !== false ||
+  relationFrontier?.probability_claim_allowed !== false ||
+  relationFrontier?.canonical_write_allowed !== false ||
+  relationFrontier?.read_only !== true
+) {
+  failures.push("mingli:relation-frontier-authority-enabled");
+}
+const expectedRuleDimensions = [
+  "APPLICABILITY_CONTEXT",
+  "EFFECT_DIRECTION",
+  "COMPLETION_CONDITIONS",
+  "BLOCKING_CONDITIONS",
+  "COUNTER_EVIDENCE",
+  "PROFESSIONAL_PROVENANCE",
+];
+const relationIntersectionRefs = new Set(
+  (vector?.reviews ?? []).flatMap((review) =>
+    review.relation_intersections.map(
+      (intersection) => intersection.intersection_ref,
+    ),
+  ),
+);
+if (
+  JSON.stringify(
+    (relationFrontier?.demands ?? [])
+      .map((demand) => demand.intersection_ref)
+      .sort(),
+  ) !== JSON.stringify([...relationIntersectionRefs].sort())
+) {
+  failures.push("mingli:relation-frontier-intersection-bijection-mismatch");
+}
+for (const demand of relationFrontier?.demands ?? []) {
+  const expectedDependency =
+    demand.source_match_kind === "EXACT_IDENTITY"
+      ? "SCOPE_INVARIANT_RULE_DEMAND"
+      : "MATCH_SCOPE_RULE_FIRST";
+  const expectedScopes =
+    expectedDependency === "SCOPE_INVARIANT_RULE_DEMAND"
+      ? ["EXACT_IDENTITY_ONLY", "ELEMENT_AFFINITY_INCLUDED"]
+      : ["ELEMENT_AFFINITY_INCLUDED"];
+  if (
+    demand.dependency_status !== expectedDependency ||
+    JSON.stringify(demand.scope_presence) !== JSON.stringify(expectedScopes) ||
+    JSON.stringify(demand.required_rule_dimensions) !==
+      JSON.stringify(expectedRuleDimensions) ||
+    demand.effect_status !== "UNRESOLVED" ||
+    demand.usability_status !== "UNRESOLVED" ||
+    demand.selection_authority !== false
+  ) {
+    failures.push(`mingli:relation-frontier-demand-invalid:${demand.demand_ref}`);
+  }
 }
 if (
   vector?.source_evidence_count !== 10 ||
@@ -417,6 +542,67 @@ if (
 ) {
   failures.push("lab:source-discussion-blocker-ids-mismatch");
 }
+const labRelationFrontier = page.locator(
+  '.relation-effect-frontier[data-mode="detailed"]',
+);
+await labRelationFrontier.waitFor({ state: "visible" });
+if (
+  (await labRelationFrontier.getAttribute("data-frontier-ref")) !==
+    relationFrontierRef ||
+  (await labRelationFrontier.getAttribute("data-frontier-hash")) !==
+    relationFrontierHash
+) {
+  failures.push("lab:relation-frontier-identity-mismatch");
+}
+for (const attribute of [
+  "data-provider-invoked",
+  "data-decision-created",
+  "data-gate-invoked",
+  "data-selection-authority",
+  "data-professional-verdict-allowed",
+  "data-probability-claim-allowed",
+  "data-canonical-write-allowed",
+]) {
+  if ((await labRelationFrontier.getAttribute(attribute)) !== "false") {
+    failures.push(`lab:relation-frontier-boundary:${attribute}`);
+  }
+}
+const renderedDemandCount = await labRelationFrontier
+  .locator(".relation-effect-demand")
+  .count();
+if (renderedDemandCount !== relationFrontier?.demand_count) {
+  failures.push("lab:relation-frontier-demand-count-mismatch");
+}
+const renderedDependencyStatuses = await labRelationFrontier
+  .locator(".relation-effect-demand")
+  .evaluateAll((nodes) =>
+    nodes.map((node) => node.getAttribute("data-dependency-status")),
+  );
+if (
+  JSON.stringify(renderedDependencyStatuses) !==
+  JSON.stringify(
+    (relationFrontier?.demands ?? []).map(
+      (demand) => demand.dependency_status,
+    ),
+  )
+) {
+  failures.push("lab:relation-frontier-dependency-order-mismatch");
+}
+const labRelationFrontierText = await labRelationFrontier.innerText();
+assertNoForbiddenDiscussionClaims(
+  "lab-frontier",
+  labRelationFrontierText,
+);
+for (const expected of [
+  "跨两种口径共现",
+  "仅宽口径出现",
+  "尚缺规则证据",
+  "六维规则缺口",
+]) {
+  if (!labRelationFrontierText.includes(expected)) {
+    failures.push(`lab:relation-frontier-missing:${expected}`);
+  }
+}
 const detailedText = await detailedPanel.innerText();
 for (const expected of [
   "来源候选",
@@ -471,6 +657,10 @@ await labDiscussionReceipt.scrollIntoViewIfNeeded();
 const labReceiptScreenshot = await screenshot(
   "02-lab-source-discussion-receipt",
 );
+await labRelationFrontier.scrollIntoViewIfNeeded();
+const labRelationFrontierScreenshot = await screenshot(
+  "03-lab-relation-effect-research-frontier",
+);
 await detailedReadiness.evaluate((node) =>
   node.scrollIntoView({ block: "start" }),
 );
@@ -488,6 +678,10 @@ const refreshedDiscussionReceipt = page.locator(
   '.source-discussion-abstention[data-mode="detailed"]',
 );
 await refreshedDiscussionReceipt.waitFor({ state: "visible" });
+const refreshedRelationFrontier = page.locator(
+  '.relation-effect-frontier[data-mode="detailed"]',
+);
+await refreshedRelationFrontier.waitFor({ state: "visible" });
 const refreshedSnapshot = await page.evaluate(async () => {
   const response = await fetch("/api/v60/experience/home");
   if (!response.ok) throw new Error(`home-refresh:${response.status}`);
@@ -522,6 +716,21 @@ if (
     discussionReceiptHash
 ) {
   failures.push("lab:refresh-source-discussion-receipt-identity-mismatch");
+}
+if (
+  (await refreshedRelationFrontier.getAttribute("data-frontier-ref")) !==
+    relationFrontierRef ||
+  (await refreshedRelationFrontier.getAttribute("data-frontier-hash")) !==
+    relationFrontierHash ||
+  refreshedSnapshot.mingli?.relation_effect_frontier?.frontier_ref !==
+    relationFrontierRef ||
+  refreshedSnapshot.mingli?.relation_effect_frontier?.frontier_hash !==
+    relationFrontierHash ||
+  refreshedSnapshot.lab?.relation_effect_frontier_ref !==
+    relationFrontierRef ||
+  refreshedSnapshot.lab?.relation_effect_frontier_hash !== relationFrontierHash
+) {
+  failures.push("lab:refresh-relation-frontier-identity-mismatch");
 }
 const refreshedDecisionIdentity = JSON.stringify({
   decisionRefs: refreshedSnapshot.mingli?.reading?.decision_refs ?? [],
@@ -581,6 +790,28 @@ const audit = {
     canonicalWriteAllowed: discussionReceipt?.canonical_write_allowed,
     readOnly: discussionReceipt?.read_only,
   },
+  relationFrontierRef,
+  relationFrontierHash,
+  relationFrontierCounts: {
+    demandCount: relationFrontier?.demand_count,
+    scopeInvariantRuleDemandCount:
+      relationFrontier?.scope_invariant_rule_demand_count,
+    matchScopeRuleFirstCount:
+      relationFrontier?.match_scope_rule_first_count,
+    admittedEffectRuleCount:
+      relationFrontier?.admitted_effect_rule_count,
+  },
+  relationFrontierBoundaries: {
+    providerInvoked: relationFrontier?.provider_invoked,
+    decisionCreated: relationFrontier?.decision_created,
+    gateInvoked: relationFrontier?.gate_invoked,
+    selectionAuthority: relationFrontier?.selection_authority,
+    professionalVerdictAllowed:
+      relationFrontier?.professional_verdict_allowed,
+    probabilityClaimAllowed: relationFrontier?.probability_claim_allowed,
+    canonicalWriteAllowed: relationFrontier?.canonical_write_allowed,
+    readOnly: relationFrontier?.read_only,
+  },
   readingRef: homeSnapshot.mingli?.reading?.reading_ref,
   caseRef: vector?.case_ref,
   sourceEvidenceCount: vector?.source_evidence_count,
@@ -616,6 +847,7 @@ const audit = {
     mingliScreenshot,
     labReceiptScreenshot,
     labScreenshot,
+    labRelationFrontierScreenshot,
   },
   metrics,
   failures,

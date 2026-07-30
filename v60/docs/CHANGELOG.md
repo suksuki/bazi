@@ -2,6 +2,39 @@
 
 ## 2026-07-30
 
+### Relation-effect research frontier and Dream lens continuity
+
+- Added `v60.mingli-relation-effect-research-frontier.001`, a read-only map
+  from every persisted relation intersection to its next authority
+  dependency.
+- Classified intersections present in exact and inclusive scopes as
+  `SCOPE_INVARIANT_RULE_DEMAND`, and inclusive-only
+  same-element/different-identity intersections as `MATCH_SCOPE_RULE_FIRST`.
+  This orders research; it does not select a source scope or infer effect.
+- Required six dimensions for any future rule: applicability context, effect
+  direction, completion conditions, blocking conditions, counter-evidence and
+  professional provenance.
+- The real QA source review remains `10 candidates / 7 clear / 3 review`; its
+  three intersections project to one effect-rule demand, two prior
+  match-scope demands and zero admitted effect rules.
+- Mingli Calculation now shows the compact `1 / 2 / 0` order and Lab expands
+  the exact coordinates, scope presence, six gaps and immutable identities
+  from the same Frontier Ref/Hash.
+- Kept relation effect and source usability `UNRESOLVED`; the Frontier invokes
+  no Provider, Kernel, Gate or Decision writer and permits no selection,
+  professional verdict, probability or canonical write.
+- Extended the equal-weight career/wealth/relationship Reading lens through
+  all Dream Encounter phases. The observations never enter the tree Question,
+  AnswerSeal or result, and Dream outcomes are not admitted as owner Mingli
+  evidence.
+- Advanced Mingli to `v60.mingli-cognitive-engine.021`, Runtime Architecture
+  to `.042`, and the Mingli/Lab/Dream units to `.015/.012/.014`. Foundation
+  and Dream Game remain `.013`; no migration was added.
+- Passed all 239 backend tests, Ruff, TypeScript/Vite build, Runtime
+  Architecture, source maintainability and frontend contracts. Real Chrome
+  evidence is in `.artifacts/source-coordinate-review/` and
+  `.artifacts/dream-reading-lens-continuity/`.
+
 ### Source-discussion abstention receipt and Dream Reading lens
 
 - Added `v60.mingli-source-discussion-abstention-receipt.001`, a downstream

@@ -1085,6 +1085,42 @@ Status: `IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
   overflow. Evidence is in `.artifacts/source-coordinate-review/` and
   `.artifacts/dream-reading-lens/`.
 
+## Completed Delivery: Relation-Effect Research Frontier And Dream Lens Continuity
+
+Status: `IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
+
+- `v60.mingli-relation-effect-research-frontier.001` exact-binds the current
+  Reading, persisted source review, source-usability prerequisite and
+  abstention Receipt. It does not replace or reinterpret any of them.
+- Every real relation intersection becomes one research demand. An
+  exact-identity hit present in both source scopes is classified
+  `SCOPE_INVARIANT_RULE_DEMAND`; a same-element/different-identity hit present
+  only in the inclusive scope is classified `MATCH_SCOPE_RULE_FIRST`.
+- Each demand names six missing rule dimensions: applicability context,
+  effect direction, completion conditions, blocking conditions,
+  counter-evidence and professional provenance.
+- The real QA Case remains `10 source / 7 clear / 3 review`. Its three
+  intersections now map to one scope-invariant effect-rule demand and two
+  match-scope-first demands; admitted effect rules remain zero.
+- Mingli Calculation shows the compact `1 / 2 / 0` research order. Lab expands
+  the same three source and relation coordinates, scope presence, six rule
+  gaps and immutable identities from one Frontier Ref/Hash.
+- The Frontier invokes no Provider, Kernel, Gate or Decision writer. It has no
+  selection, professional-verdict, probability or canonical-write authority;
+  relation effect and source usability remain `UNRESOLVED`.
+- Dream carries the same three equal-weight real-life observation questions
+  from Grove through every Encounter phase. They never enter the tree
+  Question, AnswerSeal or result, and the Dream outcome is not admitted as
+  evidence for the owner's Mingli Reading.
+- Current identities are `v60.mingli-cognitive-engine.021`,
+  `v60.runtime-architecture.042`, `v60.unit-mingli.015`,
+  `v60.unit-lab.012` and `v60.unit-dream.014`. Foundation and Dream Game remain
+  `.013`; no database migration was required.
+- All 239 backend tests, Ruff, TypeScript/Vite build, Runtime Architecture,
+  source maintainability and component contracts pass. Real Chrome evidence
+  for the source frontier is in `.artifacts/source-coordinate-review/`; Dream
+  continuity evidence is in `.artifacts/dream-reading-lens-continuity/`.
+
 ## Current Product Truth
 
 Already usable locally:
@@ -1103,11 +1139,15 @@ Already usable locally:
   scopes while exposing the rules still missing before usability discussion;
 - an immutable refusal receipt proving that source discussion stopped at facts
   and gaps rather than inventing relation effect or usability;
+- a server-owned research frontier that maps each relation intersection to
+  either an effect-rule demand or a prior match-scope authority demand, while
+  admitting zero effect rules;
 - bounded Gemma4 ordering of static natal mechanism candidates for
   investigation attention, with a verified Decision identity/evidence trace
   shared by Mingli Calculation, Abu Says and Lab;
-- a three-domain, equal-weight Reading observation lens in Dream Grove that
-  does not alter the tree candidate set/order or receive future evidence;
+- a three-domain, equal-weight Reading observation lens across Dream Grove and
+  the full Encounter that does not alter tree candidates/order, enter the
+  AnswerSeal/result or receive Dream outcome authority;
 - three-tree Dream selection, observation, Seal, World waiting, Reveal,
   reconciliation, return to Grove and another Encounter;
 - refresh and process persistence through server-owned state.
@@ -1123,13 +1163,16 @@ Still honestly incomplete:
 - final picture-book Grove tree assets and the final in-tree transition
   composition currently being prepared by design.
 
-The next professional step remains blocked until a sourced, versioned rule can
-state one exact relation configuration's direction, completion conditions,
-counter-evidence and multi-source aggregation behavior. Until then, the
-product should not repeat the same backend boundary in another form. The next
-visible iteration should return to Dream playability or obtain that authority;
-Dream must not receive a relation-effect conclusion before the professional
-boundary is stable.
+The next professional step is now ordered rather than merely labelled blocked.
+For the one exact-identity intersection, obtain a sourced, versioned rule that
+states applicability, direction, completion, blocking, counter-evidence and
+professional provenance. For the two inclusive-only intersections, admit the
+source-match scope first; only then may an effect rule be considered. Seasonal
+capacity, root usability and multi-source aggregation still remain separate
+downstream gaps. Until one of those authorities is admitted, the next visible
+iteration should deepen Dream playability rather than restating another
+abstention surface. Dream must not receive a relation-effect conclusion before
+the professional boundary is stable.
 
 Not active: population-scale content generation, ranking, mobile visual
 polish, Server 13 synchronization or production deployment.

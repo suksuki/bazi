@@ -21,7 +21,9 @@
     "audit:mechanism-decision-trace": "node tools/mechanism-decision-trace-audit.mjs",
     "audit:mechanism-decision-contract": "node tools/mechanism-decision-trace-contract-audit.mjs",
     "audit:dream-reading-lens-contract": "node tools/dream-reading-lens-contract-audit.mjs",
-    "audit:dream-reading-lens": "node tools/dream-reading-lens-audit.mjs"
+    "audit:dream-reading-lens": "node tools/dream-reading-lens-audit.mjs",
+    "audit:dream-reading-lens-continuity": "node tools/dream-reading-lens-continuity-audit.mjs",
+    "audit:relation-effect-frontier-contract": "node tools/relation-effect-frontier-contract-audit.mjs"
   },
   "dependencies": {
     "pixi.js": "^8.19.0",
