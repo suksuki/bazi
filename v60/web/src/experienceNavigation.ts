@@ -31,6 +31,11 @@ export function writeNavigation(
   else url.searchParams.set("scope", "dream");
   if (unit === "dream") url.searchParams.delete("view");
   else url.searchParams.set("view", unit);
+  if (scope !== "home" || unit !== "mingli") {
+    url.searchParams.delete("mingli_subject");
+    url.searchParams.delete("mingli_mode");
+    url.searchParams.delete("mingli_year");
+  }
   if (scope === "dream" && focusRef) url.searchParams.set("focus", focusRef);
   else url.searchParams.delete("focus");
   window.history[mode === "push" ? "pushState" : "replaceState"](

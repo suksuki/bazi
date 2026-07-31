@@ -22,12 +22,14 @@ export function HomeLifeTreeScene({
   home,
   media,
   onEnterDream,
+  onOpenMingli,
 }: {
   background: RuntimeAssetDelivery;
   busy: boolean;
   home: HomeSnapshot;
   media: RuntimeMediaManifest;
   onEnterDream: () => void;
+  onOpenMingli: () => void;
 }) {
   const phenotype = home.tree.phenotype;
   const style = {
@@ -56,6 +58,15 @@ export function HomeLifeTreeScene({
         />
         <div className="home-paper-light" aria-hidden="true" />
         <div className="home-tree-breath" aria-hidden="true" />
+        <button
+          className="home-mingli-leaf"
+          onClick={onOpenMingli}
+          type="button"
+        >
+          <span aria-hidden="true">命</span>
+          <strong>档案叶</strong>
+          <small>生长命理枝</small>
+        </button>
         <div className="home-tree-copy">
           <p className="eyebrow">我的生命树</p>
           <h1>{home.profile.display_name}，这里先记住你。</h1>

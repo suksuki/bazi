@@ -469,7 +469,7 @@ prove transactional insert/replay, deduplication, privacy, append-only
 enforcement and forged-lineage rejection; no real candidate record was
 fabricated to claim process-restart recovery.
 
-Current identities are `v60.mingli-cognitive-engine.025`,
+Identities at that delivery were `v60.mingli-cognitive-engine.025`,
 `v60.foundation.016`, `v60.runtime-architecture.048`,
 `v60.unit-mingli.019`, `v60.unit-lab.016` and migration
 `0024_relation_effect_material`. Knowledge remains `.008`, Cognition `.004`

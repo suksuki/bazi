@@ -3,6 +3,13 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+TTS_PROVIDER_PROFILE_REF = "v60.qwen3-tts-proxy.001"
+TTS_MODEL = "Qwen3-TTS"
+TTS_DEPLOYMENTS = {
+    "https://dblife.com/abu-tts/tts": "dblife-public-proxy",
+    "http://192.168.0.7:7860/tts": "dblife-server13-private-upstream",
+}
+
 
 def _environment_bool(name: str, *, default: bool) -> bool:
     value = os.getenv(name)
@@ -36,6 +43,28 @@ class Settings:
     reasoner_num_ctx: int
     reasoner_num_predict: int
     reasoner_keep_alive: str
+    tts_enabled: bool = True
+    tts_url: str = "https://dblife.com/abu-tts/tts"
+    tts_provider_profile_ref: str = TTS_PROVIDER_PROFILE_REF
+    tts_provider_deployment_ref: str = "dblife-public-proxy"
+    tts_model: str = TTS_MODEL
+    tts_abu_voice: str = "Dylan"
+    tts_duoduo_voice: str = "Vivian"
+    tts_timeout_seconds: float = 45.0
+    tts_max_audio_bytes: int = 8 * 1024 * 1024
+
+    def __post_init__(self) -> None:
+        if self.tts_model != TTS_MODEL:
+            raise ValueError("tts_model_not_controlled_by_proxy_contract")
+        if self.tts_provider_profile_ref != TTS_PROVIDER_PROFILE_REF:
+            raise ValueError("tts_provider_profile_not_admitted")
+        expected_deployment = TTS_DEPLOYMENTS.get(self.tts_url)
+        if expected_deployment is None:
+            raise ValueError("tts_url_not_admitted")
+        if self.tts_provider_deployment_ref != expected_deployment:
+            raise ValueError("tts_url_deployment_mismatch")
+        if not self.tts_abu_voice or not self.tts_duoduo_voice:
+            raise ValueError("tts_voice_required")
 
     @classmethod
     def from_environment(cls) -> Settings:
@@ -72,6 +101,18 @@ class Settings:
         ).strip()
         if not reasoner_keep_alive:
             raise ValueError("reasoner_keep_alive_required")
+        tts_url = os.getenv(
+            "V60_TTS_URL",
+            "https://dblife.com/abu-tts/tts",
+        ).strip()
+        if not tts_url:
+            raise ValueError("tts_url_required")
+        tts_timeout_seconds = float(os.getenv("V60_TTS_TIMEOUT_SECONDS", "45"))
+        if tts_timeout_seconds <= 0:
+            raise ValueError("tts_timeout_seconds_must_be_positive")
+        tts_max_audio_bytes = int(os.getenv("V60_TTS_MAX_AUDIO_BYTES", "8388608"))
+        if tts_max_audio_bytes <= 0:
+            raise ValueError("tts_max_audio_bytes_must_be_positive")
 
         reasoner_provider = os.getenv("V60_REASONER_PROVIDER")
         reasoner_model = os.getenv("V60_REASONER_MODEL")
@@ -110,6 +151,21 @@ class Settings:
             reasoner_num_ctx=reasoner_num_ctx,
             reasoner_num_predict=reasoner_num_predict,
             reasoner_keep_alive=reasoner_keep_alive,
+            tts_enabled=_environment_bool("V60_TTS_ENABLED", default=True),
+            tts_url=tts_url,
+            tts_provider_profile_ref=os.getenv(
+                "V60_TTS_PROVIDER_PROFILE_REF",
+                TTS_PROVIDER_PROFILE_REF,
+            ).strip(),
+            tts_provider_deployment_ref=os.getenv(
+                "V60_TTS_PROVIDER_DEPLOYMENT_REF",
+                "dblife-public-proxy",
+            ).strip(),
+            tts_model=os.getenv("V60_TTS_MODEL", TTS_MODEL).strip(),
+            tts_abu_voice=os.getenv("V60_TTS_ABU_VOICE", "Dylan").strip(),
+            tts_duoduo_voice=os.getenv("V60_TTS_DUODUO_VOICE", "Vivian").strip(),
+            tts_timeout_seconds=tts_timeout_seconds,
+            tts_max_audio_bytes=tts_max_audio_bytes,
         )
 
 

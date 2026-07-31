@@ -48,6 +48,16 @@ LOCAL_REASONER_DEFAULTS = {
     "V60_REASONER_NUM_PREDICT": "1200",
     "V60_REASONER_KEEP_ALIVE": "30m",
 }
+LOCAL_TTS_DEFAULTS = {
+    "V60_TTS_ENABLED": "true",
+    "V60_TTS_URL": "https://dblife.com/abu-tts/tts",
+    "V60_TTS_PROVIDER_PROFILE_REF": "v60.qwen3-tts-proxy.001",
+    "V60_TTS_PROVIDER_DEPLOYMENT_REF": "dblife-public-proxy",
+    "V60_TTS_MODEL": "Qwen3-TTS",
+    "V60_TTS_ABU_VOICE": "Dylan",
+    "V60_TTS_DUODUO_VOICE": "Vivian",
+    "V60_TTS_TIMEOUT_SECONDS": "45",
+}
 
 
 class LocalRuntimeError(RuntimeError):
@@ -194,7 +204,11 @@ def start(host: str, port: int) -> dict[str, Any]:
         str(port),
     ]
     with log_path.open("ab", buffering=0) as log:
-        runtime_environment = {**LOCAL_REASONER_DEFAULTS, **os.environ}
+        runtime_environment = {
+            **LOCAL_REASONER_DEFAULTS,
+            **LOCAL_TTS_DEFAULTS,
+            **os.environ,
+        }
         process = subprocess.Popen(
             command,
             cwd=REPO_ROOT,

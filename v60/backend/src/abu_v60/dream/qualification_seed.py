@@ -44,6 +44,7 @@ from abu_v60.story import (
     EpisodeSourceCompilation,
     StoryEpisodeAdmissionService,
     StoryEpisodeTransitionAdmissionService,
+    persisted_seed_episode_bindings,
     qualification_episode_source_registry,
 )
 from abu_v60.system_manifest import PRIMARY_WORLD_ID
@@ -296,6 +297,7 @@ def _prepare_spec(spec: ThreeLifeQualificationSpec) -> dict[str, Any]:
         "mechanism_vector": mechanism_vector,
         "timing_vector": timing_vector,
         "life_domain_vector": life_domain_vector,
+        "bindings": bindings,
         "source": source,
         "continuation_sources": continuation_sources,
     }
@@ -321,7 +323,6 @@ def _admit_prepared(
     spec: ThreeLifeQualificationSpec = item["spec"]
     birth_input: BirthInput = item["birth_input"]
     compiled: CompiledCase = item["compiled"]
-    source: EpisodeSourceCompilation = item["source"]
 
     _admit_identity(connection, spec=spec, birth_input=birth_input)
     MingliCaseAdmissionService().admit(
@@ -358,9 +359,30 @@ def _admit_prepared(
         connection,
         vector=item["life_domain_vector"],
     )
+    source_registry = qualification_episode_source_registry()
+    prepared_sources = (
+        item["source"],
+        *item["continuation_sources"],
+    )
+    replay_bindings = persisted_seed_episode_bindings(
+        connection,
+        sources=prepared_sources,
+        bindings=item["bindings"],
+    )
+    source: EpisodeSourceCompilation = source_registry.compile_package(
+        spec.package_ref,
+        bindings=replay_bindings,
+    )
+    continuation_sources = tuple(
+        source_registry.compile_package(
+            package_ref,
+            bindings=replay_bindings,
+        )
+        for package_ref in _CONTINUATION_PACKAGE_REFS.get(spec.package_ref, ())
+    )
     _admit_actor(connection, spec=spec, source=source)
     _admit_world_events(connection, source=source)
-    for continuation in item["continuation_sources"]:
+    for continuation in continuation_sources:
         _admit_world_events(connection, source=continuation)
     LifeTreeAdmissionService().admit(
         connection,
@@ -377,7 +399,7 @@ def _admit_prepared(
         life_case_revision_ref=compiled.life_case_revision_ref,
         definition=source.definition,
     )
-    for continuation in item["continuation_sources"]:
+    for continuation in continuation_sources:
         StoryEpisodeAdmissionService().admit(
             connection,
             life_case_revision_ref=compiled.life_case_revision_ref,

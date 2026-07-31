@@ -25,6 +25,7 @@ from abu_v60.story.packages import (
     default_episode_source_registry,
     qualification_episode_source_registry,
 )
+from abu_v60.story.seed_replay import persisted_seed_episode_bindings
 
 __all__ = [
     "EPISODE_SOURCE_REGISTRY_HASH",
@@ -46,6 +47,7 @@ __all__ = [
     "StoryEpisodeTransitionAdmissionService",
     "default_episode_source_registry",
     "episode_transition",
+    "persisted_seed_episode_bindings",
     "qualification_episode_source_registry",
     "validate_persisted_episode_admission",
 ]

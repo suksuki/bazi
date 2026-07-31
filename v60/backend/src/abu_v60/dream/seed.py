@@ -38,6 +38,7 @@ from abu_v60.story import (
     StoryEpisodeAdmissionService,
     StoryEpisodeTransitionAdmissionService,
     default_episode_source_registry,
+    persisted_seed_episode_bindings,
 )
 from abu_v60.system_manifest import PRIMARY_WORLD_ID
 from abu_v60.world import (
@@ -107,13 +108,12 @@ def seed_first_slice(engine: Engine) -> dict[str, Any]:
         timing_vector=timing_vector,
     )
     source_registry = default_episode_source_registry()
-    source_packages = source_registry.compile_all(
-        bindings={
-            "structure_fact_ref": structure_fact["fact_ref"],
-            "timing_vector_ref": episode_timing_vector.vector_ref,
-            "life_domain_vector_ref": life_domain_vector.vector_ref,
-        },
-    )
+    source_bindings = {
+        "structure_fact_ref": structure_fact["fact_ref"],
+        "timing_vector_ref": episode_timing_vector.vector_ref,
+        "life_domain_vector_ref": life_domain_vector.vector_ref,
+    }
+    source_packages = source_registry.compile_all(bindings=source_bindings)
     entry_sources = [source for source in source_packages if source.definition.runtime.entrypoint]
     if len(entry_sources) != 1:
         raise ValueError("episode_source_registry_requires_one_entrypoint")
@@ -135,8 +135,6 @@ def seed_first_slice(engine: Engine) -> dict[str, Any]:
     if len(return_sources) != 1:
         raise ValueError("episode_source_registry_return_episode_missing")
     return_episode = return_sources[0].definition
-    world_events = _source_world_event_definitions(source_packages)
-
     seed_manifest = {
         "seed_id": "v60.first-dream-slice.yanzhou.v1",
         "actor_kind": "CANONICAL_SYNTHETIC",
@@ -156,7 +154,6 @@ def seed_first_slice(engine: Engine) -> dict[str, Any]:
         "question_ref": return_episode.runtime.question_ref,
         "world_event_ref": return_episode.runtime.world_event_ref,
     }
-    tree_organs = first_episode.model_dump(mode="json")["organ_set"]
     with engine.begin() as connection:
         _insert_seed_batches(connection, seed_manifest, seed_extension_manifest)
         _insert_system_identity(connection, birth_input)
@@ -181,21 +178,37 @@ def seed_first_slice(engine: Engine) -> dict[str, Any]:
             connection,
             vector=life_domain_vector,
         )
+        replay_bindings = persisted_seed_episode_bindings(
+            connection,
+            sources=source_packages,
+            bindings=source_bindings,
+        )
+        admission_sources = source_registry.compile_all(
+            bindings=replay_bindings,
+        )
+        admission_entry_sources = [
+            source for source in admission_sources if source.definition.runtime.entrypoint
+        ]
+        if len(admission_entry_sources) != 1:
+            raise ValueError("episode_source_registry_requires_one_entrypoint")
+        admission_first_episode = admission_entry_sources[0].definition
+        world_events = _source_world_event_definitions(admission_sources)
+        tree_organs = admission_first_episode.model_dump(mode="json")["organ_set"]
         _insert_actor(
             connection,
-            actor_ref=first_episode.actor_ref,
-            baseline_event_ref=first_episode.runtime.baseline_event_ref,
+            actor_ref=admission_first_episode.actor_ref,
+            baseline_event_ref=admission_first_episode.runtime.baseline_event_ref,
         )
         _admit_world_events(connection, definitions=world_events)
         _insert_tree(
             connection,
             compiled,
             tree_organs,
-            tree_ref=first_episode.tree_ref,
-            actor_ref=first_episode.actor_ref,
+            tree_ref=admission_first_episode.tree_ref,
+            actor_ref=admission_first_episode.actor_ref,
         )
         admission_service = StoryEpisodeAdmissionService()
-        for source in source_packages:
+        for source in admission_sources:
             admission_service.admit(
                 connection,
                 life_case_revision_ref=compiled.life_case_revision_ref,

@@ -230,5 +230,9 @@ explicit stop list and pre-merge product work are recorded in
 The Mingli capability inventory, central decision hierarchy, V50 reuse
 boundary and quantitative/statistical model are recorded in
 [`docs/16_V60_MINGLI_CORE_AND_QUANTITATIVE_MODEL.md`](docs/16_V60_MINGLI_CORE_AND_QUANTITATIVE_MODEL.md).
+The implemented four/six-pillar stage, synthetic character fixtures, Dylan
+narration authority, audio-clock state machine and real Desktop/in-app iPad
+viewport evidence are recorded in
+[`docs/17_V60_MINGLI_STAGE_AND_SYNCHRONIZED_NARRATION.md`](docs/17_V60_MINGLI_STAGE_AND_SYNCHRONIZED_NARRATION.md).
 The running implementation history is kept in
 [`docs/CHANGELOG.md`](docs/CHANGELOG.md).

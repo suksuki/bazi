@@ -7,14 +7,18 @@ import type {
 import { DreamGroveScene } from "../DreamGroveScene";
 import type { DreamLifeDomain } from "../dreamPersonalJourneyTypes";
 import type { ExperienceScope } from "../experienceNavigation";
+import type { ExperienceUnit } from "../experienceUnits";
 import type { HomeSnapshot } from "../homeApi";
 import { buildDreamReadingObservationLens } from "../homeDreamObservationLens";
+import type { MingliStageViewContext } from "../mingliStageTypes";
 import { LifeTreeScene } from "../LifeTreeScene";
 import { DreamReadingObservationLens } from "./DreamReadingObservationLens";
 import { HomeLifeTreeScene as HomeTree } from "./HomeLifeTreeScene";
+import { MingliReadingStage } from "./MingliReadingStage";
 
 interface ExperienceStoryCanvasProps {
   scope: ExperienceScope;
+  activeUnit: ExperienceUnit;
   home: HomeSnapshot;
   grove: DreamGrove | null;
   snapshot: DreamSnapshot | null;
@@ -22,6 +26,8 @@ interface ExperienceStoryCanvasProps {
   busy: boolean;
   focusedOrganRef: string | null;
   onEnterDream: () => void;
+  onMingliContext: (context: MingliStageViewContext) => void;
+  onSelectUnit: (unit: ExperienceUnit) => void;
   onSelectTree: (candidateRef: string) => void;
   onStartPersonalJourney: (
     candidateRef: string,
@@ -40,6 +46,7 @@ interface ExperienceStoryCanvasProps {
 
 export function ExperienceStoryCanvas({
   scope,
+  activeUnit,
   home,
   grove,
   snapshot,
@@ -47,6 +54,8 @@ export function ExperienceStoryCanvas({
   busy,
   focusedOrganRef,
   onEnterDream,
+  onMingliContext,
+  onSelectUnit,
   onSelectTree,
   onStartPersonalJourney,
   onSelectDreamAttention,
@@ -65,13 +74,24 @@ export function ExperienceStoryCanvas({
 
   return (
     <section className="story-canvas" aria-label="生命树故事现场">
-      {scope === "home" ? (
+      {scope === "home" && activeUnit === "mingli" ? (
+        <MingliReadingStage
+          homeLineageKey={[
+            home.case.case_ref,
+            home.chart.chart_version_ref,
+            home.life_case.life_case_revision_ref,
+            home.mingli.reading.reading_ref,
+          ].join("|")}
+          onContextChange={onMingliContext}
+        />
+      ) : scope === "home" ? (
         <HomeTree
           background={media.assets.life_world_background}
           busy={busy}
           home={home}
           media={media}
           onEnterDream={onEnterDream}
+          onOpenMingli={() => onSelectUnit("mingli")}
         />
       ) : grove ? (
         <DreamGroveScene
@@ -109,13 +129,20 @@ export function ExperienceStoryCanvas({
       )}
       <div className="scene-lineage">
         <span aria-hidden="true" />
-        <p>{sceneLineage(scope, grove)}</p>
+        <p>{sceneLineage(scope, grove, activeUnit)}</p>
       </div>
     </section>
   );
 }
 
-function sceneLineage(scope: ExperienceScope, grove: DreamGrove | null) {
+function sceneLineage(
+  scope: ExperienceScope,
+  grove: DreamGrove | null,
+  activeUnit: ExperienceUnit,
+) {
+  if (scope === "home" && activeUnit === "mingli") {
+    return "命理枝只展开当前 Case 可复算的坐标；未被证明的作用不会被补写。";
+  }
   if (scope === "home") {
     return "这是你的私密生命树；梦境中的生命不会被写进这里。";
   }

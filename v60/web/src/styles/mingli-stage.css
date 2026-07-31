@@ -1,0 +1,582 @@
+.experience-layout[data-mingli-stage-wide="true"] .story-canvas {
+  grid-column: 1 / -1;
+}
+
+.mingli-reading-stage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(240px, 1fr) auto auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  color: #193f35;
+  background:
+    radial-gradient(circle at 50% 34%, rgba(235, 219, 169, 0.2), transparent 37%),
+    linear-gradient(145deg, #fbfaf4 0%, #f2f5ec 52%, #edf3eb 100%);
+}
+
+.mingli-reading-stage::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  opacity: 0.34;
+  background-image:
+    linear-gradient(rgba(103, 123, 106, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(103, 123, 106, 0.04) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(circle at 50% 50%, #000, transparent 76%);
+}
+
+.mingli-stage-header {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  min-height: 104px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 22px 12px;
+  border-bottom: 1px solid rgba(190, 199, 184, 0.72);
+  background: rgba(255, 255, 251, 0.76);
+  backdrop-filter: blur(12px);
+}
+
+.mingli-stage-header h1,
+.mingli-stage-header p {
+  margin: 0;
+}
+
+.mingli-stage-header h1 {
+  margin-top: 3px;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: clamp(22px, 2.2vw, 34px);
+  line-height: 1.2;
+  font-weight: 650;
+}
+
+.mingli-stage-header p {
+  color: #8d7442;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.mingli-identity-badge {
+  display: inline-flex;
+  min-height: 22px;
+  align-items: center;
+  margin-top: 7px;
+  padding: 2px 8px;
+  color: #5d7169;
+  border: 1px solid rgba(151, 170, 157, 0.58);
+  border-radius: 999px;
+  background: rgba(248, 251, 246, 0.8);
+  font-size: 9px;
+}
+
+.mingli-stage-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.mingli-stage-controls label {
+  display: grid;
+  gap: 3px;
+  color: #74857e;
+  font-size: 9px;
+}
+
+.mingli-stage-controls select,
+.mingli-stage-mode button,
+.mingli-subject-retry {
+  min-height: 38px;
+  color: #294c41;
+  border: 1px solid rgba(182, 197, 188, 0.92);
+  border-radius: 7px;
+  background: rgba(255, 255, 252, 0.92);
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.mingli-stage-controls select {
+  max-width: 176px;
+  padding: 0 27px 0 10px;
+}
+
+.mingli-stage-controls select:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.mingli-subject-retry {
+  padding: 0 8px;
+  color: #785f38;
+  cursor: pointer;
+}
+
+.mingli-stage-mode {
+  display: flex;
+  padding: 2px;
+  border: 1px solid rgba(185, 199, 190, 0.72);
+  border-radius: 8px;
+  background: rgba(241, 245, 239, 0.86);
+}
+
+.mingli-stage-mode button {
+  min-height: 34px;
+  padding: 0 10px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.mingli-stage-mode button[aria-pressed="true"] {
+  color: #fffdf7;
+  border-color: #547863;
+  background: #547863;
+  box-shadow: 0 4px 10px rgba(46, 83, 65, 0.16);
+}
+
+.mingli-stage-controls select:focus-visible,
+.mingli-stage-mode button:focus-visible,
+.mingli-narration-controls button:focus-visible,
+.home-mingli-leaf:focus-visible {
+  outline: 2px solid rgba(165, 132, 64, 0.5);
+  outline-offset: 2px;
+}
+
+.mingli-pillar-stage {
+  --mingli-column-count: 4;
+  --mingli-clock-wave: 0;
+  --mingli-relation-offset: 0px;
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 240px;
+  padding: 18px 22px 8px;
+  overflow: visible;
+}
+
+.mingli-stage-plot {
+  position: relative;
+  display: grid;
+  width: 100%;
+  max-width: 760px;
+  min-height: 0;
+  place-items: center;
+  margin: 0 auto;
+}
+
+.mingli-stage-coordinate-plane {
+  position: relative;
+  width: 100%;
+}
+
+.mingli-stage-aura {
+  position: absolute;
+  top: 14%;
+  left: 18%;
+  width: 64%;
+  height: 68%;
+  pointer-events: none;
+  opacity: calc(0.24 + var(--mingli-clock-wave) * 0.18);
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    rgba(222, 198, 121, 0.28),
+    rgba(226, 214, 170, 0.07) 52%,
+    transparent 74%
+  );
+  filter: blur(12px);
+  transform: scale(calc(0.97 + var(--mingli-clock-wave) * 0.06));
+}
+
+.mingli-stage-columns {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(var(--mingli-column-count), minmax(42px, 1fr));
+  gap: 0;
+  align-items: center;
+  width: 100%;
+}
+
+.mingli-stage-column {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  justify-items: center;
+  padding: 0 clamp(2px, 0.55vw, 7px);
+}
+
+.mingli-stage-column header {
+  display: grid;
+  min-height: 34px;
+  align-content: end;
+  justify-items: center;
+  color: #687d73;
+  font-size: 10px;
+}
+
+.mingli-stage-column header small {
+  color: #9b875c;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.mingli-stage-column[data-source-layer="DAYUN"] header,
+.mingli-stage-column[data-source-layer="ANNUAL"] header {
+  color: #755f36;
+  font-weight: 700;
+}
+
+.mingli-stage-body-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.mingli-stage-body {
+  position: relative;
+  display: grid;
+  width: clamp(48px, 5.3vw, 66px);
+  height: clamp(48px, 5.3vw, 66px);
+  place-items: center;
+  color: #244b40;
+  border: 1px solid rgba(120, 149, 132, 0.5);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 36% 28%, rgba(255, 255, 255, 0.96), transparent 34%),
+    linear-gradient(145deg, rgba(246, 249, 242, 0.98), rgba(222, 232, 218, 0.95));
+  box-shadow:
+    inset 0 -8px 16px rgba(70, 103, 84, 0.08),
+    0 8px 20px rgba(49, 76, 62, 0.1);
+}
+
+.mingli-stage-body strong {
+  position: relative;
+  z-index: 2;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: clamp(18px, 2vw, 25px);
+  font-weight: 650;
+}
+
+.mingli-stage-body small {
+  position: absolute;
+  bottom: -13px;
+  color: #8b9893;
+  font-size: 7px;
+}
+
+.mingli-stage-body i {
+  position: absolute;
+  inset: 6px;
+  opacity: 0;
+  border: 1px solid rgba(196, 164, 86, 0.5);
+  border-radius: 50%;
+}
+
+.mingli-stage-column[data-source-layer="DAYUN"] .mingli-stage-body,
+.mingli-stage-column[data-source-layer="ANNUAL"] .mingli-stage-body {
+  border-color: rgba(174, 141, 69, 0.54);
+  background:
+    radial-gradient(circle at 36% 28%, rgba(255, 255, 255, 0.96), transparent 34%),
+    linear-gradient(145deg, #faf7e9, #e9e1c6);
+}
+
+.mingli-pillar-stage:is(
+    [data-narration-phase="PLAYING"],
+    [data-narration-phase="PAUSED"],
+    [data-narration-phase="ENDED"]
+  )[data-active-cue-id="STRUCTURE"]
+  .mingli-stage-body,
+.mingli-pillar-stage:is(
+    [data-narration-phase="PLAYING"],
+    [data-narration-phase="PAUSED"],
+    [data-narration-phase="ENDED"]
+  )[data-active-cue-id="TIME_LAYER"]
+  .mingli-stage-column[data-source-layer="DAYUN"]
+  .mingli-stage-body,
+.mingli-pillar-stage:is(
+    [data-narration-phase="PLAYING"],
+    [data-narration-phase="PAUSED"],
+    [data-narration-phase="ENDED"]
+  )[data-active-cue-id="TIME_LAYER"]
+  .mingli-stage-column[data-source-layer="ANNUAL"]
+  .mingli-stage-body {
+  border-color: rgba(174, 141, 69, 0.78);
+  box-shadow:
+    inset 0 -8px 16px rgba(70, 103, 84, 0.08),
+    0 0 0 5px rgba(207, 183, 116, 0.09),
+    0 10px 24px rgba(62, 88, 70, 0.14);
+  transform: translateY(-2px);
+}
+
+.mingli-pillar-stage:is(
+    [data-narration-phase="PLAYING"],
+    [data-narration-phase="PAUSED"],
+    [data-narration-phase="ENDED"]
+  )
+  .mingli-stage-body
+  i {
+  opacity: calc(0.18 + var(--mingli-clock-wave) * 0.56);
+  transform: scale(calc(0.88 + var(--mingli-clock-wave) * 0.15));
+}
+
+.mingli-relation-lines {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.mingli-relation-lines path {
+  fill: none;
+  stroke: rgba(108, 130, 119, 0.48);
+  stroke-width: 1.4;
+  stroke-dasharray: 4 5;
+  vector-effect: non-scaling-stroke;
+}
+
+.mingli-relation-lines path[data-relation-type="six_harmony_membership"] {
+  stroke: rgba(153, 130, 77, 0.56);
+}
+
+.mingli-pillar-stage[data-narration-phase="PLAYING"][data-active-cue-id="RELATION_BOUNDARY"]
+  .mingli-relation-lines
+  path {
+  stroke-width: 2;
+  stroke-dashoffset: var(--mingli-relation-offset);
+}
+
+.mingli-pillar-stage[data-narration-phase="PAUSED"][data-active-cue-id="RELATION_BOUNDARY"]
+  .mingli-relation-lines
+  path {
+  stroke-width: 2;
+  stroke-dashoffset: var(--mingli-relation-offset);
+}
+
+.mingli-relation-key {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  width: 100%;
+  max-width: 760px;
+  min-width: 0;
+  margin: 4px auto 0;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+  overflow: visible;
+}
+
+.mingli-relation-key > span {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  color: #687b73;
+  border: 1px solid rgba(187, 199, 191, 0.72);
+  border-radius: 999px;
+  background: rgba(255, 255, 252, 0.72);
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.mingli-relation-key small {
+  color: #9a8761;
+  font-size: 7px;
+}
+
+.mingli-narration {
+  position: relative;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 104px;
+  margin: 0 18px;
+  padding: 12px 14px;
+  border: 1px solid rgba(192, 201, 188, 0.82);
+  border-radius: 10px;
+  background: rgba(255, 255, 251, 0.82);
+  box-shadow: 0 8px 24px rgba(52, 76, 62, 0.07);
+  backdrop-filter: blur(10px);
+}
+
+.mingli-narration audio {
+  display: none;
+}
+
+.mingli-narration-speaker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mingli-narration-speaker > span {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  color: #fffdf6;
+  border-radius: 50%;
+  background: #587865;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  box-shadow: 0 0 0 5px rgba(88, 120, 101, 0.09);
+}
+
+.mingli-narration-speaker p {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+
+.mingli-narration-speaker strong {
+  font-size: 11px;
+}
+
+.mingli-narration-speaker small {
+  color: #899790;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.mingli-narration-subtitle {
+  display: grid;
+  min-height: 52px;
+  align-items: center;
+  padding: 7px 12px;
+  border-right: 1px solid rgba(207, 213, 204, 0.72);
+  border-left: 1px solid rgba(207, 213, 204, 0.72);
+}
+
+.mingli-narration-subtitle p {
+  margin: 0;
+  color: #3f5c52;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 11px;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.mingli-narration[data-narration-phase="PREPARING"] .mingli-narration-subtitle p {
+  color: #8b7b59;
+}
+
+.mingli-narration-controls {
+  display: grid;
+  min-width: 110px;
+  gap: 4px;
+  justify-items: stretch;
+}
+
+.mingli-narration-controls button {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  color: #fffdf7;
+  border: 1px solid #547863;
+  border-radius: 8px;
+  background: #547863;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.mingli-narration-controls button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.mingli-narration-controls small {
+  color: #8b9892;
+  font-size: 8px;
+  text-align: center;
+}
+
+.mingli-narration-error {
+  position: absolute;
+  right: 12px;
+  bottom: 3px;
+  margin: 0;
+  color: #895c53;
+  font-size: 8px;
+}
+
+.mingli-narration-wait {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  margin: 0;
+  color: #8b754b;
+  font-size: 8px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.mingli-stage-boundary {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 20px 10px;
+  color: #657a71;
+  font-size: 9px;
+}
+
+.mingli-stage-boundary small {
+  color: #8c846f;
+  font-size: 8px;
+  text-align: right;
+}
+
+.mingli-stage-loading,
+.mingli-stage-error {
+  position: absolute;
+  z-index: 7;
+  inset: 104px 0 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  color: #667a71;
+  background: rgba(248, 249, 243, 0.9);
+  font-size: 11px;
+}
+
+.mingli-stage-loading span {
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(132, 154, 140, 0.5);
+  border-top-color: #9a7d43;
+  border-radius: 50%;
+}
+
+.mingli-stage-error p {
+  margin: 0;
+}
+
+.mingli-stage-error button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #6e8878;
+  border-radius: 7px;
+  background: #fff;
+  cursor: pointer;
+}

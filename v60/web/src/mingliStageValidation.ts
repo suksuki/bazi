@@ -1,0 +1,176 @@
+import type {
+  MingliNarrationReadyResponse,
+  MingliStageMode,
+  MingliStageProjection,
+  MingliStageSubject,
+  MingliStageSubjectId,
+} from "./mingliStageTypes";
+
+const HASH = /^[0-9a-f]{64}$/;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const STAGE_SLOTS = {
+  NATAL_4: ["NATAL_YEAR", "NATAL_MONTH", "NATAL_DAY", "NATAL_HOUR"],
+  NATAL_DAYUN_YEAR_6: [
+    "NATAL_YEAR",
+    "NATAL_MONTH",
+    "NATAL_DAY",
+    "NATAL_HOUR",
+    "DAYUN",
+    "ANNUAL",
+  ],
+} as const;
+
+export function validateStageSubjects(value: unknown): MingliStageSubject[] {
+  if (!Array.isArray(value) || value.length < 3) {
+    throw new Error("mingli_stage_subjects_invalid");
+  }
+  const subjects = value as MingliStageSubject[];
+  if (
+    subjects.some(
+      (item) =>
+        !["current", "abu", "duoduo"].includes(item.subject_id) ||
+        !item.display_name ||
+        !["HUMAN_OWNER", "CANONICAL_SYNTHETIC"].includes(item.subject_kind),
+    )
+  ) {
+    throw new Error("mingli_stage_subject_identity_invalid");
+  }
+  return subjects;
+}
+
+export function validateStageProjection(
+  value: unknown,
+  expected?: {
+    subjectId: MingliStageSubjectId;
+    mode: MingliStageMode;
+    year: number | null;
+  },
+): MingliStageProjection {
+  if (!isRecord(value)) throw new Error("mingli_stage_projection_invalid");
+  const stage = value as unknown as MingliStageProjection;
+  const slots = STAGE_SLOTS[stage.stage_mode];
+  if (
+    !slots ||
+    (expected !== undefined && stage.subject_id !== expected.subjectId) ||
+    (expected !== undefined && stage.stage_mode !== expected.mode) ||
+    (expected?.year !== null &&
+      expected?.year !== undefined &&
+      stage.selected_year !== expected.year) ||
+    (stage.subject_id === "current"
+      ? stage.subject_kind !== "HUMAN_OWNER" || stage.privacy_scope !== "PRIVATE_OWNER"
+      : stage.subject_kind !== "CANONICAL_SYNTHETIC" ||
+        stage.privacy_scope !== "PUBLIC_SYNTHETIC_SHOWCASE") ||
+    stage.projection_version !== "v60.mingli-stage-projection.002" ||
+    !stage.projection_ref ||
+    !HASH.test(stage.projection_hash) ||
+    !Array.isArray(stage.source_refs) ||
+    !stage.foundation_profile_ref ||
+    !HASH.test(stage.foundation_profile_hash) ||
+    !stage.source_refs.includes(stage.foundation_profile_ref) ||
+    !stage.timing_profile_ref ||
+    !HASH.test(stage.timing_profile_hash) ||
+    !stage.source_refs.includes(stage.timing_profile_ref) ||
+    !stage.source_refs.includes(stage.chart_version_ref) ||
+    !stage.source_refs.includes(stage.life_case_revision_ref) ||
+    (stage.reading_ref !== null && !stage.source_refs.includes(stage.reading_ref)) ||
+    (stage.reading_ref === null
+      ? stage.reading_hash !== null
+      : !HASH.test(stage.reading_hash ?? "")) ||
+    !ISO_DATE.test(stage.current_dayun_start_date) ||
+    !ISO_DATE.test(stage.current_dayun_end_date) ||
+    stage.current_dayun_start_date >= stage.current_dayun_end_date ||
+    stage.dayun_boundary_precision !==
+      "START_SOLAR_DATE_TIME_UNRESOLVED_ON_BOUNDARY_DAY" ||
+    stage.dayun_calculation_policy !==
+      "LUNAR_PYTHON_YUN_SECT_1_START_SOLAR_DATE_BOUNDARIES" ||
+    stage.dayun_resolution_status !== "RESOLVED_OUTSIDE_BOUNDARY_DAY" ||
+    !Array.isArray(stage.columns) ||
+    !Array.isArray(stage.bodies) ||
+    !Array.isArray(stage.relations) ||
+    !Array.isArray(stage.available_years) ||
+    stage.columns.length !== slots.length ||
+    stage.bodies.length !== slots.length * 2 ||
+    stage.columns.some((column, index) => column.slot !== slots[index]) ||
+    stage.columns.some((column) => column.source_layer === ("MONTHLY" as string)) ||
+    stage.columns.some((column) =>
+      column.source_layer === "DAYUN"
+        ? !column.start_date ||
+          !column.end_date ||
+          !ISO_DATE.test(column.start_date) ||
+          !ISO_DATE.test(column.end_date)
+        : column.start_date !== undefined || column.end_date !== undefined,
+    ) ||
+    stage.columns.some(
+      (column) =>
+        column.source_layer === "DAYUN" &&
+        (column.start_date !== stage.current_dayun_start_date ||
+          column.end_date !== stage.current_dayun_end_date ||
+          column.start_year !== stage.current_dayun_start_year ||
+          column.end_year !== stage.current_dayun_end_year),
+    ) ||
+    stage.relation_effect_status !== "UNRESOLVED" ||
+    stage.usable_source_status !== "UNRESOLVED" ||
+    stage.professional_verdict_allowed !== false ||
+    stage.relations.some(
+      (relation) =>
+        relation.effect_status !== "UNRESOLVED" ||
+        relation.usable_source_status !== "UNRESOLVED" ||
+        !HASH.test(relation.rule_hash),
+    )
+  ) {
+    throw new Error("mingli_stage_projection_shape_invalid");
+  }
+  if (
+    (stage.stage_mode === "NATAL_4" && stage.selected_year !== null) ||
+    (stage.stage_mode === "NATAL_DAYUN_YEAR_6" && stage.selected_year === null)
+  ) {
+    throw new Error("mingli_stage_projection_time_state_invalid");
+  }
+  return stage;
+}
+
+export function validateNarrationReady(
+  value: unknown,
+  stage: MingliStageProjection,
+): MingliNarrationReadyResponse {
+  if (!isRecord(value) || !isRecord(value.asset) || typeof value.audio_url !== "string") {
+    throw new Error("mingli_narration_response_invalid");
+  }
+  const response = value as unknown as MingliNarrationReadyResponse;
+  const asset = response.asset;
+  if (
+    !response.audio_url.startsWith("/api/v60/mingli/narrations/") ||
+    asset.narration_version !== "v60.mingli-narration.002" ||
+    asset.stage_projection_ref !== stage.projection_ref ||
+    asset.stage_projection_hash !== stage.projection_hash ||
+    asset.case_ref !== stage.case_ref ||
+    asset.reading_ref !== stage.reading_ref ||
+    asset.actor_ref !== stage.narrator_actor_id ||
+    asset.preparation_status !== "READY" ||
+    asset.clock_source !== "HTML_AUDIO_CURRENT_TIME" ||
+    asset.upstream_exposed_to_client !== false ||
+    !HASH.test(asset.narration_hash) ||
+    !HASH.test(asset.audio_sha256) ||
+    asset.provider_profile_ref !== "v60.qwen3-tts-proxy.001" ||
+    !HASH.test(asset.provider_profile_hash) ||
+    !["dblife-public-proxy", "dblife-server13-private-upstream"].includes(
+      asset.provider_deployment_ref,
+    ) ||
+    !Array.isArray(asset.cues) ||
+    asset.cues.length !== 4 ||
+    asset.cues[0]?.start_ms !== 0 ||
+    asset.cues.at(-1)?.end_ms !== asset.duration_ms ||
+    asset.cues.some(
+      (cue, index) =>
+        cue.end_ms <= cue.start_ms ||
+        (index > 0 && asset.cues[index - 1]?.end_ms !== cue.start_ms),
+    )
+  ) {
+    throw new Error("mingli_narration_response_binding_invalid");
+  }
+  return response;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}

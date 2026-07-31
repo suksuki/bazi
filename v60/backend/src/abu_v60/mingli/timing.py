@@ -11,6 +11,9 @@ from abu_v60.mingli.calendar import BirthInput, resolve_eight_char
 from abu_v60.mingli.mechanism_contracts import MingliMechanismEvidenceVector
 from abu_v60.mingli.quantitative import PILLAR_SLOTS, resolve_ten_god
 from abu_v60.mingli.timing_contracts import (
+    DAYUN_BOUNDARY_PRECISION,
+    DAYUN_CALCULATION_POLICY,
+    DAYUN_RESOLUTION_STATUS,
     MingliTimingEvidenceVector,
     TimingCandidateOverlap,
     TimingCoordinate,
@@ -49,33 +52,30 @@ class MingliTimingEvidenceCompiler:
         timing_profile = self._authority.active_timing_evidence_profile()
         foundation_profile = self._authority.active_foundation_profile()
         gender_codes = {
-            item.gender: item.lunar_python_code
-            for item in timing_profile.yun_gender_codes
+            item.gender: item.lunar_python_code for item in timing_profile.yun_gender_codes
         }
         if gender not in gender_codes:
             raise ValueError("timing_vector_gender_not_supported")
 
         eight_char = resolve_eight_char(birth_input)
-        yun = eight_char.getYun(gender_codes[gender])
-        current_dayun = next(
-            (
-                item
-                for item in yun.getDaYun()
-                if item.getStartYear() <= analysis_date.year <= item.getEndYear()
-            ),
-            None,
+        yun = eight_char.getYun(gender_codes[gender], 1)
+        current_dayun, dayun_start_date, dayun_end_date = self._resolve_current_dayun(
+            yun=yun,
+            analysis_date=analysis_date,
         )
-        if current_dayun is None:
-            raise ValueError("timing_vector_current_dayun_not_found")
 
-        current_eight_char = Solar.fromYmdHms(
-            analysis_date.year,
-            analysis_date.month,
-            analysis_date.day,
-            12,
-            0,
-            0,
-        ).getLunar().getEightChar()
+        current_eight_char = (
+            Solar.fromYmdHms(
+                analysis_date.year,
+                analysis_date.month,
+                analysis_date.day,
+                12,
+                0,
+                0,
+            )
+            .getLunar()
+            .getEightChar()
+        )
         current_eight_char.setSect(2)
         raw_coordinates = (
             (
@@ -83,9 +83,11 @@ class MingliTimingEvidenceCompiler:
                 current_dayun.getGanZhi(),
                 current_dayun.getStartYear(),
                 current_dayun.getEndYear(),
+                dayun_start_date,
+                dayun_end_date,
             ),
-            ("ANNUAL", current_eight_char.getYear(), None, None),
-            ("MONTHLY", current_eight_char.getMonth(), None, None),
+            ("ANNUAL", current_eight_char.getYear(), None, None, None, None),
+            ("MONTHLY", current_eight_char.getMonth(), None, None, None, None),
         )
         day_master = pillars["day"][0]
         coordinates = tuple(
@@ -99,8 +101,17 @@ class MingliTimingEvidenceCompiler:
                 pillar=pillar,
                 start_year=start_year,
                 end_year=end_year,
+                start_date=start_date,
+                end_date=end_date,
             )
-            for layer, pillar, start_year, end_year in raw_coordinates
+            for (
+                layer,
+                pillar,
+                start_year,
+                end_year,
+                start_date,
+                end_date,
+            ) in raw_coordinates
         )
         relations = self._relations(
             chart_version_ref=chart_version_ref,
@@ -126,6 +137,9 @@ class MingliTimingEvidenceCompiler:
             analysis_date=analysis_date,
             timezone=birth_input.timezone,
             day_master_stem=day_master,
+            dayun_boundary_precision=DAYUN_BOUNDARY_PRECISION,
+            dayun_calculation_policy=DAYUN_CALCULATION_POLICY,
+            dayun_resolution_status=DAYUN_RESOLUTION_STATUS,
             coordinates=coordinates,
             relation_evidence=relations,
             candidate_overlaps=overlaps,
@@ -135,6 +149,50 @@ class MingliTimingEvidenceCompiler:
             calibration_status="NOT_CALIBRATED",
             forbidden_conclusions=timing_profile.forbidden_conclusions,
         )
+
+    @staticmethod
+    def _resolve_current_dayun(
+        *,
+        yun: Any,
+        analysis_date: date,
+    ) -> tuple[Any, date, date]:
+        dayuns = tuple(
+            item for item in yun.getDaYun() if item.getIndex() > 0 and len(item.getGanZhi()) == 2
+        )
+        if not dayuns:
+            raise ValueError("timing_vector_dayun_schedule_missing")
+
+        first_start_solar = yun.getStartSolar()
+        first_start_year = dayuns[0].getStartYear()
+        periods: list[tuple[Any, date, date]] = []
+        boundary_dates: set[date] = set()
+        for item in dayuns:
+            start_solar = first_start_solar.nextYear(item.getStartYear() - first_start_year)
+            end_solar = first_start_solar.nextYear(item.getEndYear() + 1 - first_start_year)
+            start_date = date(
+                start_solar.getYear(),
+                start_solar.getMonth(),
+                start_solar.getDay(),
+            )
+            end_date = date(
+                end_solar.getYear(),
+                end_solar.getMonth(),
+                end_solar.getDay(),
+            )
+            if start_date.year != item.getStartYear() or end_date.year - 1 != item.getEndYear():
+                raise ValueError("timing_vector_dayun_boundary_year_drift")
+            periods.append((item, start_date, end_date))
+            boundary_dates.update((start_date, end_date))
+
+        if analysis_date in boundary_dates:
+            raise ValueError("timing_vector_dayun_boundary_unresolved")
+        current = next(
+            (period for period in periods if period[1] < analysis_date < period[2]),
+            None,
+        )
+        if current is None:
+            raise ValueError("timing_vector_current_dayun_not_found")
+        return current
 
     def _coordinate(
         self,
@@ -148,6 +206,8 @@ class MingliTimingEvidenceCompiler:
         pillar: str,
         start_year: int | None,
         end_year: int | None,
+        start_date: date | None,
+        end_date: date | None,
     ) -> TimingCoordinate:
         identity = {
             "case_ref": case_ref,
@@ -156,6 +216,8 @@ class MingliTimingEvidenceCompiler:
             "analysis_date": analysis_date.isoformat(),
             "layer": layer,
             "pillar": pillar,
+            "start_date": start_date.isoformat() if start_date is not None else None,
+            "end_date": end_date.isoformat() if end_date is not None else None,
         }
         return TimingCoordinate(
             coordinate_ref=stable_ref("v60-mingli-timing-coordinate", identity),
@@ -170,6 +232,8 @@ class MingliTimingEvidenceCompiler:
             ),
             start_year=start_year,
             end_year=end_year,
+            start_date=start_date,
+            end_date=end_date,
             calculation_status="DETERMINISTIC_COORDINATE",
         )
 

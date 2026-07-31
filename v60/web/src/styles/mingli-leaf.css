@@ -1,0 +1,56 @@
+.home-mingli-leaf {
+  position: absolute;
+  z-index: 6;
+  top: 32%;
+  left: 44%;
+  display: grid;
+  min-width: 98px;
+  min-height: 68px;
+  grid-template-columns: 34px 1fr;
+  grid-template-rows: 1fr 1fr;
+  align-items: center;
+  padding: 7px 10px;
+  color: #345648;
+  border: 1px solid rgba(137, 159, 143, 0.66);
+  border-radius: 50% 12px 50% 12px;
+  background: rgba(251, 252, 246, 0.84);
+  box-shadow: 0 10px 24px rgba(47, 81, 61, 0.12);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  transform: rotate(-4deg);
+}
+
+.home-mingli-leaf > span {
+  grid-row: 1 / 3;
+  display: grid;
+  width: 31px;
+  height: 31px;
+  place-items: center;
+  color: #fffdf7;
+  border-radius: 50%;
+  background: #5c7b66;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+}
+
+.home-mingli-leaf strong,
+.home-mingli-leaf small {
+  text-align: left;
+  transform: rotate(4deg);
+}
+
+.home-mingli-leaf strong {
+  align-self: end;
+  font-size: 11px;
+}
+
+.home-mingli-leaf small {
+  align-self: start;
+  color: #819088;
+  font-size: 8px;
+}
+
+.home-mingli-leaf:hover {
+  border-color: rgba(154, 124, 62, 0.7);
+  box-shadow: 0 12px 28px rgba(47, 81, 61, 0.17);
+  transform: rotate(-2deg) translateY(-2px);
+}

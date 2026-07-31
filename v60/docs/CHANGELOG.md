@@ -1,5 +1,56 @@
 # V60 Change Log
 
+## 2026-08-01
+
+### Real Mingli four/six-pillar stage and synchronized Dylan narration
+
+- Connected the Home profile leaf to a real Mingli stage backed by the
+  authenticated Owner Case or the explicitly admitted synthetic Abu and Dodo
+  Cases. The fixtures replay idempotently and do not reuse same-name human
+  profiles.
+- Added strict four-pillar and six-pillar Projections: the default natal view
+  has four columns/eight bodies; the time layer has natal four plus current
+  Dayun plus the selected annual year, six columns/twelve bodies. Five pillars
+  and monthly columns fail closed.
+- Bound relationship paths and pillar bodies to one responsive coordinate
+  plane, so the admitted membership line remains attached to its exact two
+  branch bodies on Desktop and iPad portrait instead of drifting vertically.
+- Kept the professional boundary visible: the stage can show only canonical
+  coordinates and admitted six-clash/six-harmony members. Relation effect,
+  source usability, strength, timing activation, effective work, probability
+  and auspiciousness remain unresolved.
+- Added server-owned narration scripts and private append-only Media assets.
+  The browser cannot submit text, speaker, model, provider or upstream URL;
+  same-origin authenticated audio supports Range and private no-store delivery.
+- Applied the Owner voice decision: Abu now binds the Owner-selected `Dylan`
+  profile; Dodo keeps the `Vivian` audition profile. The earlier Eric asset
+  remains append-only history. A non-Dylan override is labelled audition,
+  never Owner-selected.
+- Implemented `PREPARING / READY / PLAYING / PAUSED / ENDED` playback. Audio
+  `currentTime` is the only subtitle, cue and deterministic stage-emphasis
+  clock; refresh restores Case/mode/year and safely resets narration.
+- Replaced year-only Dayun edges with exact start-solar date boundaries from
+  the pinned calendar engine. A Case without an observation time now abstains
+  on the transition date instead of guessing the current Dayun.
+- Preserved already-admitted Dream Episode evidence across the Timing `.001`
+  to `.002` upgrade: seed replay recovers only fully Hash-verified historical
+  Timing/Life-domain bindings and then still passes the ordinary Story
+  admission lineage and immutable-receipt checks.
+- Added migrations `0026_mingli_narration_assets` and
+  `0027_mingli_narration_v2`; advanced Foundation to `.019`, Stage Projection
+  to `.002`, Timing Evidence to `.002` and Narration to `.002`, while retaining
+  legacy Narration/Timing decoding. Mingli remains `.026`, Media `.003`, Unit
+  Mingli `.020` and Runtime Architecture `.053`.
+- Generated a real 56.480-second Dylan Narration `.002` asset through the
+  dblife Qwen3-TTS proxy. Real signed-in browser checks passed for Desktop and
+  in-app Chrome iPad viewports, audio-clock sync, pause freeze, route recovery
+  and exact Owner-lineage presentation. Physical iPad Safari and V108 actor/
+  particle mappings remain handoff checks, not delivered claims. Evidence is
+  in `.artifacts/mingli-stage-narration/`.
+- Passed all 315 backend tests, Ruff, TypeScript/Vite build, Runtime
+  Architecture, migration-head, source-maintainability and managed-restart
+  checks on Foundation `.019`.
+
 ## 2026-07-31
 
 ### Two-line product direction before prototype merge

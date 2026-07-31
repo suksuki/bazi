@@ -39,6 +39,8 @@ import {
 } from "./experienceNavigation";
 import type { ExperienceUnit } from "./experienceUnits";
 import { compareHomeMechanisms, loadHomeExperience } from "./homeApi";
+import { initialMingliStageContext, mingliStageMatchesHome } from "./mingliStageContext";
+import type { MingliStageViewContext } from "./mingliStageTypes";
 import {
   deriveSemanticFocus,
   findOrganForSources,
@@ -50,6 +52,7 @@ export function App() {
   const [scope, setScope] = useState<ExperienceScope>(readScope);
   const [activeUnit, setActiveUnit] = useState<ExperienceUnit>(readUnit);
   const [focusRef, setFocusRef] = useState<string | null>(readFocusRef);
+  const [mingliContext, setMingliContext] = useState<MingliStageViewContext>(initialMingliStageContext);
 
   useEffect(() => {
     let active = true;
@@ -335,6 +338,10 @@ export function App() {
     const home = await loadHomeExperience();
     setRuntime((current) => ({ ...current, home }));
   };
+  const selectUnit = (unit: ExperienceUnit) => {
+    setActiveUnit(unit);
+    writeNavigation(scope, unit, scope === "dream" ? focusRef : null, "push");
+  };
 
   const handleLogout = () => {
     void logout().then(() => setRuntime(loggedOutState));
@@ -382,13 +389,25 @@ export function App() {
   const home = runtime.home;
   const snapshot = runtime.snapshot;
   const media = runtime.bootstrap.media;
+  const mingliActive = scope === "home" && activeUnit === "mingli";
+  const mingliMatchesHome = mingliActive && mingliStageMatchesHome(mingliContext, home);
   return (
     <main
       className="dream-root v60-shell"
       data-experience-scope={scope}
-      data-scene-id={scope === "home" ? "private-home-tree" : snapshot?.game.scene_id}
+      data-scene-id={
+        scope === "home"
+          ? activeUnit === "mingli"
+            ? "mingli-reading-stage"
+            : "private-home-tree"
+          : snapshot?.game.scene_id
+      }
       data-scene-version={
-        scope === "home" ? home.tree.projection_version : snapshot?.game.scene_version
+        mingliActive
+          ? (mingliContext.projection?.projection_version ?? "mingli-stage-pending")
+          : scope === "home"
+            ? home.tree.projection_version
+            : snapshot?.game.scene_version
       }
       data-layout-key={
         scope === "home" ? "picture_book_private_home" : snapshot?.game.layout_key
@@ -398,6 +417,7 @@ export function App() {
         accountName={runtime.session.account.display_name}
         brand={media.assets.brand_logo}
         home={home}
+        mingliContext={mingliActive ? mingliContext : null}
         onLogout={handleLogout}
         onReturnHome={() => void returnHome()}
         scope={scope}
@@ -408,8 +428,10 @@ export function App() {
       <div
         className="experience-layout"
         data-grove={scope === "dream" && runtime.grove !== null}
+        data-mingli-stage-wide={mingliActive && !mingliMatchesHome}
       >
         <ExperienceStoryCanvas
+          activeUnit={activeUnit}
           scope={scope}
           home={home}
           grove={runtime.grove}
@@ -418,36 +440,22 @@ export function App() {
           busy={runtime.busy}
           focusedOrganRef={semanticFocus?.organ.organ_ref ?? null}
           onEnterDream={() => void enterDream()}
+          onMingliContext={setMingliContext}
+          onSelectUnit={selectUnit}
           onSelectTree={(candidateRef) => void selectGroveTree(candidateRef)}
-          onStartPersonalJourney={(candidateRef, domain, question) =>
-            void selectGroveTree(candidateRef, { domain, question })
-          }
-          onSelectDreamAttention={createDreamNextAttentionHandler(
-            runtime,
-            setRuntime,
-          )}
+          onStartPersonalJourney={(candidateRef, domain, question) => void selectGroveTree(candidateRef, { domain, question })}
+          onSelectDreamAttention={createDreamNextAttentionHandler(runtime, setRuntime)}
           onFocus={(organ) => {
             setFocusRef(organ.organ_ref);
             writeNavigation("dream", activeUnit, organ.organ_ref, "replace");
           }}
-          onOrgan={(organ) =>
-            void runAction(() =>
-              executeDreamCommand(snapshot!, commandForOrgan(organ), {
-                targetRef: organ.organ_ref,
-              }),
-            )
-          }
-          onAnswer={(choiceId) =>
-            void runAction(() =>
-              executeDreamCommand(snapshot!, "SEAL_ANSWER", { choiceId }),
-            )
-          }
-          onReveal={() =>
-            void runAction(() => executeDreamCommand(snapshot!, "REVEAL"))
-          }
-          onReconcile={() =>
-            void runAction(() => executeDreamCommand(snapshot!, "RECONCILE"))
-          }
+          onOrgan={(organ) => void runAction(() => executeDreamCommand(
+            snapshot!, commandForOrgan(organ), { targetRef: organ.organ_ref },
+          ))}
+          onAnswer={(choiceId) => void runAction(() =>
+            executeDreamCommand(snapshot!, "SEAL_ANSWER", { choiceId }))}
+          onReveal={() => void runAction(() => executeDreamCommand(snapshot!, "REVEAL"))}
+          onReconcile={() => void runAction(() => executeDreamCommand(snapshot!, "RECONCILE"))}
           onContinue={() =>
             void runAction(() =>
               executeDreamCommand(snapshot!, "CONTINUE_ENCOUNTER"),
@@ -456,7 +464,7 @@ export function App() {
           onReturnToGrove={() => void returnToGrove()}
         />
 
-        {scope === "home" ? (
+        {scope === "home" && (!mingliActive || mingliMatchesHome) ? (
           <HomeCompanionRail
             activeUnit={activeUnit}
             busy={runtime.busy}
@@ -465,7 +473,7 @@ export function App() {
             onHomeRefresh={refreshHome}
             onEnterDream={() => void enterDream()}
           />
-        ) : runtime.grove ? null : (
+        ) : scope === "home" || runtime.grove ? null : (
           snapshot && (
             <CompanionRail
               focus={semanticFocus}
@@ -481,15 +489,7 @@ export function App() {
       <ExperienceRuntimeOverlay
         activeUnit={activeUnit}
         error={runtime.error}
-        onSelect={(unit) => {
-          setActiveUnit(unit);
-          writeNavigation(
-            scope,
-            unit,
-            scope === "dream" ? focusRef : null,
-            "push",
-          );
-        }}
+        onSelect={selectUnit}
       />
     </main>
   );

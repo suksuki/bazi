@@ -7,7 +7,7 @@ from abu_v60.system_manifest import runtime_manifest
 def test_runtime_architecture_has_one_owner_per_schema_and_five_units() -> None:
     architecture = runtime_architecture()
     architecture.validate_boundaries()
-    assert architecture.architecture_version == "v60.runtime-architecture.052"
+    assert architecture.architecture_version == "v60.runtime-architecture.053"
     assert architecture.product_units == (
         "unit-mingli",
         "unit-dream",
@@ -58,7 +58,7 @@ def test_manifest_exposes_world_game_and_localization_reservation() -> None:
     assert manifest["engines"]["context"] == "v60.experience-context.003"
     assert manifest["engines"]["game"] == "v60.dream-game-engine.019"
     assert manifest["engines"]["world"] == "v60.world-continuity-engine.004"
-    assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.025"
+    assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.026"
     assert manifest["engines"]["story"] == "v60.life-story-engine.011"
     source_review = manifest["source_review_profiles"]
     assert len(source_review) == 1
@@ -114,12 +114,19 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     architecture = runtime_architecture()
     modules = {module.module_id: module for module in architecture.modules}
 
-    assert modules["mingli"].version == "v60.mingli-cognitive-engine.025"
+    assert modules["mingli"].version == "v60.mingli-cognitive-engine.026"
     assert modules["knowledge"].version == "v60.knowledge-authority.008"
-    assert modules["unit-mingli"].version == "v60.unit-mingli.019"
+    assert modules["media"].version == "v60.media-library.003"
+    assert modules["unit-mingli"].version == "v60.unit-mingli.020"
     assert modules["unit-abu"].version == "v60.unit-abu-says.007"
     assert modules["unit-lab"].version == "v60.unit-lab.016"
     assert modules["unit-dream"].version == "v60.unit-dream.020"
+    assert modules["media"].reads_from == ("identity", "mingli")
+    assert modules["unit-mingli"].reads_from == (
+        "experience-context",
+        "mingli",
+        "media",
+    )
     assert "structural_candidate_projection" in modules["mingli"].capabilities
     assert "candidate_qualification_receipt" in modules["mingli"].capabilities
     assert "versioned_reading_envelope" in modules["mingli"].capabilities
@@ -219,6 +226,18 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
         "candidate_material_not_professional_evidence"
         in modules["mingli"].capabilities
     )
+    assert "canonical_synthetic_character_showcases" in modules["mingli"].capabilities
+    assert "four_six_column_stage_projection" in modules["mingli"].capabilities
+    assert "current_dayun_selected_annual_projection" in modules["mingli"].capabilities
+    assert "relation_membership_effect_withheld" in modules["mingli"].capabilities
+    assert "private_mingli_narration_asset" in modules["media"].capabilities
+    assert "append_only_narration_history" in modules["media"].capabilities
+    assert "server_side_qwen3_tts_adapter" in modules["media"].capabilities
+    assert "same_origin_authenticated_audio_range" in modules["media"].capabilities
+    assert (
+        "server_locked_projection_bound_narration"
+        in modules["media"].capabilities
+    )
     assert "explicit_active_profile_selection" in modules["knowledge"].capabilities
     assert "hash_locked_quant_foundation_profile" in modules["knowledge"].capabilities
     assert "hash_locked_source_coordinate_review_profile" in modules["knowledge"].capabilities
@@ -270,6 +289,9 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
         "relation_effect_evidence_preparation_request"
         in modules["unit-mingli"].capabilities
     )
+    assert "profile_leaf_stage_entry" in modules["unit-mingli"].capabilities
+    assert "four_six_pillar_stage" in modules["unit-mingli"].capabilities
+    assert "audio_current_time_narration" in modules["unit-mingli"].capabilities
     assert "return_to_grove_after_reconciliation" in modules["unit-dream"].capabilities
     assert "pre_outcome_question_basis" in modules["unit-dream"].capabilities
     assert "read_only_reading_observation_lens" in modules["unit-dream"].capabilities
@@ -523,6 +545,10 @@ def test_bootstrap_writes_route_through_each_schema_owner() -> None:
             source_root / "mingli" / "relation_effect_request.py",
             source_root / "mingli" / "source_review_store.py",
             source_root / "mingli" / "timing_store.py",
+        },
+        "media": {
+            source_root / "media" / "mingli_narration_store.py",
+            source_root / "media" / "registry.py",
         },
         "dream": {
             source_root / "dream" / "grove.py",

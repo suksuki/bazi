@@ -15,6 +15,15 @@ from abu_v60.mingli.calendar import (
     resolve_four_pillars,
 )
 from abu_v60.mingli.compiler import CompiledCase, compile_case
+from abu_v60.mingli.timing_contracts import (
+    DAYUN_BOUNDARY_PRECISION,
+    DAYUN_CALCULATION_POLICY,
+    DAYUN_RESOLUTION_STATUS,
+    LEGACY_TIMING_VECTOR_VERSION,
+    TIMING_VECTOR_VERSION,
+    MingliTimingEvidenceVector,
+)
+from abu_v60.provenance import content_hash, stable_ref
 
 ANALYSIS_DATE = date(2026, 7, 29)
 
@@ -24,6 +33,7 @@ def _compile_timing(
     case_ref: str,
     birth_date: date,
     birth_time: time,
+    analysis_date: date = ANALYSIS_DATE,
 ):
     birth_input = BirthInput(
         calendar_type="solar",
@@ -45,7 +55,7 @@ def _compile_timing(
         gender="male",
         pillars=compiled.pillars,
         facts=compiled.facts,
-        analysis_date=ANALYSIS_DATE,
+        analysis_date=analysis_date,
     )
     return birth_input, compiled, timing
 
@@ -98,6 +108,10 @@ def test_liu_jin_timing_coordinates_are_real_and_bounded() -> None:
     assert timing.activation_status == "UNRESOLVED"
     assert timing.effect_status == "UNRESOLVED"
     assert timing.calibration_status == "NOT_CALIBRATED"
+    assert timing.vector_version == TIMING_VECTOR_VERSION
+    assert timing.dayun_boundary_precision == DAYUN_BOUNDARY_PRECISION
+    assert timing.dayun_calculation_policy == DAYUN_CALCULATION_POLICY
+    assert timing.dayun_resolution_status == DAYUN_RESOLUTION_STATUS
     assert "auspiciousness" in timing.forbidden_conclusions
     assert "reality_event" in timing.forbidden_conclusions
 
@@ -109,10 +123,7 @@ def test_yanzhou_timing_coordinates_feed_dream_without_deciding_story() -> None:
         birth_time=time(9, 20),
     )
 
-    assert [
-        (item.layer, item.pillar, item.ten_god_label)
-        for item in timing.coordinates
-    ] == [
+    assert [(item.layer, item.pillar, item.ten_god_label) for item in timing.coordinates] == [
         ("DAYUN", "壬辰", "七杀"),
         ("ANNUAL", "丙午", "比肩"),
         ("MONTHLY", "乙未", "正印"),
@@ -129,10 +140,7 @@ def test_yanzhou_timing_coordinates_feed_dream_without_deciding_story() -> None:
         ("ANNUAL", "year", "six_harmony_membership"),
         ("MONTHLY", "year", "same_branch_membership"),
     }
-    assert all(
-        item.effect_status == "UNRESOLVED"
-        for item in timing.relation_evidence
-    )
+    assert all(item.effect_status == "UNRESOLVED" for item in timing.relation_evidence)
 
 
 def test_timing_vector_is_stable_under_fact_order_and_profile_is_pinned() -> None:
@@ -190,3 +198,68 @@ def test_timing_rejects_mechanism_from_another_chart() -> None:
                 compiled=other,
             ),
         )
+
+
+def test_abu_dayun_uses_exact_start_solar_date_boundaries() -> None:
+    _, _, before = _compile_timing(
+        case_ref="case-abu-before-dayun-boundary",
+        birth_date=date(1998, 11, 11),
+        birth_time=time(12, 0),
+        analysis_date=date(2017, 7, 30),
+    )
+    _, _, after = _compile_timing(
+        case_ref="case-abu-after-dayun-boundary",
+        birth_date=date(1998, 11, 11),
+        birth_time=time(12, 0),
+        analysis_date=date(2017, 8, 1),
+    )
+
+    assert (
+        before.coordinates[0].pillar,
+        before.coordinates[0].start_date,
+        before.coordinates[0].end_date,
+    ) == ("甲子", date(2007, 7, 31), date(2017, 7, 31))
+    assert (
+        after.coordinates[0].pillar,
+        after.coordinates[0].start_date,
+        after.coordinates[0].end_date,
+    ) == ("乙丑", date(2017, 7, 31), date(2027, 7, 31))
+
+    with pytest.raises(
+        ValueError,
+        match="timing_vector_dayun_boundary_unresolved",
+    ):
+        _compile_timing(
+            case_ref="case-abu-on-dayun-boundary",
+            birth_date=date(1998, 11, 11),
+            birth_time=time(12, 0),
+            analysis_date=date(2017, 7, 31),
+        )
+
+
+def test_legacy_v1_timing_payload_remains_exactly_decodable() -> None:
+    _, _, current = _compile_timing(
+        case_ref="case-timing-v1-decode",
+        birth_date=date(1998, 11, 11),
+        birth_time=time(12, 0),
+    )
+    payload = current.model_dump(mode="json")
+    payload["vector_version"] = LEGACY_TIMING_VECTOR_VERSION
+    payload.pop("dayun_boundary_precision")
+    payload.pop("dayun_calculation_policy")
+    payload.pop("dayun_resolution_status")
+    for coordinate in payload["coordinates"]:
+        coordinate.pop("start_date", None)
+        coordinate.pop("end_date", None)
+    identity = {
+        key: value for key, value in payload.items() if key not in {"vector_ref", "vector_hash"}
+    }
+    payload["vector_ref"] = stable_ref("v60-mingli-timing-vector", identity)
+    payload["vector_hash"] = content_hash(identity)
+
+    restored = MingliTimingEvidenceVector.model_validate(payload)
+
+    assert restored.vector_version == LEGACY_TIMING_VECTOR_VERSION
+    assert restored.coordinates[0].start_date is None
+    assert restored.coordinates[0].end_date is None
+    assert restored.model_dump(mode="json") == payload

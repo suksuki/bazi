@@ -124,7 +124,9 @@ class IdentityAdmissionService:
             connection.execute(
                 text(
                     """
-                    SELECT account_ref, source_ref, source_hash, source_batch_ref
+                    SELECT account_ref, email, display_name, account_role, active,
+                           password_scheme, password_hash, password_salt,
+                           source_ref, source_hash, source_batch_ref
                     FROM identity.accounts
                     WHERE account_ref = :account_ref
                     """
@@ -138,7 +140,9 @@ class IdentityAdmissionService:
             connection.execute(
                 text(
                     """
-                    SELECT profile_ref, account_ref, source_ref, source_hash, input_json
+                    SELECT profile_ref, account_ref, display_name, gender,
+                           calendar_type, birth_date, birth_time, birth_location,
+                           timezone, source_ref, source_hash, input_json, active
                     FROM identity.profiles
                     WHERE profile_ref = :profile_ref
                     """
@@ -149,16 +153,10 @@ class IdentityAdmissionService:
             .one()
         )
         expected_account = {
-            "account_ref": definition.account.account_ref,
-            "source_ref": definition.account.source_ref,
-            "source_hash": definition.account.source_hash,
-            "source_batch_ref": definition.account.source_batch_ref,
+            **definition.account.model_dump(mode="python"),
         }
         expected_profile = {
-            "profile_ref": definition.profile.profile_ref,
-            "account_ref": definition.account.account_ref,
-            "source_ref": definition.profile.source_ref,
-            "source_hash": definition.profile.source_hash,
+            **definition.profile.model_dump(mode="python", exclude={"input_payload"}),
             "input_json": definition.profile.input_payload,
         }
         if dict(account) != expected_account or dict(profile) != expected_profile:

@@ -15,7 +15,7 @@ from abu_v60.architecture.contracts import (
 @lru_cache(maxsize=1)
 def runtime_architecture() -> RuntimeArchitecture:
     architecture = RuntimeArchitecture(
-        architecture_version="v60.runtime-architecture.052",
+        architecture_version="v60.runtime-architecture.053",
         modules=(
             RuntimeModule(
                 module_id="identity",
@@ -33,7 +33,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="mingli",
                 kind=ModuleKind.ENGINE,
-                version="v60.mingli-cognitive-engine.025",
+                version="v60.mingli-cognitive-engine.026",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("mingli",),
                 reads_from=("identity",),
@@ -95,6 +95,10 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "append_only_relation_effect_candidate_material",
                     "account_private_structured_bibliography_candidate",
                     "candidate_material_not_professional_evidence",
+                    "canonical_synthetic_character_showcases",
+                    "four_six_column_stage_projection",
+                    "current_dayun_selected_annual_projection",
+                    "relation_membership_effect_withheld",
                 ),
                 writes_canonical_state=True,
             ),
@@ -277,13 +281,19 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="media",
                 kind=ModuleKind.PLATFORM,
-                version="v60.media-library.002",
+                version="v60.media-library.003",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("media",),
+                reads_from=("identity", "mingli"),
                 capabilities=(
                     "hash_locked_assets",
                     "runtime_variant_registry",
                     "runtime_cue_resolution",
+                    "private_mingli_narration_asset",
+                    "append_only_narration_history",
+                    "server_side_qwen3_tts_adapter",
+                    "same_origin_authenticated_audio_range",
+                    "server_locked_projection_bound_narration",
                 ),
                 writes_canonical_state=True,
             ),
@@ -344,9 +354,9 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-mingli",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-mingli.019",
+                version="v60.unit-mingli.020",
                 status=ModuleStatus.ACTIVE,
-                reads_from=("experience-context",),
+                reads_from=("experience-context", "mingli", "media"),
                 capabilities=(
                     "formal_chart_workspace",
                     "fact_lineage",
@@ -370,6 +380,9 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "relation_effect_evidence_readiness_summary",
                     "relation_effect_evidence_preparation_request",
                     "relation_effect_candidate_material_summary",
+                    "profile_leaf_stage_entry",
+                    "four_six_pillar_stage",
+                    "audio_current_time_narration",
                 ),
             ),
             RuntimeModule(

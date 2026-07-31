@@ -12,6 +12,8 @@ from abu_v60.api.dream import router as dream_router
 from abu_v60.api.experience import router as experience_router
 from abu_v60.api.identity import router as identity_router
 from abu_v60.api.mingli import router as mingli_router
+from abu_v60.api.mingli_narration import router as mingli_narration_router
+from abu_v60.api.mingli_stage import router as mingli_stage_router
 from abu_v60.api.system import router as system_router
 from abu_v60.runtime import world_runtime_worker
 from abu_v60.system_manifest import PRODUCT_VERSION
@@ -34,6 +36,8 @@ app = FastAPI(
 app.include_router(system_router)
 app.include_router(identity_router)
 app.include_router(mingli_router)
+app.include_router(mingli_narration_router)
+app.include_router(mingli_stage_router)
 app.include_router(experience_router)
 app.include_router(dream_router)
 
