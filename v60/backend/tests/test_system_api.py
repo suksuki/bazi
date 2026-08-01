@@ -1,6 +1,6 @@
 import asyncio
 
-from abu_v60.main import app
+from abu_v60.main import _web_cache_control, app
 from httpx import ASGITransport, AsyncClient
 
 
@@ -10,6 +10,17 @@ async def _get(path: str):
         base_url="http://v60.test",
     ) as client:
         return await client.get(path)
+
+
+def test_web_entry_revalidates_while_versioned_assets_are_immutable() -> None:
+    assert _web_cache_control("/experience") == (
+        "private, no-store, max-age=0, must-revalidate"
+    )
+    assert _web_cache_control("/") == "private, no-store, max-age=0, must-revalidate"
+    assert _web_cache_control("/assets/index-content-hash.js") == (
+        "public, max-age=31536000, immutable"
+    )
+    assert _web_cache_control("/api/v60/bootstrap") is None
 
 
 def test_manifest_has_no_v50_runtime_dependency() -> None:
@@ -126,6 +137,12 @@ def test_bootstrap_exposes_only_admitted_runtime_media_bindings() -> None:
         "brand_logo",
         "grove_background",
         "life_world_background",
+        "home_day_background",
+        "home_night_background",
+        "home_day_logo",
+        "home_night_logo",
+        "home_profile_leaf",
+        "home_lab_flower",
     }
     assert set(media["cues"]) == {"abu_idle", "abu_guide_left", "dodo_idle"}
     assert media["cues"]["abu_guide_left"]["trigger"] == (

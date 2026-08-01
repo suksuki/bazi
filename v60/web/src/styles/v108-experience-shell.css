@@ -1,0 +1,56 @@
+.v60-shell[data-scene-id="mingli-shared-scene"] {
+  display: block;
+  min-height: 620px;
+  background: #071813;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] > .app-header,
+.v60-shell[data-scene-id="mingli-shared-scene"] > .experience-dock,
+.v60-shell[data-scene-id="mingli-shared-scene"] .scene-lineage {
+  display: none;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .experience-layout {
+  position: absolute;
+  inset: 0;
+  display: block;
+  padding: 0;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .story-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host {
+  background:
+    radial-gradient(circle at 48% 45%, rgba(70, 119, 93, 0.34), transparent 44%),
+    linear-gradient(148deg, #0e2d24 0%, #0b211b 54%, #071813 100%);
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-player-field,
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-player canvas {
+  background: #071812;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host-header {
+  min-height: 76px;
+  background: linear-gradient(180deg, rgba(6, 25, 19, 0.94), rgba(6, 25, 19, 0.64));
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .runtime-error {
+  top: 18px;
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host-header {
+    min-height: 70px;
+  }
+}

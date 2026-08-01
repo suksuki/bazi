@@ -415,7 +415,7 @@ export function App() {
     >
       <ExperienceHeader
         accountName={runtime.session.account.display_name}
-        brand={media.assets.brand_logo}
+        brand={scope === "dream" ? media.assets.home_night_logo : media.assets.brand_logo}
         home={home}
         mingliContext={mingliSceneActive ? mingliContext : null}
         onLogout={handleLogout}
@@ -490,7 +490,7 @@ export function App() {
       <ExperienceRuntimeOverlay
         activeUnit={activeUnit}
         error={runtime.error}
-        hideDock={mingliSceneActive}
+        hideDock={mingliSceneActive || scope === "dream"}
         onSelect={selectUnit}
       />
     </main>

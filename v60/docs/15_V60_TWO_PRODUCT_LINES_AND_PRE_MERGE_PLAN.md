@@ -34,9 +34,10 @@ WorldEvent 或其他 canonical 来源，不能另造事实、改写命理结论�
 
 1. **首轮不建设完整多语言版本。**
 
-   第一轮只完成中文 Desktop 和 iPad 闭环。语言接口、locale 字段和
+   第一轮只完成中文 Desktop Chrome 闭环。语言接口、locale 字段和
    少量可验证实现可以保留，但英文、韩文的完整文案、TTS、资产与验收
-   不属于首轮完成条件。
+   不属于首轮完成条件。iPad 竖屏与书籍版一起另行设计，不进入本轮
+   完成口径；其他浏览器也不在本轮正式验收矩阵内。
 2. **V108 后期原型继续作为体验权威。**
 
    沉浸命理枝是正式后续设计。阿布说按共享功能模块接入各场景，不得
@@ -61,6 +62,53 @@ WorldEvent 或其他 canonical 来源，不能另造事实、改写命理结论�
    设计师可以基于工程约束制作照宁树多 NPC 原型和 Scene Script；
    Codex 在正式角色、剧情、NPC-to-NPC 事件和分支通过 Owner Gate 前，
    不实现或伪造多 NPC 能力。
+
+## 当前 V108 整合状态
+
+第一轮整体体验换壳已经进入真实 Runtime，而不是继续把 V108 当作工程
+参考：
+
+```text
+V108 昼夜全屏首页
+-> 真实 Owner 档案叶
+-> 同一树上的命理枝 / Lab 花 / 设置果 / Dream 树洞
+-> 全屏共享四柱／六柱 Scene Player
+-> 全屏真实三人生 Dream Grove（十树月湖仍待接入）
+```
+
+当前首页、命理枝与 Dream 路径已经撤下旧白色 Dashboard Header、底部
+Dock、常驻右栏和卡片边框；Dream 真实工具以场景内镜片或玻璃 Inspector
+继续可达。V108 的昼夜母图、品牌、档案叶与 Lab 花均从冻结 commit
+`a6cf762684e14514f58c8f45b82cca86d9a7ec4c` 按 Hash 正式导入；档案、
+Case、Reading、Lab、TTS 与恢复仍由 V60 canonical 承载。
+
+这不等于整体 V108 整合已经完成。当前最大的用户可感知缺口是 Dream：
+
+- 首页树洞已经符合 V108 空间入口；
+- 树洞后仍是 V60 真实三人生 Grove，不是月湖十树；
+- Dream Encounter 目前只按账号恢复，在建立 Profile／Case／LifeCase
+  lineage 前不得宣称“一档案一梦境世界”；
+- 不得复制三棵树、伪造九棵装饰树或借 CSS 把旧 Grove 冒充十树完成。
+
+下一轮体验整合应先由设计师补充 Desktop Chrome 的月湖十树真实 Scene
+Composition；Codex 同时补 Dream viewer lineage 和正式十树 Projection，
+再接入现有 Encounter／Question／Seal／World／Reveal 引擎。iPad 竖屏
+构图留到书籍版设计轮次，不再作为当前设计请求或实现阻塞项。
+
+### DESIGN_REQUEST：Desktop Chrome 月湖十树
+
+- `scene`: Dream 月湖十树（Desktop Chrome）
+- `observed_behavior`: 首页树洞成立；进入后仍是三树 Grove
+- `design_question`: 请给出十树初始全景、可恢复树状态、观察镜片／私密
+  问题／回响的分层打开方式，以及选树后的空间转场
+- `current_assumption`: 十树身份稳定但深度不等；照宁树承担首个深场景；
+  现有真实面板改为按需展开而非同时常驻
+- `implementation_constraint`: 不复制三人生数据，不伪造 NPC，不让视觉
+  树身份拥有 canonical 事实；本轮只验收 Desktop Chrome
+- `recommendation`: 先交付月湖全景、十树基础状态和一个选树转场；其余
+  复杂面板进入所选树后按需出现
+- `owner_decision_required`: `NO`；若要减少十树、删除现有真实闭环或新增
+  正式角色，才进入 Owner Gate
 
 ## 立即停止
 

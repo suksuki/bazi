@@ -1,10 +1,32 @@
 from __future__ import annotations
 
+import json
+
 from abu_v60.media import (
+    PROJECT_ROOT,
     load_verified_media_catalog,
     media_library_summary,
     runtime_media_manifest,
 )
+
+
+def test_v108_home_shell_bundle_is_frozen_to_design_canonical() -> None:
+    path = PROJECT_ROOT / "media/manifests/V108_HOME_SHELL_BASELINE_V1.v1.json"
+    bundle = json.loads(path.read_text(encoding="utf-8"))
+
+    assert bundle["frozen_design_commit"] == (
+        "a6cf762684e14514f58c8f45b82cca86d9a7ec4c"
+    )
+    assert {asset["asset_id"] for asset in bundle["assets"]} == {
+        "V108_HOME_DAY_BACKGROUND_V1",
+        "V108_HOME_NIGHT_BACKGROUND_V1",
+        "V108_HOME_DAY_LOGO_V1",
+        "V108_HOME_NIGHT_LOGO_V1",
+        "V108_HOME_PROFILE_LEAF_V1",
+        "V108_HOME_LAB_FLOWER_V1",
+    }
+    assert all(asset["sha256"] for asset in bundle["assets"])
+    assert bundle["boundaries"]["runtime_data_authority"] == "V60_CANONICAL"
 
 
 def test_media_library_sources_deliveries_and_cues_are_hash_locked() -> None:
@@ -14,11 +36,11 @@ def test_media_library_sources_deliveries_and_cues_are_hash_locked() -> None:
     assert summary == {
         "schema_version": "v60.media-library.001",
         "schema_ref": "media/schemas/media-catalog-v1.schema.json",
-        "item_count": 12,
+        "item_count": 18,
         "character_identity_count": 3,
         "primary_character_version": "ABU_CHARACTER_V60_V1",
-        "runtime_registered_count": 9,
-        "source_count": 12,
+        "runtime_registered_count": 15,
+        "source_count": 18,
         "cue_bundle_count": 6,
         "audio_gap_cues": ["cue.dream.follow-walk.v1"],
         "owner_review_items": ["media.dream.entry-transition.v1"],
@@ -36,6 +58,12 @@ def test_media_library_sources_deliveries_and_cues_are_hash_locked() -> None:
         "media.v60.life-world.clean.v1",
         "media.brand.abuknows-v60.primary-logo.v1",
         "media.dodo.v108.idle-transparent.v1",
+        "media.experience.v108.home.day-background.v1",
+        "media.experience.v108.home.night-background.v1",
+        "media.experience.v108.home.day-logo.v1",
+        "media.experience.v108.home.night-logo.v1",
+        "media.experience.v108.home.profile-leaf.v1",
+        "media.experience.v108.home.lab-flower.v1",
     }
 
 
@@ -104,12 +132,18 @@ def test_v60_character_identity_is_primary_and_legacy_cartoon_is_retained() -> N
 def test_runtime_media_manifest_resolves_hash_locked_assets_and_cues() -> None:
     manifest = runtime_media_manifest()
 
-    assert manifest["registry_version"] == "v60.runtime-media-registry.002"
+    assert manifest["registry_version"] == "v60.runtime-media-registry.003"
     assert manifest["assets"]["brand_logo"]["asset_ref"] == (
         "brand.abuknows-v60.logo.transparent.v1"
     )
     assert manifest["assets"]["life_world_background"]["url"] == (
         "/assets/dream/v60-life-world-clean-v1.png"
+    )
+    assert manifest["assets"]["home_day_background"]["sha256"] == (
+        "4b9d3edc39c3a56b2acc2b7aff1faec122a26cbdf1b7cf2b5a66dafecd93b6b3"
+    )
+    assert manifest["assets"]["home_profile_leaf"]["url"] == (
+        "/assets/v108/life-leaf-v1.webp"
     )
     assert manifest["cues"]["abu_idle"]["cue_ref"] == "cue.dream.abu-idle.v1"
     assert manifest["cues"]["abu_idle"]["playback"] == "LOOP"

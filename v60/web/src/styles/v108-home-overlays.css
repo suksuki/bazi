@@ -1,0 +1,276 @@
+.v108-world-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 34px;
+  background: rgba(4, 23, 29, 0.34);
+  backdrop-filter: blur(6px);
+  animation: v108-overlay-in 240ms ease both;
+}
+
+.v108-settings-panel {
+  display: grid;
+  width: min(760px, 92vw);
+  max-height: min(760px, calc(100dvh - 70px));
+  gap: 18px;
+  padding: 24px;
+  overflow: auto;
+  border: 1px solid rgba(255, 250, 230, 0.48);
+  border-radius: 28px;
+  background: rgba(246, 239, 222, 0.92);
+  box-shadow: 0 30px 90px rgba(3, 24, 29, 0.34);
+  color: #284c3c;
+}
+
+.v108-settings-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.v108-settings-panel > header > span {
+  display: grid;
+  gap: 3px;
+}
+
+.v108-settings-panel > header small {
+  color: #90774c;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.v108-settings-panel > header strong {
+  font: 600 25px "Noto Serif SC", "Songti SC", serif;
+}
+
+.v108-settings-panel > header button {
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(72, 91, 78, 0.12);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.34);
+  color: #69776e;
+  cursor: pointer;
+  font-size: 21px;
+}
+
+.v108-settings-profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(90, 118, 98, 0.14);
+  border-radius: 20px;
+  background: rgba(255, 255, 249, 0.44);
+}
+
+.v108-settings-profile > i {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #71967b, #315e48);
+  color: #fff8df;
+  font: normal 600 20px "Noto Serif SC", "Songti SC", serif;
+}
+
+.v108-settings-profile > div {
+  display: grid;
+  gap: 3px;
+}
+
+.v108-settings-profile small,
+.v108-settings-profile span {
+  color: #7c887e;
+  font-size: 9px;
+}
+
+.v108-settings-profile strong {
+  font: 600 17px "Noto Serif SC", "Songti SC", serif;
+}
+
+.v108-settings-pillars {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v108-settings-pillars > span {
+  display: grid;
+  min-height: 64px;
+  place-items: center;
+  padding: 8px;
+  border: 1px solid rgba(92, 118, 101, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 255, 249, 0.38);
+}
+
+.v108-settings-pillars small {
+  color: #96805a;
+  font-size: 8px;
+}
+
+.v108-settings-pillars strong {
+  font: 600 16px "Noto Serif SC", "Songti SC", serif;
+}
+
+.v108-world-footprints {
+  display: grid;
+  gap: 8px;
+}
+
+.v108-world-footprints article {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 13px;
+  border-bottom: 1px solid rgba(87, 110, 95, 0.12);
+}
+
+.v108-world-footprints article > i {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(84, 126, 96, 0.12);
+  color: #4e765b;
+  font: normal 600 11px "Noto Serif SC", "Songti SC", serif;
+}
+
+.v108-world-footprints article > span {
+  display: grid;
+  gap: 4px;
+}
+
+.v108-world-footprints strong {
+  font-size: 11px;
+}
+
+.v108-world-footprints small {
+  color: #77857c;
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.v108-settings-panel > footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.v108-settings-panel > footer button {
+  min-height: 42px;
+  padding: 8px 14px;
+  border: 1px solid rgba(54, 102, 74, 0.24);
+  border-radius: 999px;
+  background: #2e674a;
+  color: #fff8e5;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.v108-settings-panel > footer .v108-quiet-command {
+  margin-left: auto;
+  border-color: rgba(73, 87, 78, 0.14);
+  background: transparent;
+  color: #758178;
+}
+
+.v108-world-passage {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: rgba(7, 30, 26, 0.82);
+  color: #fff7dc;
+  backdrop-filter: blur(2px);
+  animation: v108-passage-arrive 860ms cubic-bezier(0.16, 0.78, 0.24, 1) both;
+}
+
+.v108-world-passage::before,
+.v108-world-passage::after,
+.v108-world-passage > i,
+.v108-world-passage > b {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44vmax;
+  aspect-ratio: 1;
+  border: 1px solid rgba(245, 211, 130, 0.28);
+  border-radius: 50%;
+  content: "";
+  transform: translate(-50%, -50%);
+  animation: v108-passage-ring 860ms cubic-bezier(0.16, 0.78, 0.24, 1) both;
+}
+
+.v108-world-passage::after {
+  width: 28vmax;
+  animation-delay: 70ms;
+}
+
+.v108-world-passage > i {
+  width: 18vmax;
+  border-color: rgba(151, 205, 177, 0.28);
+  animation-delay: 130ms;
+}
+
+.v108-world-passage > b {
+  width: 11vmax;
+  border-color: rgba(255, 235, 180, 0.36);
+  animation-delay: 190ms;
+}
+
+.v108-world-passage.to-dream {
+  background: radial-gradient(circle at 12% 79%, rgba(28, 61, 88, 0.36), rgba(2, 10, 23, 0.92) 48%, #01060f);
+}
+
+.v108-world-passage.to-dream::before,
+.v108-world-passage.to-dream::after {
+  top: 79%;
+  left: 12%;
+  border-color: rgba(129, 181, 220, 0.3);
+}
+
+.v108-world-passage p {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  text-align: center;
+}
+
+.v108-world-passage small {
+  color: rgba(240, 208, 136, 0.78);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+}
+
+.v108-world-passage strong {
+  font: 600 clamp(18px, 2.5vw, 30px) "Noto Serif SC", "Songti SC", serif;
+}
+
+@keyframes v108-overlay-in {
+  from { opacity: 0; }
+}
+
+@keyframes v108-passage-arrive {
+  from { opacity: 0; }
+  35% { opacity: 1; }
+}
+
+@keyframes v108-passage-ring {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.15); }
+  55% { opacity: 1; }
+  to { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+}

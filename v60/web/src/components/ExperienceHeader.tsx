@@ -47,7 +47,7 @@ export function ExperienceHeader({
           onClick={onReturnHome}
         >
           <span aria-hidden="true">←</span>
-          <span>梦境中的生命线</span>
+          <span>账号连续的梦境旅程</span>
           <strong>
             {activeSnapshot?.projections.dream.journey_title ?? "三棵生命树"}
           </strong>

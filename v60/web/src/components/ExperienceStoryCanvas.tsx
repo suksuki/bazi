@@ -92,11 +92,11 @@ export function ExperienceStoryCanvas({
         />
       ) : scope === "home" ? (
         <HomeTree
-          background={media.assets.life_world_background}
           busy={busy}
           home={home}
           media={media}
           onEnterDream={onEnterDream}
+          onOpenLab={() => onSelectUnit("lab")}
           onOpenMingli={() => onSelectUnit("mingli")}
         />
       ) : grove ? (

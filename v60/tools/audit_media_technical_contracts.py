@@ -54,7 +54,11 @@ def main() -> None:
                 if len(video_streams) != 1 or audio_streams:
                     raise RuntimeError(f"{path} must contain one video stream and no audio")
                 video = video_streams[0]
-                alpha_mode = str(video.get("tags", {}).get("ALPHA_MODE", "0"))
+                tags = {
+                    str(key).upper(): str(value)
+                    for key, value in video.get("tags", {}).items()
+                }
+                alpha_mode = tags.get("ALPHA_MODE", "0")
                 if video["codec_name"] != "vp9" or alpha_mode != "1":
                     raise RuntimeError(f"{path} is not a VP9 alpha delivery")
                 alpha_videos += 1

@@ -668,6 +668,232 @@
         "reduced_motion_asset_ref": "dodo.v108.idle.poster.v1",
         "performance_fidelity": "IDLE_MEDIA_WITH_AUDIO_BOUND_STATE"
       }
+    },
+    {
+      "media_ref": "media.experience.v108.home.day-background.v1",
+      "asset_id": "V108_HOME_DAY_BACKGROUND_V1",
+      "revision": "v1",
+      "media_kind": "SCENE_BACKGROUND",
+      "character_version": null,
+      "semantic_role": "V108_HOME_DAY_SCENE_PLANE",
+      "action_type": "STATIC",
+      "library_status": "RUNTIME_REGISTERED",
+      "source": {
+        "path": "media/sources/V108_HOME_DAY_BACKGROUND_V1/v1/source.webp",
+        "original_filename": "home-day-threshold-v1.webp",
+        "sha256": "4b9d3edc39c3a56b2acc2b7aff1faec122a26cbdf1b7cf2b5a66dafecd93b6b3",
+        "generator": "CHATGPT_SITES_V108_DESIGNER",
+        "prompt_ref": null,
+        "prompt_status": "FROZEN_V108_PROTOTYPE_SOURCE",
+        "authorization": "OWNER_APPROVED_V108_EXPERIENCE_BASELINE"
+      },
+      "process_manifest_path": "media/manifests/V108_HOME_SHELL_BASELINE_V1.v1.json",
+      "process_manifest_sha256": "c9f59bda6c13977c0d0b2d0056f4beece2b745c63b78c54945dd64e8f17a9754",
+      "deliveries": [
+        {
+          "asset_ref": "experience.v108.home.day-background.v1",
+          "asset_version": "V108_HOME_DAY_BACKGROUND_V1",
+          "role": "V108_HOME_DAY_SCENE_PLANE",
+          "path": "web/public/assets/v108/home-day-threshold-v1.webp",
+          "sha256": "4b9d3edc39c3a56b2acc2b7aff1faec122a26cbdf1b7cf2b5a66dafecd93b6b3",
+          "alpha": false
+        }
+      ],
+      "review_artifacts": [],
+      "runtime_contract": {
+        "trigger": "V108_HOME_WORLD_DAY_VISIBLE",
+        "playback": "STATIC",
+        "anchor": "SCENE_PLANE_1584_990",
+        "fallback": "FAIL_CLOSED"
+      }
+    },
+    {
+      "media_ref": "media.experience.v108.home.night-background.v1",
+      "asset_id": "V108_HOME_NIGHT_BACKGROUND_V1",
+      "revision": "v1",
+      "media_kind": "SCENE_BACKGROUND",
+      "character_version": null,
+      "semantic_role": "V108_HOME_NIGHT_SCENE_PLANE",
+      "action_type": "STATIC",
+      "library_status": "RUNTIME_REGISTERED",
+      "source": {
+        "path": "media/sources/V108_HOME_NIGHT_BACKGROUND_V1/v1/source.webp",
+        "original_filename": "home-night-threshold-v1.webp",
+        "sha256": "1279353c3394878d455168f7b3b0af5c2e69a468bfc62b9196bd915a8f41239b",
+        "generator": "CHATGPT_SITES_V108_DESIGNER",
+        "prompt_ref": null,
+        "prompt_status": "FROZEN_V108_PROTOTYPE_SOURCE",
+        "authorization": "OWNER_APPROVED_V108_EXPERIENCE_BASELINE"
+      },
+      "process_manifest_path": "media/manifests/V108_HOME_SHELL_BASELINE_V1.v1.json",
+      "process_manifest_sha256": "c9f59bda6c13977c0d0b2d0056f4beece2b745c63b78c54945dd64e8f17a9754",
+      "deliveries": [
+        {
+          "asset_ref": "experience.v108.home.night-background.v1",
+          "asset_version": "V108_HOME_NIGHT_BACKGROUND_V1",
+          "role": "V108_HOME_NIGHT_SCENE_PLANE",
+          "path": "web/public/assets/v108/home-night-threshold-v1.webp",
+          "sha256": "1279353c3394878d455168f7b3b0af5c2e69a468bfc62b9196bd915a8f41239b",
+          "alpha": false
+        }
+      ],
+      "review_artifacts": [],
+      "runtime_contract": {
+        "trigger": "V108_HOME_WORLD_NIGHT_VISIBLE",
+        "playback": "STATIC",
+        "anchor": "SCENE_PLANE_1584_990",
+        "fallback": "FAIL_CLOSED"
+      }
+    },
+    {
+      "media_ref": "media.experience.v108.home.day-logo.v1",
+      "asset_id": "V108_HOME_DAY_LOGO_V1",
+      "revision": "v1",
+      "media_kind": "BRAND_IDENTITY",
+      "character_version": null,
+      "semantic_role": "V108_HOME_DAY_BRAND_MARK",
+      "action_type": "STATIC",
+      "library_status": "RUNTIME_REGISTERED",
+      "source": {
+        "path": "media/sources/V108_HOME_DAY_LOGO_V1/v1/source.png",
+        "original_filename": "abuknows-logo-day-transparent-v2.png",
+        "sha256": "0672049c0b488eb9d22f8ac88aa81810cdc7bb162122c88c9bd6baed95546b11",
+        "generator": "CHATGPT_SITES_V108_DESIGNER",
+        "prompt_ref": null,
+        "prompt_status": "FROZEN_V108_PROTOTYPE_SOURCE",
+        "authorization": "OWNER_APPROVED_V108_EXPERIENCE_BASELINE"
+      },
+      "process_manifest_path": "media/manifests/V108_HOME_SHELL_BASELINE_V1.v1.json",
+      "process_manifest_sha256": "c9f59bda6c13977c0d0b2d0056f4beece2b745c63b78c54945dd64e8f17a9754",
+      "deliveries": [
+        {
+          "asset_ref": "experience.v108.home.day-logo.v1",
+          "asset_version": "V108_HOME_DAY_LOGO_V1",
+          "role": "V108_HOME_DAY_BRAND_MARK",
+          "path": "web/public/assets/v108/abuknows-logo-day-transparent-v2.png",
+          "sha256": "0672049c0b488eb9d22f8ac88aa81810cdc7bb162122c88c9bd6baed95546b11",
+          "alpha": true
+        }
+      ],
+      "review_artifacts": [],
+      "runtime_contract": {
+        "trigger": "V108_HOME_WORLD_DAY_VISIBLE",
+        "playback": "STATIC",
+        "anchor": "TOP_LEFT_BRAND_MARK"
+      }
+    },
+    {
+      "media_ref": "media.experience.v108.home.night-logo.v1",
+      "asset_id": "V108_HOME_NIGHT_LOGO_V1",
+      "revision": "v1",
+      "media_kind": "BRAND_IDENTITY",
+      "character_version": null,
+      "semantic_role": "V108_HOME_NIGHT_BRAND_MARK",
+      "action_type": "STATIC",
+      "library_status": "RUNTIME_REGISTERED",
+      "source": {
+        "path": "media/sources/V108_HOME_NIGHT_LOGO_V1/v1/source.png",
+        "original_filename": "abuknows-logo-night-white-transparent-v1.png",
+        "sha256": "fc98bdf65e43f7d5534b16e19cc8ebd02199edf7e3aa05db93f61c3fce1d723e",
+        "generator": "CHATGPT_SITES_V108_DESIGNER",
+        "prompt_ref": null,
+        "prompt_status": "FROZEN_V108_PROTOTYPE_SOURCE",
+        "authorization": "OWNER_APPROVED_V108_EXPERIENCE_BASELINE"
+      },
+      "process_manifest_path": "media/manifests/V108_HOME_SHELL_BASELINE_V1.v1.json",
+      "process_manifest_sha256": "c9f59bda6c13977c0d0b2d0056f4beece2b745c63b78c54945dd64e8f17a9754",
+      "deliveries": [
+        {
+          "asset_ref": "experience.v108.home.night-logo.v1",
+          "asset_version": "V108_HOME_NIGHT_LOGO_V1",
+          "role": "V108_HOME_NIGHT_BRAND_MARK",
+          "path": "web/public/assets/v108/abuknows-logo-night-white-transparent-v1.png",
+          "sha256": "fc98bdf65e43f7d5534b16e19cc8ebd02199edf7e3aa05db93f61c3fce1d723e",
+          "alpha": true
+        }
+      ],
+      "review_artifacts": [],
+      "runtime_contract": {
+        "trigger": "V108_HOME_WORLD_NIGHT_VISIBLE",
+        "playback": "STATIC",
+        "anchor": "TOP_LEFT_BRAND_MARK"
+      }
+    },
+    {
+      "media_ref": "media.experience.v108.home.profile-leaf.v1",
+      "asset_id": "V108_HOME_PROFILE_LEAF_V1",
+      "revision": "v1",
+      "media_kind": "INTERACTIVE_SCENE_ORGAN",
+      "character_version": null,
+      "semantic_role": "V108_CANONICAL_PROFILE_LEAF",
+      "action_type": "STATIC",
+      "library_status": "RUNTIME_REGISTERED",
+      "source": {
+        "path": "media/sources/V108_HOME_PROFILE_LEAF_V1/v1/source.webp",
+        "original_filename": "life-leaf-v1.webp",
+        "sha256": "cbcf9bc7050ca9eabf98422d8646d810ce9bb613bfccca4394e8724870bfb339",
+        "generator": "CHATGPT_SITES_V108_DESIGNER",
+        "prompt_ref": null,
+        "prompt_status": "FROZEN_V108_PROTOTYPE_SOURCE",
+        "authorization": "OWNER_APPROVED_V108_EXPERIENCE_BASELINE"
+      },
+      "process_manifest_path": "media/manifests/V108_HOME_SHELL_BASELINE_V1.v1.json",
+      "process_manifest_sha256": "c9f59bda6c13977c0d0b2d0056f4beece2b745c63b78c54945dd64e8f17a9754",
+      "deliveries": [
+        {
+          "asset_ref": "experience.v108.home.profile-leaf.v1",
+          "asset_version": "V108_HOME_PROFILE_LEAF_V1",
+          "role": "V108_CANONICAL_PROFILE_LEAF",
+          "path": "web/public/assets/v108/life-leaf-v1.webp",
+          "sha256": "cbcf9bc7050ca9eabf98422d8646d810ce9bb613bfccca4394e8724870bfb339",
+          "alpha": true
+        }
+      ],
+      "review_artifacts": [],
+      "runtime_contract": {
+        "trigger": "CANONICAL_OWNER_CASE_VISIBLE",
+        "playback": "STATIC",
+        "anchor": "V108_HOME_PROFILE_LEAF_SLOT",
+        "fact_authority": "V60_CASE_API"
+      }
+    },
+    {
+      "media_ref": "media.experience.v108.home.lab-flower.v1",
+      "asset_id": "V108_HOME_LAB_FLOWER_V1",
+      "revision": "v1",
+      "media_kind": "INTERACTIVE_SCENE_ORGAN",
+      "character_version": null,
+      "semantic_role": "V108_MINGLI_LAB_FLOWER",
+      "action_type": "STATIC",
+      "library_status": "RUNTIME_REGISTERED",
+      "source": {
+        "path": "media/sources/V108_HOME_LAB_FLOWER_V1/v1/source.webp",
+        "original_filename": "life-flower-v1.webp",
+        "sha256": "e61e7e555c2483db79bb3f0e95c341e32b5c4826eac4a8abe44d27fb596a2c09",
+        "generator": "CHATGPT_SITES_V108_DESIGNER",
+        "prompt_ref": null,
+        "prompt_status": "FROZEN_V108_PROTOTYPE_SOURCE",
+        "authorization": "OWNER_APPROVED_V108_EXPERIENCE_BASELINE"
+      },
+      "process_manifest_path": "media/manifests/V108_HOME_SHELL_BASELINE_V1.v1.json",
+      "process_manifest_sha256": "c9f59bda6c13977c0d0b2d0056f4beece2b745c63b78c54945dd64e8f17a9754",
+      "deliveries": [
+        {
+          "asset_ref": "experience.v108.home.lab-flower.v1",
+          "asset_version": "V108_HOME_LAB_FLOWER_V1",
+          "role": "V108_MINGLI_LAB_FLOWER",
+          "path": "web/public/assets/v108/life-flower-v1.webp",
+          "sha256": "e61e7e555c2483db79bb3f0e95c341e32b5c4826eac4a8abe44d27fb596a2c09",
+          "alpha": true
+        }
+      ],
+      "review_artifacts": [],
+      "runtime_contract": {
+        "trigger": "MINGLI_LAB_ENTRY_VISIBLE",
+        "playback": "STATIC",
+        "anchor": "V108_HOME_LAB_FLOWER_SLOT",
+        "creates_mingli_claim": false
+      }
     }
   ],
   "cue_bundles": [

@@ -2,6 +2,55 @@
 
 ## 2026-08-01
 
+### V108 full-screen Home world and immersive Mingli shell
+
+- Replaced the active Home Dashboard composition with the frozen V108
+  Experience Canonical from commit
+  `a6cf762684e14514f58c8f45b82cca86d9a7ec4c`: one full-screen 1584:990
+  scene plane now owns the header, profile leaves, Lab flower, settings fruit,
+  Dream hollow, world copy and day/night companion placement.
+- Imported the exact day/night scene plates, day/night logos, profile leaf and
+  Lab flower as six byte-identical, Owner-approved, immutable media revisions.
+  Their source, shared frozen-commit manifest, Catalog deliveries, Runtime
+  Registry refs and Bootstrap URLs are all Hash-verified; React contains no
+  hard-coded asset path.
+- Connected real `HomeSnapshot.case_options` to a maximum of three spatial
+  profile leaves. The active leaf enters the real shared Mingli Scene; another
+  leaf activates its canonical Owner Case before reloading the Home snapshot.
+  No V108 Profile mock state or synthetic narrator Case is presented as a
+  human profile.
+- Replaced the rectangular Dream command with the natural root-recess vortex
+  and connected the Lab flower to the existing one-Canvas Lab surface. The
+  settings fruit now opens a restrained profile/footprint/display sheet; it is
+  not silently reassigned to Theater.
+- Bound world light only to presentation state. Day uses Dodo and night uses
+  Abu; changing light neither replaces the Case nor changes Reading, Stage or
+  Dream state. Chinese is the active language and other locale controls remain
+  visibly reserved.
+- Removed the white global Header, bottom Dock, permanent right rail, card
+  border and lineage toast from the active Home path. The shared Mingli Scene
+  is now also full-bleed and retains one real Projection and one Canvas across
+  Reading, Lab and Abu Says.
+- Extended the same immersive shell across the current Dream Grove and
+  Encounter routes: their real three-life content remains intact, while the
+  old white Dashboard grid and product Dock no longer reappear after crossing
+  the tree hollow. Encounter tools now occupy a scene-level glass inspector.
+- Added a frozen Desktop Chrome scene camera that keeps the profile leaf, Lab
+  flower, settings fruit, Dream hollow and companion inside one V108 world
+  composition. Existing responsive rules remain best-effort only: iPad
+  portrait is deferred to the future book-edition design round, and phone and
+  other browsers are outside this release's acceptance target.
+- Kept Dream honest: the root hollow reaches the existing real three-life
+  Grove, but the current Grove is not relabelled as V108 Moon Lake or ten
+  trees. The entry explicitly describes its current account-level continuity;
+  Profile-bound Dream lineage and ten stable tree identities remain the next
+  integration gap.
+- Advanced the Runtime Media Registry to `.003`; the V108 bundle adds no DB
+  migration, Case fact, Mingli claim, Cue or Dream state.
+- Made `/experience` HTML private and non-cacheable while treating registered
+  versioned assets as immutable, preventing a cached entry document from
+  importing a chunk removed by a newer build.
+
 ### One shared six-pillar Scene Player for Reading, Lab and Abu Says
 
 - Implemented the first frozen-V108 integration seam from exact source commit

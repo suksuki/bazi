@@ -1,4 +1,5 @@
 import type { DreamReturnEcho } from "./dreamReturnEchoTypes";
+import type { RuntimeHomeSceneAssets } from "./runtimeMediaTypes";
 import type {
   DreamReturnAttentionPrompt,
   DreamOpeningAttention,
@@ -87,7 +88,7 @@ export interface RuntimeMediaCue {
 export interface RuntimeMediaManifest {
   registry_version: string;
   catalog_version: string;
-  assets: {
+  assets: RuntimeHomeSceneAssets & {
     brand_logo: RuntimeAssetDelivery;
     grove_background: RuntimeAssetDelivery;
     life_world_background: RuntimeAssetDelivery;

@@ -1,0 +1,149 @@
+.v60-shell[data-experience-scope="dream"] {
+  display: block;
+  min-height: 620px;
+  background: #071813;
+  color: #f7f0da;
+}
+
+.v60-shell[data-experience-scope="dream"] > .app-header {
+  position: absolute;
+  z-index: 30;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 76px;
+  padding: 0 28px;
+  border: 0;
+  background: linear-gradient(180deg, rgba(4, 21, 18, 0.86), rgba(4, 21, 18, 0));
+}
+
+.v60-shell[data-experience-scope="dream"] .brand-lockup small {
+  display: none;
+}
+
+.v60-shell[data-experience-scope="dream"] .brand-logo {
+  width: 76px;
+  height: 58px;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 14px rgba(0, 0, 0, 0.32));
+}
+
+.v60-shell[data-experience-scope="dream"] .life-thread-mark {
+  min-height: 40px;
+  border-color: rgba(231, 215, 167, 0.22);
+  background: rgba(5, 30, 24, 0.48);
+  box-shadow: 0 9px 26px rgba(0, 0, 0, 0.14);
+  color: rgba(244, 235, 205, 0.68);
+  backdrop-filter: blur(12px);
+}
+
+.v60-shell[data-experience-scope="dream"] .life-thread-mark strong {
+  color: #f8efd2;
+}
+
+.v60-shell[data-experience-scope="dream"] .scope-return-command:hover,
+.v60-shell[data-experience-scope="dream"] .scope-return-command:focus-visible {
+  border-color: rgba(235, 207, 128, 0.58);
+  background: rgba(14, 52, 40, 0.72);
+}
+
+.v60-shell[data-experience-scope="dream"] .world-context strong {
+  color: #f8efd2;
+}
+
+.v60-shell[data-experience-scope="dream"] .world-context span {
+  color: rgba(244, 235, 205, 0.62);
+}
+
+.v60-shell[data-experience-scope="dream"] .account-command {
+  border-color: rgba(230, 211, 158, 0.3);
+  background: rgba(5, 30, 24, 0.54);
+  color: #f1d992;
+  backdrop-filter: blur(10px);
+}
+
+.v60-shell[data-experience-scope="dream"] > .experience-layout {
+  position: absolute;
+  inset: 0;
+  display: block;
+  padding: 0;
+}
+
+.v60-shell[data-experience-scope="dream"] .story-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: #071813;
+  box-shadow: none;
+}
+
+.v60-shell[data-experience-scope="dream"] .scene-lineage,
+.v60-shell[data-experience-scope="dream"] > .experience-dock {
+  display: none;
+}
+
+.v60-shell[data-experience-scope="dream"] .companion-rail {
+  position: absolute;
+  z-index: 18;
+  top: 92px;
+  right: 24px;
+  bottom: 24px;
+  width: min(340px, 25vw);
+  min-width: 310px;
+  border: 1px solid rgba(229, 215, 171, 0.22);
+  border-radius: 18px;
+  background: rgba(9, 34, 27, 0.78);
+  box-shadow: 0 22px 56px rgba(0, 0, 0, 0.34);
+  color: #f6efd9;
+  backdrop-filter: blur(18px);
+}
+
+.v60-shell[data-experience-scope="dream"] .companion-header,
+.v60-shell[data-experience-scope="dream"] .companion-footer {
+  border-color: rgba(229, 215, 171, 0.14);
+  background: rgba(4, 24, 19, 0.38);
+}
+
+.v60-shell[data-experience-scope="dream"] .companion-header small,
+.v60-shell[data-experience-scope="dream"] .companion-footer p {
+  color: rgba(240, 231, 201, 0.62);
+}
+
+.v60-shell[data-experience-scope="dream"] .companion-content {
+  color: #f6efd9;
+}
+
+.v60-shell[data-experience-scope="dream"] .dream-grove-title {
+  top: 10%;
+}
+
+.v60-shell[data-experience-scope="dream"] .dream-grove-trees {
+  inset: 18% 5% 3%;
+}
+
+.v60-shell[data-experience-scope="dream"] .dream-reading-observation-lens:not([data-mode="encounter"]) {
+  top: 18%;
+}
+
+.v60-shell[data-experience-scope="dream"] .dream-reading-observation-lens[data-mode="encounter"] {
+  top: 92px;
+  right: 388px;
+  width: min(640px, calc(100% - 580px));
+}
+
+.v60-shell[data-experience-scope="dream"] .runtime-error {
+  z-index: 40;
+  top: 84px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v60-shell[data-experience-scope="dream"] .life-thread-mark,
+  .v60-shell[data-experience-scope="dream"] .account-command,
+  .v60-shell[data-experience-scope="dream"] .companion-rail {
+    backdrop-filter: none;
+  }
+}

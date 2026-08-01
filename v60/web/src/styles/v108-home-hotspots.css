@@ -1,0 +1,374 @@
+.v108-tree-nav {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.v108-tree-entry,
+.v108-settings-fruit,
+.v108-dream-hollow button,
+.v108-profile-more {
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.v108-tree-entry {
+  position: absolute;
+  display: grid;
+  min-width: 64px;
+  min-height: 64px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  isolation: isolate;
+}
+
+.v108-tree-entry img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(243, 204, 105, 0.24));
+  transform-origin: 50% 88%;
+  transition: filter 260ms ease, opacity 260ms ease, transform 260ms ease;
+}
+
+.v108-tree-entry > span,
+.v108-settings-fruit > span {
+  position: absolute;
+  top: 82%;
+  left: 50%;
+  z-index: 5;
+  display: grid;
+  min-width: max-content;
+  gap: 1px;
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 239, 191, 0.15);
+  border-radius: 999px;
+  background: rgba(11, 47, 33, 0.35);
+  box-shadow: 0 7px 20px rgba(7, 31, 21, 0.12);
+  color: rgba(255, 248, 222, 0.78);
+  opacity: 0.58;
+  text-align: center;
+  text-shadow: 0 1px 8px rgba(7, 28, 20, 0.82);
+  transform: translate(-50%, 4px);
+  transition: opacity 220ms ease, background 220ms ease, transform 220ms ease;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+}
+
+.v108-tree-entry > span small,
+.v108-settings-fruit > span small {
+  color: rgba(240, 209, 137, 0.76);
+  font-size: 6px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
+
+.v108-tree-entry > span strong,
+.v108-settings-fruit > span strong {
+  font-size: 8px;
+  font-weight: 650;
+}
+
+.v108-tree-entry:hover img,
+.v108-tree-entry:focus-visible img {
+  filter: brightness(1.12) drop-shadow(0 0 14px rgba(246, 211, 126, 0.56));
+  transform: translateY(-3px) scale(1.04);
+}
+
+.v108-tree-entry:hover > span,
+.v108-tree-entry:focus-visible > span,
+.v108-settings-fruit:hover > span,
+.v108-settings-fruit:focus-visible > span {
+  background: rgba(10, 52, 35, 0.66);
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.v108-tree-entry:focus-visible,
+.v108-settings-fruit:focus-visible,
+.v108-dream-hollow button:focus-visible {
+  border-radius: 48%;
+  outline: 1px solid rgba(240, 208, 137, 0.64);
+  outline-offset: 3px;
+}
+
+.v108-tree-entry:active img,
+.v108-settings-fruit:active > i {
+  transform: scale(0.97);
+}
+
+.v108-profile-leaf-0 {
+  top: 41.9%;
+  left: 24.6%;
+  z-index: 4;
+  width: 7.3%;
+  aspect-ratio: 1;
+}
+
+.v108-profile-leaf-1 {
+  top: 34.7%;
+  left: 29.5%;
+  z-index: 3;
+  width: 6.45%;
+  aspect-ratio: 1;
+}
+
+.v108-profile-leaf-2 {
+  top: 48.6%;
+  left: 20.25%;
+  z-index: 2;
+  width: 6.15%;
+  aspect-ratio: 1;
+}
+
+.v108-profile-leaf[data-active="false"] img {
+  opacity: 0.7;
+  filter: saturate(0.72) brightness(0.88);
+  transform: scale(0.9);
+}
+
+.v108-profile-leaf[data-active="false"] > span {
+  opacity: 0;
+}
+
+.v108-profile-leaf[data-active="false"]:hover img,
+.v108-profile-leaf[data-active="false"]:focus-visible img {
+  opacity: 1;
+  filter: saturate(0.92) brightness(1.06) drop-shadow(0 0 12px rgba(246, 211, 126, 0.42));
+  transform: scale(0.98);
+}
+
+.v108-profile-leaf[data-active="true"] img {
+  animation: v108-profile-leaf-breathe 4.8s ease-in-out infinite;
+}
+
+.v108-profile-more {
+  position: absolute;
+  top: 30.8%;
+  left: 25.6%;
+  z-index: 5;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(244, 215, 148, 0.22);
+  border-radius: 50%;
+  background: rgba(10, 48, 34, 0.48);
+  box-shadow: 0 0 0 5px rgba(237, 199, 111, 0.04), 0 0 16px rgba(237, 199, 111, 0.16);
+  color: rgba(255, 239, 194, 0.86);
+  cursor: pointer;
+  font-size: 8px;
+  backdrop-filter: blur(8px);
+}
+
+.v108-lab-flower {
+  top: 37.1%;
+  left: 39%;
+  z-index: 2;
+  width: 5.8%;
+  aspect-ratio: 1;
+}
+
+.v108-settings-fruit {
+  position: absolute;
+  top: 49.25%;
+  left: 51.83%;
+  z-index: 2;
+  display: grid;
+  width: 5.2%;
+  min-width: 64px;
+  min-height: 64px;
+  aspect-ratio: 1;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+}
+
+.v108-settings-fruit > i {
+  position: relative;
+  display: block;
+  width: 48%;
+  aspect-ratio: 0.88;
+  border-radius: 50% 48% 52% 50% / 58% 56% 44% 42%;
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255, 252, 214, 0.98) 0 5%, transparent 9%),
+    radial-gradient(ellipse at 48% 48%, #efcd72 0 22%, #a96c25 58%, #5f3514 100%);
+  box-shadow: 0 0 7px rgba(248, 214, 124, 0.72), 0 0 19px rgba(221, 167, 65, 0.32);
+  transform: rotate(-8deg);
+  transition: filter 260ms ease, transform 260ms ease;
+}
+
+.v108-settings-fruit > i::before {
+  position: absolute;
+  top: -15%;
+  left: 47%;
+  width: 17%;
+  height: 26%;
+  border-radius: 60% 10%;
+  background: #345d39;
+  content: "";
+  transform: rotate(26deg);
+}
+
+.v108-settings-fruit:hover > i,
+.v108-settings-fruit:focus-visible > i {
+  filter: brightness(1.15);
+  transform: translateY(-3px) rotate(-5deg) scale(1.05);
+}
+
+.v108-settings-fruit > span {
+  top: 86%;
+}
+
+.v108-dream-hollow {
+  position: absolute;
+  top: 79.2%;
+  left: 11.6%;
+  z-index: 8;
+  width: 10.8%;
+  min-width: 118px;
+  aspect-ratio: 1.22;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.v108-dream-hollow button {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #f7e6bb;
+  cursor: pointer;
+}
+
+.v108-dream-vortex {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 70%;
+  aspect-ratio: 0.82;
+  overflow: visible;
+  border-radius: 47% 53% 58% 42% / 61% 45% 55% 39%;
+  background:
+    radial-gradient(circle at 51% 49%, rgba(255, 247, 206, 0.94) 0 0.7%, rgba(231, 189, 93, 0.72) 1.5%, transparent 4.2%),
+    radial-gradient(ellipse at 50% 50%, rgba(96, 151, 202, 0.11) 0 22%, rgba(48, 95, 154, 0.07) 36%, transparent 72%);
+  filter: drop-shadow(0 0 5px rgba(127, 180, 219, 0.24)) drop-shadow(0 0 13px rgba(60, 104, 157, 0.14));
+  mix-blend-mode: screen;
+  opacity: 0.72;
+  transform: translate(-50%, -50%) rotate(-7deg) scale(0.88);
+  transition: filter 320ms ease, opacity 320ms ease, transform 520ms ease;
+  mask-image: radial-gradient(ellipse, #000 0 52%, rgba(0, 0, 0, 0.72) 68%, transparent 88%);
+}
+
+.v108-dream-vortex::before,
+.v108-dream-vortex::after,
+.v108-dream-vortex > b {
+  position: absolute;
+  inset: -12%;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 70% 18%, rgba(255, 245, 208, 0.9) 0 0.65px, transparent 1.45px),
+    radial-gradient(circle at 27% 69%, rgba(190, 226, 247, 0.82) 0 0.72px, transparent 1.55px),
+    conic-gradient(from 24deg, transparent 0 9%, rgba(143, 193, 229, 0.34) 13%, transparent 20% 42%, rgba(241, 214, 154, 0.24) 47%, transparent 56% 78%, rgba(112, 164, 215, 0.3) 83%, transparent 91%);
+  content: "";
+  opacity: 0.78;
+  animation: v108-dream-orbit 34s linear infinite;
+  mask-image: radial-gradient(ellipse, transparent 0 8%, #000 18% 64%, transparent 88%);
+}
+
+.v108-dream-vortex::after {
+  inset: 4%;
+  animation-direction: reverse;
+  animation-duration: 49s;
+}
+
+.v108-dream-vortex > b {
+  inset: -5%;
+  filter: blur(3px);
+  opacity: 0.45;
+  animation-duration: 58s;
+}
+
+.v108-dream-vortex > i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  width: 10%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 247, 206, 0.96) 0 7%, rgba(231, 189, 93, 0.9) 18%, rgba(220, 172, 72, 0.3) 42%, transparent 72%);
+  box-shadow: 0 0 8px rgba(246, 209, 118, 0.58), 0 0 20px rgba(222, 176, 77, 0.2);
+  transform: translate(-50%, -50%);
+  animation: v108-dream-core 4.6s ease-in-out infinite;
+}
+
+.v108-dream-label {
+  position: absolute;
+  top: 73%;
+  left: 59%;
+  display: grid;
+  min-width: max-content;
+  gap: 1px;
+  padding: 5px 9px;
+  border: 1px solid rgba(203, 220, 229, 0.1);
+  border-radius: 999px;
+  background: rgba(3, 21, 31, 0.4);
+  color: rgba(229, 232, 211, 0.62);
+  opacity: 0.32;
+  text-align: left;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.84);
+  transform: translateY(4px);
+  transition: opacity 240ms ease, transform 240ms ease;
+  backdrop-filter: blur(8px);
+}
+
+.v108-dream-label small {
+  color: rgba(239, 208, 137, 0.78);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.v108-dream-label strong {
+  font-size: 8px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.v108-dream-hollow button:hover .v108-dream-vortex,
+.v108-dream-hollow button:focus-visible .v108-dream-vortex {
+  filter: brightness(1.18) drop-shadow(0 0 8px rgba(139, 190, 225, 0.3)) drop-shadow(0 0 19px rgba(70, 116, 168, 0.18));
+  opacity: 0.96;
+  transform: translate(-50%, -50%) rotate(-3deg) scale(1.04);
+}
+
+.v108-dream-hollow button:hover .v108-dream-label,
+.v108-dream-hollow button:focus-visible .v108-dream-label {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@keyframes v108-profile-leaf-breathe {
+  50% { filter: brightness(1.12) drop-shadow(0 0 16px rgba(244, 207, 112, 0.5)); transform: scale(1.025); }
+}
+
+@keyframes v108-dream-orbit {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes v108-dream-core {
+  50% { box-shadow: 0 0 14px rgba(250, 218, 135, 0.9), 0 0 30px rgba(226, 179, 80, 0.4); transform: translate(-50%, -50%) scale(1.14); }
+}

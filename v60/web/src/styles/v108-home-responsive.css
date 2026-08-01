@@ -1,0 +1,149 @@
+@media (max-width: 1120px) {
+  .v108-home-context {
+    right: 34px;
+    width: 32vw;
+  }
+
+  .v108-home-context h1 {
+    font-size: clamp(24px, 3.3vw, 36px);
+  }
+
+  .v108-home-guide {
+    right: 8px;
+    width: 234px;
+    height: 282px;
+  }
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .v108-home-plane {
+    top: 54%;
+    left: 77%;
+    width: 180vw;
+  }
+
+  .v108-home-header {
+    padding: 0 12px;
+  }
+
+  .v108-home-brand {
+    gap: 7px;
+  }
+
+  .v108-home-brand > span:first-child {
+    width: 40px;
+    height: 40px;
+  }
+
+  .v108-home-brand strong {
+    font-size: 16px;
+  }
+
+  .v108-home-controls {
+    gap: 5px;
+  }
+
+  .v108-profile-chip {
+    min-width: 96px;
+    height: 40px;
+    padding-right: 7px;
+  }
+
+  .v108-profile-chip > i {
+    width: 32px;
+    height: 32px;
+  }
+
+  .v108-profile-chip strong {
+    max-width: 70px;
+  }
+
+  .v108-round-control,
+  .v108-locale-control {
+    width: 32px;
+    height: 32px;
+  }
+
+  .v108-home-context {
+    top: 116px;
+    right: 28px;
+    width: 330px;
+  }
+
+  .v108-home-context h1 {
+    font-size: 30px;
+  }
+
+  .v108-home-guide {
+    right: 4px;
+    bottom: 18px;
+    width: 226px;
+    height: 272px;
+  }
+
+  .v108-profile-identity {
+    bottom: 32px;
+    left: 24px;
+  }
+
+  .v108-profile-popover {
+    position: fixed;
+    top: 82px;
+    right: 18px;
+    left: 18px;
+    width: auto;
+    max-height: 70dvh;
+    overflow: auto;
+  }
+
+  .v108-profile-leaf-0 { width: 7.7%; }
+  .v108-profile-leaf-1 { width: 7%; }
+  .v108-profile-leaf-2 { width: 6.7%; }
+  .v108-lab-flower { width: 6.4%; }
+  .v108-settings-fruit { width: 5.8%; }
+  .v108-dream-hollow { min-width: 126px; }
+}
+
+@media (max-height: 720px) and (orientation: landscape) {
+  .v108-home-header {
+    height: 66px;
+    padding: 0 22px;
+  }
+
+  .v108-home-context {
+    top: 16%;
+  }
+
+  .v108-home-guide {
+    width: 220px;
+    height: 262px;
+  }
+
+  .v108-profile-identity {
+    bottom: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v108-home-art,
+  .v108-tree-entry img,
+  .v108-settings-fruit > i,
+  .v108-tree-entry > span,
+  .v108-settings-fruit > span {
+    transition: none;
+  }
+
+  .v108-life-current::before,
+  .v108-profile-leaf[data-active="true"] img,
+  .v108-dream-vortex::before,
+  .v108-dream-vortex::after,
+  .v108-dream-vortex > b,
+  .v108-dream-vortex > i,
+  .v108-world-passage,
+  .v108-world-passage::before,
+  .v108-world-passage::after,
+  .v108-world-passage > i,
+  .v108-world-passage > b {
+    animation: none;
+  }
+}

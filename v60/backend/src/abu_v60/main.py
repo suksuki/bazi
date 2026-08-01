@@ -4,7 +4,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -40,6 +40,23 @@ app.include_router(mingli_narration_router)
 app.include_router(mingli_stage_router)
 app.include_router(experience_router)
 app.include_router(dream_router)
+
+
+def _web_cache_control(path: str) -> str | None:
+    if path in {"/", "/experience"}:
+        return "private, no-store, max-age=0, must-revalidate"
+    if path.startswith("/assets/"):
+        return "public, max-age=31536000, immutable"
+    return None
+
+
+@app.middleware("http")
+async def apply_web_cache_policy(request: Request, call_next):
+    response = await call_next(request)
+    cache_control = _web_cache_control(request.url.path)
+    if cache_control is not None and response.status_code < 400:
+        response.headers["Cache-Control"] = cache_control
+    return response
 
 _repo_root = Path(__file__).resolve().parents[3]
 _web_dist = _repo_root / "web" / "dist"

@@ -306,6 +306,66 @@
       "source_manifest_ref": "media/manifests/DODO_V108_IDLE_TRANSPARENT_V1.v1.json",
       "source_status": "OWNER_APPROVED",
       "v60_role": "dodo_mingli_shared_narrator_reduced_motion"
+    },
+    {
+      "asset_ref": "experience.v108.home.day-background.v1",
+      "asset_version": "V108_HOME_DAY_BACKGROUND_V1",
+      "runtime_path": "web/public/assets/v108/home-day-threshold-v1.webp",
+      "sha256": "4b9d3edc39c3a56b2acc2b7aff1faec122a26cbdf1b7cf2b5a66dafecd93b6b3",
+      "media_type": "image/webp",
+      "source_manifest_ref": "media/manifests/V108_HOME_SHELL_BASELINE_V1.v1.json",
+      "source_status": "OWNER_APPROVED",
+      "v60_role": "v108_home_world_day_background"
+    },
+    {
+      "asset_ref": "experience.v108.home.night-background.v1",
+      "asset_version": "V108_HOME_NIGHT_BACKGROUND_V1",
+      "runtime_path": "web/public/assets/v108/home-night-threshold-v1.webp",
+      "sha256": "1279353c3394878d455168f7b3b0af5c2e69a468bfc62b9196bd915a8f41239b",
+      "media_type": "image/webp",
+      "source_manifest_ref": "media/manifests/V108_HOME_SHELL_BASELINE_V1.v1.json",
+      "source_status": "OWNER_APPROVED",
+      "v60_role": "v108_home_world_night_background"
+    },
+    {
+      "asset_ref": "experience.v108.home.day-logo.v1",
+      "asset_version": "V108_HOME_DAY_LOGO_V1",
+      "runtime_path": "web/public/assets/v108/abuknows-logo-day-transparent-v2.png",
+      "sha256": "0672049c0b488eb9d22f8ac88aa81810cdc7bb162122c88c9bd6baed95546b11",
+      "media_type": "image/png",
+      "source_manifest_ref": "media/manifests/V108_HOME_SHELL_BASELINE_V1.v1.json",
+      "source_status": "OWNER_APPROVED",
+      "v60_role": "v108_home_world_day_brand"
+    },
+    {
+      "asset_ref": "experience.v108.home.night-logo.v1",
+      "asset_version": "V108_HOME_NIGHT_LOGO_V1",
+      "runtime_path": "web/public/assets/v108/abuknows-logo-night-white-transparent-v1.png",
+      "sha256": "fc98bdf65e43f7d5534b16e19cc8ebd02199edf7e3aa05db93f61c3fce1d723e",
+      "media_type": "image/png",
+      "source_manifest_ref": "media/manifests/V108_HOME_SHELL_BASELINE_V1.v1.json",
+      "source_status": "OWNER_APPROVED",
+      "v60_role": "v108_home_world_night_brand"
+    },
+    {
+      "asset_ref": "experience.v108.home.profile-leaf.v1",
+      "asset_version": "V108_HOME_PROFILE_LEAF_V1",
+      "runtime_path": "web/public/assets/v108/life-leaf-v1.webp",
+      "sha256": "cbcf9bc7050ca9eabf98422d8646d810ce9bb613bfccca4394e8724870bfb339",
+      "media_type": "image/webp",
+      "source_manifest_ref": "media/manifests/V108_HOME_SHELL_BASELINE_V1.v1.json",
+      "source_status": "OWNER_APPROVED",
+      "v60_role": "v108_home_profile_leaf"
+    },
+    {
+      "asset_ref": "experience.v108.home.lab-flower.v1",
+      "asset_version": "V108_HOME_LAB_FLOWER_V1",
+      "runtime_path": "web/public/assets/v108/life-flower-v1.webp",
+      "sha256": "e61e7e555c2483db79bb3f0e95c341e32b5c4826eac4a8abe44d27fb596a2c09",
+      "media_type": "image/webp",
+      "source_manifest_ref": "media/manifests/V108_HOME_SHELL_BASELINE_V1.v1.json",
+      "source_status": "OWNER_APPROVED",
+      "v60_role": "v108_home_mingli_lab_flower"
     }
   ]
 }

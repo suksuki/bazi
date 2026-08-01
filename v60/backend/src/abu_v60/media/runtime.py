@@ -10,6 +10,12 @@ RUNTIME_ASSET_BINDINGS = {
     "brand_logo": "brand.abuknows-v60.logo.transparent.v1",
     "grove_background": "dream.grove.clean.v1",
     "life_world_background": "dream.v60.life-world.clean.v1",
+    "home_day_background": "experience.v108.home.day-background.v1",
+    "home_night_background": "experience.v108.home.night-background.v1",
+    "home_day_logo": "experience.v108.home.day-logo.v1",
+    "home_night_logo": "experience.v108.home.night-logo.v1",
+    "home_profile_leaf": "experience.v108.home.profile-leaf.v1",
+    "home_lab_flower": "experience.v108.home.lab-flower.v1",
 }
 RUNTIME_CUE_BINDINGS = {
     "abu_idle": "cue.dream.abu-idle.v1",
@@ -78,7 +84,7 @@ def runtime_media_manifest() -> dict[str, Any]:
         }
 
     return {
-        "registry_version": "v60.runtime-media-registry.002",
+        "registry_version": "v60.runtime-media-registry.003",
         "catalog_version": str(catalog["schema_version"]),
         "assets": runtime_assets,
         "cues": runtime_cues,
