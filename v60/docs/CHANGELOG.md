@@ -2,6 +2,34 @@
 
 ## 2026-08-01
 
+### Owner decisions after the frozen V108 design extraction
+
+- Limited the first integration round to a complete Chinese Desktop/iPad
+  experience. Locale contracts and small compatibility paths may remain, but
+  complete English/Korean copy, TTS, assets and acceptance are deferred.
+- Reclassified Abu Says from an independent product unit to a shared narrated
+  experience capability callable from Home, Mingli Branch, Lab, Dream,
+  Theater and future multi-NPC scenes. It may play voice, explain, summarize,
+  recap and guide, but must remain bound to the calling scene's canonical
+  source rather than creating a parallel truth.
+- Accepted the Dream `KEEP / REFRAME / RETIRE` split: keep the ten-tree,
+  question, seal, reality-lock, reveal, fruit-ledger and return-seed loops;
+  reframe synthetic tree-owner responses through a future real multi-NPC
+  scene; retire directed invitations, `root_echo` preselection and synthetic
+  social proof.
+- Put new professional Mingli decision rules on Owner hold until the later
+  agreed core mechanism is supplied. Relation effect, source usability,
+  strength, usable root, effective work, climate, auspiciousness and timing
+  verdicts must not be inferred in the meantime.
+- Assigned the first Zhaoning multi-NPC scene and Scene Script to the designer
+  before implementation. Existing prototype fixtures and prewritten NPC
+  choices do not satisfy that design or product Gate.
+- Defined the Mingli result model as four evidence-bound semantic layers:
+  `理法 / 象法 / 人生应事 / 岁运应期`, presented to users as
+  `命局原理 / 生命意象 / 人生主题 / 时间趋势`. `技法` remains a Lab-level
+  method rather than a fifth result layer. Abu Says may present or summarize
+  these projections but cannot derive a new downstream claim.
+
 ### Real Mingli four/six-pillar stage and synchronized Dylan narration
 
 - Connected the Home profile leaf to a real Mingli stage backed by the
