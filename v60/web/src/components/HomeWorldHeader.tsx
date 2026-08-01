@@ -97,7 +97,7 @@ export function HomeWorldHeader({
                 }}
                 type="button"
               >
-                查看档案与世界足迹
+                管理八字档案
               </button>
             </div>
           )}

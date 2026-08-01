@@ -10,7 +10,7 @@ import {
 } from "../homeWorldLight";
 import { HomeWorldHeader } from "./HomeWorldHeader";
 import { HomeWorldHotspots } from "./HomeWorldHotspots";
-import { HomeWorldSettings } from "./HomeWorldSettings";
+import { HomeProfileManager } from "./HomeProfileManager";
 import { TransparentCharacterMedia } from "./TransparentCharacterMedia";
 
 type HomePassage = "mingli" | "lab" | "dream";
@@ -20,6 +20,7 @@ export function HomeLifeTreeScene({
   home,
   media,
   onEnterDream,
+  onHomeRefresh,
   onOpenLab,
   onOpenMingli,
 }: {
@@ -27,13 +28,15 @@ export function HomeLifeTreeScene({
   home: HomeSnapshot;
   media: RuntimeMediaManifest;
   onEnterDream: () => void;
+  onHomeRefresh: () => Promise<void>;
   onOpenLab: () => void;
   onOpenMingli: () => void;
 }) {
   const [light, setLight] = useState<HomeWorldLight>(resolveHomeWorldLight);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [profileManagerOpen, setProfileManagerOpen] = useState(false);
   const [busyCaseRef, setBusyCaseRef] = useState<string | null>(null);
   const [caseError, setCaseError] = useState<string | null>(null);
+  const [caseRefreshFailed, setCaseRefreshFailed] = useState(false);
   const [passage, setPassage] = useState<HomePassage | null>(null);
   const timers = useRef<number[]>([]);
   const phenotype = home.tree.phenotype;
@@ -66,27 +69,47 @@ export function HomeLifeTreeScene({
   const activateCase = async (caseRef: string, destination: "home" | "mingli") => {
     setBusyCaseRef(caseRef);
     setCaseError(null);
+    setCaseRefreshFailed(false);
     try {
       await activateOwnerCase(caseRef);
-      if (destination === "mingli") {
-        const url = new URL(window.location.href);
-        url.searchParams.set("view", "mingli");
-        window.location.assign(url.toString());
+      try {
+        await onHomeRefresh();
+      } catch {
+        setCaseError("档案已经切换成功，但生命树没有读回最新状态。请重新读取，不要重复切换。");
+        setCaseRefreshFailed(true);
+        setBusyCaseRef(null);
         return;
       }
-      window.location.reload();
+      if (destination === "mingli") {
+        onOpenMingli();
+        return;
+      }
+      setBusyCaseRef(null);
     } catch (error) {
-      setCaseError(error instanceof Error ? error.message : String(error));
+      setCaseError(`档案切换未提交：${error instanceof Error ? error.message : String(error)}`);
+      setBusyCaseRef(null);
+    }
+  };
+
+  const retryHomeRefresh = async () => {
+    setBusyCaseRef(home.case.case_ref);
+    try {
+      await onHomeRefresh();
+      setCaseError(null);
+      setCaseRefreshFailed(false);
+    } catch {
+      setCaseError("档案已经提交，但仍未读回最新生命树。可以安全刷新页面，不要重复切换。");
+    } finally {
       setBusyCaseRef(null);
     }
   };
 
   const openLab = () => {
-    setSettingsOpen(false);
+    setProfileManagerOpen(false);
     enterThrough("lab", onOpenLab);
   };
   const enterDream = () => {
-    setSettingsOpen(false);
+    setProfileManagerOpen(false);
     enterThrough("dream", onEnterDream);
   };
 
@@ -106,7 +129,7 @@ export function HomeLifeTreeScene({
         light={light}
         media={media}
         onActivateCase={(caseRef) => void activateCase(caseRef, "home")}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={() => setProfileManagerOpen(true)}
         onToggleLight={toggleLight}
       />
 
@@ -135,14 +158,14 @@ export function HomeLifeTreeScene({
             onEnterDream={enterDream}
             onOpenLab={openLab}
             onOpenMingli={() => enterThrough("mingli", onOpenMingli)}
-            onOpenSettings={() => setSettingsOpen(true)}
+            onOpenSettings={() => setProfileManagerOpen(true)}
           />
         </div>
       </div>
 
       <button
         className="v108-profile-identity"
-        onClick={() => setSettingsOpen(true)}
+        onClick={() => setProfileManagerOpen(true)}
         type="button"
       >
         <i aria-hidden="true">{home.profile.display_name.slice(0, 1)}</i>
@@ -168,13 +191,26 @@ export function HomeLifeTreeScene({
         webp={guideCue.deliveries.ANIMATED_WEBP}
       />
 
-      {caseError && <p className="v108-home-error" role="alert">档案没有切换成功：{caseError}</p>}
-      {settingsOpen && (
-        <HomeWorldSettings
+      {caseError && (
+        <div className="v108-home-error" role="alert">
+          <span>{caseError}</span>
+          {caseRefreshFailed && (
+            <button disabled={busyCaseRef !== null} onClick={() => void retryHomeRefresh()} type="button">
+              {busyCaseRef !== null ? "正在读取…" : "重新读取"}
+            </button>
+          )}
+        </div>
+      )}
+      {profileManagerOpen && (
+        <HomeProfileManager
           home={home}
-          onClose={() => setSettingsOpen(false)}
-          onEnterDream={enterDream}
-          onOpenLab={openLab}
+          light={light}
+          onChanged={onHomeRefresh}
+          onClose={() => setProfileManagerOpen(false)}
+          onOpenMingli={() => {
+            setProfileManagerOpen(false);
+            enterThrough("mingli", onOpenMingli);
+          }}
         />
       )}
       {passage && (

@@ -36,6 +36,7 @@ export function writeNavigation(
     url.searchParams.delete("mingli_subject");
     url.searchParams.delete("mingli_mode");
     url.searchParams.delete("mingli_year");
+    url.searchParams.delete("mingli_layer");
   }
   if (scope === "dream" && focusRef) url.searchParams.set("focus", focusRef);
   else url.searchParams.delete("focus");

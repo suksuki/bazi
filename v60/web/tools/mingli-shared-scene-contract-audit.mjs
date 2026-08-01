@@ -22,6 +22,9 @@ const [
   characterMedia,
   canonicalDrawer,
   homeSceneCompanion,
+  readingJourney,
+  stageNavigation,
+  profileManager,
 ] = await Promise.all([
   read("components", "ExperienceStoryCanvas.tsx"),
   read("components", "MingliSceneHost.tsx"),
@@ -37,6 +40,9 @@ const [
   read("components", "TransparentCharacterMedia.tsx"),
   read("components", "MingliCanonicalDrawer.tsx"),
   read("components", "HomeSceneCompanion.tsx"),
+  read("components", "MingliReadingJourney.tsx"),
+  read("mingliStageNavigation.ts"),
+  read("components", "HomeProfileManager.tsx"),
 ]);
 
 const expect = (condition, message) => {
@@ -101,6 +107,41 @@ expect(
     characterMedia.includes('mode === "poster"'),
   "character-media:reduced-motion-must-use-poster",
 );
+for (const lineageCheck of [
+  "stage.case_ref === home.case.case_ref",
+  "stage.chart_version_ref === home.chart.chart_version_ref",
+  "stage.life_case_revision_ref === home.life_case.life_case_revision_ref",
+  "stage.reading_ref === reading.reading_ref",
+]) {
+  expect(
+    readingJourney.includes(lineageCheck),
+    `reading-journey:missing-home-stage-lineage-guard:${lineageCheck}`,
+  );
+}
+expect(
+  readingJourney.includes("这不是专业复核后的命理 Reading") &&
+    readingJourney.includes("stage.columns"),
+  "reading-journey:synthetic-subject-must-use-stage-only-boundary",
+);
+expect(
+  !readingJourney.includes("讲这一层"),
+  "reading-journey:must-not-claim-layer-bound-narration-before-contract-exists",
+);
+expect(
+  stageNavigation.includes('url.searchParams.set("mingli_layer"') &&
+    stageNavigation.includes('url.searchParams.get("mingli_layer")'),
+  "stage-navigation:reading-layer-must-be-refresh-recoverable",
+);
+expect(
+  profileManager.includes("<dialog") && profileManager.includes("showModal()"),
+  "profile-manager:must-remain-a-focus-isolating-modal",
+);
+expect(
+  profileManager.includes("pendingCaseRef") &&
+    profileManager.includes("if (working) return") &&
+    profileManager.includes("setPendingCaseRef(created.case_ref)"),
+  "profile-manager:committed-case-must-survive-stale-home-refresh",
+);
 
 for (const action of [
   "PILLARS_PRESENT",
@@ -135,6 +176,11 @@ console.log(
       canonicalDetailsReachable: true,
       audioReleaseOnUnmount: true,
       reducedMotionPoster: true,
+      exactReadingLineageGuard: true,
+      syntheticReadingIsolation: true,
+      readingLayerRecovery: true,
+      profileFocusIsolation: true,
+      profileMutationRecovery: true,
       semanticBoundary: "COORDINATES_AND_MEMBERSHIP_ONLY",
       failures,
     },

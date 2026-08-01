@@ -349,6 +349,15 @@ class HomeExperienceService:
                     "case_ref": item["case_ref"],
                     "profile_ref": item["profile_ref"],
                     "display_name": item["display_name"],
+                    "gender": item["gender"],
+                    "calendar_type": item["calendar_type"],
+                    "birth_date": item["birth_date"].isoformat(),
+                    "birth_time": item["birth_time"].isoformat(timespec="minutes"),
+                    "birth_location": item["birth_location"],
+                    "timezone": item["timezone"],
+                    "lunar_leap_month": bool(
+                        item["input_json"].get("lunar_leap_month", False)
+                    ),
                     "status": item["status"],
                     "pillars": item["pillars_json"],
                     "active": item["case_ref"] == workspace["case"]["case_ref"],

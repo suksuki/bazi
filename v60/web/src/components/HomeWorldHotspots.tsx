@@ -66,13 +66,13 @@ export function HomeWorldHotspots({
       </button>
 
       <button
-        aria-label="打开档案、足迹与显示设置"
+        aria-label="打开八字档案"
         className="v108-settings-fruit"
         onClick={onOpenSettings}
         type="button"
       >
         <i aria-hidden="true" />
-        <span><small>全局功能</small><strong>档案与足迹</strong></span>
+        <span><small>生命叶</small><strong>八字档案</strong></span>
       </button>
 
       <div className="v108-dream-hollow">

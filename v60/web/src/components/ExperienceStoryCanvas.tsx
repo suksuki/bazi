@@ -26,6 +26,7 @@ interface ExperienceStoryCanvasProps {
   busy: boolean;
   focusedOrganRef: string | null;
   onEnterDream: () => void;
+  onHomeRefresh: () => Promise<void>;
   onMingliContext: (context: MingliStageViewContext) => void;
   onSelectUnit: (unit: ExperienceUnit) => void;
   onSelectTree: (candidateRef: string) => void;
@@ -54,6 +55,7 @@ export function ExperienceStoryCanvas({
   busy,
   focusedOrganRef,
   onEnterDream,
+  onHomeRefresh,
   onMingliContext,
   onSelectUnit,
   onSelectTree,
@@ -76,6 +78,7 @@ export function ExperienceStoryCanvas({
     <section className="story-canvas" aria-label="生命树故事现场">
       {scope === "home" && (activeUnit === "mingli" || activeUnit === "lab") ? (
         <MingliSceneHost
+          home={home}
           homeLineageKey={[
             home.case.case_ref,
             home.chart.chart_version_ref,
@@ -96,6 +99,7 @@ export function ExperienceStoryCanvas({
           home={home}
           media={media}
           onEnterDream={onEnterDream}
+          onHomeRefresh={onHomeRefresh}
           onOpenLab={() => onSelectUnit("lab")}
           onOpenMingli={() => onSelectUnit("mingli")}
         />

@@ -2,6 +2,50 @@
 
 ## 2026-08-01
 
+### V108 profile workflow and four-layer Mingli journey use real V60 functions
+
+- Replaced the temporary engineering profile sheet with a full-screen,
+  V108-aligned Bazi Profile scene. It now searches real Owner Cases, shows the
+  immutable birth input and canonical four pillars, activates an existing
+  Case, or creates a new Profile, Chart, Case, LifeCase and Reading from solar
+  or lunar input. The form accepts arbitrary IANA timezones and states that
+  civil clock time is used until true-solar-time support is admitted.
+- Extended the private Home projection with the exact persisted gender,
+  calendar, birth date/time, location, timezone and leap-month input for every
+  Case option. The old duplicate engineering Case manager and settings path
+  were removed rather than kept as a second product flow.
+- Turned the V108 branch organs into the active four-layer journey on the same
+  4/6-pillar Scene Player: `命局原理` consumes the formal bounded Reading,
+  `生命意象` preserves an explicit unadmitted Projection gap, `人生主题`
+  presents the three real observation windows, and `时间趋势` expands the
+  stage from four natal pillars to natal plus Dayun plus the selected annual
+  pillar. No five-pillar intermediate scene exists.
+- Made the selected four-layer location part of the URL, so refresh and browser
+  history recover the same layer, subject, stage mode and selected year.
+- Added an exact Case/Chart/LifeCase/Reading lineage guard before Home Reading
+  content may enter the stage. A real Chrome switch exposed that Abu's stage
+  initially inherited the Owner's right-hand Reading; the integration was
+  stopped and corrected. Abu and Dodo now show only their own canonical
+  synthetic coordinates plus an explicit `尚无正式 Reading` boundary, and a
+  selected-year timing panel always reads the selected Stage Projection.
+- Kept narration claims honest: the existing audio contract explains the
+  current stage, so the entry says `讲解当前舞台`; it does not claim to narrate
+  a selected semantic layer until a layer-bound Script/Cue/Hash contract is
+  implemented.
+- Separated a committed Case mutation from a failed Home Projection refresh.
+  The UI now warns users not to repeat an already committed create/switch and
+  offers a safe read retry. Creation errors are visible in creation mode.
+  Profile management uses the native modal top layer for initial focus,
+  background isolation, Escape behavior and focus return.
+- Real Desktop Chrome checks covered Home → Profile view/create → Mingli four
+  layers → six pillars, refresh recovery and synthetic/Owner isolation without
+  creating a test Case in the live Owner database. Evidence is in
+  `.artifacts/v108-functional-shell/`. Dream was intentionally unchanged while
+  the designer revises the Moon Lake ten-tree composition.
+- Passed all 317 backend tests, Ruff, TypeScript/Vite build, Runtime
+  Architecture, source-maintainability and the expanded shared-scene contract
+  audit on Foundation `.019`.
+
 ### V108 full-screen Home world and immersive Mingli shell
 
 - Replaced the active Home Dashboard composition with the frozen V108

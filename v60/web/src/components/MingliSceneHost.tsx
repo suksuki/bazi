@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { RuntimeMediaManifest } from "../api";
+import type { HomeSnapshot } from "../homeApi";
 import { loadMingliStage, loadMingliStageSubjects } from "../mingliStageApi";
 import {
   readMingliStageRoute,
+  type MingliReadingLayer,
   type MingliStageRoute,
   writeMingliStageRoute,
 } from "../mingliStageNavigation";
@@ -21,10 +23,12 @@ import type {
 } from "../mingliStageTypes";
 import { MingliLabSceneInspector } from "./MingliLabSceneInspector";
 import { MingliNarrationDirector } from "./MingliNarrationDirector";
+import { MingliReadingJourney } from "./MingliReadingJourney";
 import { MingliScenePlayer } from "./MingliScenePlayer";
 
 export function MingliSceneHost({
   homeLineageKey,
+  home,
   media,
   onContextChange,
   onExit,
@@ -32,6 +36,7 @@ export function MingliSceneHost({
   surface,
 }: {
   homeLineageKey: string;
+  home: HomeSnapshot;
   media: RuntimeMediaManifest;
   onContextChange: (context: MingliStageViewContext) => void;
   onExit: () => void;
@@ -165,6 +170,15 @@ export function MingliSceneHost({
       status: "LOADING",
       projection: null,
     });
+    setRoute(next);
+    writeMingliStageRoute(
+      next,
+      "push",
+      surface === "LAB" ? "lab" : "mingli",
+    );
+  };
+  const navigateLayer = (layer: MingliReadingLayer) => {
+    const next = { ...route, layer };
     setRoute(next);
     writeMingliStageRoute(
       next,
@@ -342,8 +356,14 @@ export function MingliSceneHost({
               stage={stage}
             />
           ) : (
-            <ReadingSceneGuide
+            <MingliReadingJourney
+              home={home}
+              layer={route.layer}
               onAskGuide={() => setNarrationOpen(true)}
+              onExpandTime={() =>
+                navigate({ ...route, mode: "NATAL_DAYUN_YEAR_6", year: null })
+              }
+              onLayerChange={navigateLayer}
               stage={stage}
             />
           )}
@@ -361,30 +381,5 @@ export function MingliSceneHost({
         </footer>
       )}
     </div>
-  );
-}
-
-function ReadingSceneGuide({
-  onAskGuide,
-  stage,
-}: {
-  onAskGuide: () => void;
-  stage: MingliStageProjection;
-}) {
-  return (
-    <aside className="mingli-reading-guide" aria-label="命理阅读层">
-      <p>同一份 Reading · 同一个舞台</p>
-      <h2>{stage.stage_mode === "NATAL_4" ? "先看本命四柱" : "时间层已展开为完整六柱"}</h2>
-      <div className="mingli-reading-layer-list" aria-label="命理四层">
-        <span><strong>命局原理</strong><small>坐标与成员事实已锁定</small></span>
-        <span><strong>生命意象</strong><small>不由本舞台自行推导</small></span>
-        <span><strong>人生主题</strong><small>等待可验证的应事证据</small></span>
-        <span><strong>时间趋势</strong><small>{stage.stage_mode === "NATAL_4" ? "展开大运与所选流年后查看" : "大运与流年共同在场"}</small></span>
-      </div>
-      <button className="mingli-reading-ask-guide" onClick={onAskGuide} type="button">
-        请{stage.narrator_actor_id === "DUODUO_NARRATOR_V1" ? "多多" : "阿布"}讲当前舞台
-        <span aria-hidden="true">声音、字幕与粒子一起开始 →</span>
-      </button>
-    </aside>
   );
 }

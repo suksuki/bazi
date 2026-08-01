@@ -21,7 +21,9 @@ class MingliCaseService:
                     text(
                         """
                     SELECT c.case_ref, c.subject_kind, c.status, c.case_version,
-                           p.profile_ref, p.display_name,
+                           p.profile_ref, p.display_name, p.gender, p.calendar_type,
+                           p.birth_date, p.birth_time, p.birth_location, p.timezone,
+                           p.input_json,
                            cv.chart_version_ref, cv.pillars_json,
                            lc.life_case_revision_ref,
                            cs.scene_ref, cs.scene_json

@@ -10,7 +10,6 @@ import { MechanismDecisionTrace } from "./MechanismDecisionTrace";
 import { MechanismEvidenceContrast } from "./MechanismEvidenceContrast";
 import { MechanismQualificationMatrix } from "./MechanismQualificationMatrix";
 import { MingliEvidenceExplanation } from "./MingliEvidenceExplanation";
-import { MingliCaseManager } from "./MingliCaseManager";
 import { RelationEffectReviewStack } from "./RelationEffectReviewStack";
 import { SourceCoordinateReviewPanel } from "./SourceCoordinateReviewPanel";
 import { SourceDiscussionAbstentionReceipt } from "./SourceDiscussionAbstentionReceipt";
@@ -90,7 +89,6 @@ export function HomeCompanionRail({
                 </span>
               ))}
             </div>
-            <MingliCaseManager home={home} onChanged={onHomeRefresh} />
             <HomeReadingBrief
               brief={home.mingli.reading_brief}
               busy={busy}

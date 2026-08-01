@@ -227,6 +227,13 @@ export interface HomeSnapshot {
     case_ref: string;
     profile_ref: string;
     display_name: string;
+    gender: "male" | "female";
+    calendar_type: "solar" | "lunar";
+    birth_date: string;
+    birth_time: string;
+    birth_location: string;
+    timezone: string;
+    lunar_leap_month: boolean;
     status: "ACTIVE" | "INACTIVE";
     pillars: Record<"year" | "month" | "day" | "hour", string>;
     active: boolean;

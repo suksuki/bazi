@@ -7,6 +7,7 @@ import pytest
 from abu_v60.db import engine
 from abu_v60.dream.seed import SEED_BATCH_REF
 from abu_v60.mingli.owner_cases import MingliOwnerCaseService, OwnerCaseInput
+from abu_v60.mingli.service import MingliCaseService
 from abu_v60.provenance import content_hash
 from sqlalchemy import text
 
@@ -144,6 +145,15 @@ def test_owner_can_create_switch_and_replay_real_compiled_cases(
     assert {row["case_ref"] for row in rows if row["status"] == "ACTIVE"} == {
         second["case_ref"]
     }
+    projected = MingliCaseService(engine).list_cases(account_ref=owner_account)
+    first_projection = next(item for item in projected if item["case_ref"] == first["case_ref"])
+    assert first_projection["gender"] == "male"
+    assert first_projection["calendar_type"] == "solar"
+    assert first_projection["birth_date"] == date(1990, 6, 12)
+    assert first_projection["birth_time"] == time(9, 30)
+    assert first_projection["birth_location"] == "上海"
+    assert first_projection["timezone"] == "Asia/Shanghai"
+    assert first_projection["input_json"]["lunar_leap_month"] is False
 
     service.activate(account_ref=owner_account, case_ref=str(first["case_ref"]))
     with engine.connect() as connection:

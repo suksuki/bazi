@@ -440,6 +440,7 @@ export function App() {
           busy={runtime.busy}
           focusedOrganRef={semanticFocus?.organ.organ_ref ?? null}
           onEnterDream={() => void enterDream()}
+          onHomeRefresh={refreshHome}
           onMingliContext={setMingliContext}
           onSelectUnit={selectUnit}
           onSelectTree={(candidateRef) => void selectGroveTree(candidateRef)}

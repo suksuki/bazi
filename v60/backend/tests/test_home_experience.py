@@ -75,6 +75,19 @@ def test_home_experience_uses_only_the_signed_in_human_owner_case() -> None:
     assert brief["qualification"]["fact_count"] == len(snapshot["mingli"]["facts"])
     assert len(snapshot["case_options"]) >= 1
     assert sum(1 for item in snapshot["case_options"] if item["active"]) == 1
+    assert all(
+        {
+            "gender",
+            "calendar_type",
+            "birth_date",
+            "birth_time",
+            "birth_location",
+            "timezone",
+            "lunar_leap_month",
+        }
+        <= item.keys()
+        for item in snapshot["case_options"]
+    )
     assert len(brief["confirmed"]) == 3
     assert [item["domain"] for item in brief["life_domains"]] == [
         "career",

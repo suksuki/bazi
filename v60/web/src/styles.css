@@ -1,7 +1,6 @@
 @import "./styles/foundation.css";
 @import "./styles/home-scene.css";
 @import "./styles/home-reading.css";
-@import "./styles/mingli-case.css";
 @import "./styles/mingli-explanation.css";
 @import "./styles/mechanism-qualification.css";
 @import "./styles/home-mechanism.css";
@@ -19,6 +18,7 @@
 @import "./styles/mingli-stage-responsive.css";
 @import "./styles/mingli-shared-scene.css";
 @import "./styles/mingli-shared-overlays.css";
+@import "./styles/mingli-reading-journey.css";
 @import "./styles/mingli-shared-responsive.css";
 @import "./styles/tree-scene.css";
 @import "./styles/dream-grove.css";
@@ -33,5 +33,6 @@
 @import "./styles/v108-home-hotspots.css";
 @import "./styles/v108-home-overlays.css";
 @import "./styles/v108-home-responsive.css";
+@import "./styles/v108-profile-manager.css";
 @import "./styles/v108-experience-shell.css";
 @import "./styles/v108-dream-shell.css";

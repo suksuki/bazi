@@ -552,6 +552,20 @@
   font-size: 10px;
   transform: translateX(-50%);
   backdrop-filter: blur(14px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.v108-home-error button {
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid rgba(255, 240, 233, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  font: inherit;
 }
 
 @keyframes v108-life-breathe {
