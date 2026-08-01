@@ -11,7 +11,7 @@ export function HomeWorldHeader({
   home,
   light,
   media,
-  onActivateCase,
+  onOpenCase,
   onOpenSettings,
   onToggleLight,
 }: {
@@ -19,7 +19,7 @@ export function HomeWorldHeader({
   home: HomeSnapshot;
   light: HomeWorldLight;
   media: RuntimeMediaManifest;
-  onActivateCase: (caseRef: string) => void;
+  onOpenCase: (option: HomeSnapshot["case_options"][number], anchor: HTMLElement) => void;
   onOpenSettings: () => void;
   onToggleLight: () => void;
 }) {
@@ -74,8 +74,8 @@ export function HomeWorldHeader({
                     data-active={option.active}
                     disabled={busyCaseRef !== null}
                     key={option.case_ref}
-                    onClick={() => {
-                      if (!option.active) onActivateCase(option.case_ref);
+                    onClick={(event) => {
+                      onOpenCase(option, event.currentTarget);
                       setProfileOpen(false);
                     }}
                     type="button"
@@ -85,7 +85,7 @@ export function HomeWorldHeader({
                       <strong>{option.display_name}</strong>
                       <small>{PILLAR_ORDER.map((slot) => option.pillars[slot]).join(" · ")}</small>
                     </span>
-                    <b>{option.active ? "✓" : busyCaseRef === option.case_ref ? "…" : "进入"}</b>
+                    <b>{option.active ? "当前" : busyCaseRef === option.case_ref ? "…" : "测算"}</b>
                   </button>
                 ))}
               </div>

@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from abu_v60.provenance import content_hash, stable_ref
 
-MINGLI_STAGE_PROJECTION_VERSION = "v60.mingli-stage-projection.002"
+MINGLI_STAGE_PROJECTION_VERSION = "v60.mingli-stage-projection.003"
 
 
 class MingliStageMode(StrEnum):
@@ -107,7 +107,7 @@ class MingliStageProjection(BaseModel):
 
     projection_ref: str = Field(min_length=1)
     projection_hash: str = Field(min_length=64, max_length=64)
-    projection_version: Literal["v60.mingli-stage-projection.002"] = MINGLI_STAGE_PROJECTION_VERSION
+    projection_version: Literal["v60.mingli-stage-projection.003"] = MINGLI_STAGE_PROJECTION_VERSION
     subject_id: str = Field(min_length=1)
     case_ref: str = Field(min_length=1)
     chart_version_ref: str = Field(min_length=1)
@@ -115,9 +115,17 @@ class MingliStageProjection(BaseModel):
     reading_ref: str | None = None
     reading_hash: str | None = Field(default=None, min_length=64, max_length=64)
     display_name: str = Field(min_length=1)
-    subject_kind: Literal["HUMAN_OWNER", "CANONICAL_SYNTHETIC"]
-    identity_badge: Literal["私密真实档案", "角色合成设定"]
-    privacy_scope: Literal["PRIVATE_OWNER", "PUBLIC_SYNTHETIC_SHOWCASE"]
+    subject_kind: Literal[
+        "HUMAN_OWNER",
+        "HUMAN_REFERENCE",
+        "CANONICAL_SYNTHETIC",
+    ]
+    identity_badge: Literal["私密真实档案", "真实参考档案", "角色合成设定"]
+    privacy_scope: Literal[
+        "PRIVATE_OWNER",
+        "PRIVATE_REFERENCE",
+        "PUBLIC_SYNTHETIC_SHOWCASE",
+    ]
     stage_mode: MingliStageMode
     selected_year: int | None = None
     available_years: tuple[int, ...] = Field(min_length=1)

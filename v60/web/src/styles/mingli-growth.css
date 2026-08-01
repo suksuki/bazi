@@ -1,0 +1,540 @@
+.mingli-growth-composition,
+.mingli-growth-home-underlay,
+.mingli-growth-world {
+  position: absolute;
+  inset: 0;
+}
+
+.mingli-growth-composition {
+  --mingli-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
+  background: #071813;
+}
+
+.mingli-growth-home-underlay {
+  z-index: 1;
+  pointer-events: none;
+}
+
+.mingli-growth-home-underlay .v108-home-world {
+  min-height: 100%;
+}
+
+.mingli-growth-world {
+  z-index: 14;
+  overflow: hidden;
+  color: #f5e7c2;
+  isolation: isolate;
+  pointer-events: none;
+  will-change: clip-path;
+}
+
+.mingli-growth-world[data-entry-state="opening"] {
+  animation: mingliLeafPortalOpen 1080ms var(--mingli-ease-out) both;
+}
+
+.mingli-growth-world[data-entry-state="closing"] {
+  animation: mingliLeafPortalClose 620ms cubic-bezier(0.4, 0, 0.8, 0.2) both;
+}
+
+.mingli-growth-world[data-entry-state="entered"][data-light="day"] {
+  background: #d9d5bf;
+}
+
+.mingli-growth-world[data-entry-state="entered"][data-light="night"] {
+  background: #020f18;
+}
+
+.mingli-entry-leaf-light {
+  position: absolute;
+  top: var(--mingli-entry-y);
+  left: var(--mingli-entry-x);
+  z-index: 8;
+  display: block;
+  width: clamp(72px, 7vw, 116px);
+  aspect-ratio: 1;
+  background: radial-gradient(circle at 45% 52%, #fff7cd, rgba(230, 182, 78, 0.66) 34%, transparent 76%);
+  filter: blur(0.4px) drop-shadow(0 0 12px rgba(255, 224, 139, 0.9)) drop-shadow(0 0 34px rgba(224, 169, 64, 0.72));
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) rotate(-10deg) scale(0.5);
+  -webkit-mask: url("/assets/v108/life-leaf-v1.webp") center / contain no-repeat;
+  mask: url("/assets/v108/life-leaf-v1.webp") center / contain no-repeat;
+}
+
+.mingli-growth-world[data-entry-state="opening"] .mingli-entry-leaf-light {
+  animation: mingliEntryLeafLight 1080ms var(--mingli-ease-out) both;
+}
+
+.mingli-growth-scene,
+.mingli-growth-nodes {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 165.5vh);
+  aspect-ratio: 1612 / 974;
+  transform: translate(-50%, -50%);
+}
+
+.mingli-growth-scene {
+  z-index: 1;
+  overflow: hidden;
+  background: #061d18;
+}
+
+.mingli-growth-world[data-entry-state="opening"] .mingli-growth-scene {
+  transform-origin: var(--mingli-scene-entry-x) var(--mingli-scene-entry-y);
+  animation: mingliBranchSceneSettle 1080ms var(--mingli-ease-out) both;
+}
+
+.mingli-growth-film {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  animation: mingliBranchFilmIn 260ms ease-out both;
+}
+
+.mingli-growth-nodes {
+  z-index: 4;
+  transition: opacity 260ms ease;
+}
+
+.mingli-growth-world[data-growth-state="growing"] .mingli-growth-nodes {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mingli-growth-node {
+  position: absolute;
+  display: grid;
+  min-width: 58px;
+  aspect-ratio: 1;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  isolation: isolate;
+}
+
+.mingli-growth-node.is-principle { top: 67.1%; left: 41.25%; width: 5.2%; }
+.mingli-growth-node.is-image { top: 48.35%; left: 63.35%; width: 9.6%; }
+.mingli-growth-node.is-themes { top: 41.9%; left: 75.05%; width: 6.5%; }
+.mingli-growth-node.is-timing { top: 57.95%; left: 79.55%; width: 5.8%; }
+
+.mingli-growth-node::before {
+  position: absolute;
+  inset: 14%;
+  z-index: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(249, 226, 156, 0.32), transparent 68%);
+  content: "";
+  opacity: 0;
+  transform: scale(0.72);
+  transition: 300ms var(--mingli-ease-out);
+}
+
+.mingli-growth-node:is(:hover, :focus-visible, [aria-pressed="true"])::before {
+  opacity: 0.88;
+  transform: scale(1.32);
+  animation: mingliNodeAura 3.8s ease-in-out infinite;
+}
+
+.mingli-growth-node:is(.is-image, .is-themes, .is-timing)::after {
+  position: absolute;
+  z-index: 1;
+  border-radius: 63% 37% 58% 42% / 54% 46% 54% 46%;
+  content: "";
+  filter: blur(2.4px) saturate(1.16);
+  mix-blend-mode: screen;
+  opacity: 0.68;
+  pointer-events: none;
+  transition: 320ms ease;
+  animation: mingliOrganChroma 6.8s ease-in-out infinite;
+}
+
+.mingli-growth-node.is-image::after {
+  inset: 18% 7% 18% 5%;
+  background: radial-gradient(ellipse, rgba(190, 212, 126, 0.5) 0 13%, rgba(133, 166, 86, 0.3) 31%, transparent 72%);
+  transform: rotate(-9deg);
+}
+
+.mingli-growth-node.is-themes::after {
+  inset: 12%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 253, 231, 0.8) 0 12%, rgba(251, 235, 190, 0.46) 28%, transparent 72%);
+  animation-delay: -2.1s;
+}
+
+.mingli-growth-node.is-timing::after {
+  inset: 16% 20% 13%;
+  background: radial-gradient(ellipse, rgba(224, 241, 128, 0.78) 0 12%, rgba(184, 211, 83, 0.44) 29%, transparent 72%);
+  animation-delay: -4.2s;
+}
+
+.mingli-growth-node > span {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid rgba(255, 244, 207, 0.22);
+  border-radius: 50%;
+  background: rgba(8, 38, 31, 0.42);
+  color: rgba(255, 247, 218, 0.76);
+  font: 600 10px/1 var(--font-serif);
+  opacity: 0;
+  transition: 240ms ease;
+  backdrop-filter: blur(8px);
+}
+
+.mingli-growth-node > b {
+  position: absolute;
+  top: calc(100% - 4px);
+  left: 50%;
+  z-index: 4;
+  display: grid;
+  min-width: max-content;
+  gap: 2px;
+  padding: 5px 9px;
+  border: 1px solid rgba(255, 243, 207, 0.16);
+  border-radius: 999px;
+  background: rgba(5, 29, 34, 0.55);
+  color: rgba(255, 249, 225, 0.88);
+  font: 550 9px/1.2 var(--font-serif);
+  opacity: 0;
+  transform: translate(-50%, 5px);
+  transition: 240ms ease;
+  white-space: nowrap;
+  backdrop-filter: blur(10px);
+}
+
+.mingli-growth-node > b small {
+  color: #d1b675;
+  font: 700 7px/1 sans-serif;
+  letter-spacing: 0.14em;
+}
+
+.mingli-growth-node:is(:hover, :focus-visible, [aria-pressed="true"]) > :is(span, b) {
+  opacity: 1;
+}
+
+.mingli-growth-node:is(:hover, :focus-visible, [aria-pressed="true"]) > b {
+  transform: translate(-50%, 0);
+}
+
+.mingli-growth-controls {
+  position: absolute;
+  top: max(18px, calc(env(safe-area-inset-top) + 10px));
+  left: max(28px, 3vw);
+  z-index: 7;
+  display: flex;
+  gap: 7px;
+  pointer-events: auto;
+}
+
+.mingli-growth-controls button,
+.mingli-growth-actions button {
+  min-height: 38px;
+  padding: 8px 13px;
+  border: 1px solid rgba(255, 243, 207, 0.2);
+  border-radius: 999px;
+  background: rgba(5, 29, 34, 0.48);
+  color: rgba(255, 249, 225, 0.84);
+  font-size: 10px;
+  backdrop-filter: blur(12px);
+}
+
+.mingli-growth-world[data-light="day"] .mingli-growth-controls button {
+  border-color: rgba(61, 81, 56, 0.16);
+  background: rgba(245, 239, 216, 0.6);
+  color: rgba(31, 64, 45, 0.82);
+}
+
+.mingli-growth-guide {
+  position: absolute;
+  bottom: clamp(12px, 2vh, 24px);
+  left: clamp(26px, 3.6vw, 58px);
+  z-index: 7;
+  display: block;
+  width: clamp(132px, 12.5vw, 190px);
+  min-height: 142px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: auto;
+  opacity: 0;
+  animation: mingliGuideArrive 720ms var(--mingli-ease-out) 120ms both;
+}
+
+.mingli-growth-guide.is-dodo { width: clamp(126px, 11.8vw, 180px); }
+
+.mingli-growth-guide-motion {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 190px;
+  object-fit: contain;
+  filter: drop-shadow(0 12px 14px rgba(18, 25, 17, 0.24));
+}
+
+.mingli-growth-guide > span {
+  position: absolute;
+  bottom: 8px;
+  left: 82%;
+  min-width: max-content;
+  padding: 4px 8px;
+  border: 1px solid rgba(133, 101, 45, 0.16);
+  border-radius: 999px;
+  background: rgba(246, 238, 207, 0.68);
+  color: rgba(61, 77, 57, 0.72);
+  font-size: 8px;
+  opacity: 0;
+  transform: translateX(-5px);
+  transition: 240ms ease;
+  white-space: nowrap;
+  backdrop-filter: blur(9px);
+}
+
+.mingli-growth-guide:is(:hover, :focus-visible) > span {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.mingli-growth-whisper {
+  position: absolute;
+  bottom: max(38px, 5.2vh);
+  left: clamp(204px, 17vw, 286px);
+  z-index: 6;
+  display: grid;
+  width: min(520px, 37vw);
+  max-height: min(52dvh, 510px);
+  gap: 12px;
+  overflow: auto;
+  padding: 18px 72px 16px 24px;
+  border: 0;
+  border-left: 1px solid rgba(104, 76, 28, 0.38);
+  background: radial-gradient(ellipse at 17% 50%, rgba(252, 248, 229, 0.94), rgba(246, 239, 213, 0.84) 46%, transparent 94%);
+  color: #14372a;
+  pointer-events: auto;
+  animation: mingliWhisperIn 520ms var(--mingli-ease-out) both;
+  scrollbar-width: thin;
+  backdrop-filter: blur(4px) saturate(0.88);
+  mask-image: linear-gradient(90deg, #000 0 84%, rgba(0, 0, 0, 0.76) 93%, transparent 100%);
+}
+
+.mingli-growth-world[data-light="night"] .mingli-growth-whisper {
+  border-left-color: rgba(236, 204, 130, 0.32);
+  background: radial-gradient(ellipse at 13% 52%, rgba(3, 24, 27, 0.94), rgba(3, 19, 26, 0.8) 48%, transparent 94%);
+  color: #fff1c9;
+}
+
+.mingli-growth-identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 9px;
+}
+
+.mingli-growth-identity span {
+  color: #866328;
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
+
+.mingli-growth-identity strong {
+  font: 600 13px/1.3 var(--font-serif);
+}
+
+.mingli-growth-identity small {
+  color: rgba(45, 74, 57, 0.56);
+  font-size: 8px;
+}
+
+.mingli-growth-whisper .mingli-reading-layer {
+  gap: 9px;
+  color: inherit;
+}
+
+.mingli-growth-whisper .mingli-reading-story-heading {
+  gap: 3px;
+  padding-bottom: 7px;
+  border-color: rgba(75, 88, 66, 0.14);
+}
+
+.mingli-growth-whisper .mingli-reading-story-heading h2 {
+  color: inherit;
+  font-size: clamp(18px, 1.8vw, 27px);
+  text-shadow: 0 1px 10px rgba(255, 253, 236, 0.74);
+}
+
+.mingli-growth-world[data-light="night"] .mingli-growth-whisper :is(
+  .mingli-reading-story-heading h2,
+  .mingli-principle-lines p,
+  .mingli-reading-focus strong,
+  .mingli-theme-list strong,
+  .mingli-timing-list strong
+) {
+  color: #fff1c9;
+  text-shadow: 0 2px 12px rgba(0, 7, 12, 0.88);
+}
+
+.mingli-growth-whisper :is(
+  .mingli-principle-lines p,
+  .mingli-reading-focus p,
+  .mingli-reading-boundary,
+  .mingli-theme-list p,
+  .mingli-theme-list span,
+  .mingli-image-placeholder p
+) {
+  color: rgba(27, 56, 42, 0.84);
+  font-size: 10px;
+}
+
+.mingli-growth-world[data-light="night"] .mingli-growth-whisper :is(
+  .mingli-principle-lines p,
+  .mingli-reading-focus p,
+  .mingli-reading-boundary,
+  .mingli-theme-list p,
+  .mingli-theme-list span,
+  .mingli-image-placeholder p
+) {
+  color: rgba(238, 239, 215, 0.76);
+}
+
+.mingli-growth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: rgba(42, 68, 51, 0.62);
+  font-size: 8px;
+}
+
+.mingli-growth-actions button {
+  min-height: 28px;
+  padding: 5px 10px;
+  border-color: rgba(112, 79, 28, 0.28);
+  background: transparent;
+  color: #684413;
+}
+
+.mingli-growth-world[data-light="night"] .mingli-growth-actions {
+  color: rgba(247, 234, 198, 0.7);
+}
+
+.mingli-growth-world[data-light="night"] .mingli-growth-actions button {
+  color: #f5e7c2;
+}
+
+.mingli-growth-world[data-entry-state="opening"] :is(
+  .mingli-growth-nodes,
+  .mingli-growth-controls,
+  .mingli-growth-guide,
+  .mingli-growth-whisper
+),
+.mingli-growth-world[data-entry-state="closing"] :is(
+  .mingli-growth-nodes,
+  .mingli-growth-controls,
+  .mingli-growth-guide,
+  .mingli-growth-whisper
+) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mingli-growth-composition:has(.mingli-growth-world[data-entry-state="opening"]) .v108-home-plane {
+  transform-origin: var(--mingli-scene-entry-x, 50%) var(--mingli-scene-entry-y, 50%);
+  animation: mingliHomeLeafApproach 1080ms var(--mingli-ease-out) both;
+}
+
+.mingli-growth-composition:has(.mingli-growth-world[data-entry-state="closing"]) .v108-home-plane {
+  animation: mingliHomeLeafReturn 620ms var(--mingli-ease-out) both;
+}
+
+.mingli-growth-load-state {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 24px;
+  background: radial-gradient(circle, rgba(9, 55, 42, 0.34), rgba(2, 15, 20, 0.86));
+  color: #f4e8c9;
+  text-align: center;
+}
+
+.mingli-growth-load-state i {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(244, 232, 201, 0.2);
+  border-top-color: #e1c77f;
+  border-radius: 50%;
+  animation: spin 900ms linear infinite;
+}
+
+.mingli-growth-load-state p { margin: 0; color: rgba(244, 232, 201, 0.68); font-size: 11px; }
+.mingli-growth-load-state button { min-height: 36px; padding: 7px 13px; border-radius: 999px; }
+
+@keyframes mingliLeafPortalOpen {
+  0% { clip-path: circle(0 at var(--mingli-entry-x) var(--mingli-entry-y)); }
+  18% { clip-path: circle(3.5vmax at var(--mingli-entry-x) var(--mingli-entry-y)); }
+  58% { clip-path: circle(32vmax at var(--mingli-entry-x) var(--mingli-entry-y)); }
+  100% { clip-path: circle(150vmax at var(--mingli-entry-x) var(--mingli-entry-y)); }
+}
+
+@keyframes mingliLeafPortalClose {
+  from { clip-path: circle(150vmax at var(--mingli-entry-x) var(--mingli-entry-y)); }
+  to { clip-path: circle(0 at var(--mingli-entry-x) var(--mingli-entry-y)); }
+}
+
+@keyframes mingliEntryLeafLight {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(-10deg) scale(0.45); }
+  24% { opacity: 1; transform: translate(-50%, -50%) rotate(-8deg) scale(0.94); }
+  62% { opacity: 0.9; transform: translate(-50%, -50%) rotate(-5deg) scale(2.2); }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(0) scale(8.8); }
+}
+
+@keyframes mingliBranchSceneSettle {
+  0% { filter: brightness(1.14) blur(2px); opacity: 0.08; transform: translate(-50%, -50%) scale(1.08); }
+  34% { filter: brightness(1.08) blur(0); opacity: 0.94; }
+  100% { filter: none; opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes mingliHomeLeafApproach {
+  0% { filter: blur(0); opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  54% { filter: blur(0); opacity: 1; transform: translate(-50%, -50%) scale(1.055); }
+  100% { filter: blur(4px); opacity: 0.18; transform: translate(-50%, -50%) scale(1.14); }
+}
+
+@keyframes mingliHomeLeafReturn {
+  from { filter: blur(4px); opacity: 0.18; transform: translate(-50%, -50%) scale(1.12); }
+  to { filter: blur(0); opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes mingliBranchFilmIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mingliNodeAura { 50% { opacity: 0.4; transform: scale(1.3); } }
+@keyframes mingliOrganChroma { 50% { opacity: 0.82; } }
+@keyframes mingliWhisperIn { from { opacity: 0; transform: translateY(8px); } }
+@keyframes mingliGuideArrive { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .mingli-growth-world,
+  .mingli-growth-scene,
+  .mingli-growth-node::before,
+  .mingli-growth-node::after,
+  .mingli-growth-guide,
+  .mingli-growth-whisper {
+    animation: none !important;
+    transition: none !important;
+  }
+}

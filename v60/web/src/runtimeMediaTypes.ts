@@ -7,4 +7,10 @@ export interface RuntimeHomeSceneAssets {
   home_night_logo: RuntimeAssetDelivery;
   home_profile_leaf: RuntimeAssetDelivery;
   home_lab_flower: RuntimeAssetDelivery;
+  mingli_growth_day_video: RuntimeAssetDelivery;
+  mingli_growth_day_start: RuntimeAssetDelivery;
+  mingli_growth_day_poster: RuntimeAssetDelivery;
+  mingli_growth_night_video: RuntimeAssetDelivery;
+  mingli_growth_night_start: RuntimeAssetDelivery;
+  mingli_growth_night_poster: RuntimeAssetDelivery;
 }

@@ -46,7 +46,6 @@ import {
   findOrganForSources,
   type OrganRole,
 } from "./semanticFocus";
-
 export function App() {
   const [runtime, setRuntime] = useState<RuntimeState>(initialRuntimeState);
   const [scope, setScope] = useState<ExperienceScope>(readScope);
@@ -338,9 +337,10 @@ export function App() {
     const home = await loadHomeExperience();
     setRuntime((current) => ({ ...current, home }));
   };
-  const selectUnit = (unit: ExperienceUnit) => {
+  const selectUnit = (unit: ExperienceUnit, mode?: "push" | "replace") => {
     setActiveUnit(unit);
-    writeNavigation(scope, unit, scope === "dream" ? focusRef : null, "push");
+    const currentView = new URL(window.location.href).searchParams.get("view");
+    writeNavigation(scope, unit, scope === "dream" ? focusRef : null, mode ?? (currentView === unit ? "replace" : "push"));
   };
 
   const handleLogout = () => {
@@ -470,6 +470,7 @@ export function App() {
             activeUnit={activeUnit}
             busy={runtime.busy}
             home={home}
+            mingliContext={mingliContext}
             mingliSceneActive={mingliSceneActive}
             onCompareMechanisms={() => void compareMechanisms()}
             onHomeRefresh={refreshHome}

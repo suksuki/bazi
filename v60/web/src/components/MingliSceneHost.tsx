@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { RuntimeMediaManifest } from "../api";
-import type { HomeSnapshot } from "../homeApi";
-import { loadMingliStage, loadMingliStageSubjects } from "../mingliStageApi";
+import {
+  loadMingliReadingSummary,
+  loadMingliStage,
+  loadMingliStageSubjects,
+} from "../mingliStageApi";
 import {
   readMingliStageRoute,
   type MingliReadingLayer,
@@ -16,6 +19,7 @@ import {
 } from "../mingliSceneDirector";
 import type {
   MingliNarrationVisualClock,
+  MingliReadingSummaryProjection,
   MingliStageProjection,
   MingliStageSubject,
   MingliStageSubjectId,
@@ -28,7 +32,6 @@ import { MingliScenePlayer } from "./MingliScenePlayer";
 
 export function MingliSceneHost({
   homeLineageKey,
-  home,
   media,
   onContextChange,
   onExit,
@@ -36,7 +39,6 @@ export function MingliSceneHost({
   surface,
 }: {
   homeLineageKey: string;
-  home: HomeSnapshot;
   media: RuntimeMediaManifest;
   onContextChange: (context: MingliStageViewContext) => void;
   onExit: () => void;
@@ -46,6 +48,8 @@ export function MingliSceneHost({
   const [route, setRoute] = useState<MingliStageRoute>(readMingliStageRoute);
   const [subjects, setSubjects] = useState<MingliStageSubject[]>([]);
   const [stage, setStage] = useState<MingliStageProjection | null>(null);
+  const [readingSummary, setReadingSummary] =
+    useState<MingliReadingSummaryProjection | null>(null);
   const [clock, setClock] = useState<MingliNarrationVisualClock>(
     INITIAL_MINGLI_CLOCK,
   );
@@ -91,6 +95,9 @@ export function MingliSceneHost({
         status: "LOADING",
         projection: null,
       });
+      setStage(null);
+      setReadingSummary(null);
+      setNarrationOpen(false);
       setRoute(restored);
     };
     window.addEventListener("popstate", restore);
@@ -103,6 +110,7 @@ export function MingliSceneHost({
       route.mode === "NATAL_DAYUN_YEAR_6" ? route.year : null;
     setStageLoading(true);
     setStageError(null);
+    setReadingSummary(null);
     setNarrationOpen(false);
     setClock(INITIAL_MINGLI_CLOCK);
     onContextChange({
@@ -116,9 +124,17 @@ export function MingliSceneHost({
       requestedYear,
       controller.signal,
     )
-      .then((projection) => {
+      .then(async (projection) => ({
+        projection,
+        summary:
+          projection.subject_kind === "CANONICAL_SYNTHETIC"
+            ? null
+            : await loadMingliReadingSummary(projection, controller.signal),
+      }))
+      .then(({ projection, summary }) => {
         if (controller.signal.aborted) return;
         setStage(projection);
+        setReadingSummary(summary);
         setStageLoading(false);
         setSelectedRelationRef((current) =>
           projection.relations.some(
@@ -145,6 +161,9 @@ export function MingliSceneHost({
       })
       .catch((caught) => {
         if (!controller.signal.aborted) {
+          setStage(null);
+          setReadingSummary(null);
+          setNarrationOpen(false);
           setStageLoading(false);
           setStageError(caught instanceof Error ? caught.message : String(caught));
           onContextChange({
@@ -170,6 +189,9 @@ export function MingliSceneHost({
       status: "LOADING",
       projection: null,
     });
+    setStage(null);
+    setReadingSummary(null);
+    setNarrationOpen(false);
     setRoute(next);
     writeMingliStageRoute(
       next,
@@ -357,7 +379,6 @@ export function MingliSceneHost({
             />
           ) : (
             <MingliReadingJourney
-              home={home}
               layer={route.layer}
               onAskGuide={() => setNarrationOpen(true)}
               onExpandTime={() =>
@@ -365,6 +386,7 @@ export function MingliSceneHost({
               }
               onLayerChange={navigateLayer}
               stage={stage}
+              summary={readingSummary}
             />
           )}
         </div>

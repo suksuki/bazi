@@ -76,7 +76,10 @@ class MingliNarrationService:
             or projection.projection_hash != request.expected_stage_projection_hash
         ):
             raise MingliNarrationConflictError("mingli_narration_stage_projection_stale")
-        if projection.subject_kind == "HUMAN_OWNER" and projection.reading_ref is None:
+        if (
+            projection.subject_kind in {"HUMAN_OWNER", "HUMAN_REFERENCE"}
+            and projection.reading_ref is None
+        ):
             raise MingliNarrationConflictError("mingli_narration_formal_reading_not_ready")
 
         script = script_for_projection(projection)
@@ -147,7 +150,7 @@ class MingliNarrationService:
 
         source_scope = (
             "FORMAL_READING"
-            if projection.subject_kind == "HUMAN_OWNER"
+            if projection.subject_kind in {"HUMAN_OWNER", "HUMAN_REFERENCE"}
             else "CANONICAL_SYNTHETIC_DEMO"
         )
         asset = MingliNarrationAsset.issue(

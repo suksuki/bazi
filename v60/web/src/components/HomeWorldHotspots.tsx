@@ -6,7 +6,6 @@ export function HomeWorldHotspots({
   busyCaseRef,
   home,
   media,
-  onActivateCase,
   onEnterDream,
   onOpenLab,
   onOpenMingli,
@@ -16,10 +15,9 @@ export function HomeWorldHotspots({
   busyCaseRef: string | null;
   home: HomeSnapshot;
   media: RuntimeMediaManifest;
-  onActivateCase: (caseRef: string) => void;
   onEnterDream: () => void;
   onOpenLab: () => void;
-  onOpenMingli: () => void;
+  onOpenMingli: (option: HomeSnapshot["case_options"][number], anchor: HTMLElement) => void;
   onOpenSettings: () => void;
 }) {
   const cases = [
@@ -38,7 +36,7 @@ export function HomeWorldHotspots({
           data-case-ref={option.case_ref}
           disabled={busy || busyCaseRef !== null}
           key={option.case_ref}
-          onClick={() => option.active ? onOpenMingli() : onActivateCase(option.case_ref)}
+          onClick={(event) => onOpenMingli(option, event.currentTarget)}
           type="button"
         >
           <img data-asset-ref={media.assets.home_profile_leaf.asset_ref} src={media.assets.home_profile_leaf.url} alt="" />

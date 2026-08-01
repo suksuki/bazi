@@ -24,6 +24,7 @@ export function mingliStageMatchesHome(
     stage.case_ref === home.case.case_ref &&
     stage.chart_version_ref === home.chart.chart_version_ref &&
     stage.life_case_revision_ref === home.life_case.life_case_revision_ref &&
-    stage.reading_ref === home.mingli.reading.reading_ref
+    stage.reading_ref === home.mingli.reading.reading_ref &&
+    stage.reading_hash === home.mingli.reading.reading_hash
   );
 }

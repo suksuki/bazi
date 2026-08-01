@@ -1,0 +1,67 @@
+{
+  "schema_version": "v60.prototype-mingli-branch-import.001",
+  "bundle_ref": "V108_MINGLI_BRANCH_GROWTH_BASELINE_V1",
+  "revision": "v1",
+  "frozen_design_commit": "a6cf762684e14514f58c8f45b82cca86d9a7ec4c",
+  "source_project": "CHATGPT_SITES_V108_DESIGN_CANONICAL",
+  "owner_decision": {
+    "status": "OWNER_APPROVED_V108_EXPERIENCE_BASELINE",
+    "selected_use": "V60_MINGLI_BRANCH_GROWTH_FIDELITY"
+  },
+  "assets": [
+    {
+      "asset_id": "V108_MINGLI_BRANCH_GROWTH_DAY_VIDEO_V1",
+      "delivery_path": "web/public/assets/v108/mingli-branch/mingli-branch-growth-day-v2.mp4",
+      "sha256": "d056fa04688e93180e0e428b2ab1049a4e70fe993632fe10f256849f25f1f2f6",
+      "canvas": [1612, 974],
+      "fps": 24,
+      "duration_seconds": 7.208333
+    },
+    {
+      "asset_id": "V108_MINGLI_BRANCH_GROWTH_DAY_START_V1",
+      "delivery_path": "web/public/assets/v108/mingli-branch/mingli-branch-growth-day-v2-start.webp",
+      "sha256": "97c2ec9586a257e91150a96187b9347334c48643a4bf78150fee633277e8f27d"
+    },
+    {
+      "asset_id": "V108_MINGLI_BRANCH_GROWTH_DAY_POSTER_V1",
+      "delivery_path": "web/public/assets/v108/mingli-branch/mingli-branch-growth-day-v2-poster.webp",
+      "sha256": "47e9c5ece63923101738011fc999d582b953075b44ec590ddad30c7cf2b3727b"
+    },
+    {
+      "asset_id": "V108_MINGLI_BRANCH_GROWTH_NIGHT_VIDEO_V1",
+      "delivery_path": "web/public/assets/v108/mingli-branch/mingli-branch-growth-night-v3.mp4",
+      "sha256": "3c69223a7465d63936aaa30ad200191761c2cdb7ce51736f4913e98715f6eda3",
+      "canvas": [1612, 974],
+      "fps": 24,
+      "duration_seconds": 7.208333
+    },
+    {
+      "asset_id": "V108_MINGLI_BRANCH_GROWTH_NIGHT_START_V1",
+      "delivery_path": "web/public/assets/v108/mingli-branch/mingli-branch-growth-night-v3-start.webp",
+      "sha256": "8a35535a706cedf690ded8f40d159ebadb74b432186cfcda9b1ebf3f002f713b"
+    },
+    {
+      "asset_id": "V108_MINGLI_BRANCH_GROWTH_NIGHT_POSTER_V1",
+      "delivery_path": "web/public/assets/v108/mingli-branch/mingli-branch-growth-night-v3-poster.webp",
+      "sha256": "de1e3d4512eb8ecb8585cd5fc91157f4e89c644f85fb4451a40856c124283d62"
+    }
+  ],
+  "operations": [
+    {
+      "type": "BYTE_IDENTICAL_FROZEN_BASELINE_IMPORT",
+      "changes_pixels": false,
+      "preserves": [
+        "ORGANIC_GROWTH_TIMING",
+        "DAY_NIGHT_PARITY",
+        "FINAL_ORGAN_GEOMETRY",
+        "HOTSPOT_COORDINATE_FRAME"
+      ]
+    }
+  ],
+  "boundaries": {
+    "experience_canonical_only": true,
+    "imports_mock_data": false,
+    "imports_prototype_state": false,
+    "runtime_data_authority": "V60_CANONICAL"
+  }
+}

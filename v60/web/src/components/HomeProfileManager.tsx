@@ -41,7 +41,7 @@ export function HomeProfileManager({
   light: HomeWorldLight;
   onChanged: () => Promise<void>;
   onClose: () => void;
-  onOpenMingli: () => void;
+  onOpenMingli: (option: CaseOption, anchor: HTMLElement) => void;
 }) {
   const [query, setQuery] = useState("");
   const [selectedRef, setSelectedRef] = useState(home.case.case_ref);
@@ -187,8 +187,8 @@ export function HomeProfileManager({
             <button disabled={working} onClick={() => setMode("create")} type="button">＋ 新增</button>
           </div>
           <div className="profile-manager-tabs">
-            <strong>使用中 · {home.case_options.length}</strong>
-            <small>每片叶都绑定独立 Case</small>
+            <strong>真实档案 · {home.case_options.length}</strong>
+            <small>本人和参考档案各自绑定独立 Case</small>
           </div>
           <div className="profile-manager-cards">
             {filtered.map((option) => (
@@ -208,7 +208,10 @@ export function HomeProfileManager({
                   <small>{option.gender === "male" ? "男" : "女"} · {option.birth_location} · {option.birth_date}</small>
                   <em>{pillarsText(option)}</em>
                 </span>
-                <b>{option.active ? "当前" : "查看"}</b>
+                <b>
+                  {option.subject_kind === "HUMAN_OWNER" ? "本人" : "参考"}
+                  {option.active ? " · 当前" : ""}
+                </b>
               </button>
             ))}
             {filtered.length === 0 && <p className="profile-manager-empty">没有找到匹配的档案。</p>}
@@ -238,7 +241,7 @@ export function HomeProfileManager({
                 <div className="profile-detail-identity">
                   <CaseGlyph option={selected} />
                   <span>
-                    <small>{selected.active ? "当前生命叶" : "八字档案"}</small>
+                    <small>{selected.active ? "当前生命叶" : selected.identity_badge}</small>
                     <strong>{selected.display_name}</strong>
                     <em>{selected.gender === "male" ? "男" : "女"} · {selected.birth_location}</em>
                   </span>
@@ -250,7 +253,8 @@ export function HomeProfileManager({
                 <div><dt>出生</dt><dd>{selected.birth_date} · {selected.birth_time}</dd></div>
                 <div><dt>地点</dt><dd>{selected.birth_location} · {selected.timezone}</dd></div>
                 <div><dt>历法</dt><dd>{selected.calendar_type === "solar" ? "公历" : `农历${selected.lunar_leap_month ? " · 闰月" : ""}`} · 民用钟表时间</dd></div>
-                <div><dt>状态</dt><dd>{selected.active ? "真实 Case · 可恢复 Reading" : "真实 Case · 激活后读取 Reading"}</dd></div>
+                <div><dt>状态</dt><dd>真实 Case · 已绑定可恢复 Reading</dd></div>
+                <div><dt>身份</dt><dd>{selected.identity_badge}{selected.birth_location_status === "HISTORICAL_MISSING" ? " · 出生地待补充" : ""}</dd></div>
               </dl>
 
               <section className="profile-chart-summary">
@@ -263,11 +267,21 @@ export function HomeProfileManager({
                 出生事实与命盘版本保持不可变；需要修正资料时，请建立一份新档案，旧 Reading 不会被无声改写。
               </p>
               <div className="profile-detail-actions">
-                {selected.active ? (
-                  <button className="is-primary" disabled={working} onClick={onOpenMingli} type="button">打开这片命理枝</button>
-                ) : (
-                  <button className="is-primary" disabled={working} onClick={() => void activate(selected.case_ref)} type="button">
-                    {working ? "正在切换…" : "切换到这棵生命树"}
+                <button
+                  className="is-primary"
+                  disabled={working}
+                  onClick={(event) => {
+                    const card = event.currentTarget.closest(".profile-detail-card");
+                    const leaf = card?.querySelector<HTMLElement>(".profile-detail-leaf");
+                    onOpenMingli(selected, leaf ?? event.currentTarget);
+                  }}
+                  type="button"
+                >
+                  打开这片命理枝
+                </button>
+                {!selected.active && selected.subject_kind === "HUMAN_OWNER" && (
+                  <button disabled={working} onClick={() => void activate(selected.case_ref)} type="button">
+                    {working ? "正在切换…" : "设为当前生命树"}
                   </button>
                 )}
               </div>

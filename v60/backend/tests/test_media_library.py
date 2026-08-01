@@ -132,7 +132,7 @@ def test_v60_character_identity_is_primary_and_legacy_cartoon_is_retained() -> N
 def test_runtime_media_manifest_resolves_hash_locked_assets_and_cues() -> None:
     manifest = runtime_media_manifest()
 
-    assert manifest["registry_version"] == "v60.runtime-media-registry.003"
+    assert manifest["registry_version"] == "v60.runtime-media-registry.004"
     assert manifest["assets"]["brand_logo"]["asset_ref"] == (
         "brand.abuknows-v60.logo.transparent.v1"
     )
@@ -144,6 +144,12 @@ def test_runtime_media_manifest_resolves_hash_locked_assets_and_cues() -> None:
     )
     assert manifest["assets"]["home_profile_leaf"]["url"] == (
         "/assets/v108/life-leaf-v1.webp"
+    )
+    assert manifest["assets"]["mingli_growth_day_video"]["sha256"] == (
+        "d056fa04688e93180e0e428b2ab1049a4e70fe993632fe10f256849f25f1f2f6"
+    )
+    assert manifest["assets"]["mingli_growth_night_poster"]["url"] == (
+        "/assets/v108/mingli-branch/mingli-branch-growth-night-v3-poster.webp"
     )
     assert manifest["cues"]["abu_idle"]["cue_ref"] == "cue.dream.abu-idle.v1"
     assert manifest["cues"]["abu_idle"]["playback"] == "LOOP"

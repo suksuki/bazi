@@ -12,14 +12,16 @@ foundation into one visible, recoverable product path:
 ```text
 Home profile leaf
 -> real Mingli branch
+-> branches / leaves / flowers / fruit for the four evidence layers
 -> four-pillar natal stage
 -> six-pillar time layer
 -> server-locked Abu narration
 -> audio-clocked subtitles and deterministic stage emphasis
 ```
 
-Dream, the ten-tree loop, multi-NPC scenes, the question bank and mobile are
-not part of this slice.
+Dream, the ten-tree loop, multi-NPC scenes, the question bank, iPad book layout
+and mobile are not part of this slice. The current acceptance target is
+Desktop Chrome.
 
 ## Owner decisions now in the executable baseline
 
@@ -28,8 +30,9 @@ not part of this slice.
 - The default stage is the complete natal four pillars.
 - Expanding time shows exactly natal four pillars plus current Dayun plus the
   selected annual pillar. A five-pillar state is invalid.
-- The first layout targets Desktop and iPad. Mobile remains a separate visual
-  design problem.
+- The current layout target is Desktop Chrome. iPad portrait is deferred to
+  the book-edition design round, and mobile remains a separate visual design
+  problem.
 - Abu is the boy narrator and now uses the Owner-selected Qwen3-TTS speaker
   `Dylan`. Dodo remains the girl narrator using the `Vivian` audition profile.
 - The older Eric generation is append-only historical audition evidence. It
@@ -46,8 +49,17 @@ Owner-selected label.
 
 The stage can project only:
 
-1. the authenticated account's active `HUMAN_OWNER` Case; and
-2. the two explicitly admitted `CANONICAL_SYNTHETIC` character Cases.
+1. the authenticated account's active `HUMAN_OWNER` Case;
+2. that account's private `HUMAN_REFERENCE` Cases; and
+3. the two explicitly admitted `CANONICAL_SYNTHETIC` character Cases.
+
+Private reference subjects use stable `case:{case_ref}` routes and require the
+same account authorization as their Case workspace. Their Stage and branch
+summary bind the exact Case, Chart, LifeCase and formal Reading Ref/Hash. The
+Home API that carries private birth details is explicitly `private, no-store`.
+The canonical evidence drawer remains available only when all of those
+identities match the active Owner Home snapshot; a reference route fails
+closed rather than reading from or writing to the Owner Case.
 
 The synthetic character birth details are Owner-approved fictional product
 fixtures, not biographies and not substitutes for a real user Case:
@@ -173,12 +185,15 @@ pillars updates the server-issued Projection in that instance; it does not
 create a second stage or a five-pillar intermediate state.
 
 The earlier canonical Reading and Lab controls remain reachable through a
-collapsible evidence drawer beside the shared stage. It preserves Case
-management, formal Reading details, evidence requests and mechanism-candidate
-comparison without placing the narrator inside that drawer. Closing the
-narration layer explicitly pauses and releases its captured audio element;
-reduced-motion clients use the Registry poster rather than a moving character
-delivery.
+collapsible evidence drawer beside the shared stage only for an exact active
+Owner lineage match. It preserves Case management, formal Reading details,
+evidence requests and mechanism-candidate comparison without placing the
+narrator inside that drawer. Reference Cases already have a real branch
+Reading summary and 4/6-column stage, but their full mutable evidence drawer
+is visibly withheld until a Case-bound projection replaces the Owner-only Home
+contract. Closing the narration layer explicitly pauses and releases its
+captured audio element; reduced-motion clients use the Registry poster rather
+than a moving character delivery.
 
 The 3D renderer consumes only stable `column_ref`, `body_ref`, `relation_ref`
 and the bounded Director frame. Its admitted semantic actions are:
@@ -198,7 +213,7 @@ Director permits it. WebGL2 failure or context loss falls back to the existing
 bounded 2D stage without changing the Projection.
 
 The actor layer now supports Abu and Dodo media independently through the
-Hash-locked Runtime Media Registry `.002`; the browser does not own their
+Hash-locked Runtime Media Registry `.004`; the browser does not own their
 paths. It reports its current fidelity as
 `IDLE_MEDIA_WITH_AUDIO_BOUND_STATE`: the transparent video
 instance follows READY/PLAYING/PAUSED/BUFFERING, but the current assets are not
@@ -233,9 +248,9 @@ Foundation       v60.foundation.019
 Architecture     v60.runtime-architecture.053
 Mingli Engine    v60.mingli-cognitive-engine.026
 Media            v60.media-library.003
-Runtime Media    v60.runtime-media-registry.002
+Runtime Media    v60.runtime-media-registry.004
 Unit Mingli      v60.unit-mingli.020
-Stage            v60.mingli-stage-projection.002
+Stage            v60.mingli-stage-projection.003
 Timing           v60.mingli-timing-evidence-vector.002
 Narration        v60.mingli-narration.002
 Migration        0027_mingli_narration_v2
@@ -307,16 +322,40 @@ responsive Chrome evidence, not physical iPad Safari, touch or autoplay-policy
 certification. The Three renderer is isolated in a lazy chunk; the current
 chunk-size warning is recorded performance debt, not proof of a second stage.
 
+The real-profile branch integration additionally verified:
+
+- all 20 authorized V50 Owner-corpus profiles were already present in V60 as
+  one `HUMAN_OWNER` and 19 `HUMAN_REFERENCE` Cases; the UI now exposes them
+  without duplicating migration lineage;
+- all 20 Stage and Reading-summary projections match on Case, Chart, LifeCase,
+  Reading Ref and Reading Hash, and all 20 produce four natal columns or six
+  time-layer columns with twelve bodies;
+- the frozen V108 day/night growth films are byte-identical, 1612×974,
+  24 fps and 7.208333 seconds, with the same four organ hotspots;
+- `命局原理` uses the formal bounded Reading, `生命意象` remains an explicit
+  unadmitted gap, `人生主题` uses the three real life-domain windows, and
+  `时间趋势` exposes only deterministic coordinates and admitted relation
+  membership;
+- refresh restores the final static branch and exact layer; closing replaces
+  the leaf-route history entry so browser Back/Forward cannot reopen a closed
+  branch; and reference pages cannot expose or mutate the Owner evidence
+  drawer.
+
+Evidence is in `.artifacts/real-profile-mingli-branch/`.
+
 ## Design handoff and next constraint
 
 The frozen V108 source at commit
 `a6cf762684e14514f58c8f45b82cca86d9a7ec4c` is available and remains the
 experience authority. This slice extracted its particle-stage and transparent
-actor language, but deliberately improves one prototype limitation: V108 Lab
-and Abu Says each mounted a separate Canvas, whereas the formal product now
-keeps one shared Scene Player. This is the first integration seam, not a claim
-that the complete V108 Home, branch, motion and narration composition has
-already been reproduced.
+actor language. The active Home and profile-leaf branch now preserve the V108
+scene plane, day/night growth film, organ positions, opening/closing timing and
+companion placement while replacing mock conclusions with V60 Case-bound
+projections. The formal product also improves one prototype limitation: V108
+Lab and Abu Says each mounted a separate Canvas, whereas the formal product
+keeps one shared Scene Player. Remaining fidelity work concerns future Dream
+and scene-specific narration design, not a second Mingli entry or replacement
+UI framework.
 
 ```text
 DESIGN_REQUEST
@@ -324,8 +363,9 @@ DESIGN_REQUEST
 - source_files: frozen V108 MingliStage3D, MingliStageLabPreview, AbuSays
 - observed_behavior: one real Canvas now survives all three surfaces; current
   Abu/Dodo media prove audio-bound state but not final speaking choreography
-- design_question: provide the final single-player Desktop/iPad composition,
-  six-column spacing and Abu/Dodo listening/speaking/paused/attention states
+- design_question: provide the final single-player Desktop Chrome composition,
+  six-column spacing and Abu/Dodo listening/speaking/paused/attention states;
+  leave iPad book composition for its separate design round
 - current_assumption: Reading and Lab reserve space around the same stage;
   narration expands that stage without remounting it
 - implementation_constraint: audio.currentTime is the sole semantic clock;

@@ -2,6 +2,38 @@
 
 ## 2026-08-01
 
+### Every authorized real profile now grows its own V108 Mingli branch
+
+- Verified instead of re-importing the V50 Owner corpus: all 20 non-deleted
+  authorized profiles already exist in V60 with exact source hashes and
+  recomputed pillars, as one private Owner Case and 19 private Reference
+  Cases. Home and Profile management now expose all 20 while only the unique
+  Owner remains the account's active LifeTree identity.
+- Added account-authorized Reference Stage and formal Reading-summary
+  projections. Every profile leaf now opens its own Case/Chart/LifeCase/
+  Reading lineage; cross-account reads fail closed, and private Home responses
+  are explicitly non-cacheable.
+- Reproduced the frozen V108 leaf-to-branch experience using its byte-identical
+  day/night start frames, 7.208333-second films and final posters. Clicking a
+  visible profile leaf or persistent “more profiles” leaf opens from that real
+  anchor; refresh and reduced motion restore the final branch without
+  replaying an obsolete entry.
+- Connected branch, leaf, flower and fruit to the four formal product layers.
+  Principle uses the bounded Reading, Image shows an honest Projection hold,
+  Themes uses real career/wealth/relationship observation windows, and Timing
+  enters the same four/six-column Scene Player without claiming activation,
+  relation effect, usable source, probability, effective work or fortune.
+- Closed a cross-Case P0 found during review: a Reference Branch/Lab can never
+  display or mutate the active Owner's canonical drawer. Case, Chart,
+  LifeCase, Reading Ref and Reading Hash must all match before that drawer is
+  enabled; otherwise a visible read/write boundary replaces it.
+- Real Desktop Chrome covered all four layers, six columns/twelve bodies,
+  static refresh recovery, persistent anchor return and close/Back/Forward
+  behavior. All 20 profiles independently passed natal and time-layer
+  projection. All 320 backend tests, Ruff, TypeScript/Vite build, Runtime
+  Architecture and source maintainability pass. Evidence is in
+  `.artifacts/real-profile-mingli-branch/`.
+
 ### V108 profile workflow and four-layer Mingli journey use real V60 functions
 
 - Replaced the temporary engineering profile sheet with a full-screen,

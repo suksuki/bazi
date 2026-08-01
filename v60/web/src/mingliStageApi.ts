@@ -1,6 +1,7 @@
 import { request } from "./http";
 import type {
   MingliNarrationReadyResponse,
+  MingliReadingSummaryProjection,
   MingliStageMode,
   MingliStageProjection,
   MingliStageSubject,
@@ -8,6 +9,7 @@ import type {
 } from "./mingliStageTypes";
 import {
   validateNarrationReady,
+  validateReadingSummary,
   validateStageProjection,
   validateStageSubjects,
 } from "./mingliStageValidation";
@@ -31,6 +33,18 @@ export async function loadMingliStage(
   }
   const value = await request<unknown>(`/api/v60/mingli/stage?${parameters}`, { signal });
   return validateStageProjection(value, { subjectId, mode, year });
+}
+
+export async function loadMingliReadingSummary(
+  stage: MingliStageProjection,
+  signal?: AbortSignal,
+): Promise<MingliReadingSummaryProjection> {
+  const parameters = new URLSearchParams({ case_ref: stage.case_ref });
+  const value = await request<unknown>(
+    `/api/v60/mingli/stage/reading-summary?${parameters}`,
+    { signal },
+  );
+  return validateReadingSummary(value, stage);
 }
 
 export async function prepareMingliNarration(

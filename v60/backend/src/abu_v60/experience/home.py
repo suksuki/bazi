@@ -157,10 +157,13 @@ class HomeExperienceService:
         self._abu = abu or MingliAbuExpressionProjector()
 
     def snapshot(self, *, account_ref: str) -> dict[str, Any]:
-        owner_cases = [
+        account_cases = [
             item
             for item in self._cases.list_cases(account_ref=account_ref)
-            if item["subject_kind"] == "HUMAN_OWNER"
+            if item["subject_kind"] in {"HUMAN_OWNER", "HUMAN_REFERENCE"}
+        ]
+        owner_cases = [
+            item for item in account_cases if item["subject_kind"] == "HUMAN_OWNER"
         ]
         home_cases = [item for item in owner_cases if item["status"] == "ACTIVE"]
         if not home_cases:
@@ -361,8 +364,24 @@ class HomeExperienceService:
                     "status": item["status"],
                     "pillars": item["pillars_json"],
                     "active": item["case_ref"] == workspace["case"]["case_ref"],
+                    "subject_kind": item["subject_kind"],
+                    "identity_badge": (
+                        "私密真实档案"
+                        if item["subject_kind"] == "HUMAN_OWNER"
+                        else "真实参考档案"
+                    ),
+                    "stage_subject_id": (
+                        "current"
+                        if item["case_ref"] == workspace["case"]["case_ref"]
+                        else f"case:{item['case_ref']}"
+                    ),
+                    "birth_location_status": (
+                        "HISTORICAL_MISSING"
+                        if str(item["birth_location"]).startswith("未记录")
+                        else "RECORDED"
+                    ),
                 }
-                for item in owner_cases
+                for item in account_cases
             ],
             "chart": {
                 "chart_version_ref": chart_ref,

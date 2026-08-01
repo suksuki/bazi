@@ -366,6 +366,66 @@
       "source_manifest_ref": "media/manifests/V108_HOME_SHELL_BASELINE_V1.v1.json",
       "source_status": "OWNER_APPROVED",
       "v60_role": "v108_home_mingli_lab_flower"
+    },
+    {
+      "asset_ref": "experience.v108.mingli-branch.day-video.v1",
+      "asset_version": "V108_MINGLI_BRANCH_GROWTH_DAY_VIDEO_V1",
+      "runtime_path": "web/public/assets/v108/mingli-branch/mingli-branch-growth-day-v2.mp4",
+      "sha256": "d056fa04688e93180e0e428b2ab1049a4e70fe993632fe10f256849f25f1f2f6",
+      "media_type": "video/mp4",
+      "source_manifest_ref": "media/manifests/V108_MINGLI_BRANCH_GROWTH_BASELINE_V1.v1.json",
+      "source_status": "OWNER_APPROVED",
+      "v60_role": "v108_mingli_branch_growth_day_video"
+    },
+    {
+      "asset_ref": "experience.v108.mingli-branch.day-start.v1",
+      "asset_version": "V108_MINGLI_BRANCH_GROWTH_DAY_START_V1",
+      "runtime_path": "web/public/assets/v108/mingli-branch/mingli-branch-growth-day-v2-start.webp",
+      "sha256": "97c2ec9586a257e91150a96187b9347334c48643a4bf78150fee633277e8f27d",
+      "media_type": "image/webp",
+      "source_manifest_ref": "media/manifests/V108_MINGLI_BRANCH_GROWTH_BASELINE_V1.v1.json",
+      "source_status": "OWNER_APPROVED",
+      "v60_role": "v108_mingli_branch_growth_day_start"
+    },
+    {
+      "asset_ref": "experience.v108.mingli-branch.day-poster.v1",
+      "asset_version": "V108_MINGLI_BRANCH_GROWTH_DAY_POSTER_V1",
+      "runtime_path": "web/public/assets/v108/mingli-branch/mingli-branch-growth-day-v2-poster.webp",
+      "sha256": "47e9c5ece63923101738011fc999d582b953075b44ec590ddad30c7cf2b3727b",
+      "media_type": "image/webp",
+      "source_manifest_ref": "media/manifests/V108_MINGLI_BRANCH_GROWTH_BASELINE_V1.v1.json",
+      "source_status": "OWNER_APPROVED",
+      "v60_role": "v108_mingli_branch_growth_day_poster"
+    },
+    {
+      "asset_ref": "experience.v108.mingli-branch.night-video.v1",
+      "asset_version": "V108_MINGLI_BRANCH_GROWTH_NIGHT_VIDEO_V1",
+      "runtime_path": "web/public/assets/v108/mingli-branch/mingli-branch-growth-night-v3.mp4",
+      "sha256": "3c69223a7465d63936aaa30ad200191761c2cdb7ce51736f4913e98715f6eda3",
+      "media_type": "video/mp4",
+      "source_manifest_ref": "media/manifests/V108_MINGLI_BRANCH_GROWTH_BASELINE_V1.v1.json",
+      "source_status": "OWNER_APPROVED",
+      "v60_role": "v108_mingli_branch_growth_night_video"
+    },
+    {
+      "asset_ref": "experience.v108.mingli-branch.night-start.v1",
+      "asset_version": "V108_MINGLI_BRANCH_GROWTH_NIGHT_START_V1",
+      "runtime_path": "web/public/assets/v108/mingli-branch/mingli-branch-growth-night-v3-start.webp",
+      "sha256": "8a35535a706cedf690ded8f40d159ebadb74b432186cfcda9b1ebf3f002f713b",
+      "media_type": "image/webp",
+      "source_manifest_ref": "media/manifests/V108_MINGLI_BRANCH_GROWTH_BASELINE_V1.v1.json",
+      "source_status": "OWNER_APPROVED",
+      "v60_role": "v108_mingli_branch_growth_night_start"
+    },
+    {
+      "asset_ref": "experience.v108.mingli-branch.night-poster.v1",
+      "asset_version": "V108_MINGLI_BRANCH_GROWTH_NIGHT_POSTER_V1",
+      "runtime_path": "web/public/assets/v108/mingli-branch/mingli-branch-growth-night-v3-poster.webp",
+      "sha256": "de1e3d4512eb8ecb8585cd5fc91157f4e89c644f85fb4451a40856c124283d62",
+      "media_type": "image/webp",
+      "source_manifest_ref": "media/manifests/V108_MINGLI_BRANCH_GROWTH_BASELINE_V1.v1.json",
+      "source_status": "OWNER_APPROVED",
+      "v60_role": "v108_mingli_branch_growth_night_poster"
     }
   ]
 }

@@ -1,6 +1,8 @@
-import type { HomeSnapshot } from "../homeApi";
 import type { MingliReadingLayer } from "../mingliStageNavigation";
-import type { MingliStageProjection } from "../mingliStageTypes";
+import type {
+  MingliReadingSummaryProjection,
+  MingliStageProjection,
+} from "../mingliStageTypes";
 
 const LAYERS: Array<{
   id: MingliReadingLayer;
@@ -21,14 +23,14 @@ const DOMAIN_LABELS = {
 } as const;
 
 export function MingliReadingJourney({
-  home,
+  summary,
   layer,
   onAskGuide,
   onExpandTime,
   onLayerChange,
   stage,
 }: {
-  home: HomeSnapshot;
+  summary: MingliReadingSummaryProjection | null;
   layer: MingliReadingLayer;
   onAskGuide: () => void;
   onExpandTime: () => void;
@@ -36,7 +38,7 @@ export function MingliReadingJourney({
   stage: MingliStageProjection;
 }) {
   const narrator = stage.narrator_actor_id === "DUODUO_NARRATOR_V1" ? "多多" : "阿布";
-  const hasFormalReading = stageMatchesHomeReading(home, stage);
+  const hasFormalReading = summaryMatchesStage(summary, stage);
   return (
     <aside
       aria-label="命理四层阅读"
@@ -63,16 +65,13 @@ export function MingliReadingJourney({
       </nav>
 
       <section className="mingli-reading-story">
-        {layer === "principle" && (
-          <PrincipleLayer hasFormalReading={hasFormalReading} home={home} stage={stage} />
-        )}
-        {layer === "image" && <ImageLayer stage={stage} />}
-        {layer === "themes" && (
-          <ThemeLayer hasFormalReading={hasFormalReading} home={home} stage={stage} />
-        )}
-        {layer === "timing" && (
-          <TimingLayer onExpandTime={onExpandTime} stage={stage} />
-        )}
+        <MingliReadingLayerContent
+          hasFormalReading={hasFormalReading}
+          layer={layer}
+          onExpandTime={onExpandTime}
+          stage={stage}
+          summary={summary}
+        />
         <button className="mingli-reading-ask-guide" onClick={onAskGuide} type="button">
           请{narrator}讲解当前舞台
           <span aria-hidden="true">坐标、关系边界、声音与舞台一起开始 →</span>
@@ -82,16 +81,53 @@ export function MingliReadingJourney({
   );
 }
 
-function stageMatchesHomeReading(home: HomeSnapshot, stage: MingliStageProjection) {
-  const reading = home.mingli.reading;
-  return stage.subject_id === "current"
-    && stage.case_ref === home.case.case_ref
-    && stage.chart_version_ref === home.chart.chart_version_ref
-    && stage.life_case_revision_ref === home.life_case.life_case_revision_ref
-    && stage.reading_ref === reading.reading_ref
-    && reading.case_ref === home.case.case_ref
-    && reading.chart_version_ref === home.chart.chart_version_ref
-    && reading.life_case_revision_ref === home.life_case.life_case_revision_ref;
+export function summaryMatchesStage(
+  summary: MingliReadingSummaryProjection | null,
+  stage: MingliStageProjection,
+) {
+  return summary !== null
+    && summary.case_ref === stage.case_ref
+    && summary.chart_version_ref === stage.chart_version_ref
+    && summary.life_case_revision_ref === stage.life_case_revision_ref
+    && summary.reading_ref === stage.reading_ref
+    && summary.reading_hash === stage.reading_hash;
+}
+
+export function MingliReadingLayerContent({
+  hasFormalReading,
+  layer,
+  onExpandTime,
+  stage,
+  summary,
+}: {
+  hasFormalReading: boolean;
+  layer: MingliReadingLayer;
+  onExpandTime: () => void;
+  stage: MingliStageProjection;
+  summary: MingliReadingSummaryProjection | null;
+}) {
+  return (
+    <>
+      {layer === "principle" && (
+        <PrincipleLayer
+          hasFormalReading={hasFormalReading}
+          stage={stage}
+          summary={summary}
+        />
+      )}
+      {layer === "image" && <ImageLayer stage={stage} />}
+      {layer === "themes" && (
+        <ThemeLayer
+          hasFormalReading={hasFormalReading}
+          stage={stage}
+          summary={summary}
+        />
+      )}
+      {layer === "timing" && (
+        <TimingLayer onExpandTime={onExpandTime} stage={stage} />
+      )}
+    </>
+  );
 }
 
 function LayerHeading({
@@ -114,12 +150,12 @@ function LayerHeading({
 
 function PrincipleLayer({
   hasFormalReading,
-  home,
   stage,
+  summary,
 }: {
   hasFormalReading: boolean;
-  home: HomeSnapshot;
   stage: MingliStageProjection;
+  summary: MingliReadingSummaryProjection | null;
 }) {
   if (!hasFormalReading) {
     const pillars = stage.columns.filter((column) => column.source_layer === "NATAL");
@@ -146,7 +182,7 @@ function PrincipleLayer({
       </div>
     );
   }
-  const brief = home.mingli.reading_brief;
+  const brief = summary!.reading_brief;
   return (
     <div className="mingli-reading-layer">
       <LayerHeading eyebrow="理法枝 · 已确认与未决分开" title={brief.headline} status="正式 Reading" />
@@ -186,12 +222,12 @@ function ImageLayer({ stage }: { stage: MingliStageProjection }) {
 
 function ThemeLayer({
   hasFormalReading,
-  home,
   stage,
+  summary,
 }: {
   hasFormalReading: boolean;
-  home: HomeSnapshot;
   stage: MingliStageProjection;
+  summary: MingliReadingSummaryProjection | null;
 }) {
   if (!hasFormalReading) {
     return (
@@ -217,7 +253,7 @@ function ThemeLayer({
     <div className="mingli-reading-layer">
       <LayerHeading eyebrow="人生应事花 · 现实观察窗口" title="哪些人生主题值得继续观察" status="不是事件预测" />
       <div className="mingli-theme-list">
-        {home.mingli.reading_brief.life_domains.map((item) => (
+        {summary!.reading_brief.life_domains.map((item) => (
           <article key={item.domain}>
             <small>{DOMAIN_LABELS[item.domain]}</small>
             <strong>{item.label}</strong>

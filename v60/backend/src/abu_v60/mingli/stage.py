@@ -37,6 +37,7 @@ NATAL_SLOTS = ("year", "month", "day", "hour")
 NATAL_COLUMN_SLOTS = ("NATAL_YEAR", "NATAL_MONTH", "NATAL_DAY", "NATAL_HOUR")
 NATAL_LABELS = ("年柱", "月柱", "日柱", "时柱")
 NATAL_FACT_SLOT_BY_COLUMN = dict(zip(NATAL_COLUMN_SLOTS, NATAL_SLOTS, strict=True))
+PRIVATE_CASE_SUBJECT_PREFIX = "case:"
 
 
 class MingliStageError(ValueError):
@@ -76,6 +77,23 @@ class MingliStageService:
                 "default_narrator_actor_id": "ABU_NARRATOR_V1",
             }
         ]
+        current_case_ref = str(current["case"]["case_ref"])
+        subjects.extend(
+            {
+                "subject_id": f"{PRIVATE_CASE_SUBJECT_PREFIX}{item['case_ref']}",
+                "display_name": item["display_name"],
+                "subject_kind": item["subject_kind"],
+                "identity_badge": (
+                    "私密真实档案"
+                    if item["subject_kind"] == "HUMAN_OWNER"
+                    else "真实参考档案"
+                ),
+                "default_narrator_actor_id": "ABU_NARRATOR_V1",
+            }
+            for item in self._cases.list_cases(account_ref=account_ref)
+            if item["subject_kind"] in {"HUMAN_OWNER", "HUMAN_REFERENCE"}
+            and str(item["case_ref"]) != current_case_ref
+        )
         subjects.extend(
             {
                 "subject_id": item.subject_id,
@@ -145,7 +163,7 @@ class MingliStageService:
             rule_ref=foundation.source_ref,
             rule_hash=foundation.profile_hash,
         )
-        owner_case = workspace["case"]["subject_kind"] == "HUMAN_OWNER"
+        subject_kind = str(workspace["case"]["subject_kind"])
         reading_binding = self._latest_reading_binding(
             case_ref=str(workspace["case"]["case_ref"]),
             chart_version_ref=str(workspace["chart"]["chart_version_ref"]),
@@ -183,9 +201,21 @@ class MingliStageService:
                 str(reading_binding["reading_hash"]) if reading_binding is not None else None
             ),
             display_name=str(workspace["profile"]["display_name"]),
-            subject_kind="HUMAN_OWNER" if owner_case else "CANONICAL_SYNTHETIC",
-            identity_badge="私密真实档案" if owner_case else "角色合成设定",
-            privacy_scope="PRIVATE_OWNER" if owner_case else "PUBLIC_SYNTHETIC_SHOWCASE",
+            subject_kind=subject_kind,
+            identity_badge=(
+                "私密真实档案"
+                if subject_kind == "HUMAN_OWNER"
+                else "真实参考档案"
+                if subject_kind == "HUMAN_REFERENCE"
+                else "角色合成设定"
+            ),
+            privacy_scope=(
+                "PRIVATE_OWNER"
+                if subject_kind == "HUMAN_OWNER"
+                else "PRIVATE_REFERENCE"
+                if subject_kind == "HUMAN_REFERENCE"
+                else "PUBLIC_SYNTHETIC_SHOWCASE"
+            ),
             stage_mode=stage_mode,
             selected_year=selected_year,
             available_years=available_years,
@@ -235,7 +265,7 @@ class MingliStageService:
                             SELECT 1 FROM mingli.cases
                             WHERE case_ref = :case_ref
                               AND owner_account_ref = :account_ref
-                              AND subject_kind = 'HUMAN_OWNER'
+                              AND subject_kind IN ('HUMAN_OWNER', 'HUMAN_REFERENCE')
                         )
                         """
                     ),
@@ -251,6 +281,23 @@ class MingliStageService:
     ) -> tuple[dict[str, Any], str]:
         if subject_id == "current":
             return self._owner_workspace(account_ref=account_ref), "ABU_NARRATOR_V1"
+        if subject_id.startswith(PRIVATE_CASE_SUBJECT_PREFIX):
+            case_ref = subject_id.removeprefix(PRIVATE_CASE_SUBJECT_PREFIX)
+            if not case_ref:
+                raise MingliStageError("mingli_stage_subject_not_found")
+            try:
+                workspace = self._cases.workspace(
+                    account_ref=account_ref,
+                    case_ref=case_ref,
+                )
+            except CaseNotFoundError as exc:
+                raise MingliStageError("mingli_stage_subject_not_found") from exc
+            if workspace["case"]["subject_kind"] not in {
+                "HUMAN_OWNER",
+                "HUMAN_REFERENCE",
+            }:
+                raise MingliStageError("mingli_stage_private_case_kind_mismatch")
+            return workspace, "ABU_NARRATOR_V1"
         definition = SHOWCASE_BY_SUBJECT.get(subject_id)
         if definition is None:
             raise MingliStageError("mingli_stage_subject_not_found")

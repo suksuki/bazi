@@ -1,5 +1,6 @@
 import type {
   MingliNarrationReadyResponse,
+  MingliReadingSummaryProjection,
   MingliStageMode,
   MingliStageProjection,
   MingliStageSubject,
@@ -28,9 +29,11 @@ export function validateStageSubjects(value: unknown): MingliStageSubject[] {
   if (
     subjects.some(
       (item) =>
-        !["current", "abu", "duoduo"].includes(item.subject_id) ||
+        !isStageSubjectId(item.subject_id) ||
         !item.display_name ||
-        !["HUMAN_OWNER", "CANONICAL_SYNTHETIC"].includes(item.subject_kind),
+        !["HUMAN_OWNER", "HUMAN_REFERENCE", "CANONICAL_SYNTHETIC"].includes(
+          item.subject_kind,
+        ),
     )
   ) {
     throw new Error("mingli_stage_subject_identity_invalid");
@@ -56,11 +59,8 @@ export function validateStageProjection(
     (expected?.year !== null &&
       expected?.year !== undefined &&
       stage.selected_year !== expected.year) ||
-    (stage.subject_id === "current"
-      ? stage.subject_kind !== "HUMAN_OWNER" || stage.privacy_scope !== "PRIVATE_OWNER"
-      : stage.subject_kind !== "CANONICAL_SYNTHETIC" ||
-        stage.privacy_scope !== "PUBLIC_SYNTHETIC_SHOWCASE") ||
-    stage.projection_version !== "v60.mingli-stage-projection.002" ||
+    !stageIdentityIsValid(stage) ||
+    stage.projection_version !== "v60.mingli-stage-projection.003" ||
     !stage.projection_ref ||
     !HASH.test(stage.projection_hash) ||
     !Array.isArray(stage.source_refs) ||
@@ -127,6 +127,62 @@ export function validateStageProjection(
     throw new Error("mingli_stage_projection_time_state_invalid");
   }
   return stage;
+}
+
+export function validateReadingSummary(
+  value: unknown,
+  stage: MingliStageProjection,
+): MingliReadingSummaryProjection {
+  if (!isRecord(value) || !isRecord(value.reading_brief)) {
+    throw new Error("mingli_reading_summary_invalid");
+  }
+  const summary = value as unknown as MingliReadingSummaryProjection;
+  const lineage = summary.reading_brief.lineage;
+  if (
+    summary.summary_version !== "v60.mingli-reading-summary.001" ||
+    !summary.summary_ref ||
+    !HASH.test(summary.summary_hash) ||
+    summary.case_ref !== stage.case_ref ||
+    summary.chart_version_ref !== stage.chart_version_ref ||
+    summary.life_case_revision_ref !== stage.life_case_revision_ref ||
+    summary.reading_ref !== stage.reading_ref ||
+    summary.reading_hash !== stage.reading_hash ||
+    summary.subject_kind !== stage.subject_kind ||
+    summary.image_projection_status !== "NOT_ADMITTED" ||
+    summary.professional_verdict_allowed !== false ||
+    summary.canonical_write_allowed !== false ||
+    summary.read_only !== true ||
+    lineage.reading_ref !== summary.reading_ref ||
+    lineage.reading_hash !== summary.reading_hash ||
+    summary.reading_brief.qualification.status !== "FORMAL_BOUNDED_READING"
+  ) {
+    throw new Error("mingli_reading_summary_shape_invalid");
+  }
+  return summary;
+}
+
+function isStageSubjectId(value: unknown): value is string {
+  return typeof value === "string" && (
+    ["current", "abu", "duoduo"].includes(value) ||
+    (value.startsWith("case:") && value.length > "case:".length)
+  );
+}
+
+function stageIdentityIsValid(stage: MingliStageProjection) {
+  if (stage.subject_id === "current") {
+    return stage.subject_kind === "HUMAN_OWNER" && stage.privacy_scope === "PRIVATE_OWNER";
+  }
+  if (stage.subject_id.startsWith("case:")) {
+    return (
+      (stage.subject_kind === "HUMAN_OWNER" && stage.privacy_scope === "PRIVATE_OWNER") ||
+      (stage.subject_kind === "HUMAN_REFERENCE" && stage.privacy_scope === "PRIVATE_REFERENCE")
+    );
+  }
+  return (
+    ["abu", "duoduo"].includes(stage.subject_id) &&
+    stage.subject_kind === "CANONICAL_SYNTHETIC" &&
+    stage.privacy_scope === "PUBLIC_SYNTHETIC_SHOWCASE"
+  );
 }
 
 export function validateNarrationReady(

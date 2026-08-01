@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 import type { RuntimeMediaManifest } from "../api";
-import { activateOwnerCase } from "../homeApi";
 import type { HomeSnapshot } from "../homeApi";
+import { writeMingliLeafRoute } from "../mingliStageNavigation";
 import {
   rememberHomeWorldLight,
   resolveHomeWorldLight,
@@ -13,7 +13,7 @@ import { HomeWorldHotspots } from "./HomeWorldHotspots";
 import { HomeProfileManager } from "./HomeProfileManager";
 import { TransparentCharacterMedia } from "./TransparentCharacterMedia";
 
-type HomePassage = "mingli" | "lab" | "dream";
+type HomePassage = "lab" | "dream";
 
 export function HomeLifeTreeScene({
   busy,
@@ -34,11 +34,10 @@ export function HomeLifeTreeScene({
 }) {
   const [light, setLight] = useState<HomeWorldLight>(resolveHomeWorldLight);
   const [profileManagerOpen, setProfileManagerOpen] = useState(false);
-  const [busyCaseRef, setBusyCaseRef] = useState<string | null>(null);
-  const [caseError, setCaseError] = useState<string | null>(null);
-  const [caseRefreshFailed, setCaseRefreshFailed] = useState(false);
   const [passage, setPassage] = useState<HomePassage | null>(null);
   const timers = useRef<number[]>([]);
+  const worldRef = useRef<HTMLDivElement>(null);
+  const planeRef = useRef<HTMLDivElement>(null);
   const phenotype = home.tree.phenotype;
   const guideCue = light === "day" ? media.cues.dodo_idle : media.cues.abu_idle;
   const style = {
@@ -66,42 +65,36 @@ export function HomeLifeTreeScene({
     timers.current.push(window.setTimeout(() => setPassage(null), reduced ? 80 : 1500));
   };
 
-  const activateCase = async (caseRef: string, destination: "home" | "mingli") => {
-    setBusyCaseRef(caseRef);
-    setCaseError(null);
-    setCaseRefreshFailed(false);
-    try {
-      await activateOwnerCase(caseRef);
-      try {
-        await onHomeRefresh();
-      } catch {
-        setCaseError("档案已经切换成功，但生命树没有读回最新状态。请重新读取，不要重复切换。");
-        setCaseRefreshFailed(true);
-        setBusyCaseRef(null);
-        return;
-      }
-      if (destination === "mingli") {
-        onOpenMingli();
-        return;
-      }
-      setBusyCaseRef(null);
-    } catch (error) {
-      setCaseError(`档案切换未提交：${error instanceof Error ? error.message : String(error)}`);
-      setBusyCaseRef(null);
-    }
-  };
-
-  const retryHomeRefresh = async () => {
-    setBusyCaseRef(home.case.case_ref);
-    try {
-      await onHomeRefresh();
-      setCaseError(null);
-      setCaseRefreshFailed(false);
-    } catch {
-      setCaseError("档案已经提交，但仍未读回最新生命树。可以安全刷新页面，不要重复切换。");
-    } finally {
-      setBusyCaseRef(null);
-    }
+  const openMingliCase = (
+    option: HomeSnapshot["case_options"][number],
+    anchor: HTMLElement,
+  ) => {
+    if (passage || busy) return;
+    const stableAnchor = anchor.closest(".profile-manager")
+      ? worldRef.current?.querySelector<HTMLElement>(".v108-profile-more")
+        ?? worldRef.current?.querySelector<HTMLElement>(".v108-settings-fruit")
+        ?? anchor
+      : anchor.closest(".v108-profile-popover")
+        ? worldRef.current?.querySelector<HTMLElement>(".v108-profile-chip") ?? anchor
+        : anchor;
+    const rect = stableAnchor.getBoundingClientRect();
+    const planeRect = planeRef.current?.getBoundingClientRect() ?? {
+      left: 0,
+      top: 0,
+      width: window.innerWidth,
+      height: window.innerHeight,
+    };
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    writeMingliLeafRoute(option.stage_subject_id, {
+      light,
+      viewportX: centerX / window.innerWidth * 100,
+      viewportY: centerY / window.innerHeight * 100,
+      sceneX: (centerX - planeRect.left) / planeRect.width * 100,
+      sceneY: (centerY - planeRect.top) / planeRect.height * 100,
+    });
+    setProfileManagerOpen(false);
+    onOpenMingli();
   };
 
   const openLab = () => {
@@ -121,20 +114,21 @@ export function HomeLifeTreeScene({
       data-life-case-ref={home.life_case.life_case_revision_ref}
       data-tree-ref={home.tree.tree_ref}
       data-world-light={light}
+      ref={worldRef}
       style={style}
     >
       <HomeWorldHeader
-        busyCaseRef={busyCaseRef}
+        busyCaseRef={null}
         home={home}
         light={light}
         media={media}
-        onActivateCase={(caseRef) => void activateCase(caseRef, "home")}
+        onOpenCase={openMingliCase}
         onOpenSettings={() => setProfileManagerOpen(true)}
         onToggleLight={toggleLight}
       />
 
       <div className="v108-home-viewport">
-        <div className="v108-home-plane">
+        <div className="v108-home-plane" ref={planeRef}>
           <img
             alt=""
             className="v108-home-art v108-home-art-day"
@@ -151,13 +145,12 @@ export function HomeLifeTreeScene({
           <div className="v108-life-current" aria-hidden="true"><i /><b /><span /></div>
           <HomeWorldHotspots
             busy={busy || passage !== null}
-            busyCaseRef={busyCaseRef}
+            busyCaseRef={null}
             home={home}
             media={media}
-            onActivateCase={(caseRef) => void activateCase(caseRef, "mingli")}
             onEnterDream={enterDream}
             onOpenLab={openLab}
-            onOpenMingli={() => enterThrough("mingli", onOpenMingli)}
+            onOpenMingli={openMingliCase}
             onOpenSettings={() => setProfileManagerOpen(true)}
           />
         </div>
@@ -191,26 +184,13 @@ export function HomeLifeTreeScene({
         webp={guideCue.deliveries.ANIMATED_WEBP}
       />
 
-      {caseError && (
-        <div className="v108-home-error" role="alert">
-          <span>{caseError}</span>
-          {caseRefreshFailed && (
-            <button disabled={busyCaseRef !== null} onClick={() => void retryHomeRefresh()} type="button">
-              {busyCaseRef !== null ? "正在读取…" : "重新读取"}
-            </button>
-          )}
-        </div>
-      )}
       {profileManagerOpen && (
         <HomeProfileManager
           home={home}
           light={light}
           onChanged={onHomeRefresh}
           onClose={() => setProfileManagerOpen(false)}
-          onOpenMingli={() => {
-            setProfileManagerOpen(false);
-            enterThrough("mingli", onOpenMingli);
-          }}
+          onOpenMingli={openMingliCase}
         />
       )}
       {passage && (

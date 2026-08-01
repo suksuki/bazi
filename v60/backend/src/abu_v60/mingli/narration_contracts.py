@@ -19,7 +19,7 @@ class MingliNarrationPrepareRequest(BaseModel):
     request_version: Literal["v60.mingli-narration-request.001"] = (
         MINGLI_NARRATION_REQUEST_VERSION
     )
-    subject_id: str = Field(min_length=1, max_length=40)
+    subject_id: str = Field(min_length=1, max_length=240)
     stage_mode: MingliStageMode
     selected_year: int | None = Field(default=None, ge=1900, le=2200)
     expected_stage_projection_ref: str = Field(min_length=1)

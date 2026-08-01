@@ -1,11 +1,11 @@
 export type MingliStageMode = "NATAL_4" | "NATAL_DAYUN_YEAR_6";
-export type MingliStageSubjectId = "current" | "abu" | "duoduo";
+export type MingliStageSubjectId = string;
 
 export interface MingliStageSubject {
   subject_id: MingliStageSubjectId;
   display_name: string;
-  subject_kind: "HUMAN_OWNER" | "CANONICAL_SYNTHETIC";
-  identity_badge: "私密真实档案" | "角色合成设定";
+  subject_kind: "HUMAN_OWNER" | "HUMAN_REFERENCE" | "CANONICAL_SYNTHETIC";
+  identity_badge: "私密真实档案" | "真实参考档案" | "角色合成设定";
   default_narrator_actor_id: "ABU_NARRATOR_V1" | "DUODUO_NARRATOR_V1";
 }
 
@@ -58,7 +58,7 @@ export interface MingliStageRelation {
 export interface MingliStageProjection {
   projection_ref: string;
   projection_hash: string;
-  projection_version: "v60.mingli-stage-projection.002";
+  projection_version: "v60.mingli-stage-projection.003";
   subject_id: MingliStageSubjectId;
   case_ref: string;
   chart_version_ref: string;
@@ -66,9 +66,9 @@ export interface MingliStageProjection {
   reading_ref: string | null;
   reading_hash: string | null;
   display_name: string;
-  subject_kind: "HUMAN_OWNER" | "CANONICAL_SYNTHETIC";
-  identity_badge: "私密真实档案" | "角色合成设定";
-  privacy_scope: "PRIVATE_OWNER" | "PUBLIC_SYNTHETIC_SHOWCASE";
+  subject_kind: "HUMAN_OWNER" | "HUMAN_REFERENCE" | "CANONICAL_SYNTHETIC";
+  identity_badge: "私密真实档案" | "真实参考档案" | "角色合成设定";
+  privacy_scope: "PRIVATE_OWNER" | "PRIVATE_REFERENCE" | "PUBLIC_SYNTHETIC_SHOWCASE";
   stage_mode: MingliStageMode;
   selected_year: number | null;
   available_years: number[];
@@ -96,6 +96,23 @@ export interface MingliStageProjection {
   professional_verdict_allowed: false;
   forbidden_conclusions: string[];
   source_refs: string[];
+  read_only: true;
+}
+
+export interface MingliReadingSummaryProjection {
+  summary_ref: string;
+  summary_hash: string;
+  summary_version: "v60.mingli-reading-summary.001";
+  case_ref: string;
+  chart_version_ref: string;
+  life_case_revision_ref: string;
+  reading_ref: string;
+  reading_hash: string;
+  subject_kind: "HUMAN_OWNER" | "HUMAN_REFERENCE";
+  reading_brief: import("./homeReadingTypes").HomeReadingBrief;
+  image_projection_status: "NOT_ADMITTED";
+  professional_verdict_allowed: false;
+  canonical_write_allowed: false;
   read_only: true;
 }
 

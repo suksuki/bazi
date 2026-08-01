@@ -237,6 +237,10 @@ export interface HomeSnapshot {
     status: "ACTIVE" | "INACTIVE";
     pillars: Record<"year" | "month" | "day" | "hour", string>;
     active: boolean;
+    subject_kind: "HUMAN_OWNER" | "HUMAN_REFERENCE";
+    identity_badge: "私密真实档案" | "真实参考档案";
+    stage_subject_id: string;
+    birth_location_status: "RECORDED" | "HISTORICAL_MISSING";
   }>;
   chart: {
     chart_version_ref: string;

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Response, status
 
 from abu_v60.api.identity import SessionDependency
 from abu_v60.db import engine
@@ -30,14 +30,19 @@ service = HomeExperienceService(engine)
 
 
 @router.get("/home")
-def home_experience(session: SessionDependency) -> dict[str, Any]:
+def home_experience(
+    response: Response,
+    session: SessionDependency,
+) -> dict[str, Any]:
     try:
-        return service.snapshot(account_ref=session.account.account_ref)
+        snapshot = service.snapshot(account_ref=session.account.account_ref)
     except HomeExperienceUnavailableError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
         ) from exc
+    response.headers["Cache-Control"] = "private, no-store"
+    return snapshot
 
 
 @router.post("/home/mechanism-comparison")

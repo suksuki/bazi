@@ -370,7 +370,10 @@
 
 .v108-profile-popover > div {
   display: grid;
+  max-height: min(58vh, 520px);
+  overflow: auto;
   padding: 0 10px;
+  scrollbar-width: thin;
 }
 
 .v108-profile-popover > div > button {

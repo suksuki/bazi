@@ -76,6 +76,13 @@ def test_home_experience_uses_only_the_signed_in_human_owner_case() -> None:
     assert len(snapshot["case_options"]) >= 1
     assert sum(1 for item in snapshot["case_options"] if item["active"]) == 1
     assert all(
+        item["subject_kind"] in {"HUMAN_OWNER", "HUMAN_REFERENCE"}
+        and item["identity_badge"] in {"私密真实档案", "真实参考档案"}
+        and item["stage_subject_id"]
+        and item["birth_location_status"] in {"RECORDED", "HISTORICAL_MISSING"}
+        for item in snapshot["case_options"]
+    )
+    assert all(
         {
             "gender",
             "calendar_type",

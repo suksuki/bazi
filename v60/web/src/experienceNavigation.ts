@@ -37,6 +37,12 @@ export function writeNavigation(
     url.searchParams.delete("mingli_mode");
     url.searchParams.delete("mingli_year");
     url.searchParams.delete("mingli_layer");
+    url.searchParams.delete("mingli_entry");
+    url.searchParams.delete("mingli_entry_x");
+    url.searchParams.delete("mingli_entry_y");
+    url.searchParams.delete("mingli_entry_scene_x");
+    url.searchParams.delete("mingli_entry_scene_y");
+    url.searchParams.delete("mingli_light");
   }
   if (scope === "dream" && focusRef) url.searchParams.set("focus", focusRef);
   else url.searchParams.delete("focus");
