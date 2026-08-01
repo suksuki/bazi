@@ -234,5 +234,9 @@ The implemented four/six-pillar stage, synthetic character fixtures, Dylan
 narration authority, audio-clock state machine and real Desktop/in-app iPad
 viewport evidence are recorded in
 [`docs/17_V60_MINGLI_STAGE_AND_SYNCHRONIZED_NARRATION.md`](docs/17_V60_MINGLI_STAGE_AND_SYNCHRONIZED_NARRATION.md).
+The Owner-approved specialist Mingli Agent decision, implemented one-call
+Reading path, typed semantic guards and current local-model qualification
+failure are recorded in
+[`docs/18_V60_MINGLI_AGENT_DECISION_AND_BUILD.md`](docs/18_V60_MINGLI_AGENT_DECISION_AND_BUILD.md).
 The running implementation history is kept in
 [`docs/CHANGELOG.md`](docs/CHANGELOG.md).

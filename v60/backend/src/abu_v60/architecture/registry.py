@@ -15,7 +15,7 @@ from abu_v60.architecture.contracts import (
 @lru_cache(maxsize=1)
 def runtime_architecture() -> RuntimeArchitecture:
     architecture = RuntimeArchitecture(
-        architecture_version="v60.runtime-architecture.053",
+        architecture_version="v60.runtime-architecture.054",
         modules=(
             RuntimeModule(
                 module_id="identity",
@@ -33,7 +33,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="mingli",
                 kind=ModuleKind.ENGINE,
-                version="v60.mingli-cognitive-engine.026",
+                version="v60.mingli-cognitive-engine.027",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("mingli",),
                 reads_from=("identity",),
@@ -99,6 +99,11 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "four_six_column_stage_projection",
                     "current_dayun_selected_annual_projection",
                     "relation_membership_effect_withheld",
+                    "single_specialist_agent_case_packet",
+                    "one_call_whole_chart_agent_interpretation",
+                    "append_only_agent_reading_history",
+                    "profile_pinned_agent_reading_replay",
+                    "agent_interpretation_cannot_write_canonical_facts",
                 ),
                 writes_canonical_state=True,
             ),
@@ -354,7 +359,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-mingli",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-mingli.020",
+                version="v60.unit-mingli.021",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "mingli", "media"),
                 capabilities=(
@@ -383,6 +388,8 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "profile_leaf_stage_entry",
                     "four_six_pillar_stage",
                     "audio_current_time_narration",
+                    "explicit_whole_chart_agent_generation",
+                    "four_layer_agent_reading_projection",
                 ),
             ),
             RuntimeModule(

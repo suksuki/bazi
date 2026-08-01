@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-import json
 import time
 from enum import StrEnum
 from typing import Any, Literal, Protocol
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -21,6 +18,11 @@ from abu_v60.decision.contracts import (
 )
 from abu_v60.decision.gate import EpistemicGate
 from abu_v60.decision.service import CognitiveDecisionKernel, CognitiveDecisionLedger
+from abu_v60.llm_transport import (
+    JsonTransport,
+    LlmTransportError,
+    default_json_transport,
+)
 from abu_v60.provenance import canonical_json, content_hash, stable_ref
 from abu_v60.settings import Settings, settings
 
@@ -194,45 +196,11 @@ class ReasonerProvider(Protocol):
     ) -> ReasonerProviderResult: ...
 
 
-class JsonTransport(Protocol):
-    def __call__(
-        self,
-        *,
-        url: str,
-        headers: dict[str, str],
-        payload: dict[str, Any],
-        timeout_seconds: float,
-    ) -> dict[str, Any]: ...
-
-
-def _default_json_transport(
-    *,
-    url: str,
-    headers: dict[str, str],
-    payload: dict[str, Any],
-    timeout_seconds: float,
-) -> dict[str, Any]:
-    request = Request(
-        url,
-        data=canonical_json(payload).encode("utf-8"),
-        headers=headers,
-        method="POST",
-    )
+def _reasoner_json_transport(**kwargs: Any) -> dict[str, Any]:
     try:
-        with urlopen(request, timeout=timeout_seconds) as response:
-            body = response.read().decode("utf-8")
-    except HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")[:500]
-        raise ReasonerProviderError(f"reasoner_provider_http_error:{exc.code}:{detail}") from exc
-    except URLError as exc:
-        raise ReasonerProviderError(f"reasoner_provider_network_error:{exc.reason}") from exc
-    try:
-        parsed = json.loads(body)
-    except json.JSONDecodeError as exc:
-        raise ReasonerProviderError("reasoner_provider_invalid_json") from exc
-    if not isinstance(parsed, dict):
-        raise ReasonerProviderError("reasoner_provider_response_must_be_object")
-    return parsed
+        return default_json_transport(**kwargs)
+    except LlmTransportError as exc:
+        raise ReasonerProviderError(str(exc).replace("llm_provider_", "reasoner_provider_")) from exc
 
 
 class OpenAIResponsesReasonerProvider:
@@ -247,7 +215,7 @@ class OpenAIResponsesReasonerProvider:
         model_ref: str,
         base_url: str,
         timeout_seconds: float,
-        transport: JsonTransport = _default_json_transport,
+        transport: JsonTransport = _reasoner_json_transport,
     ) -> None:
         if not api_key:
             raise ValueError("reasoner_api_key_required")
@@ -438,7 +406,7 @@ class OllamaGenerateReasonerProvider:
         num_ctx: int = 32768,
         num_predict: int = 1200,
         keep_alive: str = "30m",
-        transport: JsonTransport = _default_json_transport,
+        transport: JsonTransport = _reasoner_json_transport,
     ) -> None:
         if not model_ref:
             raise ValueError("reasoner_model_ref_required")

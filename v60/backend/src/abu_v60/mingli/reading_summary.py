@@ -6,6 +6,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
+from abu_v60.mingli.agent_contracts import MingliAgentReadingEnvelope
+from abu_v60.mingli.agent_runtime import mingli_agent_runtime_manifest
+from abu_v60.mingli.agent_store import MingliAgentReadingStore
 from abu_v60.mingli.brief import MingliReadingBriefProjector
 from abu_v60.mingli.domain_store import MingliLifeDomainVectorStore
 from abu_v60.mingli.mechanism_decision import MingliMechanismComparisonService
@@ -13,11 +16,15 @@ from abu_v60.mingli.mechanism_store import MingliMechanismVectorStore
 from abu_v60.mingli.quant_store import MingliQuantVectorStore
 from abu_v60.mingli.reading_store import MingliReadingStore
 from abu_v60.mingli.service import CaseNotFoundError, MingliCaseService
+from abu_v60.mingli.showcases import SHOWCASE_ACCOUNT_REF, SHOWCASE_BY_SUBJECT
 from abu_v60.mingli.timing_store import MingliTimingVectorStore
 from abu_v60.provenance import content_hash, stable_ref
 
-MINGLI_READING_SUMMARY_VERSION = "v60.mingli-reading-summary.001"
-HUMAN_SUBJECT_KINDS = frozenset({"HUMAN_OWNER", "HUMAN_REFERENCE"})
+MINGLI_READING_SUMMARY_VERSION = "v60.mingli-reading-summary.002"
+SUPPORTED_SUBJECT_KINDS = frozenset(
+    {"HUMAN_OWNER", "HUMAN_REFERENCE", "CANONICAL_SYNTHETIC"}
+)
+SHOWCASE_CASE_REFS = frozenset(item.case_ref for item in SHOWCASE_BY_SUBJECT.values())
 
 
 class MingliReadingSummaryError(ValueError):
@@ -25,21 +32,34 @@ class MingliReadingSummaryError(ValueError):
 
 
 class MingliReadingSummaryProjection(BaseModel):
-    """A private, Case-bound four-layer summary; it never creates conclusions."""
+    """A private four-layer view binding facts and one optional Agent reading."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     summary_ref: str = Field(min_length=1)
     summary_hash: str = Field(min_length=64, max_length=64)
-    summary_version: Literal["v60.mingli-reading-summary.001"]
+    summary_version: Literal["v60.mingli-reading-summary.002"]
     case_ref: str = Field(min_length=1)
     chart_version_ref: str = Field(min_length=1)
     life_case_revision_ref: str = Field(min_length=1)
     reading_ref: str = Field(min_length=1)
     reading_hash: str = Field(min_length=64, max_length=64)
-    subject_kind: Literal["HUMAN_OWNER", "HUMAN_REFERENCE"]
+    subject_kind: Literal[
+        "HUMAN_OWNER",
+        "HUMAN_REFERENCE",
+        "CANONICAL_SYNTHETIC",
+    ]
     reading_brief: dict[str, Any]
-    image_projection_status: Literal["NOT_ADMITTED"]
+    agent_runtime_status: Literal[
+        "READY",
+        "DISABLED",
+        "MISCONFIGURED",
+        "UNQUALIFIED",
+    ]
+    agent_generation_available: bool
+    agent_status: Literal["READY", "NOT_GENERATED"]
+    agent_reading: MingliAgentReadingEnvelope | None
+    image_projection_status: Literal["AGENT_INTERPRETATION", "NOT_GENERATED"]
     professional_verdict_allowed: Literal[False]
     canonical_write_allowed: Literal[False]
     read_only: Literal[True]
@@ -60,14 +80,39 @@ class MingliReadingSummaryProjection(BaseModel):
             lineage.get("reading_hash"),
         ) != (self.reading_ref, self.reading_hash):
             raise ValueError("mingli_reading_summary_brief_lineage_mismatch")
+        if self.agent_reading is None:
+            if (
+                self.agent_status != "NOT_GENERATED"
+                or self.image_projection_status != "NOT_GENERATED"
+            ):
+                raise ValueError("mingli_reading_summary_agent_status_mismatch")
+        elif (
+            self.agent_status != "READY"
+            or self.image_projection_status != "AGENT_INTERPRETATION"
+            or self.agent_reading.case_ref != self.case_ref
+            or self.agent_reading.chart_version_ref != self.chart_version_ref
+            or self.agent_reading.life_case_revision_ref
+            != self.life_case_revision_ref
+            or self.agent_reading.reading_ref != self.reading_ref
+            or self.agent_reading.reading_hash != self.reading_hash
+        ):
+            raise ValueError("mingli_reading_summary_agent_lineage_mismatch")
+        if self.agent_generation_available != (self.agent_runtime_status == "READY"):
+            raise ValueError("mingli_reading_summary_agent_runtime_status_mismatch")
         return self
 
     @classmethod
     def issue(cls, **values: Any) -> MingliReadingSummaryProjection:
+        agent_reading = values.get("agent_reading")
         identity = {
             **values,
             "summary_version": MINGLI_READING_SUMMARY_VERSION,
-            "image_projection_status": "NOT_ADMITTED",
+            "agent_status": "READY" if agent_reading is not None else "NOT_GENERATED",
+            "image_projection_status": (
+                "AGENT_INTERPRETATION"
+                if agent_reading is not None
+                else "NOT_GENERATED"
+            ),
             "professional_verdict_allowed": False,
             "canonical_write_allowed": False,
             "read_only": True,
@@ -84,6 +129,9 @@ class MingliReadingSummaryService:
         self._engine = engine
         self._cases = MingliCaseService(engine)
         self._readings = MingliReadingStore(engine)
+        self._agent_readings = MingliAgentReadingStore(engine)
+        self._agent_runtime_manifest = mingli_agent_runtime_manifest()
+        self._agent_runtime_profile = self._agent_runtime_manifest["profile"]
         self._quant = MingliQuantVectorStore(engine)
         self._mechanism = MingliMechanismVectorStore(engine)
         self._timing = MingliTimingVectorStore(engine)
@@ -99,14 +147,16 @@ class MingliReadingSummaryService:
     ) -> MingliReadingSummaryProjection:
         try:
             workspace = self._cases.workspace(
-                account_ref=account_ref,
+                account_ref=(
+                    SHOWCASE_ACCOUNT_REF if case_ref in SHOWCASE_CASE_REFS else account_ref
+                ),
                 case_ref=case_ref,
             )
         except CaseNotFoundError as exc:
             raise MingliReadingSummaryError("mingli_reading_summary_case_not_found") from exc
         subject_kind = str(workspace["case"]["subject_kind"])
-        if subject_kind not in HUMAN_SUBJECT_KINDS:
-            raise MingliReadingSummaryError("mingli_reading_summary_human_case_required")
+        if subject_kind not in SUPPORTED_SUBJECT_KINDS:
+            raise MingliReadingSummaryError("mingli_reading_summary_subject_kind_unsupported")
 
         chart_ref = str(workspace["chart"]["chart_version_ref"])
         life_case_ref = str(workspace["life_case"]["life_case_revision_ref"])
@@ -167,6 +217,28 @@ class MingliReadingSummaryService:
             life_domain_vector=domains,
             mechanism_comparison=comparison,
         )
+        agent_reading = None
+        if self._agent_runtime_manifest["publication_allowed"] is True:
+            agent_reading = self._agent_readings.latest(
+                requester_account_ref=account_ref,
+                case_ref=case_ref,
+                reading_ref=reading.reading_ref,
+                reading_hash=reading.reading_hash,
+                agent_profile_ref=str(
+                    self._agent_runtime_profile["agent_profile_ref"]
+                ),
+                agent_profile_hash=str(
+                    self._agent_runtime_profile["agent_profile_hash"]
+                ),
+                provider_profile_ref=str(
+                    self._agent_runtime_profile["provider_profile_ref"]
+                ),
+                provider_profile_hash=str(
+                    self._agent_runtime_profile["provider_profile_hash"]
+                ),
+                prompt_ref=str(self._agent_runtime_profile["prompt_ref"]),
+                prompt_hash=str(self._agent_runtime_profile["prompt_hash"]),
+            )
         return MingliReadingSummaryProjection.issue(
             case_ref=case_ref,
             chart_version_ref=chart_ref,
@@ -175,4 +247,9 @@ class MingliReadingSummaryService:
             reading_hash=reading.reading_hash,
             subject_kind=subject_kind,
             reading_brief=brief,
+            agent_runtime_status=str(self._agent_runtime_manifest["status"]),
+            agent_generation_available=(
+                self._agent_runtime_manifest["status"] == "READY"
+            ),
+            agent_reading=agent_reading,
         )

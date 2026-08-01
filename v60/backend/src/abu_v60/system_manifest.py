@@ -5,6 +5,7 @@ from typing import Final
 from abu_v60.architecture import runtime_architecture
 from abu_v60.decision.reasoner import reasoner_runtime_manifest
 from abu_v60.knowledge import KnowledgeAuthority
+from abu_v60.mingli.agent_runtime import mingli_agent_runtime_manifest
 from abu_v60.story.packages import (
     default_episode_source_registry,
     qualification_episode_source_registry,
@@ -12,12 +13,12 @@ from abu_v60.story.packages import (
 
 PRODUCT_ID: Final = "abu-knows-v60"
 PRODUCT_VERSION: Final = "0.1.0"
-FOUNDATION_VERSION: Final = "v60.foundation.019"
+FOUNDATION_VERSION: Final = "v60.foundation.020"
 EXPERIENCE_CONTEXT_VERSION: Final = "v60.experience-context.003"
 DECISION_POLICY_VERSION: Final = "v60.cognitive-decision-kernel.004"
 DREAM_GAME_ENGINE_VERSION: Final = "v60.dream-game-engine.019"
 WORLD_ENGINE_VERSION: Final = "v60.world-continuity-engine.004"
-MINGLI_ENGINE_VERSION: Final = "v60.mingli-cognitive-engine.026"
+MINGLI_ENGINE_VERSION: Final = "v60.mingli-cognitive-engine.027"
 STORY_ENGINE_VERSION: Final = "v60.life-story-engine.011"
 ASSET_REGISTRY_VERSION: Final = "v60.asset-registry.002"
 MEDIA_RUNTIME_VERSION: Final = "v60.runtime-media-registry.003"
@@ -56,12 +57,13 @@ def runtime_manifest() -> dict[str, object]:
         "authority": {
             "facts": "SYSTEM",
             "world_outcomes": "SYSTEM",
-            "interpretation": "BOUNDED_LLM_REASONER",
+            "interpretation": "BOUNDED_REASONER_AND_SPECIALIST_MINGLI_AGENT",
             "formal_commit": "EPISTEMIC_GATE",
             "consent": "HUMAN",
             "global_knowledge": "OWNER_PROFESSIONAL_REVIEW",
         },
         "reasoner_runtime": reasoner_runtime_manifest(),
+        "mingli_agent_runtime": mingli_agent_runtime_manifest(),
         "episode_source_packages": {
             "canonical_story": default_episode_source_registry().public_manifest(),
             "three_life_qualification": (qualification_episode_source_registry().public_manifest()),

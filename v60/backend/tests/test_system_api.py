@@ -30,11 +30,19 @@ def test_manifest_has_no_v50_runtime_dependency() -> None:
     assert payload["entry_experience"] == "PRIVATE_LIFE_TREE_HOME"
     assert payload["v50_runtime_dependency"] is False
     assert payload["authority"]["world_outcomes"] == "SYSTEM"
-    assert payload["authority"]["interpretation"] == "BOUNDED_LLM_REASONER"
+    assert payload["authority"]["interpretation"] == (
+        "BOUNDED_REASONER_AND_SPECIALIST_MINGLI_AGENT"
+    )
     assert payload["reasoner_runtime"]["status"] == "NOT_CONFIGURED"
     assert payload["reasoner_runtime"]["network_calls_enabled"] is False
     assert payload["engines"]["context"] == "v60.experience-context.003"
-    assert payload["engines"]["mingli"] == "v60.mingli-cognitive-engine.026"
+    assert payload["engines"]["mingli"] == "v60.mingli-cognitive-engine.027"
+    assert payload["mingli_agent_runtime"]["status"] == "DISABLED"
+    assert payload["mingli_agent_runtime"]["network_calls_enabled"] is False
+    assert payload["mingli_agent_runtime"]["publication_allowed"] is False
+    assert payload["mingli_agent_runtime"]["model_qualification_status"] == (
+        "CURRENT_LOCAL_MODELS_NOT_QUALIFIED"
+    )
     assert payload["engines"]["story"] == "v60.life-story-engine.011"
     relation_effect_admission = payload["relation_effect_rule_admission"]
     assert relation_effect_admission["professional_rule_count"] == 0
@@ -76,8 +84,8 @@ def test_health_binds_database_to_runtime_foundation() -> None:
     assert payload["status"] == "ready"
     assert payload["database"] == {
         "status": "ready",
-        "foundation_version": "v60.foundation.019",
-        "expected_foundation_version": "v60.foundation.019",
+        "foundation_version": "v60.foundation.020",
+        "expected_foundation_version": "v60.foundation.020",
     }
 
 

@@ -70,7 +70,9 @@ def test_private_reference_is_listed_and_projects_its_own_formal_reading() -> No
     assert summary.reading_brief["qualification"]["status"] == (
         "FORMAL_BOUNDED_READING"
     )
-    assert summary.image_projection_status == "NOT_ADMITTED"
+    assert summary.agent_status == "NOT_GENERATED"
+    assert summary.agent_reading is None
+    assert summary.image_projection_status == "NOT_GENERATED"
     assert summary.professional_verdict_allowed is False
     assert summary.canonical_write_allowed is False
 

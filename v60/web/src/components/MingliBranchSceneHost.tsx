@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import type { RuntimeMediaManifest } from "../api";
 import {
+  generateMingliAgentReading,
   loadMingliReadingSummary,
   loadMingliStage,
 } from "../mingliStageApi";
@@ -35,6 +36,8 @@ export function MingliBranchSceneHost({
   const [entry] = useState(readMingliLeafEntry);
   const [stage, setStage] = useState<MingliStageProjection | null>(null);
   const [summary, setSummary] = useState<MingliReadingSummaryProjection | null>(null);
+  const [agentGenerating, setAgentGenerating] = useState(false);
+  const [agentError, setAgentError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
   const light = entry?.light ?? (
@@ -48,13 +51,15 @@ export function MingliBranchSceneHost({
     const requestedYear = route.mode === "NATAL_DAYUN_YEAR_6" ? route.year : null;
     setStage(null);
     setSummary(null);
+    setAgentGenerating(false);
+    setAgentError(null);
     setError(null);
     onContextChange({ subjectId: route.subjectId, status: "LOADING", projection: null });
     void loadMingliStage(route.subjectId, route.mode, requestedYear, controller.signal)
       .then(async (projection) => ({
         projection,
         summary:
-          projection.subject_kind === "CANONICAL_SYNTHETIC"
+          projection.reading_ref === null
             ? null
             : await loadMingliReadingSummary(projection, controller.signal),
       }))
@@ -88,12 +93,24 @@ export function MingliBranchSceneHost({
     writeMingliStageRoute(next, "replace", "lab");
     onOpenStage();
   };
+  const generateAgentReading = () => {
+    if (stage === null || agentGenerating) return;
+    setAgentGenerating(true);
+    setAgentError(null);
+    void generateMingliAgentReading(stage)
+      .then(() => loadMingliReadingSummary(stage))
+      .then((nextSummary) => setSummary(nextSummary))
+      .catch((cause) => {
+        setAgentError(cause instanceof Error ? cause.message : String(cause));
+      })
+      .finally(() => setAgentGenerating(false));
+  };
 
   if (error) {
     return (
       <div className="mingli-growth-load-state is-error" role="alert">
-        <strong>这片命理枝没有通过 Case／Reading 锁定</strong>
-        <p>{error}</p>
+        <strong>这片命理枝暂时没有长出来</strong>
+        <p>档案与命盘没有完整对应，请重新读取；原有档案不会受到影响。</p>
         <button onClick={() => setRetry((value) => value + 1)} type="button">重新读取</button>
         <button onClick={onExit} type="button">回到生命树</button>
       </div>
@@ -103,13 +120,15 @@ export function MingliBranchSceneHost({
     return (
       <div className="mingli-growth-load-state" role="status">
         <i aria-hidden="true" />
-        <strong>正在锁定这片档案叶</strong>
-        <p>Case、命盘、LifeCase 与 Reading 一致后，枝条才会开始生长。</p>
+        <strong>正在读这片档案叶</strong>
+        <p>命盘确认后，属于这份档案的命理枝就会从这里长出来。</p>
       </div>
     );
   }
   return (
     <MingliBranchJourney
+      agentError={agentError}
+      agentGenerating={agentGenerating}
       entry={entry}
       layer={route.layer}
       light={light}
@@ -117,6 +136,7 @@ export function MingliBranchSceneHost({
       onClose={onExit}
       onEntryConsumed={clearMingliLeafEntry}
       onLayerChange={selectLayer}
+      onGenerateAgent={generateAgentReading}
       onOpenStage={openStage}
       stage={stage}
       summary={summary}

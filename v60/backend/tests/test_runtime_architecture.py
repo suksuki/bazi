@@ -7,7 +7,7 @@ from abu_v60.system_manifest import runtime_manifest
 def test_runtime_architecture_has_one_owner_per_schema_and_five_units() -> None:
     architecture = runtime_architecture()
     architecture.validate_boundaries()
-    assert architecture.architecture_version == "v60.runtime-architecture.053"
+    assert architecture.architecture_version == "v60.runtime-architecture.054"
     assert architecture.product_units == (
         "unit-mingli",
         "unit-dream",
@@ -58,7 +58,7 @@ def test_manifest_exposes_world_game_and_localization_reservation() -> None:
     assert manifest["engines"]["context"] == "v60.experience-context.003"
     assert manifest["engines"]["game"] == "v60.dream-game-engine.019"
     assert manifest["engines"]["world"] == "v60.world-continuity-engine.004"
-    assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.026"
+    assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.027"
     assert manifest["engines"]["story"] == "v60.life-story-engine.011"
     source_review = manifest["source_review_profiles"]
     assert len(source_review) == 1
@@ -114,10 +114,10 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     architecture = runtime_architecture()
     modules = {module.module_id: module for module in architecture.modules}
 
-    assert modules["mingli"].version == "v60.mingli-cognitive-engine.026"
+    assert modules["mingli"].version == "v60.mingli-cognitive-engine.027"
     assert modules["knowledge"].version == "v60.knowledge-authority.008"
     assert modules["media"].version == "v60.media-library.003"
-    assert modules["unit-mingli"].version == "v60.unit-mingli.020"
+    assert modules["unit-mingli"].version == "v60.unit-mingli.021"
     assert modules["unit-abu"].version == "v60.unit-abu-says.007"
     assert modules["unit-lab"].version == "v60.unit-lab.016"
     assert modules["unit-dream"].version == "v60.unit-dream.020"
@@ -147,6 +147,13 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     assert "owner_case_intake" in modules["mingli"].capabilities
     assert "single_active_owner_case_selection" in modules["mingli"].capabilities
     assert "formal_bounded_reading_summary" in modules["mingli"].capabilities
+    assert "one_call_whole_chart_agent_interpretation" in (
+        modules["mingli"].capabilities
+    )
+    assert "append_only_agent_reading_history" in modules["mingli"].capabilities
+    assert "four_layer_agent_reading_projection" in (
+        modules["unit-mingli"].capabilities
+    )
     assert "versioned_evidence_explanation_projection" in modules["mingli"].capabilities
     assert "support_counter_unknown_separation" in modules["mingli"].capabilities
     assert "versioned_mechanism_qualification_projection" in modules["mingli"].capabilities
@@ -534,9 +541,10 @@ def test_bootstrap_writes_route_through_each_schema_owner() -> None:
             source_root / "identity" / "admission.py",
             source_root / "identity" / "service.py",
         },
-        "mingli": {
-            source_root / "mingli" / "admission.py",
-            source_root / "mingli" / "corpus.py",
+            "mingli": {
+                source_root / "mingli" / "admission.py",
+                source_root / "mingli" / "agent_store.py",
+                source_root / "mingli" / "corpus.py",
             source_root / "mingli" / "domain_store.py",
             source_root / "mingli" / "mechanism_store.py",
             source_root / "mingli" / "quant_store.py",

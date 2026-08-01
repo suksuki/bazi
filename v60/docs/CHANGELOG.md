@@ -2,6 +2,46 @@
 
 ## 2026-08-01
 
+### Specialist Mingli Agent replaces template copy, without promoting a weak model
+
+- Froze the Owner decision that the calculation core is one specialist Mingli
+  Agent: deterministic V60 facts and a professional dossier feed one whole-chart
+  model call. The first delivery reuses its immutable result across the
+  four-layer branch and shared four/six-pillar Scene Player without repeat
+  calls; Lab semantic projection and Abu Says narration remain downstream
+  consumers, not silently claimed as completed wiring.
+- Added a compact prompt projection, typed whole-chart output, common Runtime
+  semantic validation, explicit account-private POST generation, generation-key
+  replay and append-only PostgreSQL Agent Readings. GET and page refresh never
+  invoke a model.
+- Separated root candidates, visible peers and resource support; isolated Dayun
+  and Annual evidence; rejected evidence IDs used as prose, unlisted relations,
+  cross-layer timing claims, unsupported event claims and canonical fact drift.
+  Membership-only relation evidence cannot be promoted to definite effects such
+  as activation, resolution or increased capacity.
+- Removed the generic public career/wealth/relationship templates from the
+  active Mingli branch. A qualified Agent Reading supplies Principle, Image,
+  Themes and Timing together; without one, the product states that professional
+  calibration is still in progress.
+- Ran real content qualification on the Owner chart. `qwen3.5:35b` remained
+  factually unsafe. `qwen3.6:27b` completed the v5 contract in 224,331 ms with
+  2,005 input and 2,416 output tokens, but still promoted relation membership to
+  effect, mixed Dayun into Annual/domain prose and overreached in relationship
+  and family claims. Both models are `NOT_QUALIFIED`; managed local generation
+  is disabled by default rather than presenting a weak reading.
+- Added a publication gate independent of the runtime switch. Enabling the
+  current provider configuration yields `UNQUALIFIED`, not `READY`; historical
+  failed rows remain append-only audit evidence but cannot enter a Reading
+  Summary or the UI.
+- Passed all 332 backend tests, Ruff, TypeScript/Vite build, Runtime
+  Architecture and source-maintainability audits. Real Desktop Chrome covered
+  the Owner leaf, all four Mingli layers and the six-pillar Stage; no legacy
+  template copy or console errors remained.
+- Advanced Foundation to `.020`, Mingli Engine to `.027` and Runtime
+  Architecture to `.054`; introduced migration `0028_mingli_agent_readings`.
+- Recorded the decision, architecture, measured failures and next functional
+  benchmark in `docs/18_V60_MINGLI_AGENT_DECISION_AND_BUILD.md`.
+
 ### Every authorized real profile now grows its own V108 Mingli branch
 
 - Verified instead of re-importing the V50 Owner corpus: all 20 non-deleted

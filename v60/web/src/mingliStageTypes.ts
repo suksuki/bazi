@@ -102,17 +102,135 @@ export interface MingliStageProjection {
 export interface MingliReadingSummaryProjection {
   summary_ref: string;
   summary_hash: string;
-  summary_version: "v60.mingli-reading-summary.001";
+  summary_version: "v60.mingli-reading-summary.002";
   case_ref: string;
   chart_version_ref: string;
   life_case_revision_ref: string;
   reading_ref: string;
   reading_hash: string;
-  subject_kind: "HUMAN_OWNER" | "HUMAN_REFERENCE";
+  subject_kind: "HUMAN_OWNER" | "HUMAN_REFERENCE" | "CANONICAL_SYNTHETIC";
   reading_brief: import("./homeReadingTypes").HomeReadingBrief;
-  image_projection_status: "NOT_ADMITTED";
+  agent_runtime_status: "READY" | "DISABLED" | "MISCONFIGURED" | "UNQUALIFIED";
+  agent_generation_available: boolean;
+  agent_status: "READY" | "NOT_GENERATED";
+  agent_reading: MingliAgentReading | null;
+  image_projection_status: "AGENT_INTERPRETATION" | "NOT_GENERATED";
   professional_verdict_allowed: false;
   canonical_write_allowed: false;
+  read_only: true;
+}
+
+export type MingliAgentConfidence = "LOW" | "MEDIUM" | "HIGH";
+
+export interface MingliAgentHypothesis {
+  hypothesis_id: "H1" | "H2";
+  role: "PRIMARY" | "ALTERNATIVE";
+  name: string;
+  judgment: "WORKS_IF" | "PARTIAL" | "BLOCKED" | "COMPETING";
+  mechanism_evidence_ids: string[];
+  thesis: string;
+  failure_condition: string;
+  evidence_ids: string[];
+  confidence: MingliAgentConfidence;
+}
+
+export interface MingliAgentDomainReading {
+  headline: string;
+  conclusion: string;
+  causal_chain: string[];
+  condition: string;
+  evidence_ids: string[];
+  confidence: MingliAgentConfidence;
+}
+
+export interface MingliAgentTimingLayerReading {
+  coordinate_evidence_id: string;
+  relation_evidence_ids: string[];
+  conclusion: string;
+  activation_chain: string[];
+  evidence_ids: string[];
+  confidence: "LOW" | "MEDIUM";
+}
+
+export interface MingliAgentOutput {
+  first_look: string;
+  whole_chart_thesis: string;
+  day_master_state:
+    | "STRONG"
+    | "WEAK"
+    | "BALANCED"
+    | "FOLLOWING_TENDENCY"
+    | "SPECIALIZED_TENDENCY"
+    | "UNCERTAIN";
+  support_selection: {
+    root_status: "NONE" | "PRESENT";
+    root_coordinates: string[];
+    peer_coordinates: string[];
+    resource_coordinates: string[];
+  };
+  day_master_rationale: string;
+  day_master_evidence_ids: string[];
+  hypotheses: MingliAgentHypothesis[];
+  work_path: {
+    path_statement: string;
+    transformation_codes: Array<
+      "GENERATES" | "CONTROLS" | "SUPPORTS" | "CONSTRAINS" | "CHANNELS" | "COMPETES"
+    >;
+    closure: "CLOSED" | "CONDITIONAL" | "BROKEN" | "UNCERTAIN";
+    condition: string;
+    evidence_ids: string[];
+  };
+  life_image: {
+    title: string;
+    image: string;
+    explanation: string;
+    evidence_ids: string[];
+  };
+  domains: Record<
+    "personality" | "career" | "wealth" | "relationship" | "family",
+    MingliAgentDomainReading
+  >;
+  timing: {
+    natal_baseline: string;
+    natal_evidence_ids: string[];
+    dayun: MingliAgentTimingLayerReading;
+    annual: MingliAgentTimingLayerReading;
+    verification_signals: string[];
+  };
+  discriminating_question: string;
+}
+
+export interface MingliAgentReading {
+  agent_reading_ref: string;
+  agent_reading_hash: string;
+  agent_reading_version: "v60.mingli-agent-reading.001";
+  generation_key: string;
+  requester_account_ref: string;
+  case_ref: string;
+  chart_version_ref: string;
+  life_case_revision_ref: string;
+  reading_ref: string;
+  reading_hash: string;
+  packet_ref: string;
+  packet_hash: string;
+  agent_profile_ref: string;
+  agent_profile_hash: string;
+  provider_id: string;
+  model_ref: string;
+  model_digest: string;
+  provider_profile_ref: string;
+  provider_profile_hash: string;
+  prompt_ref: string;
+  prompt_hash: string;
+  provider_response_ref: string;
+  output: MingliAgentOutput;
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  duration_ms: number;
+  interpretation_status: "AGENT_INTERPRETATION";
+  owner_review_status: "NOT_REVIEWED";
+  canonical_fact_write_allowed: false;
   read_only: true;
 }
 

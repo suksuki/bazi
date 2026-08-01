@@ -1,4 +1,5 @@
 import type {
+  MingliAgentReading,
   MingliNarrationReadyResponse,
   MingliReadingSummaryProjection,
   MingliStageMode,
@@ -138,8 +139,9 @@ export function validateReadingSummary(
   }
   const summary = value as unknown as MingliReadingSummaryProjection;
   const lineage = summary.reading_brief.lineage;
+  const agentReady = summary.agent_status === "READY";
   if (
-    summary.summary_version !== "v60.mingli-reading-summary.001" ||
+    summary.summary_version !== "v60.mingli-reading-summary.002" ||
     !summary.summary_ref ||
     !HASH.test(summary.summary_hash) ||
     summary.case_ref !== stage.case_ref ||
@@ -148,7 +150,14 @@ export function validateReadingSummary(
     summary.reading_ref !== stage.reading_ref ||
     summary.reading_hash !== stage.reading_hash ||
     summary.subject_kind !== stage.subject_kind ||
-    summary.image_projection_status !== "NOT_ADMITTED" ||
+    !["READY", "DISABLED", "MISCONFIGURED", "UNQUALIFIED"].includes(
+      summary.agent_runtime_status,
+    ) ||
+    summary.agent_generation_available !== (summary.agent_runtime_status === "READY") ||
+    !["READY", "NOT_GENERATED"].includes(summary.agent_status) ||
+    summary.image_projection_status !== (
+      agentReady ? "AGENT_INTERPRETATION" : "NOT_GENERATED"
+    ) ||
     summary.professional_verdict_allowed !== false ||
     summary.canonical_write_allowed !== false ||
     summary.read_only !== true ||
@@ -158,7 +167,100 @@ export function validateReadingSummary(
   ) {
     throw new Error("mingli_reading_summary_shape_invalid");
   }
+  if (agentReady) {
+    validateAgentReading(summary.agent_reading, stage);
+  } else if (summary.agent_reading !== null) {
+    throw new Error("mingli_reading_summary_agent_status_invalid");
+  }
   return summary;
+}
+
+export function validateAgentReading(
+  value: unknown,
+  stage: MingliStageProjection,
+): MingliAgentReading {
+  if (!isRecord(value) || !isRecord(value.output)) {
+    throw new Error("mingli_agent_reading_invalid");
+  }
+  const reading = value as unknown as MingliAgentReading;
+  const output = reading.output;
+  const selected = Array.isArray(output.hypotheses)
+    ? output.hypotheses.filter(
+        (item) => item.role === "PRIMARY",
+      )
+    : [];
+  const domainOrder = [
+    "personality",
+    "career",
+    "wealth",
+    "relationship",
+    "family",
+  ] as const;
+  const citedEvidence = [
+    ...(Array.isArray(output.day_master_evidence_ids)
+      ? output.day_master_evidence_ids
+      : []),
+    ...(Array.isArray(output.hypotheses)
+      ? output.hypotheses.flatMap((item) => [
+          ...item.mechanism_evidence_ids,
+          ...item.evidence_ids,
+        ])
+      : []),
+    ...(Array.isArray(output.work_path?.evidence_ids)
+      ? output.work_path.evidence_ids
+      : []),
+    ...(Array.isArray(output.life_image?.evidence_ids)
+      ? output.life_image.evidence_ids
+      : []),
+    ...domainOrder.flatMap((domain) => output.domains?.[domain]?.evidence_ids ?? []),
+    ...(Array.isArray(output.timing?.natal_evidence_ids)
+      ? output.timing.natal_evidence_ids
+      : []),
+    ...([output.timing?.dayun, output.timing?.annual].flatMap((item) => (
+      item === undefined
+        ? []
+        : [item.coordinate_evidence_id, ...item.relation_evidence_ids, ...item.evidence_ids]
+    ))),
+  ];
+  if (
+    reading.agent_reading_version !== "v60.mingli-agent-reading.001" ||
+    !reading.agent_reading_ref ||
+    !HASH.test(reading.agent_reading_hash) ||
+    !HASH.test(reading.generation_key) ||
+    reading.case_ref !== stage.case_ref ||
+    reading.chart_version_ref !== stage.chart_version_ref ||
+    reading.life_case_revision_ref !== stage.life_case_revision_ref ||
+    reading.reading_ref !== stage.reading_ref ||
+    reading.reading_hash !== stage.reading_hash ||
+    !HASH.test(reading.packet_hash) ||
+    !HASH.test(reading.agent_profile_hash) ||
+    !HASH.test(reading.model_digest) ||
+    !HASH.test(reading.provider_profile_hash) ||
+    !HASH.test(reading.prompt_hash) ||
+    reading.interpretation_status !== "AGENT_INTERPRETATION" ||
+    reading.owner_review_status !== "NOT_REVIEWED" ||
+    reading.canonical_fact_write_allowed !== false ||
+    reading.read_only !== true ||
+    reading.total_tokens !== reading.input_tokens + reading.output_tokens ||
+    typeof output.first_look !== "string" ||
+    typeof output.whole_chart_thesis !== "string" ||
+    !isRecord(output.support_selection) ||
+    typeof output.day_master_rationale !== "string" ||
+    !Array.isArray(output.hypotheses) ||
+    output.hypotheses.length !== 2 ||
+    selected.length !== 1 ||
+    !isRecord(output.work_path) ||
+    !isRecord(output.life_image) ||
+    !isRecord(output.domains) ||
+    domainOrder.some((domain) => !isRecord(output.domains[domain])) ||
+    !isRecord(output.timing) ||
+    !isRecord(output.timing.dayun) ||
+    !isRecord(output.timing.annual) ||
+    citedEvidence.some((item) => !/^E\d{3}$/.test(item))
+  ) {
+    throw new Error("mingli_agent_reading_shape_invalid");
+  }
+  return reading;
 }
 
 function isStageSubjectId(value: unknown): value is string {

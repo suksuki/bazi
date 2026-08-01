@@ -1,11 +1,17 @@
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query, Response, status
+from pydantic import BaseModel, ConfigDict, Field
 
 from abu_v60.api.identity import SessionDependency
 from abu_v60.db import engine
+from abu_v60.mingli.agent_service import (
+    MINGLI_AGENT_REQUEST_VERSION,
+    MingliAgentService,
+    MingliAgentServiceError,
+)
 from abu_v60.mingli.reading_summary import (
     MingliReadingSummaryError,
     MingliReadingSummaryService,
@@ -16,6 +22,18 @@ from abu_v60.mingli.stage_contracts import MingliStageMode
 router = APIRouter(prefix="/api/v60/mingli", tags=["mingli-stage"])
 service = MingliStageService(engine)
 reading_summaries = MingliReadingSummaryService(engine)
+agent_readings = MingliAgentService(engine)
+
+
+class MingliAgentReadingRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    request_version: Literal["v60.mingli-agent-request.001"] = (
+        MINGLI_AGENT_REQUEST_VERSION
+    )
+    case_ref: str = Field(min_length=1)
+    expected_reading_ref: str = Field(min_length=1)
+    expected_reading_hash: str = Field(min_length=64, max_length=64)
 
 
 @router.get("/stage/subjects")
@@ -85,3 +103,32 @@ def stage_reading_summary(
         raise HTTPException(status_code=code, detail=reason) from exc
     response.headers["Cache-Control"] = "private, no-store"
     return projection.model_dump(mode="json")
+
+
+@router.post("/stage/agent-reading")
+def generate_agent_reading(
+    payload: MingliAgentReadingRequest,
+    response: Response,
+    session: SessionDependency,
+) -> dict[str, Any]:
+    try:
+        reading = agent_readings.generate(
+            requester_account_ref=session.account.account_ref,
+            case_ref=payload.case_ref,
+            expected_reading_ref=payload.expected_reading_ref,
+            expected_reading_hash=payload.expected_reading_hash,
+        )
+    except MingliAgentServiceError as exc:
+        reason = str(exc)
+        if reason in {
+            "mingli_agent_case_not_found",
+            "mingli_agent_base_reading_not_found",
+        }:
+            code = status.HTTP_404_NOT_FOUND
+        elif reason.startswith(("mingli_agent_runtime_", "mingli_agent_provider_")):
+            code = status.HTTP_503_SERVICE_UNAVAILABLE
+        else:
+            code = status.HTTP_409_CONFLICT
+        raise HTTPException(status_code=code, detail=reason) from exc
+    response.headers["Cache-Control"] = "private, no-store"
+    return reading.model_dump(mode="json")

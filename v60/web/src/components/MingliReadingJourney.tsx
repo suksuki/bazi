@@ -1,5 +1,6 @@
 import type { MingliReadingLayer } from "../mingliStageNavigation";
 import type {
+  MingliAgentReading,
   MingliReadingSummaryProjection,
   MingliStageProjection,
 } from "../mingliStageTypes";
@@ -17,9 +18,28 @@ const LAYERS: Array<{
 ];
 
 const DOMAIN_LABELS = {
+  personality: "性情",
   career: "事业",
   wealth: "财富",
   relationship: "关系",
+  family: "家庭",
+} as const;
+
+const DOMAIN_ORDER = [
+  "personality",
+  "career",
+  "wealth",
+  "relationship",
+  "family",
+] as const;
+
+const DAY_MASTER_LABELS = {
+  STRONG: "日主偏强",
+  WEAK: "日主偏弱",
+  BALANCED: "日主相对均衡",
+  FOLLOWING_TENDENCY: "日主呈从势倾向",
+  SPECIALIZED_TENDENCY: "命局呈专旺倾向",
+  UNCERTAIN: "日主状态仍需复核",
 } as const;
 
 export function MingliReadingJourney({
@@ -27,24 +47,31 @@ export function MingliReadingJourney({
   layer,
   onAskGuide,
   onExpandTime,
+  onGenerateAgent,
   onLayerChange,
+  agentError = null,
+  agentGenerating = false,
   stage,
 }: {
   summary: MingliReadingSummaryProjection | null;
   layer: MingliReadingLayer;
   onAskGuide: () => void;
   onExpandTime: () => void;
+  onGenerateAgent?: () => void;
   onLayerChange: (layer: MingliReadingLayer) => void;
+  agentError?: string | null;
+  agentGenerating?: boolean;
   stage: MingliStageProjection;
 }) {
   const narrator = stage.narrator_actor_id === "DUODUO_NARRATOR_V1" ? "多多" : "阿布";
   const hasFormalReading = summaryMatchesStage(summary, stage);
+  const hasAgentReading = hasFormalReading && summary?.agent_reading !== null;
   return (
     <aside
       aria-label="命理四层阅读"
       className="mingli-reading-journey"
       data-layer={layer}
-      data-reading-scope={hasFormalReading ? "formal" : "synthetic-boundary"}
+      data-reading-scope={hasAgentReading ? "agent-reading" : "awaiting-agent"}
     >
       <div className="mingli-reading-branch" aria-hidden="true">
         <i /><i /><i />
@@ -68,7 +95,10 @@ export function MingliReadingJourney({
         <MingliReadingLayerContent
           hasFormalReading={hasFormalReading}
           layer={layer}
+          agentError={agentError}
+          agentGenerating={agentGenerating}
           onExpandTime={onExpandTime}
+          onGenerateAgent={onGenerateAgent}
           stage={stage}
           summary={summary}
         />
@@ -94,37 +124,50 @@ export function summaryMatchesStage(
 }
 
 export function MingliReadingLayerContent({
+  agentError = null,
+  agentGenerating = false,
   hasFormalReading,
   layer,
   onExpandTime,
+  onGenerateAgent,
   stage,
   summary,
 }: {
+  agentError?: string | null;
+  agentGenerating?: boolean;
   hasFormalReading: boolean;
   layer: MingliReadingLayer;
   onExpandTime: () => void;
+  onGenerateAgent?: () => void;
   stage: MingliStageProjection;
   summary: MingliReadingSummaryProjection | null;
 }) {
+  const agentReading = hasFormalReading ? summary?.agent_reading ?? null : null;
+  if (agentReading === null) {
+    return (
+      <AgentPendingLayer
+        agentError={agentError}
+        agentGenerating={agentGenerating}
+        generationAvailable={summary?.agent_generation_available ?? false}
+        layer={layer}
+        onGenerateAgent={onGenerateAgent}
+        stage={stage}
+      />
+    );
+  }
   return (
     <>
       {layer === "principle" && (
-        <PrincipleLayer
-          hasFormalReading={hasFormalReading}
-          stage={stage}
-          summary={summary}
-        />
+        <PrincipleLayer reading={agentReading} />
       )}
-      {layer === "image" && <ImageLayer stage={stage} />}
-      {layer === "themes" && (
-        <ThemeLayer
-          hasFormalReading={hasFormalReading}
-          stage={stage}
-          summary={summary}
-        />
-      )}
+      {layer === "image" && <ImageLayer reading={agentReading} stage={stage} />}
+      {layer === "themes" && <ThemeLayer reading={agentReading} />}
       {layer === "timing" && (
-        <TimingLayer onExpandTime={onExpandTime} stage={stage} />
+        <TimingLayer
+          onExpandTime={onExpandTime}
+          reading={agentReading}
+          stage={stage}
+        />
       )}
     </>
   );
@@ -148,157 +191,185 @@ function LayerHeading({
   );
 }
 
-function PrincipleLayer({
-  hasFormalReading,
+function AgentPendingLayer({
+  agentError,
+  agentGenerating,
+  generationAvailable,
+  layer,
+  onGenerateAgent,
   stage,
-  summary,
 }: {
-  hasFormalReading: boolean;
+  agentError: string | null;
+  agentGenerating: boolean;
+  generationAvailable: boolean;
+  layer: MingliReadingLayer;
+  onGenerateAgent?: () => void;
   stage: MingliStageProjection;
-  summary: MingliReadingSummaryProjection | null;
 }) {
-  if (!hasFormalReading) {
-    const pillars = stage.columns.filter((column) => column.source_layer === "NATAL");
-    return (
-      <div className="mingli-reading-layer">
-        <LayerHeading
-          eyebrow="理法枝 · 角色合成设定"
-          title={`${stage.display_name}的四柱坐标已经锁定`}
-          status="尚无正式 Reading"
-        />
-        <div className="mingli-principle-lines">
-          {pillars.map((column) => (
-            <p key={column.column_ref}>{column.label}为 {column.pillar}。</p>
-          ))}
-        </div>
-        <article className="mingli-reading-focus">
-          <small>当前允许的用途</small>
-          <strong>原型角色与声画舞台演示</strong>
-          <p>这里只使用该角色自己的 canonical 合成坐标和已准入关系成员。</p>
-        </article>
-        <p className="mingli-reading-boundary">
-          这不是专业复核后的命理 Reading，也不会复用当前 Owner 的结论、人生主题或时间判断。
-        </p>
-      </div>
-    );
-  }
-  const brief = summary!.reading_brief;
-  return (
-    <div className="mingli-reading-layer">
-      <LayerHeading eyebrow="理法枝 · 已确认与未决分开" title={brief.headline} status="正式 Reading" />
-      <div className="mingli-principle-lines">
-        {brief.confirmed.map((statement) => <p key={statement}>{statement}</p>)}
-      </div>
-      <article className="mingli-reading-focus">
-        <small>当前可讨论重点</small>
-        <strong>{brief.focus.label}</strong>
-        <p>{brief.focus.statement}</p>
-      </article>
-      <p className="mingli-reading-boundary">{brief.boundaries[0] ?? "没有足够证据的专业结论保持未决。"}</p>
-    </div>
-  );
-}
-
-function ImageLayer({ stage }: { stage: MingliStageProjection }) {
-  const dayMaster = stage.columns.find((column) => column.slot === "NATAL_DAY")?.stem ?? "命";
-  const synthetic = stage.subject_id !== "current" || !stage.reading_ref;
+  const selected = LAYERS.find((item) => item.id === layer) ?? LAYERS[0];
+  const pillars = stage.columns
+    .filter((column) => column.source_layer === "NATAL")
+    .map((column) => column.pillar)
+    .join(" · ");
+  const canGenerate = generationAvailable
+    && onGenerateAgent !== undefined
+    && stage.reading_ref !== null;
   return (
     <div className="mingli-reading-layer">
       <LayerHeading
-        eyebrow="象法叶 · 证据缺口可见"
-        title={synthetic ? `${stage.display_name}尚未建立正式生命意象` : "生命意象尚未进入正式命理正本"}
-        status="等待专业准入"
+        eyebrow={`${selected.professional}${selected.organ} · ${selected.product}`}
+        title={generationAvailable
+          ? `让阿布完整读一遍${stage.display_name}的命局`
+          : "这张命盘先不交给尚未合格的模型"}
+        status={agentGenerating ? "正在研判" : generationAvailable ? "等待研判" : "专业校准中"}
       />
-      <div className="mingli-image-placeholder">
-        <i aria-hidden="true">{dayMaster}</i>
-        <p>生命树可以表达气质和空间感，但当前树形参数只具备视觉隐喻语义。</p>
+      <div className="mingli-principle-lines">
+        <p>{pillars}</p>
+        <p>{generationAvailable
+          ? "阿布会把月令、透藏、根位、结构竞争、做功路径与岁运放回同一张命盘里判断。"
+          : "四柱与岁运已经排定；当前阿布还没有通过整盘判断、命局取舍与岁运层次的专业校准。"}</p>
       </div>
-      <p className="mingli-reading-boundary">
-        系统尚未取得足以讨论冷暖燥湿、物象或人物象的正式 Projection，因此这里保留原型的位置和体验，不伪造象法结论。
-      </p>
+      <article className="mingli-reading-focus">
+        <small>一次整盘研判</small>
+        <strong>{agentGenerating
+          ? "阿布正在通读全盘……"
+          : generationAvailable ? "不套模板，不逐项拼句" : "宁可暂缺，也不拿套话冒充判断"}</strong>
+        <p>{generationAvailable
+          ? "完成后，命局原理、生命意象、人生主题与时间趋势会一起长在这根命理枝上。"
+          : "通过合成对照盘与专业复核后，这里才会开放完整研判。"}</p>
+      </article>
+      {canGenerate && (
+        <button
+          className="mingli-time-expand"
+          disabled={agentGenerating}
+          onClick={onGenerateAgent}
+          type="button"
+        >
+          {agentGenerating ? "正在形成整盘判断…" : "开始命理师研判"}
+        </button>
+      )}
+      {agentError && (
+        <p className="mingli-reading-boundary" role="alert">
+          本次研判没有完整完成，请稍后再试；已有命盘不会受到影响。
+        </p>
+      )}
     </div>
   );
 }
 
-function ThemeLayer({
-  hasFormalReading,
-  stage,
-  summary,
-}: {
-  hasFormalReading: boolean;
-  stage: MingliStageProjection;
-  summary: MingliReadingSummaryProjection | null;
-}) {
-  if (!hasFormalReading) {
-    return (
-      <div className="mingli-reading-layer">
-        <LayerHeading
-          eyebrow="人生应事花 · 角色边界"
-          title={`${stage.display_name}尚未建立人生应事窗口`}
-          status="不借用 Owner Reading"
-        />
-        <div className="mingli-theme-list">
-          <article>
-            <small>角色合成设定</small>
-            <strong>只有坐标，没有人生断语</strong>
-            <p>合成八字支持原型舞台、关系成员与角色讲述验收，不等于专业命理师已经完成事业、财富或关系判断。</p>
-            <span>未来必须由该角色自己的正式证据和专业复核生成。</span>
-          </article>
-        </div>
-        <p className="mingli-reading-boundary">系统不会把其他 Case 的人生主题拼接到这个角色。</p>
-      </div>
-    );
-  }
+function PrincipleLayer({ reading }: { reading: MingliAgentReading }) {
+  const output = reading.output;
+  const primary = output.hypotheses.find(
+    (item) => item.role === "PRIMARY",
+  )!;
+  const alternative = output.hypotheses.find(
+    (item) => item.role === "ALTERNATIVE",
+  );
   return (
     <div className="mingli-reading-layer">
-      <LayerHeading eyebrow="人生应事花 · 现实观察窗口" title="哪些人生主题值得继续观察" status="不是事件预测" />
-      <div className="mingli-theme-list">
-        {summary!.reading_brief.life_domains.map((item) => (
-          <article key={item.domain}>
-            <small>{DOMAIN_LABELS[item.domain]}</small>
-            <strong>{item.label}</strong>
-            <p>{item.statement}</p>
-            <span>{item.question}</span>
-          </article>
-        ))}
+      <LayerHeading
+        eyebrow="理法枝 · 整盘总纲"
+        title={output.first_look}
+        status={DAY_MASTER_LABELS[output.day_master_state]}
+      />
+      <div className="mingli-principle-lines">
+        <p>{output.whole_chart_thesis}</p>
+        <p>{output.day_master_rationale}</p>
       </div>
-      <p className="mingli-reading-boundary">这些是有限证据支持的注意窗口，不是吉凶、概率或必然事件。</p>
+      <article className="mingli-reading-focus">
+        <small>主解释 · {primary.name}</small>
+        <strong>{primary.thesis}</strong>
+        <p>{output.work_path.path_statement}</p>
+      </article>
+      {alternative && (
+        <p className="mingli-reading-boundary">
+          竞争解释：{alternative.name}。{alternative.thesis}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ImageLayer({
+  reading,
+  stage,
+}: {
+  reading: MingliAgentReading;
+  stage: MingliStageProjection;
+}) {
+  const dayMaster = stage.columns.find((column) => column.slot === "NATAL_DAY")?.stem ?? "命";
+  const image = reading.output.life_image;
+  return (
+    <div className="mingli-reading-layer">
+      <LayerHeading
+        eyebrow="象法叶 · 整盘成象"
+        title={image.title}
+        status="由命局结构生发"
+      />
+      <div className="mingli-image-placeholder">
+        <i aria-hidden="true">{dayMaster}</i>
+        <p>{image.image}</p>
+      </div>
+      <div className="mingli-principle-lines"><p>{image.explanation}</p></div>
+    </div>
+  );
+}
+
+function ThemeLayer({ reading }: { reading: MingliAgentReading }) {
+  return (
+    <div className="mingli-reading-layer">
+      <LayerHeading
+        eyebrow="人生应事花 · 从结构落到生活"
+        title="这份命局如何进入性情、事业、财富与关系"
+        status="条件性应事"
+      />
+      <div className="mingli-theme-list">
+        {DOMAIN_ORDER.map((domain) => {
+          const item = reading.output.domains[domain];
+          return (
+          <article key={domain}>
+            <small>{DOMAIN_LABELS[domain]}</small>
+            <strong>{item.headline}</strong>
+            <p>{item.conclusion}</p>
+            <span>{item.causal_chain.join(" → ")}</span>
+          </article>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
 function TimingLayer({
   onExpandTime,
+  reading,
   stage,
 }: {
   onExpandTime: () => void;
+  reading: MingliAgentReading;
   stage: MingliStageProjection;
 }) {
   const expanded = stage.stage_mode === "NATAL_DAYUN_YEAR_6";
-  const coordinates = expanded
-    ? stage.columns
-        .filter((column) => column.source_layer !== "NATAL")
-        .map((column) => ({
-          layer: column.label,
-          pillar: column.pillar,
-          ten_god_label: "确定坐标",
-        }))
-    : [{ layer: "大运", pillar: stage.current_dayun_label, ten_god_label: "确定坐标" }];
+  const timing = reading.output.timing;
   return (
     <div className="mingli-reading-layer">
       <LayerHeading
-        eyebrow="岁运应期果 · 同一舞台的时间层"
-        title={expanded ? "本命、大运与所选流年已经同时在场" : "先保留本命，再展开完整时间层"}
-        status={expanded ? "六柱坐标已锁定" : "当前为本命四柱"}
+        eyebrow="岁运应期果 · 原局为体，岁运为用"
+        title={timing.natal_baseline}
+        status={expanded ? "六柱同场" : "本命四柱"}
       />
-      <div className="mingli-timing-list">
-        {coordinates.map((coordinate) => (
-          <span key={`${coordinate.layer}:${coordinate.pillar}`}>
-            <small>{coordinate.layer}</small>
-            <strong>{coordinate.pillar}</strong>
-            <em>{coordinate.ten_god_label}</em>
-          </span>
-        ))}
+      <div className="mingli-theme-list">
+        <article>
+          <small>当前大运 · {stage.current_dayun_label}</small>
+          <strong>十年环境如何改变原局发力方式</strong>
+          <p>{timing.dayun.conclusion}</p>
+        </article>
+        <article>
+          <small>当前流年</small>
+          <strong>今年触发了什么</strong>
+          <p>{timing.annual.conclusion}</p>
+          <span>{timing.annual.activation_chain.join(" → ")}</span>
+        </article>
       </div>
       {!expanded && (
         <button className="mingli-time-expand" onClick={onExpandTime} type="button">
@@ -306,7 +377,7 @@ function TimingLayer({
         </button>
       )}
       <p className="mingli-reading-boundary">
-        时间坐标与六冲／六合成员关系可以展示；激活、关系作用、应事强度和吉凶仍未决。
+        可复核信号：{timing.verification_signals.join("；")}
       </p>
     </div>
   );

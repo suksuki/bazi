@@ -38,6 +38,8 @@ const LAYERS: Array<{
 ];
 
 export function MingliBranchJourney({
+  agentError,
+  agentGenerating,
   entry,
   layer,
   light,
@@ -45,10 +47,13 @@ export function MingliBranchJourney({
   onClose,
   onEntryConsumed,
   onLayerChange,
+  onGenerateAgent,
   onOpenStage,
   stage,
   summary,
 }: {
+  agentError: string | null;
+  agentGenerating: boolean;
   entry: MingliLeafEntry | null;
   layer: MingliReadingLayer;
   light: HomeWorldLight;
@@ -56,6 +61,7 @@ export function MingliBranchJourney({
   onClose: () => void;
   onEntryConsumed: () => void;
   onLayerChange: (layer: MingliReadingLayer) => void;
+  onGenerateAgent: () => void;
   onOpenStage: (expandTime: boolean) => void;
   stage: MingliStageProjection;
   summary: MingliReadingSummaryProjection | null;
@@ -73,6 +79,7 @@ export function MingliBranchJourney({
   const timerRef = useRef<number | null>(null);
   const entryTimerRef = useRef<number | null>(null);
   const hasFormalReading = summaryMatchesStage(summary, stage);
+  const hasAgentReading = hasFormalReading && summary?.agent_reading !== null;
   const guideIsDodo = light === "day";
   const guideCue = guideIsDodo ? media.cues.dodo_idle : media.cues.abu_idle;
   const film = light === "day"
@@ -242,12 +249,15 @@ export function MingliBranchJourney({
             <header className="mingli-growth-identity">
               <span>{stage.identity_badge}</span>
               <strong>{stage.display_name}的命理枝</strong>
-              <small>{hasFormalReading ? "真实 Reading 已锁定" : "只展示已准入坐标"}</small>
+              <small>{hasAgentReading ? "阿布已经读完这份命局" : "等待阿布整盘研判"}</small>
             </header>
             <MingliReadingLayerContent
+              agentError={agentError}
+              agentGenerating={agentGenerating}
               hasFormalReading={hasFormalReading}
               layer={layer}
               onExpandTime={() => onOpenStage(true)}
+              onGenerateAgent={onGenerateAgent}
               stage={stage}
               summary={summary}
             />

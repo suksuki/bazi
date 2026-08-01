@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { RuntimeMediaManifest } from "../api";
 import {
+  generateMingliAgentReading,
   loadMingliReadingSummary,
   loadMingliStage,
   loadMingliStageSubjects,
@@ -50,6 +51,8 @@ export function MingliSceneHost({
   const [stage, setStage] = useState<MingliStageProjection | null>(null);
   const [readingSummary, setReadingSummary] =
     useState<MingliReadingSummaryProjection | null>(null);
+  const [agentGenerating, setAgentGenerating] = useState(false);
+  const [agentError, setAgentError] = useState<string | null>(null);
   const [clock, setClock] = useState<MingliNarrationVisualClock>(
     INITIAL_MINGLI_CLOCK,
   );
@@ -97,6 +100,8 @@ export function MingliSceneHost({
       });
       setStage(null);
       setReadingSummary(null);
+      setAgentGenerating(false);
+      setAgentError(null);
       setNarrationOpen(false);
       setRoute(restored);
     };
@@ -111,6 +116,8 @@ export function MingliSceneHost({
     setStageLoading(true);
     setStageError(null);
     setReadingSummary(null);
+    setAgentGenerating(false);
+    setAgentError(null);
     setNarrationOpen(false);
     setClock(INITIAL_MINGLI_CLOCK);
     onContextChange({
@@ -127,7 +134,7 @@ export function MingliSceneHost({
       .then(async (projection) => ({
         projection,
         summary:
-          projection.subject_kind === "CANONICAL_SYNTHETIC"
+          projection.reading_ref === null
             ? null
             : await loadMingliReadingSummary(projection, controller.signal),
       }))
@@ -207,6 +214,18 @@ export function MingliSceneHost({
       "push",
       surface === "LAB" ? "lab" : "mingli",
     );
+  };
+  const generateAgentReading = () => {
+    if (stage === null || agentGenerating) return;
+    setAgentGenerating(true);
+    setAgentError(null);
+    void generateMingliAgentReading(stage)
+      .then(() => loadMingliReadingSummary(stage))
+      .then((summary) => setReadingSummary(summary))
+      .catch((caught) => {
+        setAgentError(caught instanceof Error ? caught.message : String(caught));
+      })
+      .finally(() => setAgentGenerating(false));
   };
   const frame = useMemo(
     () =>
@@ -336,12 +355,12 @@ export function MingliSceneHost({
       {stageLoading && (
         <div className="mingli-stage-loading" role="status">
           <span aria-hidden="true" />
-          {stage ? "正在锁定新的坐标；当前场景保持不拆除……" : "正在从当前 Case 生长命理枝……"}
+          {stage ? "正在展开新的时间位置；当前舞台会留在原处……" : "正在从当前档案生长命理枝……"}
         </div>
       )}
       {stageError && (
         <div className="mingli-stage-error" role="alert">
-          <p>新坐标暂时没有完成接线：{stageError}</p>
+          <p>新的命盘位置暂时没有展开，请重新读取；当前档案不会受到影响。</p>
           <button onClick={() => setStageRetry((value) => value + 1)} type="button">
             重新读取
           </button>
@@ -379,11 +398,14 @@ export function MingliSceneHost({
             />
           ) : (
             <MingliReadingJourney
+              agentError={agentError}
+              agentGenerating={agentGenerating}
               layer={route.layer}
               onAskGuide={() => setNarrationOpen(true)}
               onExpandTime={() =>
                 navigate({ ...route, mode: "NATAL_DAYUN_YEAR_6", year: null })
               }
+              onGenerateAgent={generateAgentReading}
               onLayerChange={navigateLayer}
               stage={stage}
               summary={readingSummary}
@@ -392,7 +414,7 @@ export function MingliSceneHost({
         </div>
       )}
 
-      {stage && (
+      {stage && surface === "LAB" && (
         <footer className="mingli-stage-boundary">
           <span>
             系统目前只证明坐标与六冲／六合成员关系
@@ -400,6 +422,16 @@ export function MingliSceneHost({
               ` · 当前大运区间 ${stage.current_dayun_start_date}—${stage.current_dayun_end_date}，交运当日不声明“当前”`}
           </span>
           <small>关系作用、来源可用性、旺衰、概率、有效做功与吉凶均保持未决</small>
+        </footer>
+      )}
+      {stage && surface === "READING" && (
+        <footer className="mingli-stage-boundary">
+          <span>
+            {readingSummary?.agent_reading
+              ? "这份整盘研判已经保存；刷新或切回档案后仍会回到同一结果。"
+              : "四柱已经排定，等待阿布完成一次整盘研判。"}
+          </span>
+          <small>阿布会把原局、结构竞争与岁运放在同一条判断链里。</small>
         </footer>
       )}
     </div>

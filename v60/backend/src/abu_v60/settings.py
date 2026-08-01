@@ -43,6 +43,24 @@ class Settings:
     reasoner_num_ctx: int
     reasoner_num_predict: int
     reasoner_keep_alive: str
+    mingli_agent_enabled: bool = False
+    mingli_agent_provider: str = "ollama-generate"
+    mingli_agent_model: str = "qwen3.6:27b"
+    mingli_agent_model_digest: str = (
+        "a50eda8ed977ab48a12431878896b27ffd5cef552c17af3317d9623b939a7f1e"
+    )
+    mingli_agent_profile_ref: str = (
+        "v60.model-serving.qwen3.6-27b-mingli-agent.003"
+    )
+    mingli_agent_base_url: str = "http://127.0.0.1:11434"
+    mingli_agent_timeout_seconds: float = 420.0
+    mingli_agent_think: bool = False
+    mingli_agent_temperature: float = 0.1
+    mingli_agent_top_p: float = 0.9
+    mingli_agent_top_k: int = 40
+    mingli_agent_num_ctx: int = 32768
+    mingli_agent_num_predict: int = 4096
+    mingli_agent_keep_alive: str = "30m"
     tts_enabled: bool = True
     tts_url: str = "https://dblife.com/abu-tts/tts"
     tts_provider_profile_ref: str = TTS_PROVIDER_PROFILE_REF
@@ -54,6 +72,24 @@ class Settings:
     tts_max_audio_bytes: int = 8 * 1024 * 1024
 
     def __post_init__(self) -> None:
+        if self.mingli_agent_provider != "ollama-generate":
+            raise ValueError("mingli_agent_provider_not_supported")
+        if not self.mingli_agent_model or not self.mingli_agent_profile_ref:
+            raise ValueError("mingli_agent_model_profile_required")
+        if len(self.mingli_agent_model_digest) != 64:
+            raise ValueError("mingli_agent_model_digest_invalid")
+        if self.mingli_agent_timeout_seconds <= 0:
+            raise ValueError("mingli_agent_timeout_must_be_positive")
+        if not 0 <= self.mingli_agent_temperature <= 2:
+            raise ValueError("mingli_agent_temperature_out_of_range")
+        if not 0 < self.mingli_agent_top_p <= 1:
+            raise ValueError("mingli_agent_top_p_out_of_range")
+        if self.mingli_agent_top_k <= 0:
+            raise ValueError("mingli_agent_top_k_must_be_positive")
+        if self.mingli_agent_num_ctx <= 0 or self.mingli_agent_num_predict <= 0:
+            raise ValueError("mingli_agent_token_budget_must_be_positive")
+        if not self.mingli_agent_keep_alive:
+            raise ValueError("mingli_agent_keep_alive_required")
         if self.tts_model != TTS_MODEL:
             raise ValueError("tts_model_not_controlled_by_proxy_contract")
         if self.tts_provider_profile_ref != TTS_PROVIDER_PROFILE_REF:
@@ -101,6 +137,24 @@ class Settings:
         ).strip()
         if not reasoner_keep_alive:
             raise ValueError("reasoner_keep_alive_required")
+        mingli_agent_timeout_seconds = float(
+            os.getenv("V60_MINGLI_AGENT_TIMEOUT_SECONDS", "420")
+        )
+        mingli_agent_temperature = float(
+            os.getenv("V60_MINGLI_AGENT_TEMPERATURE", "0.1")
+        )
+        mingli_agent_top_p = float(os.getenv("V60_MINGLI_AGENT_TOP_P", "0.9"))
+        mingli_agent_top_k = int(os.getenv("V60_MINGLI_AGENT_TOP_K", "40"))
+        mingli_agent_num_ctx = int(
+            os.getenv("V60_MINGLI_AGENT_NUM_CTX", "32768")
+        )
+        mingli_agent_num_predict = int(
+            os.getenv("V60_MINGLI_AGENT_NUM_PREDICT", "4096")
+        )
+        mingli_agent_keep_alive = os.getenv(
+            "V60_MINGLI_AGENT_KEEP_ALIVE",
+            "30m",
+        ).strip()
         tts_url = os.getenv(
             "V60_TTS_URL",
             "https://dblife.com/abu-tts/tts",
@@ -125,7 +179,7 @@ class Settings:
             environment=os.getenv("V60_ENVIRONMENT", "local"),
             world_runtime_enabled=_environment_bool(
                 "V60_WORLD_RUNTIME_ENABLED",
-                default=True,
+                default=False,
             ),
             world_runtime_poll_seconds=poll_seconds,
             reasoner_enabled=_environment_bool(
@@ -151,6 +205,41 @@ class Settings:
             reasoner_num_ctx=reasoner_num_ctx,
             reasoner_num_predict=reasoner_num_predict,
             reasoner_keep_alive=reasoner_keep_alive,
+            mingli_agent_enabled=_environment_bool(
+                "V60_MINGLI_AGENT_ENABLED",
+                default=False,
+            ),
+            mingli_agent_provider=os.getenv(
+                "V60_MINGLI_AGENT_PROVIDER",
+                "ollama-generate",
+            ).strip(),
+            mingli_agent_model=os.getenv(
+                "V60_MINGLI_AGENT_MODEL",
+                "qwen3.6:27b",
+            ).strip(),
+            mingli_agent_model_digest=os.getenv(
+                "V60_MINGLI_AGENT_MODEL_DIGEST",
+                "a50eda8ed977ab48a12431878896b27ffd5cef552c17af3317d9623b939a7f1e",
+            ).strip(),
+            mingli_agent_profile_ref=os.getenv(
+                "V60_MINGLI_AGENT_PROFILE_REF",
+                "v60.model-serving.qwen3.6-27b-mingli-agent.003",
+            ).strip(),
+            mingli_agent_base_url=os.getenv(
+                "V60_MINGLI_AGENT_BASE_URL",
+                "http://127.0.0.1:11434",
+            ).rstrip("/"),
+            mingli_agent_timeout_seconds=mingli_agent_timeout_seconds,
+            mingli_agent_think=_environment_bool(
+                "V60_MINGLI_AGENT_THINK",
+                default=False,
+            ),
+            mingli_agent_temperature=mingli_agent_temperature,
+            mingli_agent_top_p=mingli_agent_top_p,
+            mingli_agent_top_k=mingli_agent_top_k,
+            mingli_agent_num_ctx=mingli_agent_num_ctx,
+            mingli_agent_num_predict=mingli_agent_num_predict,
+            mingli_agent_keep_alive=mingli_agent_keep_alive,
             tts_enabled=_environment_bool("V60_TTS_ENABLED", default=True),
             tts_url=tts_url,
             tts_provider_profile_ref=os.getenv(

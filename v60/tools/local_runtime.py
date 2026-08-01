@@ -48,6 +48,26 @@ LOCAL_REASONER_DEFAULTS = {
     "V60_REASONER_NUM_PREDICT": "1200",
     "V60_REASONER_KEEP_ALIVE": "30m",
 }
+LOCAL_MINGLI_AGENT_DEFAULTS = {
+    "V60_MINGLI_AGENT_ENABLED": "false",
+    "V60_MINGLI_AGENT_PROVIDER": "ollama-generate",
+    "V60_MINGLI_AGENT_MODEL": "qwen3.6:27b",
+    "V60_MINGLI_AGENT_MODEL_DIGEST": (
+        "a50eda8ed977ab48a12431878896b27ffd5cef552c17af3317d9623b939a7f1e"
+    ),
+    "V60_MINGLI_AGENT_PROFILE_REF": (
+        "v60.model-serving.qwen3.6-27b-mingli-agent.003"
+    ),
+    "V60_MINGLI_AGENT_BASE_URL": "http://dblife.com:11888",
+    "V60_MINGLI_AGENT_TIMEOUT_SECONDS": "420",
+    "V60_MINGLI_AGENT_THINK": "false",
+    "V60_MINGLI_AGENT_TEMPERATURE": "0.1",
+    "V60_MINGLI_AGENT_TOP_P": "0.9",
+    "V60_MINGLI_AGENT_TOP_K": "40",
+    "V60_MINGLI_AGENT_NUM_CTX": "32768",
+    "V60_MINGLI_AGENT_NUM_PREDICT": "4096",
+    "V60_MINGLI_AGENT_KEEP_ALIVE": "30m",
+}
 LOCAL_TTS_DEFAULTS = {
     "V60_TTS_ENABLED": "true",
     "V60_TTS_URL": "https://dblife.com/abu-tts/tts",
@@ -206,6 +226,7 @@ def start(host: str, port: int) -> dict[str, Any]:
     with log_path.open("ab", buffering=0) as log:
         runtime_environment = {
             **LOCAL_REASONER_DEFAULTS,
+            **LOCAL_MINGLI_AGENT_DEFAULTS,
             **LOCAL_TTS_DEFAULTS,
             **os.environ,
         }

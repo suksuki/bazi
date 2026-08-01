@@ -1,5 +1,6 @@
 import { request } from "./http";
 import type {
+  MingliAgentReading,
   MingliNarrationReadyResponse,
   MingliReadingSummaryProjection,
   MingliStageMode,
@@ -8,6 +9,7 @@ import type {
   MingliStageSubjectId,
 } from "./mingliStageTypes";
 import {
+  validateAgentReading,
   validateNarrationReady,
   validateReadingSummary,
   validateStageProjection,
@@ -45,6 +47,26 @@ export async function loadMingliReadingSummary(
     { signal },
   );
   return validateReadingSummary(value, stage);
+}
+
+export async function generateMingliAgentReading(
+  stage: MingliStageProjection,
+  signal?: AbortSignal,
+): Promise<MingliAgentReading> {
+  if (stage.reading_ref === null || stage.reading_hash === null) {
+    throw new Error("这份档案还没有形成可研判的基础命盘。");
+  }
+  const value = await request<unknown>("/api/v60/mingli/stage/agent-reading", {
+    method: "POST",
+    signal,
+    body: JSON.stringify({
+      request_version: "v60.mingli-agent-request.001",
+      case_ref: stage.case_ref,
+      expected_reading_ref: stage.reading_ref,
+      expected_reading_hash: stage.reading_hash,
+    }),
+  });
+  return validateAgentReading(value, stage);
 }
 
 export async function prepareMingliNarration(

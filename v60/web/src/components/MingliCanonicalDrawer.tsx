@@ -24,9 +24,9 @@ export function MingliCanonicalDrawer({
     >
       <summary>
         <span>
-          {activeUnit === "lab" ? "Lab 证据与候选" : "正式 Reading 与证据"}
+          {activeUnit === "lab" ? "Lab 证据与候选" : "命盘依据"}
         </span>
-        <small>展开 canonical 明细</small>
+        <small>展开排盘与推演依据</small>
       </summary>
       <div className="mingli-canonical-drawer-panel">
         <HomeCompanionRail
