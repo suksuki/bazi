@@ -103,6 +103,7 @@ export type MingliNarrationPhase =
   | "PREPARING"
   | "READY"
   | "PLAYING"
+  | "BUFFERING"
   | "PAUSED"
   | "ENDED"
   | "FAILED";
@@ -162,6 +163,8 @@ export interface MingliNarrationVisualClock {
   phase: MingliNarrationPhase | null;
   currentTimeMs: number;
   activeCueId: MingliNarrationCue["cue_id"] | null;
+  cueProgress: number;
+  semanticAction: MingliNarrationCue["semantic_action"] | null;
 }
 
 export type MingliStageViewContext =

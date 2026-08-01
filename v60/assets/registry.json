@@ -276,6 +276,36 @@
       "source_manifest_ref": "media/manifests/ABU_V60_05_GUIDE_LEFT_ONCE_V1.v1.json",
       "source_status": "OWNER_APPROVED",
       "v60_role": "abu_v60_guide_left_reduced_motion"
+    },
+    {
+      "asset_ref": "dodo.v108.idle.v1",
+      "asset_version": "DODO_V108_IDLE_TRANSPARENT_V1",
+      "runtime_path": "web/public/assets/dodo/idle-transparent-v1.webm",
+      "sha256": "b5f582af6a022fd3faebb202b6bcbf4efcb65474294b19898dcb26b14ddd3ea8",
+      "media_type": "video/webm",
+      "source_manifest_ref": "media/manifests/DODO_V108_IDLE_TRANSPARENT_V1.v1.json",
+      "source_status": "OWNER_APPROVED",
+      "v60_role": "dodo_mingli_shared_narrator_idle"
+    },
+    {
+      "asset_ref": "dodo.v108.idle.webp.v1",
+      "asset_version": "DODO_V108_IDLE_TRANSPARENT_V1",
+      "runtime_path": "web/public/assets/dodo/idle-transparent-v1.webp",
+      "sha256": "e9a217268993cde6464d252767701fb3ce76b7c80a004a7505a207229a4dadbc",
+      "media_type": "image/webp",
+      "source_manifest_ref": "media/manifests/DODO_V108_IDLE_TRANSPARENT_V1.v1.json",
+      "source_status": "OWNER_APPROVED",
+      "v60_role": "dodo_mingli_shared_narrator_animation_fallback"
+    },
+    {
+      "asset_ref": "dodo.v108.idle.poster.v1",
+      "asset_version": "DODO_V108_IDLE_TRANSPARENT_V1",
+      "runtime_path": "web/public/assets/dodo/idle-poster-transparent-v1.png",
+      "sha256": "3a2c9ef54b4d1858177a514d20e8372ff298f61cb327c647bf3f6df73b84b971",
+      "media_type": "image/png",
+      "source_manifest_ref": "media/manifests/DODO_V108_IDLE_TRANSPARENT_V1.v1.json",
+      "source_status": "OWNER_APPROVED",
+      "v60_role": "dodo_mingli_shared_narrator_reduced_motion"
     }
   ]
 }

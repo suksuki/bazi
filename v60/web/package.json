@@ -34,16 +34,20 @@
     "audit:relation-effect-admission-contract": "node tools/relation-effect-admission-contract-audit.mjs",
     "audit:relation-effect-evidence-packet-contract": "node tools/relation-effect-evidence-packet-contract-audit.mjs",
     "audit:relation-effect-evidence-request-contract": "node tools/relation-effect-evidence-request-contract-audit.mjs",
-    "audit:relation-effect-evidence-material-contract": "node tools/relation-effect-evidence-material-contract-audit.mjs"
+    "audit:relation-effect-evidence-material-contract": "node tools/relation-effect-evidence-material-contract-audit.mjs",
+    "audit:mingli-shared-scene-contract": "node tools/mingli-shared-scene-contract-audit.mjs"
   },
   "dependencies": {
+    "@react-three/fiber": "^9.6.1",
     "pixi.js": "^8.19.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "three": "^0.185.1"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@types/three": "^0.185.1",
     "@vitejs/plugin-react": "^6.0.4",
     "playwright": "^1.62.0",
     "typescript": "^7.0.2",

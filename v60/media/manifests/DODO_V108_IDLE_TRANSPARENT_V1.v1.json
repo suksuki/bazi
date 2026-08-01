@@ -1,0 +1,54 @@
+{
+  "schema_version": "v60.prototype-actor-import.001",
+  "asset_id": "DODO_V108_IDLE_TRANSPARENT_V1",
+  "revision": "v1",
+  "character_version": "DODO_CHARACTER_V108_V1",
+  "source": {
+    "path": "media/sources/DODO_V108_IDLE_TRANSPARENT_V1/v1/source.webm",
+    "sha256": "b5f582af6a022fd3faebb202b6bcbf4efcb65474294b19898dcb26b14ddd3ea8",
+    "original_filename": "dodo-idle-transparent.webm",
+    "frozen_design_commit": "a6cf762684e14514f58c8f45b82cca86d9a7ec4c",
+    "video": {
+      "size": [
+        512,
+        576
+      ],
+      "fps": 24,
+      "duration_ms": 8417,
+      "codec": "VP9_ALPHA"
+    },
+    "audio": "NONE"
+  },
+  "owner_decision": {
+    "status": "OWNER_APPROVED_V108_EXPERIENCE_BASELINE",
+    "selected_identity_use": "MINGLI_SHARED_NARRATOR_IDLE"
+  },
+  "deliveries": {
+    "webm": {
+      "path": "web/public/assets/dodo/idle-transparent-v1.webm",
+      "sha256": "b5f582af6a022fd3faebb202b6bcbf4efcb65474294b19898dcb26b14ddd3ea8"
+    },
+    "webp": {
+      "path": "web/public/assets/dodo/idle-transparent-v1.webp",
+      "sha256": "e9a217268993cde6464d252767701fb3ce76b7c80a004a7505a207229a4dadbc"
+    },
+    "poster": {
+      "path": "web/public/assets/dodo/idle-poster-transparent-v1.png",
+      "sha256": "3a2c9ef54b4d1858177a514d20e8372ff298f61cb327c647bf3f6df73b84b971"
+    }
+  },
+  "runtime_contract": {
+    "semantic_state": "QUIET_NARRATOR_IDLE",
+    "trigger": "DODO_VISIBLE_IN_MINGLI_NARRATION_STATE",
+    "playback": "LOOP",
+    "interruptible": true,
+    "anchor": "BOTTOM_CENTER",
+    "reduced_motion_asset_ref": "dodo.v108.idle.poster.v1"
+  },
+  "boundaries": {
+    "performance_fidelity": "IDLE_MEDIA_WITH_AUDIO_BOUND_STATE",
+    "phoneme_lip_sync": false,
+    "cue_gaze_direction": false,
+    "creates_mingli_claim": false
+  }
+}

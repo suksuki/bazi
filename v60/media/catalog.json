@@ -47,6 +47,18 @@
         "media.abu.v60.guide-left.v1",
         "media.abu.v60.seated-idle.v1"
       ]
+    },
+    {
+      "character_version": "DODO_CHARACTER_V108_V1",
+      "display_name": "多多",
+      "visual_style": "V108_WARM_CARTOON",
+      "status": "FROZEN_V108_BASELINE_COMPATIBILITY",
+      "primary_for_new_v60_generation": false,
+      "identity_reference_media_ref": null,
+      "runtime_poster_media_ref": "media.dodo.v108.idle-transparent.v1",
+      "motion_media_refs": [
+        "media.dodo.v108.idle-transparent.v1"
+      ]
     }
   ],
   "items": [
@@ -600,6 +612,62 @@
         "mobile_suitability": true,
         "reduced_motion_asset_ref": "abu.v60.guide-left.poster.v1"
       }
+    },
+    {
+      "media_ref": "media.dodo.v108.idle-transparent.v1",
+      "asset_id": "DODO_V108_IDLE_TRANSPARENT_V1",
+      "revision": "v1",
+      "media_kind": "ACTOR_MOTION",
+      "character_version": "DODO_CHARACTER_V108_V1",
+      "semantic_role": "MINGLI_SHARED_NARRATOR_IDLE",
+      "action_type": "LOOP",
+      "library_status": "RUNTIME_REGISTERED",
+      "source": {
+        "path": "media/sources/DODO_V108_IDLE_TRANSPARENT_V1/v1/source.webm",
+        "original_filename": "dodo-idle-transparent.webm",
+        "sha256": "b5f582af6a022fd3faebb202b6bcbf4efcb65474294b19898dcb26b14ddd3ea8",
+        "generator": "CHATGPT_SITES_V108_DESIGNER",
+        "prompt_ref": null,
+        "prompt_status": "FROZEN_V108_PROTOTYPE_SOURCE",
+        "authorization": "OWNER_APPROVED_V108_EXPERIENCE_BASELINE"
+      },
+      "process_manifest_path": "media/manifests/DODO_V108_IDLE_TRANSPARENT_V1.v1.json",
+      "process_manifest_sha256": "ace672e7e9f8d97fe82858bf7a932aa9869d68c479d1f00ab9dbd5ac9aacce36",
+      "deliveries": [
+        {
+          "asset_ref": "dodo.v108.idle.v1",
+          "asset_version": "DODO_V108_IDLE_TRANSPARENT_V1",
+          "role": "VP9_ALPHA_WEBM",
+          "path": "web/public/assets/dodo/idle-transparent-v1.webm",
+          "sha256": "b5f582af6a022fd3faebb202b6bcbf4efcb65474294b19898dcb26b14ddd3ea8",
+          "alpha": true
+        },
+        {
+          "asset_ref": "dodo.v108.idle.webp.v1",
+          "asset_version": "DODO_V108_IDLE_TRANSPARENT_V1",
+          "role": "ANIMATED_WEBP",
+          "path": "web/public/assets/dodo/idle-transparent-v1.webp",
+          "sha256": "e9a217268993cde6464d252767701fb3ce76b7c80a004a7505a207229a4dadbc",
+          "alpha": true
+        },
+        {
+          "asset_ref": "dodo.v108.idle.poster.v1",
+          "asset_version": "DODO_V108_IDLE_TRANSPARENT_V1",
+          "role": "REDUCED_MOTION_POSTER",
+          "path": "web/public/assets/dodo/idle-poster-transparent-v1.png",
+          "sha256": "3a2c9ef54b4d1858177a514d20e8372ff298f61cb327c647bf3f6df73b84b971",
+          "alpha": true
+        }
+      ],
+      "runtime_contract": {
+        "trigger": "DODO_VISIBLE_IN_MINGLI_NARRATION_STATE",
+        "playback": "LOOP",
+        "interruptible": true,
+        "return_action": "SELF",
+        "anchor": "BOTTOM_CENTER",
+        "reduced_motion_asset_ref": "dodo.v108.idle.poster.v1",
+        "performance_fidelity": "IDLE_MEDIA_WITH_AUDIO_BOUND_STATE"
+      }
     }
   ],
   "cue_bundles": [
@@ -702,6 +770,24 @@
       "reduced_motion": {
         "visual_asset_ref": "abu.v60.guide-left.poster.v1",
         "audio_policy": "SILENT"
+      }
+    },
+    {
+      "cue_ref": "cue.mingli.dodo-idle.v1",
+      "version": "v1",
+      "status": "RUNTIME_REGISTERED",
+      "trigger": "DODO_VISIBLE_IN_MINGLI_NARRATION_STATE",
+      "visual_media_ref": "media.dodo.v108.idle-transparent.v1",
+      "audio_media_refs": [],
+      "sync": {
+        "mode": "AUDIO_BOUND_PRESENTATION_STATE",
+        "visual_offset_ms": 0,
+        "visual_loop": true,
+        "end_policy": "PAUSE_WITH_NARRATION_TRANSPORT"
+      },
+      "reduced_motion": {
+        "visual_asset_ref": "dodo.v108.idle.poster.v1",
+        "audio_policy": "UNCHANGED"
       }
     }
   ]

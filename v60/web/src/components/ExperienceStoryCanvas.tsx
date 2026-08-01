@@ -14,7 +14,7 @@ import type { MingliStageViewContext } from "../mingliStageTypes";
 import { LifeTreeScene } from "../LifeTreeScene";
 import { DreamReadingObservationLens } from "./DreamReadingObservationLens";
 import { HomeLifeTreeScene as HomeTree } from "./HomeLifeTreeScene";
-import { MingliReadingStage } from "./MingliReadingStage";
+import { MingliSceneHost } from "./MingliSceneHost";
 
 interface ExperienceStoryCanvasProps {
   scope: ExperienceScope;
@@ -74,15 +74,21 @@ export function ExperienceStoryCanvas({
 
   return (
     <section className="story-canvas" aria-label="生命树故事现场">
-      {scope === "home" && activeUnit === "mingli" ? (
-        <MingliReadingStage
+      {scope === "home" && (activeUnit === "mingli" || activeUnit === "lab") ? (
+        <MingliSceneHost
           homeLineageKey={[
             home.case.case_ref,
             home.chart.chart_version_ref,
             home.life_case.life_case_revision_ref,
             home.mingli.reading.reading_ref,
           ].join("|")}
+          media={media}
           onContextChange={onMingliContext}
+          onExit={() => onSelectUnit("dream")}
+          onSurfaceChange={(surface) =>
+            onSelectUnit(surface === "LAB" ? "lab" : "mingli")
+          }
+          surface={activeUnit === "lab" ? "LAB" : "READING"}
         />
       ) : scope === "home" ? (
         <HomeTree
@@ -140,8 +146,8 @@ function sceneLineage(
   grove: DreamGrove | null,
   activeUnit: ExperienceUnit,
 ) {
-  if (scope === "home" && activeUnit === "mingli") {
-    return "命理枝只展开当前 Case 可复算的坐标；未被证明的作用不会被补写。";
+  if (scope === "home" && (activeUnit === "mingli" || activeUnit === "lab")) {
+    return "命理阅读、Lab 与角色讲述共用同一个可复算舞台；未被证明的作用不会被补写。";
   }
   if (scope === "home") {
     return "这是你的私密生命树；梦境中的生命不会被写进这里。";

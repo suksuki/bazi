@@ -21,12 +21,6 @@ export const EXPERIENCE_UNITS: readonly ExperienceUnitDefinition[] = [
     contentKey: "navigation.unit.mingli",
   },
   {
-    key: "abu",
-    glyph: "阿",
-    label: "阿布说",
-    contentKey: "navigation.unit.abu",
-  },
-  {
     key: "theater",
     glyph: "故",
     label: "阿布小剧场",
@@ -41,7 +35,7 @@ export const EXPERIENCE_UNITS: readonly ExperienceUnitDefinition[] = [
 ] as const;
 
 export function isExperienceUnit(value: string | null): value is ExperienceUnit {
-  return EXPERIENCE_UNITS.some(({ key }) => key === value);
+  return ["dream", "mingli", "abu", "theater", "lab"].includes(value ?? "");
 }
 
 export function unitTitle(unit: ExperienceUnit): string {

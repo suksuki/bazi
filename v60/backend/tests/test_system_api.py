@@ -127,7 +127,10 @@ def test_bootstrap_exposes_only_admitted_runtime_media_bindings() -> None:
         "grove_background",
         "life_world_background",
     }
-    assert set(media["cues"]) == {"abu_idle", "abu_guide_left"}
+    assert set(media["cues"]) == {"abu_idle", "abu_guide_left", "dodo_idle"}
     assert media["cues"]["abu_guide_left"]["trigger"] == (
         "NEW_ENCOUNTER_HAS_UNOBSERVED_LEFT_TREE_ORGAN"
+    )
+    assert media["cues"]["dodo_idle"]["trigger"] == (
+        "DODO_VISIBLE_IN_MINGLI_NARRATION_STATE"
     )

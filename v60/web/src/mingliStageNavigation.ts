@@ -34,9 +34,10 @@ export function readMingliStageRoute(): MingliStageRoute {
 export function writeMingliStageRoute(
   route: MingliStageRoute,
   mode: "push" | "replace" = "push",
+  view: "mingli" | "lab" = "mingli",
 ) {
   const url = new URL(window.location.href);
-  url.searchParams.set("view", "mingli");
+  url.searchParams.set("view", view);
   url.searchParams.set("mingli_subject", route.subjectId);
   url.searchParams.set("mingli_mode", route.mode);
   if (route.mode === "NATAL_DAYUN_YEAR_6" && route.year !== null) {

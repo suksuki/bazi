@@ -1,0 +1,426 @@
+.mingli-reading-guide,
+.mingli-lab-inspector {
+  position: absolute;
+  z-index: 6;
+  top: 18px;
+  right: 18px;
+  display: grid;
+  width: min(330px, 34%);
+  max-height: calc(100% - 36px);
+  gap: 13px;
+  padding: 18px;
+  overflow: auto;
+  color: #e8f0e9;
+  border: 1px solid rgba(198, 220, 205, 0.18);
+  border-radius: 18px;
+  background: rgba(8, 32, 24, 0.76);
+  box-shadow: 0 22px 56px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(18px);
+  scrollbar-width: thin;
+}
+
+.mingli-canonical-drawer {
+  position: absolute;
+  z-index: 24;
+  top: 142px;
+  left: 42px;
+  width: min(420px, calc(100% - 84px));
+  color: #e7efe8;
+  pointer-events: none;
+}
+
+.mingli-canonical-drawer > summary {
+  display: inline-grid;
+  min-height: 42px;
+  align-content: center;
+  gap: 1px;
+  padding: 6px 14px;
+  color: #e8eee8;
+  border: 1px solid rgba(205, 223, 210, 0.24);
+  border-radius: 999px;
+  background: rgba(7, 29, 22, 0.78);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  list-style: none;
+  pointer-events: auto;
+  backdrop-filter: blur(14px);
+}
+
+.mingli-canonical-drawer > summary::-webkit-details-marker {
+  display: none;
+}
+
+.mingli-canonical-drawer > summary:hover,
+.mingli-canonical-drawer > summary:focus-visible,
+.mingli-canonical-drawer[open] > summary {
+  border-color: rgba(222, 197, 137, 0.66);
+  outline: 2px solid rgba(222, 197, 137, 0.18);
+  outline-offset: 2px;
+}
+
+.mingli-canonical-drawer > summary span {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 11px;
+}
+
+.mingli-canonical-drawer > summary small {
+  color: #92a79b;
+  font-size: 7px;
+  letter-spacing: 0.08em;
+}
+
+.mingli-canonical-drawer-panel {
+  width: min(420px, calc(100vw - 84px));
+  height: min(650px, calc(100vh - 230px));
+  min-height: 360px;
+  margin-top: 8px;
+  pointer-events: auto;
+}
+
+.mingli-canonical-drawer-panel > .home-companion-rail {
+  width: 100%;
+  height: 100%;
+  color: var(--ink);
+  background: rgba(249, 248, 241, 0.98);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+}
+
+.mingli-reading-guide > p,
+.mingli-lab-inspector header p {
+  margin: 0;
+  color: #cfba82;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.mingli-reading-guide h2,
+.mingli-lab-inspector h2 {
+  margin: 0;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 20px;
+  font-weight: 560;
+}
+
+.mingli-reading-layer-list {
+  display: grid;
+  gap: 1px;
+  border-top: 1px solid rgba(203, 222, 210, 0.12);
+  border-bottom: 1px solid rgba(203, 222, 210, 0.12);
+}
+
+.mingli-reading-layer-list span {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(203, 222, 210, 0.08);
+}
+
+.mingli-reading-layer-list span:last-child {
+  border-bottom: 0;
+}
+
+.mingli-reading-layer-list strong {
+  color: #dce9df;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 10px;
+}
+
+.mingli-reading-layer-list small {
+  color: #89a095;
+  font-size: 8px;
+  line-height: 1.55;
+}
+
+.mingli-reading-ask-guide,
+.mingli-lab-ask-guide {
+  display: grid;
+  min-height: 54px;
+  align-content: center;
+  justify-items: start;
+  gap: 3px;
+  padding: 9px 13px;
+  color: #fffaf0;
+  border: 1px solid rgba(219, 195, 137, 0.42);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(99, 135, 110, 0.92), rgba(65, 101, 81, 0.92));
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18);
+  font-size: 10px;
+}
+
+.mingli-reading-ask-guide span,
+.mingli-lab-ask-guide span {
+  color: rgba(246, 239, 213, 0.72);
+  font-size: 8px;
+}
+
+.mingli-lab-inspector header {
+  display: grid;
+  gap: 5px;
+}
+
+.mingli-lab-inspector header span {
+  color: #91a69b;
+  font-size: 9px;
+  line-height: 1.6;
+}
+
+.mingli-lab-relation-list {
+  display: grid;
+  gap: 7px;
+}
+
+.mingli-lab-relation-list > p {
+  margin: 0;
+  color: #a8bbb0;
+  font-size: 9px;
+  line-height: 1.6;
+}
+
+.mingli-lab-relation-list button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 8px;
+  min-height: 52px;
+  align-items: center;
+  padding: 8px 10px;
+  color: #c8d7ce;
+  text-align: left;
+  border: 1px solid rgba(197, 218, 204, 0.14);
+  border-radius: 10px;
+  background: rgba(233, 244, 236, 0.04);
+  cursor: pointer;
+}
+
+.mingli-lab-relation-list button strong {
+  grid-row: 1 / 3;
+  color: #eadba9;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 16px;
+}
+
+.mingli-lab-relation-list button span {
+  font-size: 9px;
+}
+
+.mingli-lab-relation-list button small {
+  color: #7f978a;
+  font-size: 7px;
+}
+
+.mingli-lab-relation-list button[aria-pressed="true"] {
+  border-color: rgba(213, 190, 130, 0.56);
+  background: rgba(181, 149, 77, 0.1);
+  box-shadow: inset 3px 0 #cbb475;
+}
+
+.mingli-lab-evidence {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid rgba(198, 218, 204, 0.12);
+  border-radius: 10px;
+  background: rgba(2, 16, 12, 0.22);
+}
+
+.mingli-lab-evidence div {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 7px;
+}
+
+.mingli-lab-evidence dt {
+  color: #82998c;
+  font-size: 8px;
+}
+
+.mingli-lab-evidence dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #bdcdc3;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.mingli-narration-director {
+  position: absolute;
+  z-index: 9;
+  inset: 0;
+  color: #f2f5ec;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(5, 19, 15, 0.52), transparent 36%),
+    linear-gradient(180deg, transparent 35%, rgba(3, 15, 11, 0.82) 100%);
+}
+
+.mingli-narration-director audio {
+  display: none;
+}
+
+.mingli-narration-close {
+  position: absolute;
+  z-index: 4;
+  top: 18px;
+  left: 18px;
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  color: #dce7df;
+  border: 1px solid rgba(204, 222, 209, 0.22);
+  border-radius: 999px;
+  background: rgba(6, 26, 19, 0.68);
+  pointer-events: auto;
+  backdrop-filter: blur(12px);
+}
+
+.mingli-character-performance {
+  position: absolute;
+  z-index: 3;
+  bottom: 18px;
+  left: 22px;
+  display: grid;
+  width: 230px;
+  height: min(66%, 390px);
+  align-content: end;
+  pointer-events: none;
+}
+
+.mingli-character-media {
+  position: absolute;
+  right: 0;
+  bottom: 36px;
+  left: 0;
+  width: 100%;
+  height: calc(100% - 22px);
+  object-fit: contain;
+  object-position: center bottom;
+  filter: drop-shadow(0 18px 22px rgba(0, 0, 0, 0.28));
+}
+
+.mingli-character-performance > div {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  justify-self: center;
+  gap: 1px;
+  min-width: 142px;
+  padding: 7px 12px;
+  text-align: center;
+  border: 1px solid rgba(211, 227, 216, 0.16);
+  border-radius: 999px;
+  background: rgba(5, 23, 17, 0.74);
+  backdrop-filter: blur(10px);
+}
+
+.mingli-character-performance strong {
+  color: #f3ecd5;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 11px;
+}
+
+.mingli-character-performance span,
+.mingli-character-performance small {
+  color: #96aa9f;
+  font-size: 7px;
+}
+
+.mingli-narration-director .mingli-narration-subtitle {
+  position: absolute;
+  z-index: 4;
+  right: max(160px, 16%);
+  bottom: 76px;
+  left: max(230px, 22%);
+  display: grid;
+  min-height: 74px;
+  place-items: center;
+  padding: 12px 20px;
+  border: 1px solid rgba(205, 224, 210, 0.18);
+  border-radius: 16px;
+  background: rgba(4, 22, 16, 0.72);
+  backdrop-filter: blur(16px);
+}
+
+.mingli-narration-director .mingli-narration-subtitle p {
+  margin: 0;
+  color: #f1eee0;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: clamp(11px, 1.2vw, 15px);
+  line-height: 1.75;
+  text-align: center;
+}
+
+.mingli-narration-director .mingli-narration-controls {
+  position: absolute;
+  z-index: 5;
+  right: 24px;
+  bottom: 22px;
+  display: grid;
+  min-width: 128px;
+  gap: 4px;
+  pointer-events: auto;
+}
+
+.mingli-narration-director .mingli-narration-controls button {
+  min-height: 42px;
+  color: #fffaf0;
+  border: 1px solid rgba(220, 197, 142, 0.4);
+  border-radius: 999px;
+  background: rgba(78, 119, 94, 0.92);
+}
+
+.mingli-narration-director .mingli-narration-controls small {
+  color: #8fa497;
+}
+
+.mingli-narration-director .mingli-narration-wait,
+.mingli-narration-director .mingli-narration-error {
+  position: absolute;
+  z-index: 5;
+  right: 24px;
+  bottom: 74px;
+  left: auto;
+  max-width: 300px;
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: rgba(23, 31, 23, 0.8);
+  font-size: 8px;
+  transform: none;
+}
+
+.mingli-narration-director .mingli-narration-error {
+  color: #ecc2b4;
+}
+
+.mingli-scene-host > .mingli-stage-loading,
+.mingli-scene-host > .mingli-stage-error {
+  z-index: 16;
+  inset: 126px 0 48px;
+  color: #baccc1;
+  background: rgba(6, 24, 18, 0.76);
+  backdrop-filter: blur(7px);
+}
+
+.mingli-scene-host > .mingli-stage-error button {
+  color: #e8f0e9;
+  border-color: rgba(201, 220, 207, 0.28);
+  background: rgba(239, 247, 241, 0.08);
+}
+
+.mingli-scene-host > .mingli-stage-boundary {
+  z-index: 12;
+  min-height: 44px;
+  color: #90a79a;
+  border-top: 1px solid rgba(196, 218, 203, 0.1);
+  background: rgba(5, 23, 17, 0.78);
+}
+
+.mingli-scene-host > .mingli-stage-boundary small {
+  color: #9b947c;
+}

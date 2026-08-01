@@ -9,7 +9,10 @@ export function cueAtAudioTime(
   currentTimeMs: number,
   phase: MingliNarrationPhase | null,
 ): MingliNarrationCue | null {
-  if (!asset || !["PLAYING", "PAUSED", "ENDED"].includes(phase ?? "")) {
+  if (
+    !asset ||
+    !["PLAYING", "BUFFERING", "PAUSED", "ENDED"].includes(phase ?? "")
+  ) {
     return null;
   }
   if (phase === "ENDED") return asset.cues.at(-1) ?? null;
@@ -24,6 +27,7 @@ export function narrationCommandLabel(phase: MingliNarrationPhase | null): strin
   if (phase === "PREPARING") return "正在准备声音";
   if (phase === "READY") return "开始播放";
   if (phase === "PLAYING") return "暂停讲述";
+  if (phase === "BUFFERING") return "暂停等待";
   if (phase === "PAUSED") return "继续播放";
   if (phase === "ENDED") return "重新播放";
   if (phase === "FAILED") return "重新准备";

@@ -139,7 +139,9 @@ no-store and Range semantics.
 The playback states are:
 
 ```text
-PREPARING -> READY -> PLAYING <-> PAUSED -> ENDED
+PREPARING -> READY -> PLAYING <-> PAUSED
+                         <-> BUFFERING
+                         -> ENDED / FAILED
 ```
 
 While PREPARING, semantic subtitles and motion do not run. During PLAYING,
@@ -147,6 +149,60 @@ While PREPARING, semantic subtitles and motion do not run. During PLAYING,
 stage-emphasis clock. PAUSED freezes the same clock. Refresh preserves the selected Case,
 four/six-pillar mode and year through the URL, while narration returns to
 `IDLE`; it never pretends to recover an in-flight audio position.
+
+## One shared Scene Player
+
+The first frozen-V108 integration slice no longer treats Abu Says as a panel
+inside Lab. `MingliSceneHost` remains mounted while the user switches among
+Mingli Reading, Lab observation and narrated presentation. It owns exactly one
+lazy-loaded React Three Fiber Scene Player:
+
+```text
+MingliSceneHost
+├── MingliScenePlayer          one Canvas / one Projection
+├── ReadingSceneGuide          presentation only
+├── MingliLabSceneInspector    selection and evidence only
+└── MingliNarrationDirector
+    ├── MingliAudioPlayer      audio transport and sole clock
+    └── CharacterPerformance  actor state and transparent media
+```
+
+Reading and Lab never mount their own Canvas. Opening or closing narration
+also leaves the same Scene Player instance in place. Moving from four to six
+pillars updates the server-issued Projection in that instance; it does not
+create a second stage or a five-pillar intermediate state.
+
+The earlier canonical Reading and Lab controls remain reachable through a
+collapsible evidence drawer beside the shared stage. It preserves Case
+management, formal Reading details, evidence requests and mechanism-candidate
+comparison without placing the narrator inside that drawer. Closing the
+narration layer explicitly pauses and releases its captured audio element;
+reduced-motion clients use the Registry poster rather than a moving character
+delivery.
+
+The 3D renderer consumes only stable `column_ref`, `body_ref`, `relation_ref`
+and the bounded Director frame. Its admitted semantic actions are:
+
+```text
+PILLARS_PRESENT
+RELATIONS_PRESENT
+BOUNDARY_HOLD
+TIME_COORDINATES_PRESENT
+```
+
+Relation paths are neutral arcs between exact branch members. Bodies do not
+aggregate, collide, morph into “合”, grow a usable-root channel or perform an
+effect animation. `PAUSED` and `BUFFERING` freeze semantic motion at the exact
+audio time; a separate non-semantic ambient clock may continue only when the
+Director permits it. WebGL2 failure or context loss falls back to the existing
+bounded 2D stage without changing the Projection.
+
+The actor layer now supports Abu and Dodo media independently through the
+Hash-locked Runtime Media Registry `.002`; the browser does not own their
+paths. It reports its current fidelity as
+`IDLE_MEDIA_WITH_AUDIO_BOUND_STATE`: the transparent video
+instance follows READY/PLAYING/PAUSED/BUFFERING, but the current assets are not
+claimed as phoneme lip-sync, gaze direction or final Cue choreography.
 
 ## Persistence and ownership
 
@@ -177,6 +233,7 @@ Foundation       v60.foundation.019
 Architecture     v60.runtime-architecture.053
 Mingli Engine    v60.mingli-cognitive-engine.026
 Media            v60.media-library.003
+Runtime Media    v60.runtime-media-registry.002
 Unit Mingli      v60.unit-mingli.020
 Stage            v60.mingli-stage-projection.002
 Timing           v60.mingli-timing-evidence-vector.002
@@ -225,17 +282,61 @@ Screenshots and machine-readable metrics are in
 
 The iPad checks are responsive viewport evidence in the in-app Chrome runtime,
 not a claim of physical iPad Safari, touch or autoplay-policy certification.
-The current semantic cue output drives subtitles and stage emphasis; V108 actor
-motion, mouth shapes and particle asset mappings still require the designer's
-source handoff and are not claimed as delivered here.
+The shared-player browser audit additionally verified:
+
+- Reading -> Lab -> narration -> Lab kept the same Scene instance and exactly
+  one Canvas;
+- four pillars -> six pillars kept that instance while changing from eight to
+  twelve bodies;
+- a Lab relation selection retained its exact `relation_ref` and never changed
+  the professional boundary;
+- READY exposed one private audio element without advancing subtitles;
+- PLAYING followed real `audio.currentTime`; PAUSED held both audio time and
+  Scene `cueProgress` exactly constant across a 500 ms sample;
+- 1440x900 Desktop, 1024x768 iPad landscape and 768x1024 iPad portrait showed
+  all six columns without inspector overlap or document overflow;
+- Dodo used her own transparent media source while sharing the same Director,
+  audio transport and Scene Player.
+- the canonical evidence drawer exposed Case management, Reading and source
+  evidence at Desktop and iPad portrait sizes without adding document overflow
+  or a second Canvas; closing an actively playing narration removed its audio
+  node after playback had started.
+
+Evidence is in `.artifacts/mingli-shared-scene/`. These iPad checks remain
+responsive Chrome evidence, not physical iPad Safari, touch or autoplay-policy
+certification. The Three renderer is isolated in a lazy chunk; the current
+chunk-size warning is recorded performance debt, not proof of a second stage.
 
 ## Design handoff and next constraint
 
-The current V60 shell preserves its warm, restrained stage language; this
-slice does not replace it with a dashboard. Exact V108 prototype-source merge
-still requires the designer's source handoff. The design review should focus
-on fitting this Projection and playback contract into the frozen V108 visual
-baseline, not rebuilding the facts or adding another Mingli entry.
+The frozen V108 source at commit
+`a6cf762684e14514f58c8f45b82cca86d9a7ec4c` is available and remains the
+experience authority. This slice extracted its particle-stage and transparent
+actor language, but deliberately improves one prototype limitation: V108 Lab
+and Abu Says each mounted a separate Canvas, whereas the formal product now
+keeps one shared Scene Player. This is the first integration seam, not a claim
+that the complete V108 Home, branch, motion and narration composition has
+already been reproduced.
+
+```text
+DESIGN_REQUEST
+- scene: Mingli Reading / Lab / Abu Says shared six-pillar stage
+- source_files: frozen V108 MingliStage3D, MingliStageLabPreview, AbuSays
+- observed_behavior: one real Canvas now survives all three surfaces; current
+  Abu/Dodo media prove audio-bound state but not final speaking choreography
+- design_question: provide the final single-player Desktop/iPad composition,
+  six-column spacing and Abu/Dodo listening/speaking/paused/attention states
+- current_assumption: Reading and Lab reserve space around the same stage;
+  narration expands that stage without remounting it
+- implementation_constraint: audio.currentTime is the sole semantic clock;
+  only coordinates, admitted relation members and evidence holds may animate
+- options: refine V108 into a true one-player prototype, or provide annotated
+  states/assets that can be applied directly to the current shared Host
+- recommendation: prototype the real one-player transition and deliver the
+  minimum controllable actor-state assets; do not add a second Canvas
+- owner_decision_required: NO, unless the design requests a semantic relation
+  action beyond the currently admitted evidence boundary
+```
 
 The remaining Mingli blocker is professional, not audiovisual: V60 still
 lacks an Owner-reviewed complete relation-effect rule family and therefore

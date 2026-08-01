@@ -14,6 +14,7 @@ RUNTIME_ASSET_BINDINGS = {
 RUNTIME_CUE_BINDINGS = {
     "abu_idle": "cue.dream.abu-idle.v1",
     "abu_guide_left": "cue.dream.abu-guide-left.v1",
+    "dodo_idle": "cue.mingli.dodo-idle.v1",
 }
 
 
@@ -77,7 +78,7 @@ def runtime_media_manifest() -> dict[str, Any]:
         }
 
     return {
-        "registry_version": "v60.runtime-media-registry.001",
+        "registry_version": "v60.runtime-media-registry.002",
         "catalog_version": str(catalog["schema_version"]),
         "assets": runtime_assets,
         "cues": runtime_cues,

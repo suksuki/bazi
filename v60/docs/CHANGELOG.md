@@ -2,6 +2,49 @@
 
 ## 2026-08-01
 
+### One shared six-pillar Scene Player for Reading, Lab and Abu Says
+
+- Implemented the first frozen-V108 integration seam from exact source commit
+  `a6cf762684e14514f58c8f45b82cca86d9a7ec4c`: Reading, Lab and Abu Says now
+  keep one persistent `MingliSceneHost`, one Projection and exactly one lazy
+  React Three Fiber Canvas instead of mounting separate stages.
+- Reclassified the old narrated page implementation into a Director, an audio
+  transport and an independent character-performance layer. Abu Says can now
+  be invoked from Reading or Lab and returns to its calling surface without
+  replacing the Scene instance; its independent Dock entry is retired while
+  legacy `view=abu` URLs resolve to the current domain.
+- Added the first real 4/6-pillar particle Scene Player. Four-to-six expansion
+  keeps the Canvas identity and changes only from eight to twelve stable
+  Projection bodies. Lab relation selection targets exact admitted branch
+  members; no relation effect, source usability, strength, work, probability
+  or auspiciousness is inferred.
+- Limited Director semantics to `PILLARS_PRESENT`, `RELATIONS_PRESENT`,
+  `BOUNDARY_HOLD` and `TIME_COORDINATES_PRESENT`. PREPARING/READY do not run
+  semantic motion; PLAYING follows `audio.currentTime`; PAUSED and BUFFERING
+  freeze it.
+- Added independent transparent Dodo media while keeping the actor claim
+  honest as `IDLE_MEDIA_WITH_AUDIO_BOUND_STATE`, not lip-sync or final Cue
+  choreography. The source and all three deliveries are Hash-locked in Media
+  Runtime Registry `.002`; no browser component hardcodes their paths. Abu
+  continues to use Owner-selected Dylan; Dodo continues to use the Vivian
+  audition binding.
+- Corrected shared-stage responsive geometry discovered in real testing:
+  Desktop and iPad landscape reserve a non-overlapping inspector lane, while
+  iPad portrait reserves a lower inspector region and fits the camera to all
+  six columns. No breakpoint creates a second Canvas.
+- Kept the previous canonical Reading, Case management, evidence-request and
+  mechanism-comparison functions reachable from a collapsible evidence drawer
+  beside the same Scene Player. This avoids a visible capability regression
+  without turning Abu Says back into a Lab panel or mounting another stage.
+- Made narrator media lifecycle explicit: closing narration releases the
+  captured audio element, while reduced-motion preference selects the
+  Registry poster instead of playing WebM or animated WebP.
+- Real signed-in Chrome checks passed at 1440x900, 1024x768 and 768x1024 with
+  no document overflow; Reading/Lab/narration and four/six transitions retained
+  one Scene instance. Playback reached READY/PLAYING/PAUSED; both audio time
+  and Scene Cue progress stayed exactly constant across a 500 ms paused
+  sample. Evidence is in `.artifacts/mingli-shared-scene/`.
+
 ### Owner decisions after the frozen V108 design extraction
 
 - Limited the first integration round to a complete Chinese Desktop/iPad

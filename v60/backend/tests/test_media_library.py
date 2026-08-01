@@ -14,12 +14,12 @@ def test_media_library_sources_deliveries_and_cues_are_hash_locked() -> None:
     assert summary == {
         "schema_version": "v60.media-library.001",
         "schema_ref": "media/schemas/media-catalog-v1.schema.json",
-        "item_count": 11,
-        "character_identity_count": 2,
+        "item_count": 12,
+        "character_identity_count": 3,
         "primary_character_version": "ABU_CHARACTER_V60_V1",
-        "runtime_registered_count": 8,
-        "source_count": 11,
-        "cue_bundle_count": 5,
+        "runtime_registered_count": 9,
+        "source_count": 12,
+        "cue_bundle_count": 6,
         "audio_gap_cues": ["cue.dream.follow-walk.v1"],
         "owner_review_items": ["media.dream.entry-transition.v1"],
     }
@@ -35,6 +35,7 @@ def test_media_library_sources_deliveries_and_cues_are_hash_locked() -> None:
         "media.v60.life-world.reference.v1",
         "media.v60.life-world.clean.v1",
         "media.brand.abuknows-v60.primary-logo.v1",
+        "media.dodo.v108.idle-transparent.v1",
     }
 
 
@@ -75,6 +76,7 @@ def test_audio_visual_pairing_is_explicit_and_honest_about_gaps() -> None:
     assert "audio_gap" in walk
     assert cues["cue.dream.abu-idle.v1"]["status"] == "RUNTIME_REGISTERED"
     assert cues["cue.dream.abu-guide-left.v1"]["status"] == "RUNTIME_REGISTERED"
+    assert cues["cue.mingli.dodo-idle.v1"]["status"] == "RUNTIME_REGISTERED"
 
 
 def test_v60_character_identity_is_primary_and_legacy_cartoon_is_retained() -> None:
@@ -91,12 +93,18 @@ def test_v60_character_identity_is_primary_and_legacy_cartoon_is_retained() -> N
     ]
     assert identities["ABU_CHARACTER_V1"]["status"] == "RETAINED_COMPATIBILITY"
     assert not identities["ABU_CHARACTER_V1"]["primary_for_new_v60_generation"]
+    assert identities["DODO_CHARACTER_V108_V1"]["status"] == (
+        "FROZEN_V108_BASELINE_COMPATIBILITY"
+    )
+    assert not identities["DODO_CHARACTER_V108_V1"][
+        "primary_for_new_v60_generation"
+    ]
 
 
 def test_runtime_media_manifest_resolves_hash_locked_assets_and_cues() -> None:
     manifest = runtime_media_manifest()
 
-    assert manifest["registry_version"] == "v60.runtime-media-registry.001"
+    assert manifest["registry_version"] == "v60.runtime-media-registry.002"
     assert manifest["assets"]["brand_logo"]["asset_ref"] == (
         "brand.abuknows-v60.logo.transparent.v1"
     )
@@ -106,6 +114,10 @@ def test_runtime_media_manifest_resolves_hash_locked_assets_and_cues() -> None:
     assert manifest["cues"]["abu_idle"]["cue_ref"] == "cue.dream.abu-idle.v1"
     assert manifest["cues"]["abu_idle"]["playback"] == "LOOP"
     assert manifest["cues"]["abu_guide_left"]["playback"] == "PLAY_ONCE"
+    assert manifest["cues"]["dodo_idle"]["cue_ref"] == "cue.mingli.dodo-idle.v1"
+    assert manifest["cues"]["dodo_idle"]["deliveries"]["VP9_ALPHA_WEBM"][
+        "sha256"
+    ] == "b5f582af6a022fd3faebb202b6bcbf4efcb65474294b19898dcb26b14ddd3ea8"
     assert manifest["cues"]["abu_guide_left"]["deliveries"][
         "VP9_ALPHA_WEBM"
     ]["sha256"] == (

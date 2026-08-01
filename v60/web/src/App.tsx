@@ -26,7 +26,7 @@ import { createDreamNextAttentionHandler } from "./dreamNextAttentionAction";
 import { startDreamPersonalJourney } from "./dreamPersonalJourneyApi";
 import type { DreamLifeDomain } from "./dreamPersonalJourneyTypes";
 import { ExperienceStoryCanvas } from "./components/ExperienceStoryCanvas";
-import { HomeCompanionRail } from "./components/HomeCompanionRail";
+import { HomeSceneCompanion } from "./components/HomeSceneCompanion";
 import { LoginScene } from "./components/LoginScene";
 import { RuntimeBoundaryScene } from "./components/RuntimeBoundaryScene";
 import { commandForOrgan } from "./dreamCommands";
@@ -39,7 +39,7 @@ import {
 } from "./experienceNavigation";
 import type { ExperienceUnit } from "./experienceUnits";
 import { compareHomeMechanisms, loadHomeExperience } from "./homeApi";
-import { initialMingliStageContext, mingliStageMatchesHome } from "./mingliStageContext";
+import { initialMingliStageContext } from "./mingliStageContext";
 import type { MingliStageViewContext } from "./mingliStageTypes";
 import {
   deriveSemanticFocus,
@@ -389,21 +389,21 @@ export function App() {
   const home = runtime.home;
   const snapshot = runtime.snapshot;
   const media = runtime.bootstrap.media;
-  const mingliActive = scope === "home" && activeUnit === "mingli";
-  const mingliMatchesHome = mingliActive && mingliStageMatchesHome(mingliContext, home);
+  const mingliSceneActive =
+    scope === "home" && (activeUnit === "mingli" || activeUnit === "lab");
   return (
     <main
       className="dream-root v60-shell"
       data-experience-scope={scope}
       data-scene-id={
         scope === "home"
-          ? activeUnit === "mingli"
-            ? "mingli-reading-stage"
+          ? mingliSceneActive
+            ? "mingli-shared-scene"
             : "private-home-tree"
           : snapshot?.game.scene_id
       }
       data-scene-version={
-        mingliActive
+        mingliSceneActive
           ? (mingliContext.projection?.projection_version ?? "mingli-stage-pending")
           : scope === "home"
             ? home.tree.projection_version
@@ -417,7 +417,7 @@ export function App() {
         accountName={runtime.session.account.display_name}
         brand={media.assets.brand_logo}
         home={home}
-        mingliContext={mingliActive ? mingliContext : null}
+        mingliContext={mingliSceneActive ? mingliContext : null}
         onLogout={handleLogout}
         onReturnHome={() => void returnHome()}
         scope={scope}
@@ -428,7 +428,7 @@ export function App() {
       <div
         className="experience-layout"
         data-grove={scope === "dream" && runtime.grove !== null}
-        data-mingli-stage-wide={mingliActive && !mingliMatchesHome}
+        data-mingli-stage-wide={mingliSceneActive}
       >
         <ExperienceStoryCanvas
           activeUnit={activeUnit}
@@ -464,16 +464,17 @@ export function App() {
           onReturnToGrove={() => void returnToGrove()}
         />
 
-        {scope === "home" && (!mingliActive || mingliMatchesHome) ? (
-          <HomeCompanionRail
+        {scope === "home" ? (
+          <HomeSceneCompanion
             activeUnit={activeUnit}
             busy={runtime.busy}
             home={home}
+            mingliSceneActive={mingliSceneActive}
             onCompareMechanisms={() => void compareMechanisms()}
             onHomeRefresh={refreshHome}
             onEnterDream={() => void enterDream()}
           />
-        ) : scope === "home" || runtime.grove ? null : (
+        ) : runtime.grove ? null : (
           snapshot && (
             <CompanionRail
               focus={semanticFocus}
@@ -489,6 +490,7 @@ export function App() {
       <ExperienceRuntimeOverlay
         activeUnit={activeUnit}
         error={runtime.error}
+        hideDock={mingliSceneActive}
         onSelect={selectUnit}
       />
     </main>

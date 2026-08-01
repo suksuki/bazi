@@ -8,7 +8,7 @@ from abu_v60.media import PROJECT_ROOT, load_verified_assets
 def test_registry_assets_exist_and_match_hashes() -> None:
     assets = load_verified_assets()
 
-    assert len(assets) == 27
+    assert len(assets) == 30
     assert {asset["asset_ref"] for asset in assets} == {
         "dream.grove.clean.v1",
         "dream.v60.life-world.clean.v1",
@@ -23,6 +23,9 @@ def test_registry_assets_exist_and_match_hashes() -> None:
         "abu.v60.guide-left.v1",
         "abu.v60.guide-left.webp.v1",
         "abu.v60.guide-left.poster.v1",
+        "dodo.v108.idle.v1",
+        "dodo.v108.idle.webp.v1",
+        "dodo.v108.idle.poster.v1",
         "abu.follow.walk.v1",
         "abu.follow.walk.webp.v1",
         "abu.follow.walk.poster.v1",

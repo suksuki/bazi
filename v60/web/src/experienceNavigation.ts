@@ -13,6 +13,7 @@ export function readScope(): ExperienceScope {
 
 export function readUnit(): ExperienceUnit {
   const value = new URL(window.location.href).searchParams.get("view");
+  if (value === "abu") return readScope() === "dream" ? "dream" : "mingli";
   return isExperienceUnit(value) ? value : "dream";
 }
 
@@ -31,7 +32,7 @@ export function writeNavigation(
   else url.searchParams.set("scope", "dream");
   if (unit === "dream") url.searchParams.delete("view");
   else url.searchParams.set("view", unit);
-  if (scope !== "home" || unit !== "mingli") {
+  if (scope !== "home" || (unit !== "mingli" && unit !== "lab")) {
     url.searchParams.delete("mingli_subject");
     url.searchParams.delete("mingli_mode");
     url.searchParams.delete("mingli_year");

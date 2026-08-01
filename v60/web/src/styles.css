@@ -17,6 +17,9 @@
 @import "./styles/mingli-leaf.css";
 @import "./styles/mingli-stage.css";
 @import "./styles/mingli-stage-responsive.css";
+@import "./styles/mingli-shared-scene.css";
+@import "./styles/mingli-shared-overlays.css";
+@import "./styles/mingli-shared-responsive.css";
 @import "./styles/tree-scene.css";
 @import "./styles/dream-grove.css";
 @import "./styles/dream-chapter-route.css";

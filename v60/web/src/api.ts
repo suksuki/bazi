@@ -95,6 +95,7 @@ export interface RuntimeMediaManifest {
   cues: {
     abu_idle: RuntimeMediaCue;
     abu_guide_left: RuntimeMediaCue;
+    dodo_idle: RuntimeMediaCue;
   };
 }
 
