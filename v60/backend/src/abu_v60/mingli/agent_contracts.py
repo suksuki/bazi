@@ -19,13 +19,26 @@ from abu_v60.mingli.agent_method_distillation import (
     day_master_regime_method_asset,
     domain_method_assets,
 )
+from abu_v60.mingli.agent_normalization_receipt import (
+    MingliAgentNormalizationReceipt,
+)
 from abu_v60.mingli.agent_regime_contracts import AgentRegimeDecision
 from abu_v60.mingli.agent_root_gate import packet_root_candidate_assessments
 from abu_v60.provenance import content_hash, stable_ref
 
 MINGLI_AGENT_PACKET_VERSION = "v60.mingli-agent-case-packet.003"
 MINGLI_AGENT_PROMPT_VIEW_VERSION = "v60.mingli-agent-prompt-view.011"
-MINGLI_AGENT_READING_VERSION = "v60.mingli-agent-reading.004"
+MINGLI_AGENT_READING_VERSION = "v60.mingli-agent-reading.005"
+MINGLI_AGENT_READING_REGIME_VERSIONS = frozenset(
+    {
+        "v60.mingli-agent-reading.004",
+        "v60.mingli-agent-reading.005",
+    }
+)
+MINGLI_AGENT_READING_RECEIPT_VERSIONS = frozenset({"v60.mingli-agent-reading.005"})
+MINGLI_AGENT_READING_VERSIONED_KEY_VERSIONS = frozenset(
+    {"v60.mingli-agent-reading.005"}
+)
 
 Confidence = Literal["LOW", "MEDIUM", "HIGH"]
 EvidenceKind = Literal[
@@ -705,22 +718,24 @@ def mingli_agent_generation_key(
     provider_profile_hash: str,
     prompt_ref: str,
     prompt_hash: str,
+    agent_reading_version: str = MINGLI_AGENT_READING_VERSION,
 ) -> str:
-    return content_hash(
-        {
-            "requester_account_ref": requester_account_ref,
-            "reading_ref": reading_ref,
-            "reading_hash": reading_hash,
-            "packet_ref": packet_ref,
-            "packet_hash": packet_hash,
-            "agent_profile_ref": agent_profile_ref,
-            "agent_profile_hash": agent_profile_hash,
-            "provider_profile_ref": provider_profile_ref,
-            "provider_profile_hash": provider_profile_hash,
-            "prompt_ref": prompt_ref,
-            "prompt_hash": prompt_hash,
-        }
-    )
+    identity = {
+        "requester_account_ref": requester_account_ref,
+        "reading_ref": reading_ref,
+        "reading_hash": reading_hash,
+        "packet_ref": packet_ref,
+        "packet_hash": packet_hash,
+        "agent_profile_ref": agent_profile_ref,
+        "agent_profile_hash": agent_profile_hash,
+        "provider_profile_ref": provider_profile_ref,
+        "provider_profile_hash": provider_profile_hash,
+        "prompt_ref": prompt_ref,
+        "prompt_hash": prompt_hash,
+    }
+    if agent_reading_version in MINGLI_AGENT_READING_VERSIONED_KEY_VERSIONS:
+        identity["agent_reading_version"] = agent_reading_version
+    return content_hash(identity)
 
 
 class MingliAgentReadingEnvelope(BaseModel):
@@ -731,6 +746,7 @@ class MingliAgentReadingEnvelope(BaseModel):
     agent_reading_version: Literal[
         "v60.mingli-agent-reading.003",
         "v60.mingli-agent-reading.004",
+        "v60.mingli-agent-reading.005",
     ]
     generation_key: str = Field(min_length=64, max_length=64)
     requester_account_ref: str = Field(min_length=1)
@@ -751,6 +767,7 @@ class MingliAgentReadingEnvelope(BaseModel):
     prompt_ref: str = Field(min_length=1)
     prompt_hash: str = Field(min_length=64, max_length=64)
     provider_response_ref: str = Field(min_length=1)
+    normalization_receipt: MingliAgentNormalizationReceipt | None = None
     output: MingliAgentModelOutput
     input_tokens: int = Field(ge=0)
     output_tokens: int = Field(ge=0)
@@ -764,7 +781,7 @@ class MingliAgentReadingEnvelope(BaseModel):
     @model_validator(mode="after")
     def identity_is_valid(self) -> MingliAgentReadingEnvelope:
         if (
-            self.agent_reading_version == MINGLI_AGENT_READING_VERSION
+            self.agent_reading_version in MINGLI_AGENT_READING_REGIME_VERSIONS
             and self.output.regime_decision is None
         ):
             raise ValueError("mingli_agent_regime_decision_required")
@@ -773,6 +790,14 @@ class MingliAgentReadingEnvelope(BaseModel):
             and self.output.regime_decision is not None
         ):
             raise ValueError("mingli_agent_legacy_regime_decision_forbidden")
+        if self.agent_reading_version in MINGLI_AGENT_READING_RECEIPT_VERSIONS:
+            receipt = self.normalization_receipt
+            if receipt is None:
+                raise ValueError("mingli_agent_normalization_receipt_required")
+            if not receipt.is_bound_to_reading_payload(self.model_dump(mode="json")):
+                raise ValueError("mingli_agent_normalization_receipt_binding_mismatch")
+        elif self.normalization_receipt is not None:
+            raise ValueError("mingli_agent_legacy_normalization_receipt_forbidden")
         expected_key = mingli_agent_generation_key(
             requester_account_ref=self.requester_account_ref,
             reading_ref=self.reading_ref,
@@ -785,13 +810,14 @@ class MingliAgentReadingEnvelope(BaseModel):
             provider_profile_hash=self.provider_profile_hash,
             prompt_ref=self.prompt_ref,
             prompt_hash=self.prompt_hash,
+            agent_reading_version=self.agent_reading_version,
         )
         if self.generation_key != expected_key:
             raise ValueError("mingli_agent_reading_generation_key_mismatch")
-        identity = self.model_dump(
-            mode="json",
-            exclude={"agent_reading_ref", "agent_reading_hash"},
-        )
+        excluded = {"agent_reading_ref", "agent_reading_hash"}
+        if self.agent_reading_version not in MINGLI_AGENT_READING_RECEIPT_VERSIONS:
+            excluded.add("normalization_receipt")
+        identity = self.model_dump(mode="json", exclude=excluded)
         if self.agent_reading_hash != content_hash(identity):
             raise ValueError("mingli_agent_reading_hash_mismatch")
         if self.agent_reading_ref != stable_ref("v60-mingli-agent-reading", identity):
@@ -810,6 +836,10 @@ class MingliAgentReadingEnvelope(BaseModel):
         }
         if isinstance(identity["output"], BaseModel):
             identity["output"] = identity["output"].model_dump(mode="json")
+        if isinstance(identity.get("normalization_receipt"), BaseModel):
+            identity["normalization_receipt"] = identity[
+                "normalization_receipt"
+            ].model_dump(mode="json")
         return cls(
             agent_reading_ref=stable_ref("v60-mingli-agent-reading", identity),
             agent_reading_hash=content_hash(identity),

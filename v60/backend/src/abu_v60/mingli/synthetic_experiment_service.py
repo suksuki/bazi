@@ -9,6 +9,9 @@ from abu_v60.mingli.agent_contracts import (
     MingliAgentCasePacket,
     MingliAgentReadingEnvelope,
 )
+from abu_v60.mingli.agent_normalization_receipt import (
+    MingliAgentNormalizationDelta,
+)
 from abu_v60.mingli.agent_packet import MingliAgentCasePacketCompiler
 from abu_v60.mingli.agent_runtime import MingliAgentRuntime
 from abu_v60.mingli.agent_service import MingliAgentService
@@ -149,17 +152,21 @@ class SyntheticExperimentService:
         if run["definition_hash"] != definition["definition_hash"]:
             raise SyntheticExperimentError("mingli_synthetic_experiment_definition_drift")
         member = SYNTHETIC_MEMBER_BY_VARIANT[variant]
-        sealed_agent_reading_ref = str(
-            run[
-                "member_a_agent_reading_ref"
-                if variant == "A"
-                else "member_b_agent_reading_ref"
-            ]
-        )
-        sealed_agent_reading = self._agent_readings.get(
-            requester_account_ref=SYNTHETIC_RESEARCH_ACCOUNT_REF,
-            agent_reading_ref=sealed_agent_reading_ref,
-        )
+        sealed_readings = {
+            member_variant: self._agent_readings.get(
+                requester_account_ref=SYNTHETIC_RESEARCH_ACCOUNT_REF,
+                agent_reading_ref=str(
+                    run[
+                        "member_a_agent_reading_ref"
+                        if member_variant == "A"
+                        else "member_b_agent_reading_ref"
+                    ]
+                ),
+            )
+            for member_variant in ("A", "B")
+        }
+        sealed_agent_reading = sealed_readings[variant]
+        sealed_agent_reading_ref = sealed_agent_reading.agent_reading_ref
         if sealed_agent_reading.case_ref != member.case_ref:
             raise SyntheticExperimentError(
                 "mingli_synthetic_experiment_member_reading_mismatch"
@@ -190,6 +197,11 @@ class SyntheticExperimentService:
             "sealed_agent_reading_ref": sealed_agent_reading_ref,
             "stage": stage.model_dump(mode="json"),
             "evaluation": run["evaluation_json"],
+            "training_assessment": self._training_assessment(
+                evaluation=run["evaluation_json"],
+                readings=sealed_readings,
+            ),
+            "model_trace": self._model_trace(sealed_agent_reading),
         }
         return {
             "snapshot_ref": stable_ref("v60-mingli-synthetic-snapshot", identity),
@@ -198,6 +210,135 @@ class SyntheticExperimentService:
             "definition": definition,
             "browser_generation_allowed": False,
             "read_only": True,
+        }
+
+    @staticmethod
+    def _training_assessment(
+        *,
+        evaluation: Mapping[str, Any],
+        readings: Mapping[str, MingliAgentReadingEnvelope],
+    ) -> dict[str, Any]:
+        checks = tuple(evaluation["checks"])
+        validity_failed = any(
+            item["status"] == "FAIL"
+            and item["group"] in {"EXPERIMENT_VALIDITY", "MUST_HOLD"}
+            for item in checks
+        )
+        expected_failed = any(
+            item["status"] == "FAIL" and item["group"] == "EXPECTED_CHANGE"
+            for item in checks
+        )
+        issue_keys = {
+            variant: tuple(evaluation["server_issue_keys"][variant])
+            for variant in ("A", "B")
+        }
+        trace_count = sum(
+            readings[variant].normalization_receipt is not None
+            for variant in ("A", "B")
+        )
+        trace_coverage = (
+            "FIELD_LEVEL"
+            if trace_count == 2
+            else "PARTIAL"
+            if trace_count == 1
+            else "LEGACY_SUMMARY_ONLY"
+        )
+        experiment_validity = "INVALID" if validity_failed else "VALID"
+        model_independence = (
+            "NOT_EVALUABLE"
+            if validity_failed
+            else "FAIL"
+            if expected_failed or issue_keys["A"] or issue_keys["B"]
+            else "PASS"
+        )
+        outcome = str(evaluation["outcome"])
+        product_result = (
+            "NOT_EVALUABLE"
+            if validity_failed
+            else "SAFE_MODEL_DIRECT"
+            if outcome == "PASS"
+            else "SAFE_WITH_REPAIR"
+            if outcome == "PRODUCT_SAFE_MODEL_FAIL"
+            else "WITHHELD"
+        )
+        return {
+            "assessment_version": "v60.mingli-synthetic-training-assessment.001",
+            "experiment_validity": experiment_validity,
+            "model_independence": model_independence,
+            "product_result": product_result,
+            "trace_coverage": trace_coverage,
+            "server_issue_keys": issue_keys,
+            "summary": (
+                "控制变量有效；产品结果已被规则收敛，但模型尚未独立通过。"
+                if product_result == "SAFE_WITH_REPAIR"
+                else "控制变量有效；模型与产品结果均独立通过当前 DEV 检查。"
+                if product_result == "SAFE_MODEL_DIRECT"
+                else "模型结果未进入产品结论，等待修正后重跑。"
+                if product_result == "WITHHELD"
+                else "控制变量发生漂移，不能评价模型或产品结果。"
+            ),
+            "qualification_effect": "DEV_REVIEW_ONLY_NOT_MODEL_QUALIFICATION",
+        }
+
+    @staticmethod
+    def _model_trace(reading: MingliAgentReadingEnvelope) -> dict[str, Any]:
+        receipt = reading.normalization_receipt
+        if receipt is None:
+            return {
+                "trace_version": "v60.mingli-synthetic-model-trace.001",
+                "availability": "LEGACY_NOT_CAPTURED",
+                "selected_agent_reading_ref": reading.agent_reading_ref,
+                "receipt_ref": None,
+                "receipt_hash": None,
+                "raw_output_hash": None,
+                "normalized_output_hash": content_hash(
+                    reading.output.model_dump(mode="json")
+                ),
+                "change_count": None,
+                "stage_counts": [],
+                "key_deltas": [],
+                "server_issue_keys": list(reading.output.server_issue_keys),
+                "limitation": (
+                    "该历史运行只封存了归一化结果与修正码，没有保存模型原断；"
+                    "系统不会补造字段级差异。"
+                ),
+            }
+        key_deltas = tuple(
+            item
+            for item in receipt.changes
+            if _is_professional_trace_delta(item)
+        )[:16]
+        stage_counts = tuple(
+            {
+                "stage": stage,
+                "change_count": sum(item.stage == stage for item in receipt.changes),
+            }
+            for stage in (
+                "EVIDENCE_ID_NORMALIZATION",
+                "PACKET_FACT_BINDING",
+                "PROFESSIONAL_ADJUDICATION",
+                "PROSE_EVIDENCE_REPAIR",
+                "OUTPUT_FORM_REPAIR",
+                "LOCAL_FIELD_REPAIR",
+            )
+            if any(item.stage == stage for item in receipt.changes)
+        )
+        return {
+            "trace_version": "v60.mingli-synthetic-model-trace.001",
+            "availability": "FIELD_LEVEL",
+            "selected_agent_reading_ref": reading.agent_reading_ref,
+            "receipt_ref": receipt.receipt_ref,
+            "receipt_hash": receipt.receipt_hash,
+            "raw_output_hash": receipt.raw_output_hash,
+            "normalized_output_hash": receipt.normalized_output_hash,
+            "change_count": len(receipt.changes),
+            "stage_counts": stage_counts,
+            "key_deltas": tuple(item.model_dump(mode="json") for item in key_deltas),
+            "server_issue_keys": list(receipt.server_issue_keys),
+            "limitation": (
+                "只保存 think=false 的结构化回答，不保存或展示隐藏思维链；"
+                "字段差异证明系统改了什么，不自动证明专业 Gold 正确。"
+            ),
         }
 
     def _packet(self, *, case_ref: str, reading_ref: str) -> MingliAgentCasePacket:
@@ -468,3 +609,23 @@ class SyntheticExperimentService:
             return self._runs.ensure(identity=identity)
         except MingliSyntheticExperimentRunStoreError as exc:
             raise SyntheticExperimentError(str(exc)) from exc
+
+
+_PROFESSIONAL_TRACE_PREFIXES = (
+    "/regime_decision",
+    "/day_master_state",
+    "/day_master_rationale",
+    "/support_selection",
+    "/hypotheses",
+    "/hypothesis_decision",
+    "/work_path",
+)
+
+
+def _is_professional_trace_delta(
+    delta: MingliAgentNormalizationDelta,
+) -> bool:
+    return (
+        delta.path != "/hypotheses"
+        and delta.path.startswith(_PROFESSIONAL_TRACE_PREFIXES)
+    )

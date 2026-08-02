@@ -15,6 +15,14 @@ const OUTCOMES = [
   "INVALID_EXPERIMENT",
 ] as const;
 const GROUPS = ["EXPERIMENT_VALIDITY", "MUST_HOLD", "EXPECTED_CHANGE"] as const;
+const TRACE_STAGES = [
+  "EVIDENCE_ID_NORMALIZATION",
+  "PACKET_FACT_BINDING",
+  "PROFESSIONAL_ADJUDICATION",
+  "PROSE_EVIDENCE_REPAIR",
+  "OUTPUT_FORM_REPAIR",
+  "LOCAL_FIELD_REPAIR",
+] as const;
 
 export function validateSyntheticExperimentCatalog(
   value: unknown,
@@ -43,7 +51,13 @@ export function validateSyntheticExperimentSnapshot(
     variant: MingliSyntheticVariant;
   },
 ): MingliSyntheticExperimentSnapshot {
-  if (!isRecord(value) || !isRecord(value.evaluation) || !isRecord(value.definition)) {
+  if (
+    !isRecord(value)
+    || !isRecord(value.evaluation)
+    || !isRecord(value.definition)
+    || !isRecord(value.training_assessment)
+    || !isRecord(value.model_trace)
+  ) {
     throw new Error("mingli_synthetic_snapshot_invalid");
   }
   const snapshot = value as unknown as MingliSyntheticExperimentSnapshot;
@@ -51,7 +65,7 @@ export function validateSyntheticExperimentSnapshot(
     (item) => item.variant === expected.variant,
   );
   if (
-    snapshot.snapshot_version !== "v60.mingli-synthetic-experiment-snapshot.001" ||
+    snapshot.snapshot_version !== "v60.mingli-synthetic-experiment-snapshot.002" ||
     !snapshot.snapshot_ref ||
     !HASH.test(snapshot.snapshot_hash) ||
     snapshot.experiment_ref !== expected.experimentRef ||
@@ -70,6 +84,8 @@ export function validateSyntheticExperimentSnapshot(
   }
   validateDefinition(snapshot.definition);
   validateEvaluation(snapshot.evaluation);
+  validateTrainingAssessment(snapshot);
+  validateModelTrace(snapshot);
   validateStageProjection(snapshot.stage, {
     subjectId: member.subject_id,
     mode: "NATAL_4",
@@ -82,6 +98,133 @@ export function validateSyntheticExperimentSnapshot(
     throw new Error("mingli_synthetic_stage_scope_invalid");
   }
   return snapshot;
+}
+
+function validateTrainingAssessment(
+  snapshot: MingliSyntheticExperimentSnapshot,
+): void {
+  const value = snapshot.training_assessment;
+  const validityFailed = snapshot.evaluation.checks.some(
+    (item) =>
+      item.status === "FAIL"
+      && (item.group === "EXPERIMENT_VALIDITY" || item.group === "MUST_HOLD"),
+  );
+  const expectedFailed = snapshot.evaluation.checks.some(
+    (item) => item.status === "FAIL" && item.group === "EXPECTED_CHANGE",
+  );
+  const hasIssues =
+    snapshot.evaluation.server_issue_keys.A.length > 0
+    || snapshot.evaluation.server_issue_keys.B.length > 0;
+  const expectedModel = validityFailed
+    ? "NOT_EVALUABLE"
+    : expectedFailed || hasIssues
+      ? "FAIL"
+      : "PASS";
+  const expectedProduct = validityFailed
+    ? "NOT_EVALUABLE"
+    : snapshot.evaluation.outcome === "PASS"
+      ? "SAFE_MODEL_DIRECT"
+      : snapshot.evaluation.outcome === "PRODUCT_SAFE_MODEL_FAIL"
+        ? "SAFE_WITH_REPAIR"
+        : "WITHHELD";
+  if (
+    value.assessment_version
+      !== "v60.mingli-synthetic-training-assessment.001"
+    || value.experiment_validity !== (validityFailed ? "INVALID" : "VALID")
+    || value.model_independence !== expectedModel
+    || value.product_result !== expectedProduct
+    || !["FIELD_LEVEL", "PARTIAL", "LEGACY_SUMMARY_ONLY"].includes(
+      value.trace_coverage,
+    )
+    || value.qualification_effect !== "DEV_REVIEW_ONLY_NOT_MODEL_QUALIFICATION"
+    || !value.summary
+    || !isRecord(value.server_issue_keys)
+    || !Array.isArray(value.server_issue_keys.A)
+    || !Array.isArray(value.server_issue_keys.B)
+    || !sameStrings(
+      value.server_issue_keys.A,
+      snapshot.evaluation.server_issue_keys.A,
+    )
+    || !sameStrings(
+      value.server_issue_keys.B,
+      snapshot.evaluation.server_issue_keys.B,
+    )
+  ) {
+    throw new Error("mingli_synthetic_training_assessment_invalid");
+  }
+}
+
+function validateModelTrace(snapshot: MingliSyntheticExperimentSnapshot): void {
+  const value = snapshot.model_trace;
+  const expectedIssues = snapshot.evaluation.server_issue_keys[
+    snapshot.selected_variant
+  ];
+  const coverage = snapshot.training_assessment.trace_coverage;
+  const commonInvalid =
+    value.trace_version !== "v60.mingli-synthetic-model-trace.001"
+    || !["FIELD_LEVEL", "LEGACY_NOT_CAPTURED"].includes(value.availability)
+    || value.selected_agent_reading_ref !== snapshot.sealed_agent_reading_ref
+    || !HASH.test(value.normalized_output_hash)
+    || !Array.isArray(value.stage_counts)
+    || !Array.isArray(value.key_deltas)
+    || !Array.isArray(value.server_issue_keys)
+    || value.server_issue_keys.some((item) => typeof item !== "string")
+    || !sameStrings(value.server_issue_keys, expectedIssues)
+    || (coverage === "FIELD_LEVEL" && value.availability !== "FIELD_LEVEL")
+    || (
+      coverage === "LEGACY_SUMMARY_ONLY"
+      && value.availability !== "LEGACY_NOT_CAPTURED"
+    )
+    || !value.limitation;
+  if (commonInvalid) throw new Error("mingli_synthetic_model_trace_invalid");
+
+  if (value.availability === "LEGACY_NOT_CAPTURED") {
+    if (
+      value.receipt_ref !== null
+      || value.receipt_hash !== null
+      || value.raw_output_hash !== null
+      || value.change_count !== null
+      || value.stage_counts.length !== 0
+      || value.key_deltas.length !== 0
+    ) {
+      throw new Error("mingli_synthetic_legacy_trace_invalid");
+    }
+    return;
+  }
+  const changeCount = value.change_count;
+  if (
+    !value.receipt_ref
+    || !value.receipt_hash
+    || !HASH.test(value.receipt_hash)
+    || !value.raw_output_hash
+    || !HASH.test(value.raw_output_hash)
+    || typeof changeCount !== "number"
+    || !Number.isInteger(changeCount)
+    || changeCount < 0
+    || changeCount < value.key_deltas.length
+    || new Set(value.stage_counts.map((item) => item.stage)).size
+      !== value.stage_counts.length
+    || value.stage_counts.some(
+      (item) =>
+        !TRACE_STAGES.includes(item.stage as (typeof TRACE_STAGES)[number])
+        || !Number.isInteger(item.change_count)
+        || item.change_count < 1,
+    )
+    || value.stage_counts.reduce((total, item) => total + item.change_count, 0)
+      !== changeCount
+    || new Set(value.key_deltas.map((item) => `${item.stage}:${item.path}`)).size
+      !== value.key_deltas.length
+    || value.key_deltas.some(
+      (item) =>
+        !item.path.startsWith("/")
+        || typeof item.before_present !== "boolean"
+        || typeof item.after_present !== "boolean"
+        || (!item.before_present && !item.after_present)
+        || !TRACE_STAGES.includes(item.stage),
+    )
+  ) {
+    throw new Error("mingli_synthetic_field_trace_invalid");
+  }
 }
 
 function validateCatalogEntry(value: unknown): void {

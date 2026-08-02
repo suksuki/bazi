@@ -9,7 +9,7 @@ from abu_v60.mingli.stage_contracts import MingliStageProjection
 
 SYNTHETIC_EXPERIMENT_RUN_VERSION = "v60.mingli-synthetic-experiment-run.001"
 SYNTHETIC_EXPERIMENT_SNAPSHOT_VERSION = (
-    "v60.mingli-synthetic-experiment-snapshot.001"
+    "v60.mingli-synthetic-experiment-snapshot.002"
 )
 SyntheticExperimentOutcome = Literal[
     "PASS",

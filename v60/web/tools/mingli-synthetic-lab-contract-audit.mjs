@@ -72,8 +72,13 @@ expect(
 expect(
   inspector.includes("开发证据，不等于方法取得资格") &&
     inspector.includes("Gold 未进入 Agent 输入") &&
+    inspector.includes("TrainingTracks") &&
+    inspector.includes("ModelNormalizationTrace") &&
+    inspector.includes("模型原断 → 系统校正") &&
+    inspector.includes("关键字段") &&
+    inspector.includes("三条结果轨道") &&
     !/MingliScenePlayer|Canvas/.test(inspector),
-  "synthetic-inspector:must-show-qualification-boundary-without-owning-scene",
+  "synthetic-inspector:must-separate-three-tracks-and-trace-without-owning-scene",
 );
 expect(
   stageValidation.includes('stage.subject_id.startsWith("research:")') &&
@@ -92,8 +97,11 @@ expect(
     syntheticValidation.includes(
       "value.changed_pass_count !== changedPassCount",
     ) &&
-    syntheticValidation.includes("value.outcome !== expectedOutcome"),
-  "synthetic-validation:must-recompute-identity-counts-drift-and-outcome",
+    syntheticValidation.includes("value.outcome !== expectedOutcome") &&
+    syntheticValidation.includes("TRACE_STAGES.includes") &&
+    syntheticValidation.includes("value.stage_counts.reduce") &&
+    syntheticValidation.includes("sameStrings(value.server_issue_keys, expectedIssues)"),
+  "synthetic-validation:must-recompute-outcomes-and-close-trace-invariants",
 );
 
 if (failures.length) throw new Error(failures.join("\n"));
@@ -101,6 +109,8 @@ console.log(JSON.stringify({
   syntheticLabContract: "PASS",
   browserModelCalls: 0,
   runtimeScenePlayers: 1,
+  resultTracks: 3,
+  normalizationTrace: "FIELD_LEVEL_OR_HONEST_LEGACY",
   routeRecovery: ["experiment", "run", "variant"],
   ordinarySubjectLeakage: false,
   failures,

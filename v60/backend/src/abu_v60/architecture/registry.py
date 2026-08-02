@@ -15,7 +15,7 @@ from abu_v60.architecture.contracts import (
 @lru_cache(maxsize=1)
 def runtime_architecture() -> RuntimeArchitecture:
     architecture = RuntimeArchitecture(
-        architecture_version="v60.runtime-architecture.065",
+        architecture_version="v60.runtime-architecture.066",
         modules=(
             RuntimeModule(
                 module_id="identity",
@@ -33,7 +33,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="mingli",
                 kind=ModuleKind.ENGINE,
-                version="v60.mingli-cognitive-engine.038",
+                version="v60.mingli-cognitive-engine.039",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("mingli",),
                 reads_from=("identity",),
@@ -102,6 +102,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "single_specialist_agent_case_packet",
                     "one_call_whole_chart_agent_interpretation",
                     "append_only_agent_reading_history",
+                    "append_only_agent_normalization_receipt",
                     "profile_pinned_agent_reading_replay",
                     "agent_interpretation_cannot_write_canonical_facts",
                     "explicit_blind_reading_contract",
@@ -373,7 +374,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-mingli",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-mingli.028",
+                version="v60.unit-mingli.029",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "mingli", "media"),
                 capabilities=(
@@ -441,7 +442,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-lab",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-lab.024",
+                version="v60.unit-lab.025",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "knowledge", "cognition", "mingli"),
                 capabilities=(
@@ -470,6 +471,8 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "method_ruling_and_decisive_check_inspection",
                     "controlled_synthetic_ab_comparison",
                     "browser_read_only_experiment_snapshot",
+                    "model_raw_normalized_trace_inspection",
+                    "reviewer_scoped_synthetic_method_lab",
                 ),
             ),
         ),

@@ -230,8 +230,11 @@ The first legal synthetic A/B pair is now sealed and visible in Mingli Lab.
 The current Run passes all six hold checks and all three expected response
 checks, but both local-model outputs required server regime normalization; its
 status therefore remains `PRODUCT_SAFE_MODEL_FAIL`, not an advanced-master
-qualification. Owner charts now serve as regressions while method discovery
-moves to synthetic DEV, qualification and holdout suites.
+qualification. The latest Run now seals the structured raw model answer and a
+replay-verified field-level normalization receipt: A invented a root coordinate;
+B recognized 寅中甲 in prose but put it in peer support, left root status as
+`NONE`, and omitted the typed regime object. Owner charts now serve as regressions
+while method discovery moves to synthetic DEV, qualification and holdout suites.
 
 The engine and framework choices are recorded in
 [`docs/05_V60_ENGINE_AND_TECHNOLOGY_SELECTION.md`](docs/05_V60_ENGINE_AND_TECHNOLOGY_SELECTION.md).
@@ -278,5 +281,8 @@ blind/reconciliation boundary and functional delivery sequence are recorded in
 The legal paired-chart method Lab, minimum anti-follow root rule, append-only
 experiment history and next synthetic qualification matrix are recorded in
 [`docs/20_V60_SYNTHETIC_MINGLI_METHOD_LAB.md`](docs/20_V60_SYNTHETIC_MINGLI_METHOD_LAB.md).
+The consolidated prototype request for blind review, three-track adjudication,
+method candidates, Abu guidance and Desktop Chrome states is recorded in
+[`docs/21_V60_SYNTHETIC_MINGLI_TRAINING_DESIGN_BRIEF.md`](docs/21_V60_SYNTHETIC_MINGLI_TRAINING_DESIGN_BRIEF.md).
 The running implementation history is kept in
 [`docs/CHANGELOG.md`](docs/CHANGELOG.md).

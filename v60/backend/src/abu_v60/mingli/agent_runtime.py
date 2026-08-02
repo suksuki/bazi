@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import time
+from copy import deepcopy
 from enum import StrEnum
 from typing import Any, Protocol
 
@@ -27,6 +28,13 @@ from abu_v60.mingli.agent_fact_binding import bind_packet_fact_fields
 from abu_v60.mingli.agent_method_cards import MINGLI_AGENT_ADJUDICATION_VERSION
 from abu_v60.mingli.agent_method_distillation import (
     MINGLI_AGENT_METHOD_DISTILLATION_VERSION,
+)
+from abu_v60.mingli.agent_normalization_receipt import (
+    MINGLI_AGENT_NORMALIZATION_RECEIPT_VERSION,
+    MingliAgentNormalizationDelta,
+    MingliAgentNormalizationReceipt,
+    NormalizationStage,
+    normalization_deltas,
 )
 from abu_v60.mingli.agent_output_repair import (
     MINGLI_AGENT_OUTPUT_REPAIR_VERSION,
@@ -79,6 +87,7 @@ class MingliAgentProviderResult(BaseModel):
 
     provider_response_ref: str = Field(min_length=1)
     output: MingliAgentModelOutput
+    normalization_receipt: MingliAgentNormalizationReceipt
     input_tokens: int = Field(ge=0)
     output_tokens: int = Field(ge=0)
     total_tokens: int = Field(ge=0)
@@ -119,6 +128,8 @@ class OllamaMingliAgentProvider:
     ) -> None:
         if not model_ref or len(model_digest) != 64 or not provider_profile_ref:
             raise ValueError("mingli_agent_provider_identity_invalid")
+        if think:
+            raise ValueError("mingli_agent_provider_think_forbidden")
         self.model_ref = model_ref
         self.model_digest = model_digest
         self.provider_profile_ref = provider_profile_ref
@@ -176,26 +187,52 @@ class OllamaMingliAgentProvider:
             raise MingliAgentProviderError("mingli_agent_provider_output_missing")
         try:
             raw_output = json.loads(output_text)
-            normalized_output = _normalize_evidence_ids(
-                raw_output,
-                allowed=packet.allowed_evidence_ids,
+            if not isinstance(raw_output, dict):
+                raise TypeError("mingli_agent_provider_output_not_object")
+            normalized_output: Any = deepcopy(raw_output)
+            changes: list[MingliAgentNormalizationDelta] = []
+
+            def apply_stage(
+                stage: NormalizationStage,
+                transform: Any,
+            ) -> None:
+                nonlocal normalized_output
+                before = deepcopy(normalized_output)
+                normalized_output = transform(deepcopy(normalized_output))
+                changes.extend(
+                    normalization_deltas(
+                        before,
+                        normalized_output,
+                        stage=stage,
+                    )
+                )
+
+            apply_stage(
+                "EVIDENCE_ID_NORMALIZATION",
+                lambda value: _normalize_evidence_ids(
+                    value,
+                    allowed=packet.allowed_evidence_ids,
+                ),
             )
-            normalized_output = bind_packet_fact_fields(
-                normalized_output,
-                packet=packet,
+            apply_stage(
+                "PACKET_FACT_BINDING",
+                lambda value: bind_packet_fact_fields(value, packet=packet),
             )
-            normalized_output = normalize_adjudication_output(
-                normalized_output,
-                packet=packet,
+            apply_stage(
+                "PROFESSIONAL_ADJUDICATION",
+                lambda value: normalize_adjudication_output(value, packet=packet),
             )
-            normalized_output = _strip_evidence_ids_from_prose(normalized_output)
-            normalized_output = repair_output_form(normalized_output)
-            normalized_output = repair_local_output_fields(
-                normalized_output,
-                packet=packet,
+            apply_stage(
+                "PROSE_EVIDENCE_REPAIR",
+                _strip_evidence_ids_from_prose,
+            )
+            apply_stage("OUTPUT_FORM_REPAIR", repair_output_form)
+            apply_stage(
+                "LOCAL_FIELD_REPAIR",
+                lambda value: repair_local_output_fields(value, packet=packet),
             )
             output = MingliAgentModelOutput.model_validate(normalized_output)
-        except ValueError as exc:
+        except (TypeError, ValueError) as exc:
             raise MingliAgentProviderError(f"mingli_agent_provider_output_invalid:{exc}") from exc
         input_tokens = _nonnegative_int(response.get("prompt_eval_count"))
         output_tokens = _nonnegative_int(response.get("eval_count"))
@@ -209,12 +246,31 @@ class OllamaMingliAgentProvider:
                 "packet_ref": packet.packet_ref,
                 "packet_hash": packet.packet_hash,
                 "created_at": response.get("created_at"),
-                "output_hash": content_hash(output.model_dump(mode="json")),
+                "raw_output_hash": content_hash(raw_output),
             },
+        )
+        normalization_receipt = MingliAgentNormalizationReceipt.issue(
+            provider_response_ref=response_ref,
+            packet_ref=packet.packet_ref,
+            packet_hash=packet.packet_hash,
+            agent_profile_ref=MINGLI_AGENT_PROFILE_REF,
+            agent_profile_hash=MINGLI_AGENT_PROFILE_HASH,
+            provider_id=self.provider_id,
+            model_ref=self.model_ref,
+            model_digest=self.model_digest,
+            provider_profile_ref=self.provider_profile_ref,
+            provider_profile_hash=self.provider_profile_hash,
+            prompt_ref=MINGLI_AGENT_PROMPT_REF,
+            prompt_hash=MINGLI_AGENT_PROMPT_HASH,
+            raw_output=raw_output,
+            normalized_output=output.model_dump(mode="json"),
+            changes=tuple(changes),
+            server_issue_keys=output.server_issue_keys,
         )
         return MingliAgentProviderResult(
             provider_response_ref=response_ref,
             output=output,
+            normalization_receipt=normalization_receipt,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             total_tokens=input_tokens + output_tokens,
@@ -317,6 +373,7 @@ class MingliAgentRuntime:
             prompt_ref=MINGLI_AGENT_PROMPT_REF,
             prompt_hash=MINGLI_AGENT_PROMPT_HASH,
             provider_response_ref=result.provider_response_ref,
+            normalization_receipt=result.normalization_receipt,
             output=result.output,
             input_tokens=result.input_tokens,
             output_tokens=result.output_tokens,
@@ -339,6 +396,7 @@ def mingli_agent_runtime_status(
         current_settings.mingli_agent_provider != OLLAMA_GENERATE_PROVIDER_ID
         or not current_settings.mingli_agent_model
         or len(current_settings.mingli_agent_model_digest) != 64
+        or current_settings.mingli_agent_think
     ):
         return MingliAgentRuntimeStatus.MISCONFIGURED
     if MINGLI_AGENT_PUBLICATION_ALLOWED:
@@ -415,6 +473,9 @@ def mingli_agent_runtime_manifest(
         "method_distillation_ref": MINGLI_AGENT_METHOD_DISTILLATION_VERSION,
         "effective_root_method_ref": MINGLI_EFFECTIVE_ROOT_METHOD_VERSION,
         "output_repair_contract_ref": MINGLI_AGENT_OUTPUT_REPAIR_VERSION,
+        "normalization_receipt_contract_ref": (
+            MINGLI_AGENT_NORMALIZATION_RECEIPT_VERSION
+        ),
         "regime_decision_contract_ref": MINGLI_AGENT_REGIME_DECISION_VERSION,
         "method_adjudication": "TYPED_CHECK_RULINGS_AND_SERVER_DERIVED_AGGREGATE",
         "whole_chart_judgment_required": True,

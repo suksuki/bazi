@@ -2,6 +2,42 @@
 
 ## 2026-08-02
 
+### Synthetic training now exposes what the model actually got wrong
+
+- Added append-only `v60.mingli-agent-normalization-receipt.001`. Every new
+  Agent Reading now binds the structured `think=false` provider answer, raw and
+  normalized Hashes, ordered repair stages and replay-verifiable JSON-pointer
+  deltas to the same Packet, Profile, Provider and Prompt. The contract rejects
+  a receipt whose deltas cannot reconstruct the normalized result.
+- Preserved explicit Reading-version semantics: `.003` has no regime or receipt,
+  `.004` requires typed regime without receipt, and `.005` requires both. `.004`
+  retains its historical unversioned generation key while `.005` explicitly
+  binds its version, so a future current-version bump cannot silently reinterpret
+  sealed history.
+- Sealed real local Gemma4 Run
+  `v60-mingli-synthetic-run-b11507e53a8bd05faf9b`. It still passes 6/6 hold and
+  3/3 response checks with `PRODUCT_SAFE_MODEL_FAIL`, but now shows the exact
+  training errors: A invented a root coordinate; B put 寅中甲 in peer support,
+  left root status `NONE` despite recognizing it in prose, and omitted typed
+  regime data.
+- Added three visible Lab result tracks—experiment validity, independent model
+  ability and product result—plus a bounded “模型原断 → 系统校正” drawer. Old
+  Runs honestly say the raw answer was not captured; large hypotheses arrays are
+  not projected as a text wall.
+- Kept full receipts private in storage. Ordinary Reading and Reading-summary
+  APIs redact them, while synthetic DEV catalog/snapshot access is restricted
+  to explicit `admin / local_qa_owner` reviewer roles. The browser still has no
+  model-call endpoint.
+- Added migration `0036_mingli_model_trace`; advanced Foundation/Mingli/
+  Architecture to `.028/.039/.066`, Agent Runtime/Profile to `.022/.021`,
+  Reading to `.005`, Synthetic Snapshot to `.002`, and Unit Mingli/Lab to
+  `.029/.025`.
+- Added the consolidated design request
+  `21_V60_SYNTHETIC_MINGLI_TRAINING_DESIGN_BRIEF.md`: the designer should build
+  one integrated Desktop Chrome flow from blind judgment through locked reveal,
+  three-track professional adjudication and draft method candidate, not another
+  dashboard or isolated mockup.
+
 ### Legal synthetic charts become the visible Mingli method Lab
 
 - Replaced Owner-chart-only method fitting with the first independently

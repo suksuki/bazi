@@ -27,6 +27,14 @@ reading_summaries = MingliReadingSummaryService(engine)
 agent_readings = MingliAgentService(engine)
 
 
+def _without_private_normalization_receipt(payload: dict[str, Any]) -> dict[str, Any]:
+    payload.pop("normalization_receipt", None)
+    nested = payload.get("agent_reading")
+    if isinstance(nested, dict):
+        nested.pop("normalization_receipt", None)
+    return payload
+
+
 class MingliAgentReadingRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -104,7 +112,9 @@ def stage_reading_summary(
         )
         raise HTTPException(status_code=code, detail=reason) from exc
     response.headers["Cache-Control"] = "private, no-store"
-    return projection.model_dump(mode="json")
+    return _without_private_normalization_receipt(
+        projection.model_dump(mode="json")
+    )
 
 
 @router.post("/stage/agent-reading")
@@ -134,4 +144,4 @@ def generate_agent_reading(
             code = status.HTTP_409_CONFLICT
         raise HTTPException(status_code=code, detail=reason) from exc
     response.headers["Cache-Control"] = "private, no-store"
-    return reading.model_dump(mode="json")
+    return _without_private_normalization_receipt(reading.model_dump(mode="json"))

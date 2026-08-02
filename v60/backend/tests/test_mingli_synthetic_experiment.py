@@ -6,6 +6,9 @@ from typing import Any
 import pytest
 from abu_v60.db import engine
 from abu_v60.db.schema import mingli_synthetic_experiment_runs
+from abu_v60.mingli.agent_normalization_receipt import (
+    MingliAgentNormalizationDelta,
+)
 from abu_v60.mingli.agent_regime import (
     normalize_regime_decision,
     reconcile_day_master_state,
@@ -443,3 +446,57 @@ def test_evaluator_separates_experiment_invalidity_from_model_failure() -> None:
     assert SyntheticExperimentEvaluation.model_validate(hold_invalid).outcome == (
         "INVALID_EXPERIMENT"
     )
+
+
+def test_model_trace_projects_bounded_field_deltas_and_honest_legacy_state() -> None:
+    deltas = (
+        MingliAgentNormalizationDelta(
+            stage="PROFESSIONAL_ADJUDICATION",
+            path="/hypotheses",
+            before_present=True,
+            after_present=True,
+            before=[{"long": "raw" * 1000}],
+            after=[{"long": "normalized" * 1000}],
+        ),
+        MingliAgentNormalizationDelta(
+            stage="PROFESSIONAL_ADJUDICATION",
+            path="/regime_decision/effective_root_status",
+            before_present=True,
+            after_present=True,
+            before="NONE",
+            after="PRESENT",
+        ),
+    )
+    receipt = SimpleNamespace(
+        changes=deltas,
+        receipt_ref="receipt:field-level",
+        receipt_hash="a" * 64,
+        raw_output_hash="b" * 64,
+        normalized_output_hash="c" * 64,
+        server_issue_keys=("DAY_MASTER_REGIME",),
+    )
+    field_trace = SyntheticExperimentService._model_trace(
+        SimpleNamespace(
+            normalization_receipt=receipt,
+            agent_reading_ref="agent-reading:field-level",
+        )
+    )
+    legacy_trace = SyntheticExperimentService._model_trace(
+        SimpleNamespace(
+            normalization_receipt=None,
+            agent_reading_ref="agent-reading:legacy",
+            output=SimpleNamespace(
+                model_dump=lambda **_: {"server_issue_keys": []},
+                server_issue_keys=(),
+            ),
+        )
+    )
+
+    assert field_trace["availability"] == "FIELD_LEVEL"
+    assert field_trace["change_count"] == 2
+    assert [item["path"] for item in field_trace["key_deltas"]] == [
+        "/regime_decision/effective_root_status"
+    ]
+    assert legacy_trace["availability"] == "LEGACY_NOT_CAPTURED"
+    assert legacy_trace["key_deltas"] == []
+    assert "不会补造" in legacy_trace["limitation"]

@@ -461,12 +461,17 @@ Owner 盘从方法发现主样本退回回归样本；离线 Lab 分别生成 A�
 即使最低阻从根成立，只要模型原始强弱状态仍是 `UNCERTAIN`，服务端也必须保持
 `UNRESOLVED / UNCERTAIN`，不能仅凭这条根法静默改成 `WEAK`。
 
-当前封存运行 `v60-mingli-synthetic-run-a7600d249c620dd5b3b6` 的六个保持项和三个响应项
+当前封存运行 `v60-mingli-synthetic-run-b11507e53a8bd05faf9b` 的六个保持项和三个响应项
 全部通过：A 保持 `UNRESOLVED`，B 以 `hour支藏甲` 退出直接从势并进入
 `ORDINARY_WEAK / WEAK`。但 A、B 都发生过服务端 `DAY_MASTER_REGIME` 归一化，所以
 结果仍是 `PRODUCT_SAFE_MODEL_FAIL`，不是模型资格通过。完整实验、历史运行、可见 Lab、
 方法边界和下一组矩阵记录在
 [`20_V60_SYNTHETIC_MINGLI_METHOD_LAB.md`](20_V60_SYNTHETIC_MINGLI_METHOD_LAB.md)。
+
+该运行首次封存 replay-verified Normalization Receipt，不再只看到泛化修正码：A 的模型
+原断虚填了根坐标；B 虽在正文识别寅中甲，却把它归入 peer support、保留 `NONE` 根状态
+并漏掉 typed regime。普通 Reading API 不返回完整原断，只有授权 Lab 读取裁剪后的关键
+字段差异。
 
 下一刀不再回到 Owner 单盘追加规则，而是扩展第一／二／三藏干、同字／同元素、冲合未决、
 明确失效、多根竞争与岁运不回写原局的合成矩阵；冻结方法后再建立陌生资格集和保留集。

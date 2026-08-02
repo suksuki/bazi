@@ -102,13 +102,14 @@ v60.mingli-effective-root-method.001
 
 ## 当前封存运行
 
-历史运行不覆盖、不回写；三个运行都能由当前 Snapshot 服务重放：
+历史运行不覆盖、不回写；四个运行都能由当前 Snapshot 服务重放：
 
-| 运行 | Profile / Prompt | 保持项 | 响应项 | 结果 |
-| --- | --- | ---: | ---: | --- |
-| `v60-mingli-synthetic-run-4470e707b662c6dd1b30` | `.017 / .016` | 6/6 | 1/3 | `PRODUCT_SAFE_MODEL_FAIL` |
-| `v60-mingli-synthetic-run-9895e2ae3f16dab4d8b7` | `.018 / .017` | 6/6 | 3/3 | `PRODUCT_SAFE_MODEL_FAIL` |
-| `v60-mingli-synthetic-run-a7600d249c620dd5b3b6` | `.019 / .018` | 6/6 | 3/3 | `PRODUCT_SAFE_MODEL_FAIL` |
+| 运行 | Profile / Prompt | 保持项 | 响应项 | 原断凭证 | 结果 |
+| --- | --- | ---: | ---: | --- | --- |
+| `v60-mingli-synthetic-run-4470e707b662c6dd1b30` | `.017 / .016` | 6/6 | 1/3 | 历史未封存 | `PRODUCT_SAFE_MODEL_FAIL` |
+| `v60-mingli-synthetic-run-9895e2ae3f16dab4d8b7` | `.018 / .017` | 6/6 | 3/3 | 历史未封存 | `PRODUCT_SAFE_MODEL_FAIL` |
+| `v60-mingli-synthetic-run-a7600d249c620dd5b3b6` | `.019 / .018` | 6/6 | 3/3 | 历史未封存 | `PRODUCT_SAFE_MODEL_FAIL` |
+| `v60-mingli-synthetic-run-b11507e53a8bd05faf9b` | `.021 / .018` | 6/6 | 3/3 | A／B 字段级 | `PRODUCT_SAFE_MODEL_FAIL` |
 
 当前运行中：
 
@@ -137,6 +138,30 @@ B 的当前说明为：
 ≠ 高级命理师资格通过
 ```
 
+### 最新一轮真正发现的模型错误
+
+以前只保存归一化后的 Reading 和泛化修正码，能知道“模型未通过”，却不知道模型究竟
+错在哪个字段。最新运行新增 append-only Normalization Receipt，绑定 Packet、Profile、
+Provider、Prompt、原始结构化回答 Hash、归一化结果 Hash 与逐阶段字段差异。它只保存
+`think=false` 的结构化回答，不请求、不保存隐藏思维链；普通 Reading API 不返回该私有
+凭证，只有有审阅权限的合成 Lab 得到经过裁剪的关键差异。
+
+这次终于看见了可训练的问题：
+
+```text
+A
+模型把 E003 填入根坐标，但该命盘没有准入的同类根；系统移除。
+模型没有提供 typed regime_decision；系统补为 UNRESOLVED / ABSENT。
+
+B
+模型在正文里看见“寅中甲”，却把它放进 peer support，root_status 仍写 NONE；
+系统移除错误 peer 坐标，并把最低阻从范围内的有效根修正为 PRESENT。
+模型同样没有提供 typed regime_decision；系统补为 ORDINARY_WEAK / PRESENT。
+```
+
+因此这一轮不是继续“拟合 Owner 一盘”，而是第一次得到能直接反馈给 Prompt、规则和
+后续模型的错误类型：事实归槽错误、根状态与文字自相矛盾、typed 判型对象缺失。
+
 ## 可见 Lab 闭环
 
 入口：
@@ -158,9 +183,13 @@ B 的当前说明为：
 - 切换失败时继续显示已提交的旧变体，并明确说明目标变体读取失败；
 - 失效的 pinned run 可以改读 catalog 中最新封存运行；
 - 浏览器只有两个 GET 读取入口，没有模型 POST；
+- 首屏明确分开“实验有效性／模型独立能力／产品结果”三条轨道；
+- 最新运行可展开“模型原断 → 系统校正”，旧运行诚实显示原断未封存；
+- 合成 Lab 只允许 `admin / local_qa_owner` 审阅角色读取，普通会员不能读取 DEV Gold；
 - Desktop Chrome 1440×900 与 1280×800 均无舞台／Inspector 重叠或横向溢出。
 
-真实 Chrome 证据在 `.artifacts/mingli-synthetic-lab/`。macOS 125% 缩放下，物理
+原有 Chrome 证据在 `.artifacts/mingli-synthetic-lab/`，最新三轨与字段差异证据在
+`.artifacts/mingli-synthetic-model-trace/`。macOS 125% 缩放下，物理
 1440×900／1280×800 分别对应 CSS 1152×720／1024×640；证据 JSON 明确记录两种尺寸。
 
 ## 当前能力与下一组矩阵
@@ -169,10 +198,13 @@ B 的当前说明为：
 差异”，不是完整断命资格。当前最大问题已经从“只测 Owner 一盘”收窄为：样本仍只有
 一组完整时柱对照，且模型原始结果仍需服务端修正。
 
-下一批按方法矩阵推进，不继续人工围绕某一真人命盘扩写：
+下一批按方法矩阵推进，不继续人工围绕某一真人命盘扩写。先做两个已通过历法核对的
+窄矩阵：
 
-1. 第一藏干同字、第二藏干同字、第三藏干同字三组位阶对照；
-2. 同元素不同字与日主同字对照；
+1. `1989-06-03 05:00 / 03:00`：同元素异字的卯中乙，对照日主同字的寅中甲；
+   只验证 `NOT_DETERMINED` 与最低阻从 `PRESENT` 的边界；
+2. `1980-06-01 05:00 / 07:00 / 13:00`：卯中乙第一藏干、辰中乙第二藏干、
+   未中乙第三藏干；先拆为两个 A／B 实验，不伪造第二、第三藏干“无效”；
 3. 有六冲／六合成员关系但作用未决的保留未决组；
 4. 具备明确失效证据后才允许 `DOES_NOT_BLOCK` 的反例组；
 5. 多个根候选的合并与竞争组；
@@ -185,13 +217,15 @@ B 的当前说明为：
 ## 当前版本
 
 ```text
-Foundation                 v60.foundation.027
-Mingli Engine              v60.mingli-cognitive-engine.038
-Runtime Architecture       v60.runtime-architecture.065
-Agent Runtime              v60.mingli-agent-runtime.021
-Agent Profile              v60.mingli-agent.whole-chart-cognition.020
+Foundation                 v60.foundation.028
+Mingli Engine              v60.mingli-cognitive-engine.039
+Runtime Architecture       v60.runtime-architecture.066
+Agent Runtime              v60.mingli-agent-runtime.022
+Agent Profile              v60.mingli-agent.whole-chart-cognition.021
 Agent Prompt               v60.prompt.mingli-agent-whole-chart.018
 Agent Prompt View          v60.mingli-agent-prompt-view.011
+Agent Reading              v60.mingli-agent-reading.005
+Normalization Receipt      v60.mingli-agent-normalization-receipt.001
 Agent Adjudication         v60.mingli-agent-adjudication.009
 Method Distillation        v60.mingli-agent-method-distillation.003
 Effective-root Method      v60.mingli-effective-root-method.001
@@ -200,19 +234,21 @@ Stage Projection           v60.mingli-stage-projection.004
 Synthetic Catalog          v60.mingli-synthetic-experiment-catalog.001
 Synthetic Evaluator        v60.mingli-synthetic-experiment-evaluator.001
 Synthetic Run              v60.mingli-synthetic-experiment-run.001
-Synthetic Snapshot         v60.mingli-synthetic-experiment-snapshot.001
-Migration                  0035_mingli_uncertain_root_guard
+Synthetic Snapshot         v60.mingli-synthetic-experiment-snapshot.002
+Unit Mingli                v60.unit-mingli.029
+Unit Lab                   v60.unit-lab.025
+Migration                  0036_mingli_model_trace
 ```
 
-Migration 0035 did not call the model or rewrite a sealed run. The current
-`a7600d...` evidence therefore remains bound to Profile/Prompt `.019/.018`;
-future generation uses Profile `.020`, so it cannot silently reuse the older
-normalization behavior.
+Migration 0036 only升级 manifest 与能力声明，不调用模型、不重写前三个 sealed run。
+最新 `b11507...` 由本地 Gemma4 两次独立调用形成，绑定 Profile/Prompt `.021/.018` 与
+Reading `.005`；历史 `.003/.004` Reading 仍按各自明确版本语义重放，不能被“当前版本”
+常量静默改义。
 
 ## 验证
 
 ```text
-Backend tests              396 PASS
+Backend tests              402 PASS
 Ruff                       PASS
 TypeScript / Vite build    PASS
 Runtime Architecture       PASS

@@ -271,7 +271,8 @@ export interface MingliAgentReading {
   agent_reading_hash: string;
   agent_reading_version:
     | "v60.mingli-agent-reading.003"
-    | "v60.mingli-agent-reading.004";
+    | "v60.mingli-agent-reading.004"
+    | "v60.mingli-agent-reading.005";
   generation_key: string;
   requester_account_ref: string;
   case_ref: string;

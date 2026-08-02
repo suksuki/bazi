@@ -243,10 +243,13 @@ export function validateAgentReading(
     ![
       "v60.mingli-agent-reading.003",
       "v60.mingli-agent-reading.004",
+      "v60.mingli-agent-reading.005",
     ].includes(reading.agent_reading_version) ||
     (reading.agent_reading_version === "v60.mingli-agent-reading.003"
       && output.regime_decision !== undefined) ||
-    (reading.agent_reading_version === "v60.mingli-agent-reading.004"
+    (["v60.mingli-agent-reading.004", "v60.mingli-agent-reading.005"].includes(
+      reading.agent_reading_version,
+    )
       && !regimeDecisionIsValid(output.regime_decision)) ||
     !reading.agent_reading_ref ||
     !HASH.test(reading.agent_reading_hash) ||

@@ -44,7 +44,9 @@ class _ReadOnlySyntheticService:
 def test_catalog_and_snapshot_are_authenticated_read_only_gets(monkeypatch: Any) -> None:
     stub = _ReadOnlySyntheticService()
     monkeypatch.setattr(mingli_synthetic_lab, "service", stub)
-    session = SimpleNamespace(account=SimpleNamespace(account_ref="owner"))
+    session = SimpleNamespace(
+        account=SimpleNamespace(account_ref="owner", account_role="admin")
+    )
     catalog_response = Response()
     snapshot_response = Response()
 
@@ -75,7 +77,9 @@ def test_snapshot_maps_missing_and_drift_without_running_model(monkeypatch: Any)
             raise SyntheticExperimentError("mingli_synthetic_experiment_definition_drift")
 
     monkeypatch.setattr(mingli_synthetic_lab, "service", _FailingService())
-    session = SimpleNamespace(account=SimpleNamespace(account_ref="owner"))
+    session = SimpleNamespace(
+        account=SimpleNamespace(account_ref="owner", account_role="admin")
+    )
 
     with pytest.raises(HTTPException) as caught:
         mingli_synthetic_lab.synthetic_experiment_snapshot(
@@ -87,6 +91,24 @@ def test_snapshot_maps_missing_and_drift_without_running_model(monkeypatch: Any)
         )
     assert caught.value.status_code == 409
     assert caught.value.detail == "mingli_synthetic_experiment_definition_drift"
+
+
+def test_synthetic_lab_rejects_non_reviewer_session(monkeypatch: Any) -> None:
+    stub = _ReadOnlySyntheticService()
+    monkeypatch.setattr(mingli_synthetic_lab, "service", stub)
+    session = SimpleNamespace(
+        account=SimpleNamespace(account_ref="member", account_role="member")
+    )
+
+    with pytest.raises(HTTPException) as caught:
+        mingli_synthetic_lab.synthetic_experiment_catalog(
+            Response(),
+            session,  # type: ignore[arg-type]
+        )
+
+    assert caught.value.status_code == 403
+    assert caught.value.detail == "mingli_synthetic_lab_reviewer_required"
+    assert stub.catalog_calls == 0
 
 
 def test_synthetic_lab_api_requires_session() -> None:

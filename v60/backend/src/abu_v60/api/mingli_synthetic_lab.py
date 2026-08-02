@@ -13,6 +13,15 @@ from abu_v60.mingli.synthetic_experiment_service import (
 
 router = APIRouter(prefix="/api/v60/mingli/lab", tags=["mingli-synthetic-lab"])
 service = SyntheticExperimentService(engine)
+SYNTHETIC_LAB_REVIEWER_ROLES = frozenset({"admin", "local_qa_owner"})
+
+
+def _require_synthetic_lab_reviewer(session: Any) -> None:
+    if session.account.account_role not in SYNTHETIC_LAB_REVIEWER_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="mingli_synthetic_lab_reviewer_required",
+        )
 
 
 @router.get("/synthetic-experiments")
@@ -20,7 +29,7 @@ def synthetic_experiment_catalog(
     response: Response,
     session: SessionDependency,
 ) -> dict[str, Any]:
-    del session
+    _require_synthetic_lab_reviewer(session)
     response.headers["Cache-Control"] = "private, no-store"
     return service.catalog()
 
@@ -33,7 +42,7 @@ def synthetic_experiment_snapshot(
     variant: Literal["A", "B"] = "A",
     run_ref: Annotated[str | None, Query(min_length=1)] = None,
 ) -> dict[str, Any]:
-    del session
+    _require_synthetic_lab_reviewer(session)
     try:
         catalog = service.catalog()["experiments"][0]
         if experiment_ref != catalog["experiment_ref"]:

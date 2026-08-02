@@ -23,7 +23,16 @@ from abu_v60.mingli.agent_method_cards import (
     method_card_catalog,
 )
 from abu_v60.mingli.agent_method_distillation import exact_role_paths
+from abu_v60.mingli.agent_normalization_receipt import (
+    MingliAgentNormalizationReceipt,
+)
 from abu_v60.mingli.agent_packet import MingliAgentCasePacketCompiler
+from abu_v60.mingli.agent_profile import (
+    MINGLI_AGENT_PROFILE_HASH,
+    MINGLI_AGENT_PROFILE_REF,
+    MINGLI_AGENT_PROMPT_HASH,
+    MINGLI_AGENT_PROMPT_REF,
+)
 from abu_v60.mingli.agent_reasoning_modes import (
     BLIND_READING_CONTRACT,
     RECONCILIATION_CONTRACT,
@@ -435,9 +444,17 @@ class _FakeProvider:
 
     def generate(self, *, packet: Any) -> MingliAgentProviderResult:
         self.calls += 1
+        output = _valid_output(packet=packet)
+        provider_response_ref = f"test-response-{packet.packet_hash[:24]}"
         return MingliAgentProviderResult(
-            provider_response_ref=f"test-response-{packet.packet_hash[:24]}",
-            output=_valid_output(packet=packet),
+            provider_response_ref=provider_response_ref,
+            output=output,
+            normalization_receipt=_test_normalization_receipt(
+                provider=self,
+                packet=packet,
+                output=output,
+                provider_response_ref=provider_response_ref,
+            ),
             input_tokens=100,
             output_tokens=200,
             total_tokens=300,
@@ -452,14 +469,49 @@ class _OutputProvider(_FakeProvider):
 
     def generate(self, *, packet: Any) -> MingliAgentProviderResult:
         self.calls += 1
+        provider_response_ref = f"test-response-{packet.packet_hash[:24]}"
         return MingliAgentProviderResult(
-            provider_response_ref=f"test-response-{packet.packet_hash[:24]}",
+            provider_response_ref=provider_response_ref,
             output=self._output,
+            normalization_receipt=_test_normalization_receipt(
+                provider=self,
+                packet=packet,
+                output=self._output,
+                provider_response_ref=provider_response_ref,
+            ),
             input_tokens=100,
             output_tokens=200,
             total_tokens=300,
             duration_ms=50,
         )
+
+
+def _test_normalization_receipt(
+    *,
+    provider: _FakeProvider,
+    packet: Any,
+    output: MingliAgentModelOutput,
+    provider_response_ref: str,
+) -> MingliAgentNormalizationReceipt:
+    structured = output.model_dump(mode="json")
+    return MingliAgentNormalizationReceipt.issue(
+        provider_response_ref=provider_response_ref,
+        packet_ref=packet.packet_ref,
+        packet_hash=packet.packet_hash,
+        agent_profile_ref=MINGLI_AGENT_PROFILE_REF,
+        agent_profile_hash=MINGLI_AGENT_PROFILE_HASH,
+        provider_id=provider.provider_id,
+        model_ref=provider.model_ref,
+        model_digest=provider.model_digest,
+        provider_profile_ref=provider.provider_profile_ref,
+        provider_profile_hash=provider.provider_profile_hash,
+        prompt_ref=MINGLI_AGENT_PROMPT_REF,
+        prompt_hash=MINGLI_AGENT_PROMPT_HASH,
+        raw_output=structured,
+        normalized_output=structured,
+        changes=(),
+        server_issue_keys=output.server_issue_keys,
+    )
 
 
 def _normalize_raw(*, packet: Any, raw: dict[str, Any]) -> MingliAgentModelOutput:
@@ -617,6 +669,51 @@ def test_ollama_adapter_sends_one_locked_packet_and_validates_output() -> None:
     assert result.output.hypotheses[0].role == "PRIMARY"
     assert result.output.regime_decision is not None
     assert result.output.regime_decision.classification == "UNRESOLVED"
+    receipt = result.normalization_receipt
+    assert receipt.raw_output["support_selection"]["peer_coordinates"] == [
+        "错误坐标"
+    ]
+    assert receipt.raw_output_hash == content_hash(receipt.raw_output)
+    assert receipt.normalized_output_hash == content_hash(
+        result.output.model_dump(mode="json")
+    )
+    assert receipt.hidden_reasoning_stored is False
+    assert receipt.stored_scope == "STRUCTURED_PROVIDER_OUTPUT_ONLY"
+    assert {
+        (item.stage, item.path)
+        for item in receipt.changes
+    }.issuperset(
+        {
+            ("EVIDENCE_ID_NORMALIZATION", "/day_master_evidence_ids"),
+            ("PACKET_FACT_BINDING", "/support_selection/peer_coordinates"),
+        }
+    )
+
+
+def test_ollama_adapter_maps_non_object_json_to_provider_error() -> None:
+    _, packet = _packet()
+    provider = OllamaMingliAgentProvider(
+        model_ref="gemma4:test",
+        model_digest="b" * 64,
+        provider_profile_ref="v60.test-provider.non-object",
+        base_url="http://private-model.invalid",
+        timeout_seconds=3,
+        think=False,
+        temperature=0,
+        top_p=0.95,
+        top_k=64,
+        num_ctx=32768,
+        num_predict=4096,
+        keep_alive="30m",
+        transport=lambda **_: {
+            "response": "[]",
+            "prompt_eval_count": 1,
+            "eval_count": 1,
+        },
+    )
+
+    with pytest.raises(MingliAgentProviderError, match="output_not_object"):
+        provider.generate(packet=packet)
 
 
 def test_ollama_adapter_repairs_partial_rulings_and_timing_scope() -> None:
@@ -1591,6 +1688,10 @@ def test_unqualified_candidate_can_generate_private_review_without_publication()
     assert manifest["publication_allowed"] is False
     assert manifest["network_calls_enabled"] is True
 
+    thinking_settings = replace(enabled_settings, mingli_agent_think=True)
+    assert mingli_agent_runtime_status(thinking_settings).value == "MISCONFIGURED"
+    assert configured_mingli_agent_runtime(thinking_settings).ready is False
+
     fixture = _base_reading_fixture()
     summary_service = MingliReadingSummaryService(engine)
 
@@ -1698,6 +1799,26 @@ def _envelope(fixture: dict[str, str], *, suffix: str = "", packet: Any | None =
         prompt_ref=prompt_ref,
         prompt_hash=prompt_hash,
     )
+    output = _valid_output(suffix=suffix, packet=packet)
+    provider_response_ref = f"test-provider-response{suffix}"
+    normalization_receipt = MingliAgentNormalizationReceipt.issue(
+        provider_response_ref=provider_response_ref,
+        packet_ref=packet_ref,
+        packet_hash=packet_hash,
+        agent_profile_ref=agent_profile_ref,
+        agent_profile_hash=agent_profile_hash,
+        provider_id="test-provider",
+        model_ref="test-model",
+        model_digest="1" * 64,
+        provider_profile_ref=provider_profile_ref,
+        provider_profile_hash=provider_profile_hash,
+        prompt_ref=prompt_ref,
+        prompt_hash=prompt_hash,
+        raw_output=output.model_dump(mode="json"),
+        normalized_output=output.model_dump(mode="json"),
+        changes=(),
+        server_issue_keys=output.server_issue_keys,
+    )
     return MingliAgentReadingEnvelope.issue(
         generation_key=generation_key,
         requester_account_ref=fixture["owner_account_ref"],
@@ -1717,8 +1838,9 @@ def _envelope(fixture: dict[str, str], *, suffix: str = "", packet: Any | None =
         provider_profile_hash=provider_profile_hash,
         prompt_ref=prompt_ref,
         prompt_hash=prompt_hash,
-        provider_response_ref=f"test-provider-response{suffix}",
-        output=_valid_output(suffix=suffix, packet=packet),
+        provider_response_ref=provider_response_ref,
+        normalization_receipt=normalization_receipt,
+        output=output,
         input_tokens=10,
         output_tokens=20,
         total_tokens=30,
@@ -1731,6 +1853,21 @@ def test_legacy_reading_003_replays_without_injecting_null_regime() -> None:
     current = _envelope(fixture)
     payload = current.model_dump(mode="json")
     payload["agent_reading_version"] = "v60.mingli-agent-reading.003"
+    payload["generation_key"] = mingli_agent_generation_key(
+        requester_account_ref=payload["requester_account_ref"],
+        reading_ref=payload["reading_ref"],
+        reading_hash=payload["reading_hash"],
+        packet_ref=payload["packet_ref"],
+        packet_hash=payload["packet_hash"],
+        agent_profile_ref=payload["agent_profile_ref"],
+        agent_profile_hash=payload["agent_profile_hash"],
+        provider_profile_ref=payload["provider_profile_ref"],
+        provider_profile_hash=payload["provider_profile_hash"],
+        prompt_ref=payload["prompt_ref"],
+        prompt_hash=payload["prompt_hash"],
+        agent_reading_version="v60.mingli-agent-reading.003",
+    )
+    payload.pop("normalization_receipt")
     payload["output"].pop("regime_decision")
     identity = {
         key: value
@@ -1747,13 +1884,89 @@ def test_legacy_reading_003_replays_without_injecting_null_regime() -> None:
     assert "regime_decision" not in restored.output.model_dump(mode="json")
 
 
-def test_reading_004_requires_typed_regime_decision() -> None:
+def test_reading_004_keeps_typed_regime_and_historical_generation_key() -> None:
+    fixture = _base_reading_fixture()
+    payload = _envelope(fixture).model_dump(mode="json")
+    payload["agent_reading_version"] = "v60.mingli-agent-reading.004"
+    payload.pop("normalization_receipt")
+    payload["generation_key"] = mingli_agent_generation_key(
+        requester_account_ref=payload["requester_account_ref"],
+        reading_ref=payload["reading_ref"],
+        reading_hash=payload["reading_hash"],
+        packet_ref=payload["packet_ref"],
+        packet_hash=payload["packet_hash"],
+        agent_profile_ref=payload["agent_profile_ref"],
+        agent_profile_hash=payload["agent_profile_hash"],
+        provider_profile_ref=payload["provider_profile_ref"],
+        provider_profile_hash=payload["provider_profile_hash"],
+        prompt_ref=payload["prompt_ref"],
+        prompt_hash=payload["prompt_hash"],
+        agent_reading_version="v60.mingli-agent-reading.004",
+    )
+    identity = {
+        key: value
+        for key, value in payload.items()
+        if key not in {"agent_reading_ref", "agent_reading_hash"}
+    }
+    payload["agent_reading_ref"] = stable_ref("v60-mingli-agent-reading", identity)
+    payload["agent_reading_hash"] = content_hash(identity)
+
+    restored = MingliAgentReadingEnvelope.model_validate(payload)
+
+    assert restored.output.regime_decision is not None
+    assert restored.generation_key == mingli_agent_generation_key(
+        requester_account_ref=payload["requester_account_ref"],
+        reading_ref=payload["reading_ref"],
+        reading_hash=payload["reading_hash"],
+        packet_ref=payload["packet_ref"],
+        packet_hash=payload["packet_hash"],
+        agent_profile_ref=payload["agent_profile_ref"],
+        agent_profile_hash=payload["agent_profile_hash"],
+        provider_profile_ref=payload["provider_profile_ref"],
+        provider_profile_hash=payload["provider_profile_hash"],
+        prompt_ref=payload["prompt_ref"],
+        prompt_hash=payload["prompt_hash"],
+        agent_reading_version="v60.mingli-agent-reading.003",
+    )
+    payload["output"].pop("regime_decision")
+    with pytest.raises(ValueError, match="regime_decision_required"):
+        MingliAgentReadingEnvelope.model_validate(payload)
+
+
+def test_reading_005_requires_typed_regime_decision() -> None:
     fixture = _base_reading_fixture()
     payload = _envelope(fixture).model_dump(mode="json")
     payload["output"].pop("regime_decision")
 
     with pytest.raises(ValueError, match="regime_decision_required"):
         MingliAgentReadingEnvelope.model_validate(payload)
+
+
+def test_normalization_receipt_rejects_unproved_raw_to_normalized_change() -> None:
+    fixture = _base_reading_fixture()
+    envelope = _envelope(fixture)
+    receipt = envelope.normalization_receipt
+    assert receipt is not None
+
+    with pytest.raises(ValueError, match="delta_chain_mismatch"):
+        MingliAgentNormalizationReceipt.issue(
+            provider_response_ref=receipt.provider_response_ref,
+            packet_ref=receipt.packet_ref,
+            packet_hash=receipt.packet_hash,
+            agent_profile_ref=receipt.agent_profile_ref,
+            agent_profile_hash=receipt.agent_profile_hash,
+            provider_id=receipt.provider_id,
+            model_ref=receipt.model_ref,
+            model_digest=receipt.model_digest,
+            provider_profile_ref=receipt.provider_profile_ref,
+            provider_profile_hash=receipt.provider_profile_hash,
+            prompt_ref=receipt.prompt_ref,
+            prompt_hash=receipt.prompt_hash,
+            raw_output={"verdict": "RAW"},
+            normalized_output={"verdict": "REPAIRED"},
+            changes=(),
+            server_issue_keys=(),
+        )
 
 
 def test_agent_reading_projects_one_deterministic_shared_claim_graph() -> None:
@@ -2340,6 +2553,7 @@ def test_api_uses_session_identity_and_maps_runtime_failure(
     )
 
     assert payload["agent_reading_ref"] == envelope.agent_reading_ref
+    assert "normalization_receipt" not in payload
     assert calls[0]["requester_account_ref"] == fixture["owner_account_ref"]
     assert response.headers["Cache-Control"] == "private, no-store"
 
@@ -2355,3 +2569,30 @@ def test_api_uses_session_identity_and_maps_runtime_failure(
             session,
         )
     assert caught.value.status_code == 503
+
+
+def test_reading_summary_api_redacts_private_normalization_receipt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class SummaryService:
+        def project(self, **_: str):
+            return SimpleNamespace(
+                model_dump=lambda **__: {
+                    "agent_reading": {
+                        "agent_reading_ref": "reading:owner",
+                        "normalization_receipt": {"raw_output": {"private": True}},
+                    }
+                }
+            )
+
+    monkeypatch.setattr(mingli_stage, "reading_summaries", SummaryService())
+    response = Response()
+    session = SimpleNamespace(account=SimpleNamespace(account_ref="owner"))
+
+    payload = mingli_stage.stage_reading_summary(
+        response,
+        session,  # type: ignore[arg-type]
+        case_ref="case:owner",
+    )
+
+    assert "normalization_receipt" not in payload["agent_reading"]

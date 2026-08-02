@@ -16,8 +16,8 @@ from abu_v60.mingli.agent_reasoning_modes import BLIND_READING_CONTRACT
 from abu_v60.mingli.agent_root_gate import MINGLI_EFFECTIVE_ROOT_METHOD_VERSION
 from abu_v60.provenance import content_hash
 
-MINGLI_AGENT_RUNTIME_VERSION: Final = "v60.mingli-agent-runtime.021"
-MINGLI_AGENT_PROFILE_REF: Final = "v60.mingli-agent.whole-chart-cognition.020"
+MINGLI_AGENT_RUNTIME_VERSION: Final = "v60.mingli-agent-runtime.022"
+MINGLI_AGENT_PROFILE_REF: Final = "v60.mingli-agent.whole-chart-cognition.021"
 MINGLI_AGENT_PROMPT_REF: Final = "v60.prompt.mingli-agent-whole-chart.018"
 MINGLI_AGENT_PROFESSIONAL_REVIEW_STATUS: Final = "GEMMA4_PRODUCT_CANDIDATE_REQUIRES_OWNER_REVIEW"
 MINGLI_AGENT_PUBLICATION_ALLOWED: Final = False

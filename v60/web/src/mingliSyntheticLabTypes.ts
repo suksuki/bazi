@@ -77,8 +77,56 @@ export interface MingliSyntheticExperimentEvaluation {
   summary: string;
 }
 
+export interface MingliSyntheticTrainingAssessment {
+  assessment_version: "v60.mingli-synthetic-training-assessment.001";
+  experiment_validity: "VALID" | "INVALID";
+  model_independence: "PASS" | "FAIL" | "NOT_EVALUABLE";
+  product_result:
+    | "SAFE_MODEL_DIRECT"
+    | "SAFE_WITH_REPAIR"
+    | "WITHHELD"
+    | "NOT_EVALUABLE";
+  trace_coverage: "FIELD_LEVEL" | "PARTIAL" | "LEGACY_SUMMARY_ONLY";
+  server_issue_keys: { A: string[]; B: string[] };
+  summary: string;
+  qualification_effect: "DEV_REVIEW_ONLY_NOT_MODEL_QUALIFICATION";
+}
+
+export interface MingliSyntheticNormalizationDelta {
+  stage:
+    | "EVIDENCE_ID_NORMALIZATION"
+    | "PACKET_FACT_BINDING"
+    | "PROFESSIONAL_ADJUDICATION"
+    | "PROSE_EVIDENCE_REPAIR"
+    | "OUTPUT_FORM_REPAIR"
+    | "LOCAL_FIELD_REPAIR";
+  path: string;
+  before_present: boolean;
+  after_present: boolean;
+  before: unknown;
+  after: unknown;
+}
+
+export interface MingliSyntheticModelTrace {
+  trace_version: "v60.mingli-synthetic-model-trace.001";
+  availability: "FIELD_LEVEL" | "LEGACY_NOT_CAPTURED";
+  selected_agent_reading_ref: string;
+  receipt_ref: string | null;
+  receipt_hash: string | null;
+  raw_output_hash: string | null;
+  normalized_output_hash: string;
+  change_count: number | null;
+  stage_counts: Array<{
+    stage: MingliSyntheticNormalizationDelta["stage"];
+    change_count: number;
+  }>;
+  key_deltas: MingliSyntheticNormalizationDelta[];
+  server_issue_keys: string[];
+  limitation: string;
+}
+
 export interface MingliSyntheticExperimentSnapshot {
-  snapshot_version: "v60.mingli-synthetic-experiment-snapshot.001";
+  snapshot_version: "v60.mingli-synthetic-experiment-snapshot.002";
   snapshot_ref: string;
   snapshot_hash: string;
   experiment_ref: string;
@@ -89,6 +137,8 @@ export interface MingliSyntheticExperimentSnapshot {
   sealed_agent_reading_ref: string;
   stage: MingliStageProjection;
   evaluation: MingliSyntheticExperimentEvaluation;
+  training_assessment: MingliSyntheticTrainingAssessment;
+  model_trace: MingliSyntheticModelTrace;
   definition: MingliSyntheticExperimentDefinition;
   browser_generation_allowed: false;
   read_only: true;
