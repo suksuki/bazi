@@ -26,6 +26,9 @@ const [
   stageNavigation,
   profileManager,
   branchSceneHost,
+  labWorkspaceHost,
+  syntheticScene,
+  syntheticInspector,
 ] = await Promise.all([
   read("components", "ExperienceStoryCanvas.tsx"),
   read("components", "MingliSceneHost.tsx"),
@@ -45,6 +48,9 @@ const [
   read("mingliStageNavigation.ts"),
   read("components", "HomeProfileManager.tsx"),
   read("components", "MingliBranchSceneHost.tsx"),
+  read("components", "MingliLabWorkspaceHost.tsx"),
+  read("components", "MingliSyntheticExperimentScene.tsx"),
+  read("components", "MingliSyntheticExperimentInspector.tsx"),
 ]);
 
 const expect = (condition, message) => {
@@ -57,8 +63,9 @@ expect(
   "story-canvas:reading-and-lab-do-not-share-host-condition",
 );
 expect(
-  occurrences(storyCanvas, /<MingliSceneHost/g) === 1,
-  "story-canvas:scene-host-must-mount-once",
+  occurrences(storyCanvas, /<MingliLabWorkspaceHost/g) === 1 &&
+    occurrences(labWorkspaceHost, /<MingliSceneHost/g) === 1,
+  "story-canvas:lab-workspace-must-own-current-scene-host",
 );
 expect(
   occurrences(sceneHost, /<MingliScenePlayer/g) === 1,
@@ -71,6 +78,18 @@ expect(
 expect(
   !/MingliScenePlayer|Canvas/.test(labInspector),
   "lab-inspector:must-not-own-scene-player-or-canvas",
+);
+expect(
+  occurrences(syntheticScene, /<MingliScenePlayer/g) === 1 &&
+    !/key=\{.*projection/.test(syntheticScene) &&
+    !/MingliScenePlayer|Canvas/.test(syntheticInspector),
+  "synthetic-lab:must-reuse-one-keyless-player-and-inspector-must-not-own-canvas",
+);
+expect(
+  labWorkspaceHost.includes('route.mode === "synthetic"') &&
+    labWorkspaceHost.indexOf("<MingliSyntheticExperimentScene") <
+      labWorkspaceHost.indexOf("<MingliSceneHost"),
+  "lab-workspace:current-and-synthetic-scenes-must-be-mutually-exclusive",
 );
 expect(
   scenePlayer.includes('lazy(() => import("./MingliSceneCanvas"))'),
@@ -183,7 +202,8 @@ console.log(
   JSON.stringify(
     {
       sharedHost: "PASS",
-      scenePlayerMounts: 1,
+      currentScenePlayerMounts: 1,
+      syntheticScenePlayerMounts: 1,
       narratorOwnsCanvas: false,
       labOwnsCanvas: false,
       independentAbuDockUnit: false,

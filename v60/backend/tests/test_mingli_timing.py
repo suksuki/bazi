@@ -12,9 +12,8 @@ from abu_v60.mingli import (
 from abu_v60.mingli.calendar import (
     CALENDAR_ENGINE_VERSION,
     BirthInput,
-    resolve_four_pillars,
 )
-from abu_v60.mingli.compiler import CompiledCase, compile_case
+from abu_v60.mingli.compiler import CompiledCase, compile_birth_case
 from abu_v60.mingli.timing_contracts import (
     DAYUN_BOUNDARY_PRECISION,
     DAYUN_CALCULATION_POLICY,
@@ -41,11 +40,9 @@ def _compile_timing(
         birth_time=birth_time,
         timezone="Asia/Shanghai",
     )
-    chart = resolve_four_pillars(birth_input)
-    compiled = compile_case(
+    compiled = compile_birth_case(
         case_ref=case_ref,
         birth_input=birth_input,
-        chart=chart,
     )
     timing = MingliTimingEvidenceCompiler().compile(
         case_ref=case_ref,

@@ -3,8 +3,10 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Literal
 
+from abu_v60.mingli.agent_root_gate import MINGLI_EFFECTIVE_ROOT_METHOD_VERSION
+
 MINGLI_AGENT_METHOD_DISTILLATION_VERSION = (
-    "v60.mingli-agent-method-distillation.001"
+    "v60.mingli-agent-method-distillation.003"
 )
 
 OUTPUT_TO_PRESSURE = "bazi.mechanism.output-to-pressure@1"
@@ -220,6 +222,7 @@ def day_master_regime_method_asset(
     root_candidates: Sequence[str],
     visible_peers: Sequence[str],
     hidden_resources: Sequence[str],
+    root_candidate_assessments: Sequence[Mapping[str, object]],
 ) -> dict[str, object]:
     return {
         "method_asset_ref": "REGIME_WEAK_VS_FOLLOW_TREND_001",
@@ -229,6 +232,23 @@ def day_master_regime_method_asset(
             "root_candidates": tuple(root_candidates),
             "visible_peers": tuple(visible_peers),
             "hidden_resources": tuple(hidden_resources),
+        },
+        "root_candidate_assessments": tuple(
+            dict(item) for item in root_candidate_assessments
+        ),
+        "minimum_anti_follow_scope": {
+            "gate_version": MINGLI_EFFECTIVE_ROOT_METHOD_VERSION,
+            "rule": (
+                "日主同字位于某支第一藏干，且该支没有准入的原局六冲／六合成员关系时，"
+                "只在排除直接从势的最低范围内将该坐标裁为有效根"
+            ),
+            "does_not_prove": (
+                "DAY_MASTER_STRONG",
+                "USEFUL_ROOT",
+                "MECHANISM_AVAILABLE",
+                "AUSPICIOUSNESS",
+            ),
+            "other_candidates": "仍须按月令、位置与全盘制化逐项裁决",
         },
         "candidate_states": (
             {
@@ -245,8 +265,18 @@ def day_master_regime_method_asset(
                 "requires": "无根而仍有浮比、弱藏印或合化未定等竞争证据",
             },
         ),
+        "required_typed_output": (
+            "effective_root_status",
+            "effective_root_coordinates",
+            "rooted_visible_support_status",
+            "dominant_chain_status",
+            "competition_kinds",
+            "classification",
+        ),
         "hard_rules": (
             "有有效根或透而有根的印比时不得判从",
+            "minimum_anti_follow_gate 为 PRESENT 的坐标不得写成余气或继续保留有效根未决",
+            "存在根候选但没有明确失效证据时不得裁为 ABSENT，只能 PRESENT 或 UNRESOLVED",
             "仅凭无根不得判从",
             "三合成员齐备不得直接当作合化后的承载能力",
             "未完成身弱／从势竞争审计不得输出喜忌",

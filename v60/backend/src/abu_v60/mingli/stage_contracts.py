@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from abu_v60.provenance import content_hash, stable_ref
 
-MINGLI_STAGE_PROJECTION_VERSION = "v60.mingli-stage-projection.003"
+MINGLI_STAGE_PROJECTION_VERSION = "v60.mingli-stage-projection.004"
 
 
 class MingliStageMode(StrEnum):
@@ -107,7 +107,7 @@ class MingliStageProjection(BaseModel):
 
     projection_ref: str = Field(min_length=1)
     projection_hash: str = Field(min_length=64, max_length=64)
-    projection_version: Literal["v60.mingli-stage-projection.003"] = MINGLI_STAGE_PROJECTION_VERSION
+    projection_version: Literal["v60.mingli-stage-projection.004"] = MINGLI_STAGE_PROJECTION_VERSION
     subject_id: str = Field(min_length=1)
     case_ref: str = Field(min_length=1)
     chart_version_ref: str = Field(min_length=1)
@@ -120,11 +120,17 @@ class MingliStageProjection(BaseModel):
         "HUMAN_REFERENCE",
         "CANONICAL_SYNTHETIC",
     ]
-    identity_badge: Literal["私密真实档案", "真实参考档案", "角色合成设定"]
+    identity_badge: Literal[
+        "私密真实档案",
+        "真实参考档案",
+        "角色合成设定",
+        "研究合成命盘",
+    ]
     privacy_scope: Literal[
         "PRIVATE_OWNER",
         "PRIVATE_REFERENCE",
         "PUBLIC_SYNTHETIC_SHOWCASE",
+        "SYNTHETIC_RESEARCH",
     ]
     stage_mode: MingliStageMode
     selected_year: int | None = None
@@ -157,6 +163,41 @@ class MingliStageProjection(BaseModel):
 
     @model_validator(mode="after")
     def stage_identity_and_shape_are_valid(self) -> MingliStageProjection:
+        private_owner = (
+            self.subject_kind == "HUMAN_OWNER"
+            and self.identity_badge == "私密真实档案"
+            and self.privacy_scope == "PRIVATE_OWNER"
+        )
+        private_reference = (
+            self.subject_kind == "HUMAN_REFERENCE"
+            and self.identity_badge == "真实参考档案"
+            and self.privacy_scope == "PRIVATE_REFERENCE"
+        )
+        public_showcase = (
+            self.subject_kind == "CANONICAL_SYNTHETIC"
+            and self.identity_badge == "角色合成设定"
+            and self.privacy_scope == "PUBLIC_SYNTHETIC_SHOWCASE"
+        )
+        research_case = (
+            self.subject_kind == "CANONICAL_SYNTHETIC"
+            and self.identity_badge == "研究合成命盘"
+            and self.privacy_scope == "SYNTHETIC_RESEARCH"
+        )
+        identity_is_valid = (
+            (self.subject_id == "current" and private_owner)
+            or (
+                self.subject_id.startswith("case:")
+                and (private_owner or private_reference)
+            )
+            or (self.subject_id in {"abu", "duoduo"} and public_showcase)
+            or (
+                self.subject_id.startswith("research:")
+                and len(self.subject_id) > len("research:")
+                and research_case
+            )
+        )
+        if not identity_is_valid:
+            raise ValueError("mingli_stage_identity_scope_invalid")
         expected_columns = 4 if self.stage_mode == MingliStageMode.NATAL_4 else 6
         expected_bodies = expected_columns * 2
         if len(self.columns) != expected_columns or len(self.bodies) != expected_bodies:

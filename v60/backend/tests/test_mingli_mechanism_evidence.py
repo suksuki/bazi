@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from datetime import date, time
-
 from abu_v60.decision import DecisionKind
 from abu_v60.knowledge import KnowledgeAuthority
 from abu_v60.mingli import (
@@ -9,8 +7,8 @@ from abu_v60.mingli import (
     MingliMechanismEvidenceCompiler,
     MingliQuantFoundationCompiler,
 )
-from abu_v60.mingli.calendar import BirthInput, ChartPillars
-from abu_v60.mingli.compiler import compile_case
+from abu_v60.mingli.calendar import ChartPillars
+from abu_v60.mingli.compiler import compile_research_case
 
 
 def _compile(
@@ -24,14 +22,8 @@ def _compile(
         day="乙丑",
         hour="乙酉",
     )
-    compiled = compile_case(
+    compiled = compile_research_case(
         case_ref=case_ref,
-        birth_input=BirthInput(
-            calendar_type="solar",
-            birth_date=date(1977, 5, 8),
-            birth_time=time(17, 30),
-            timezone="Asia/Shanghai",
-        ),
         chart=chart,
     )
     quant = MingliQuantFoundationCompiler().compile(

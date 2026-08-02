@@ -20,7 +20,7 @@ from abu_v60.mingli import (
     StructuralCandidateCompiler,
 )
 from abu_v60.mingli.calendar import BirthInput, ChartPillars
-from abu_v60.mingli.compiler import compile_case
+from abu_v60.mingli.compiler import compile_research_case
 from abu_v60.provenance import canonical_json
 
 ANALYSIS_DATE = date(2026, 7, 29)
@@ -41,9 +41,8 @@ def _inputs(
         birth_time=time(12, 0),
         timezone="Asia/Shanghai",
     )
-    compiled = compile_case(
+    compiled = compile_research_case(
         case_ref=case_ref,
-        birth_input=birth_input,
         chart=(
             pillars
             or ChartPillars(

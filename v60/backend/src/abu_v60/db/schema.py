@@ -325,6 +325,26 @@ mingli_agent_readings = Table(
     schema="mingli",
 )
 
+mingli_synthetic_experiment_runs = Table(
+    "synthetic_experiment_runs",
+    metadata,
+    Column("run_ref", String(180), primary_key=True),
+    Column("run_version", String(100), nullable=False),
+    Column("experiment_ref", String(180), nullable=False),
+    Column("definition_hash", String(64), nullable=False),
+    Column("evaluator_version", String(100), nullable=False),
+    Column("analysis_date", Date, nullable=False),
+    Column("member_a_agent_reading_ref", String(180), nullable=False),
+    Column("member_b_agent_reading_ref", String(180), nullable=False),
+    Column("member_a_stage_json", JSONB, nullable=False),
+    Column("member_b_stage_json", JSONB, nullable=False),
+    Column("outcome", String(60), nullable=False),
+    Column("evaluation_json", JSONB, nullable=False),
+    Column("run_hash", String(64), nullable=False, unique=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    schema="mingli",
+)
+
 mingli_relation_effect_evidence_request_receipts = Table(
     "relation_effect_evidence_request_receipts",
     metadata,

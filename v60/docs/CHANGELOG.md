@@ -2,6 +2,59 @@
 
 ## 2026-08-02
 
+### Legal synthetic charts become the visible Mingli method Lab
+
+- Replaced Owner-chart-only method fitting with the first independently
+  calendar-resolved A/B research pair. Both members now pass through real
+  canonical Case, Chart, Reading, Packet, local Agent and Stage materialization;
+  explicit research charts cannot enter the ordinary profile selector or
+  silently replace a human profile.
+- Added a typed weak-vs-following decision and the narrow
+  `v60.mingli-effective-root-method.001`. An exact Day-Master stem in the first
+  hidden-stem position, without admitted natal clash/harmony membership on that
+  branch, is sufficient only to block a direct following verdict. It does not
+  prove a strong Day Master, usable root, useful deity, relation effect,
+  effective work or fortune. Any other candidate remains unresolved until an
+  explicit invalidation method exists; the model can no longer erase it as
+  absent.
+- Added migrations 0032–0035, the offline synthetic runner, typed DEV
+  Gold/evaluator, append-only
+  `mingli.synthetic_experiment_runs` ledger and read-only catalog/snapshot API.
+  Browser navigation has no model POST path. Historical runs remain replayable
+  by exact Run Ref and database triggers reject update/delete mutation.
+- Preserved all three real Gemma4 runs. Baseline
+  `v60-mingli-synthetic-run-4470e707b662c6dd1b30` passed 6/6 hold and 1/3
+  response checks. The current
+  `v60-mingli-synthetic-run-a7600d249c620dd5b3b6` passes 6/6 hold and 3/3
+  response checks: B identifies `hour支藏甲` and exits direct following into
+  `ORDINARY_WEAK / WEAK`; A is not forced into following. Both variants still
+  carry server regime normalization, so the honest outcome remains
+  `PRODUCT_SAFE_MODEL_FAIL`, not model qualification.
+- Added a visible Lab A/B workspace on the one shared `MingliScenePlayer`.
+  Variant switching changes the Projection without remounting the scene;
+  refresh and browser history restore the sealed Run/variant; failed switches
+  keep the committed chart visible and offer retry or latest-run recovery;
+  invalid pinned links can also recover before any snapshot has loaded.
+- Replaced the research-chart engineering placeholder with quiet product
+  language and extracted the shared Scene boundary into its own component to
+  keep every Runtime source within the enforced maintainability budget.
+- Closed a final professional overreach found during review: a minimum
+  anti-follow root no longer turns an Agent's `UNCERTAIN` whole-chart strength
+  state into `WEAK`. That combination remains `UNRESOLVED / UNCERTAIN`; the
+  current B run is unchanged because its original state was already `WEAK`.
+- Real Desktop Chrome verified A→B scene identity, changed Projection, B
+  refresh, A history return, ordinary-Lab cleanup, research isolation and
+  non-overlapping layouts at physical 1440×900 and 1280×800. Evidence is in
+  `.artifacts/mingli-synthetic-lab/`; the A screenshot is a real PNG and the
+  JSON records all four browser states and assertions.
+- Advanced Foundation to `.027`, Mingli Engine to `.038`, Runtime Architecture
+  to `.065`, Agent Runtime/Profile/Prompt to `.021/.020/.018`, Prompt View to
+  `.011`, Adjudication to `.009`, Method Distillation to `.003`, Stage to
+  `.004` and migration head to `0035_mingli_uncertain_root_guard`. All 396 backend
+  tests, Ruff, TypeScript/Vite build, Runtime Architecture, source
+  maintainability and both Mingli frontend contract audits pass. Existing
+  Vite chunks above 500 kB remain recorded performance debt.
+
 ### First distilled Mingli methods change the local model's actual verdict
 
 - Added the first versioned teacher-distillation asset

@@ -17,7 +17,7 @@ import { LifeTreeScene } from "../LifeTreeScene";
 import { DreamReadingObservationLens } from "./DreamReadingObservationLens";
 import { HomeLifeTreeScene as HomeTree } from "./HomeLifeTreeScene";
 import { MingliBranchSceneHost } from "./MingliBranchSceneHost";
-import { MingliSceneHost } from "./MingliSceneHost";
+import { MingliLabWorkspaceHost } from "./MingliLabWorkspaceHost";
 
 interface ExperienceStoryCanvasProps {
   scope: ExperienceScope;
@@ -111,7 +111,7 @@ export function ExperienceStoryCanvas({
           />
         </div>
       ) : scope === "home" && activeUnit === "lab" ? (
-        <MingliSceneHost
+        <MingliLabWorkspaceHost
           homeLineageKey={[
             home.case.case_ref,
             home.chart.chart_version_ref,
@@ -124,7 +124,6 @@ export function ExperienceStoryCanvas({
           onSurfaceChange={(surface) =>
             onSelectUnit(surface === "LAB" ? "lab" : "mingli")
           }
-          surface="LAB"
         />
       ) : scope === "home" ? (
         <HomeTree

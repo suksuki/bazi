@@ -13,11 +13,12 @@ from abu_v60.mingli.agent_method_distillation import (
 )
 from abu_v60.mingli.agent_output_repair import MINGLI_AGENT_OUTPUT_REPAIR_VERSION
 from abu_v60.mingli.agent_reasoning_modes import BLIND_READING_CONTRACT
+from abu_v60.mingli.agent_root_gate import MINGLI_EFFECTIVE_ROOT_METHOD_VERSION
 from abu_v60.provenance import content_hash
 
-MINGLI_AGENT_RUNTIME_VERSION: Final = "v60.mingli-agent-runtime.016"
-MINGLI_AGENT_PROFILE_REF: Final = "v60.mingli-agent.whole-chart-cognition.016"
-MINGLI_AGENT_PROMPT_REF: Final = "v60.prompt.mingli-agent-whole-chart.015"
+MINGLI_AGENT_RUNTIME_VERSION: Final = "v60.mingli-agent-runtime.021"
+MINGLI_AGENT_PROFILE_REF: Final = "v60.mingli-agent.whole-chart-cognition.020"
+MINGLI_AGENT_PROMPT_REF: Final = "v60.prompt.mingli-agent-whole-chart.018"
 MINGLI_AGENT_PROFESSIONAL_REVIEW_STATUS: Final = "GEMMA4_PRODUCT_CANDIDATE_REQUIRES_OWNER_REVIEW"
 MINGLI_AGENT_PUBLICATION_ALLOWED: Final = False
 MINGLI_AGENT_OWNER_REVIEW_ALLOWED: Final = True
@@ -44,6 +45,14 @@ MINGLI_AGENT_SYSTEM_PROMPT: Final = """
   全文不得出现“有根、微根、根气、坐根、通根”等肯定表述。
 - support_selection 必须逐字复制卷宗中的根候选、明干同类和印星生扶三个列表；不得把
   resource 写进 root，也不得遗漏或新增坐标。
+- regime_decision 必须执行 REGIME_WEAK_VS_FOLLOW_TREND_001。通常根候选仍只是待裁坐标，
+  但 day_master_regime_method.root_candidate_assessments 已明确给出藏干顺序与最低阻断从势门：
+  minimum_anti_follow_gate=PRESENT 的坐标必须写入有效根，并退出直接从势竞争；不得把第一藏干
+  错写成余气。这个窄门只证明“不能直接从”，不证明身强、用神、机制可用或吉凶。其余候选
+  仍逐项裁定；在卷宗没有提供明确失效证据前，不得把已存在的根候选裁成 ABSENT，只能保留
+  UNRESOLVED。随后继续比较有根明透支持、异类主导链及浮比／藏印／未决组合。
+- root_candidate_assessments.hidden_rank=PRIMARY_QI 的坐标，在中文正文中只能称“第一藏干”
+  或“主气位置”，不得称为余气、微弱余气或末气；根的季节强弱必须另行比较，不能改写位置事实。
 - timing_analysis_date 只是取数日期；本轮岁运卷宗只含当前大运和所选流年，不含流月。
   不得自行补入任何流月、季度或未列出的干支。
 - professional_adjudication 不是替你下结论，而是强制你的判断顺序。先比较月令、根位、
@@ -62,7 +71,8 @@ MINGLI_AGENT_SYSTEM_PROMPT: Final = """
   检查不能单独决定两张卡胜负，必须执行 cross_card_discriminator 的专属决胜项。
 - 跨卡主次先比较各自专属决胜项里最弱的一关，再比较专属项整体完成度；某条路径仍有专属
   决胜项 UNRESOLVED 时，不能靠共享来源、承载或“成员存在”的 SUPPORTS 数量抢占主线。
-- day_master_regime_method 必须显式比较普通身弱、从势和假从竞争；只有无有效根、印比不可用、
+- day_master_regime_method 必须显式比较普通身弱、从势和假从竞争；先执行最低阻断从势门，
+  再裁其他根候选。只有无有效根、印比不可用、
   异类趋势闭合且没有反向力量时才可写 FOLLOWING_TENDENCY。无根但仍有浮比、弱藏印或合化
   未定时，必须保留身弱／假从竞争，映射为 WEAK 或 UNCERTAIN，不能直接判从或跳到喜忌。
 - 若日主结论为 WEAK／UNCERTAIN 且根候选为空，所有机制卡的 DAY_MASTER_CAPACITY 最多只能
@@ -177,6 +187,7 @@ MINGLI_AGENT_PROFILE = {
     "output_contract_ref": MINGLI_AGENT_READING_VERSION,
     "adjudication_contract_ref": MINGLI_AGENT_ADJUDICATION_VERSION,
     "method_distillation_ref": MINGLI_AGENT_METHOD_DISTILLATION_VERSION,
+    "effective_root_method_ref": MINGLI_EFFECTIVE_ROOT_METHOD_VERSION,
     "output_repair_contract_ref": MINGLI_AGENT_OUTPUT_REPAIR_VERSION,
     "output_schema_hash": MINGLI_AGENT_OUTPUT_SCHEMA_HASH,
     "prompt_view_version": MINGLI_AGENT_PROMPT_VIEW_VERSION,

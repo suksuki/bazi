@@ -23,7 +23,7 @@ from abu_v60.mingli.calendar import (
     BirthInput,
     resolve_four_pillars,
 )
-from abu_v60.mingli.compiler import compile_case
+from abu_v60.mingli.compiler import compile_birth_case
 from abu_v60.provenance import content_hash
 
 SHOWCASE_ACCOUNT_REF: Final = "v60-system-account-character-showcases-v1"
@@ -124,10 +124,9 @@ def seed_mingli_showcases(engine: Engine) -> dict[str, Any]:
             if tuple(chart.ordered()) != definition.expected_pillars:
                 raise ValueError(f"showcase_pillar_drift:{definition.subject_id}")
             _admit_identity(connection, definition=definition)
-            compiled = compile_case(
+            compiled = compile_birth_case(
                 case_ref=definition.case_ref,
                 birth_input=birth_input,
-                chart=chart,
             )
             MingliCaseAdmissionService().admit(
                 connection,

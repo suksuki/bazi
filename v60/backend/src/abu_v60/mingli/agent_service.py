@@ -20,6 +20,10 @@ from abu_v60.mingli.reading_store import (
 )
 from abu_v60.mingli.service import CaseNotFoundError, MingliCaseService
 from abu_v60.mingli.showcases import SHOWCASE_ACCOUNT_REF, SHOWCASE_BY_SUBJECT
+from abu_v60.mingli.synthetic_experiment_catalog import (
+    SYNTHETIC_RESEARCH_ACCOUNT_REF,
+    SYNTHETIC_RESEARCH_CASE_REFS,
+)
 from abu_v60.mingli.timing_store import MingliTimingVectorStore
 
 MINGLI_AGENT_REQUEST_VERSION = "v60.mingli-agent-request.001"
@@ -143,8 +147,17 @@ class MingliAgentService:
         requester_account_ref: str,
         case_ref: str,
     ) -> dict[str, object]:
+        if (
+            case_ref in SYNTHETIC_RESEARCH_CASE_REFS
+            and requester_account_ref != SYNTHETIC_RESEARCH_ACCOUNT_REF
+        ):
+            raise MingliAgentServiceError("mingli_agent_case_not_found")
         workspace_account_ref = (
-            SHOWCASE_ACCOUNT_REF if case_ref in SHOWCASE_CASE_REFS else requester_account_ref
+            SYNTHETIC_RESEARCH_ACCOUNT_REF
+            if case_ref in SYNTHETIC_RESEARCH_CASE_REFS
+            else SHOWCASE_ACCOUNT_REF
+            if case_ref in SHOWCASE_CASE_REFS
+            else requester_account_ref
         )
         try:
             workspace = self._cases.workspace(

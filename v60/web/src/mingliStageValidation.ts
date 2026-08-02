@@ -62,7 +62,7 @@ export function validateStageProjection(
       expected?.year !== undefined &&
       stage.selected_year !== expected.year) ||
     !stageIdentityIsValid(stage) ||
-    stage.projection_version !== "v60.mingli-stage-projection.003" ||
+    stage.projection_version !== "v60.mingli-stage-projection.004" ||
     !stage.projection_ref ||
     !HASH.test(stage.projection_hash) ||
     !Array.isArray(stage.source_refs) ||
@@ -208,6 +208,9 @@ export function validateAgentReading(
     ...(Array.isArray(output.day_master_evidence_ids)
       ? output.day_master_evidence_ids
       : []),
+    ...(Array.isArray(output.regime_decision?.evidence_ids)
+      ? output.regime_decision.evidence_ids
+      : []),
     ...(Array.isArray(output.hypotheses)
       ? output.hypotheses.flatMap((item) => [
           ...item.mechanism_evidence_ids,
@@ -237,7 +240,14 @@ export function validateAgentReading(
     ))),
   ];
   if (
-    reading.agent_reading_version !== "v60.mingli-agent-reading.003" ||
+    ![
+      "v60.mingli-agent-reading.003",
+      "v60.mingli-agent-reading.004",
+    ].includes(reading.agent_reading_version) ||
+    (reading.agent_reading_version === "v60.mingli-agent-reading.003"
+      && output.regime_decision !== undefined) ||
+    (reading.agent_reading_version === "v60.mingli-agent-reading.004"
+      && !regimeDecisionIsValid(output.regime_decision)) ||
     !reading.agent_reading_ref ||
     !HASH.test(reading.agent_reading_hash) ||
     !HASH.test(reading.generation_key) ||
@@ -314,6 +324,36 @@ export function validateAgentReading(
   return reading;
 }
 
+function regimeDecisionIsValid(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  const statuses = ["PRESENT", "ABSENT", "UNRESOLVED"];
+  return (
+    value.method_asset_ref === "REGIME_WEAK_VS_FOLLOW_TREND_001"
+    && [
+      "ORDINARY_WEAK",
+      "FALSE_FOLLOW_COMPETITION",
+      "FOLLOW_TREND",
+      "UNRESOLVED",
+    ].includes(String(value.classification))
+    && statuses.includes(String(value.effective_root_status))
+    && Array.isArray(value.effective_root_coordinates)
+    && value.effective_root_coordinates.every((item) => typeof item === "string")
+    && statuses.includes(String(value.rooted_visible_support_status))
+    && ["CLOSED", "OPEN", "UNRESOLVED"].includes(
+      String(value.dominant_chain_status),
+    )
+    && Array.isArray(value.competition_kinds)
+    && value.competition_kinds.every((item) => [
+      "VISIBLE_PEER",
+      "HIDDEN_RESOURCE",
+      "COMBINATION_UNRESOLVED",
+    ].includes(String(item)))
+    && Array.isArray(value.evidence_ids)
+    && value.evidence_ids.length > 0
+    && value.evidence_ids.every((item) => /^E\d{3}$/.test(String(item)))
+  );
+}
+
 function isStageSubjectId(value: unknown): value is string {
   return typeof value === "string" && (
     ["current", "abu", "duoduo"].includes(value) ||
@@ -331,9 +371,18 @@ function stageIdentityIsValid(stage: MingliStageProjection) {
       (stage.subject_kind === "HUMAN_REFERENCE" && stage.privacy_scope === "PRIVATE_REFERENCE")
     );
   }
+  if (stage.subject_id.startsWith("research:")) {
+    return (
+      stage.subject_id.length > "research:".length &&
+      stage.subject_kind === "CANONICAL_SYNTHETIC" &&
+      stage.identity_badge === "研究合成命盘" &&
+      stage.privacy_scope === "SYNTHETIC_RESEARCH"
+    );
+  }
   return (
     ["abu", "duoduo"].includes(stage.subject_id) &&
     stage.subject_kind === "CANONICAL_SYNTHETIC" &&
+    stage.identity_badge === "角色合成设定" &&
     stage.privacy_scope === "PUBLIC_SYNTHETIC_SHOWCASE"
   );
 }

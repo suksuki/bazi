@@ -244,16 +244,16 @@ schema directly.
 Current executable identities are:
 
 ```text
-Foundation       v60.foundation.019
-Architecture     v60.runtime-architecture.053
-Mingli Engine    v60.mingli-cognitive-engine.026
+Foundation       v60.foundation.027
+Architecture     v60.runtime-architecture.065
+Mingli Engine    v60.mingli-cognitive-engine.038
 Media            v60.media-library.003
 Runtime Media    v60.runtime-media-registry.004
-Unit Mingli      v60.unit-mingli.020
-Stage            v60.mingli-stage-projection.003
+Unit Mingli      v60.unit-mingli.028
+Stage            v60.mingli-stage-projection.004
 Timing           v60.mingli-timing-evidence-vector.002
 Narration        v60.mingli-narration.002
-Migration        0027_mingli_narration_v2
+Migration        0035_mingli_uncertain_root_guard
 ```
 
 ## Real evidence
@@ -378,9 +378,12 @@ DESIGN_REQUEST
   action beyond the currently admitted evidence boundary
 ```
 
-The remaining Mingli blocker is professional, not audiovisual: V60 still
-lacks an Owner-reviewed complete relation-effect rule family and therefore
-cannot yet resolve strength, source usability, effective work or a direct
-life-domain destiny answer. The next Mingli functional slice must qualify one
-complete rule chain over an authorized real Case; another page that merely
-restates the same evidence gap is not progress.
+The remaining Mingli blocker is professional, not audiovisual. The Stage now
+also renders sealed synthetic research Cases through the same Player without
+placing `research:*` identities in the ordinary profile list. Method discovery
+no longer stays on one Owner Case: the first legal A/B pair and minimum
+anti-follow root rule are recorded in
+[`20_V60_SYNTHETIC_MINGLI_METHOD_LAB.md`](20_V60_SYNTHETIC_MINGLI_METHOD_LAB.md).
+Desktop Chrome is the active first-round target; the older responsive iPad
+checks above remain historical evidence, not a current iPad portrait product
+commitment.

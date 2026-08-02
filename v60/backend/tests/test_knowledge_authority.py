@@ -21,8 +21,8 @@ from abu_v60.knowledge import (
     bazi_foundation_profile,
     bazi_quant_foundation_profile,
 )
-from abu_v60.mingli.calendar import BirthInput, resolve_four_pillars
-from abu_v60.mingli.compiler import compile_case
+from abu_v60.mingli.calendar import BirthInput
+from abu_v60.mingli.compiler import compile_birth_case
 from abu_v60.system_manifest import runtime_manifest
 from pydantic import ValidationError
 
@@ -213,10 +213,9 @@ def test_mingli_compiler_consumes_the_admitted_profile_source() -> None:
         timezone="Asia/Shanghai",
         true_solar_time_policy="not_applied",
     )
-    compiled = compile_case(
+    compiled = compile_birth_case(
         case_ref="v60-test-knowledge-authority",
         birth_input=birth_input,
-        chart=resolve_four_pillars(birth_input),
     )
 
     assert compiled.evidence_manifest["profile_source_ref"] == SOURCE_REF
@@ -251,10 +250,9 @@ def test_mingli_compiler_uses_the_explicit_active_profile_maps() -> None:
         true_solar_time_policy="not_applied",
     )
 
-    compiled = compile_case(
+    compiled = compile_birth_case(
         case_ref="v60-test-selected-knowledge-profile",
         birth_input=birth_input,
-        chart=resolve_four_pillars(birth_input),
         knowledge=authority,
     )
 

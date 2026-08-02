@@ -36,8 +36,8 @@ from abu_v60.mingli import (
     MingliTimingEvidenceCompiler,
     MingliTimingVectorStore,
 )
-from abu_v60.mingli.calendar import CALENDAR_ENGINE_VERSION, BirthInput, resolve_four_pillars
-from abu_v60.mingli.compiler import CompiledCase, compile_case
+from abu_v60.mingli.calendar import CALENDAR_ENGINE_VERSION, BirthInput
+from abu_v60.mingli.compiler import CompiledCase, compile_birth_case
 from abu_v60.provenance import content_hash
 from abu_v60.story import (
     QUALIFICATION_EPISODE_SOURCE_REGISTRY_HASH,
@@ -228,10 +228,9 @@ def _prepare_spec(spec: ThreeLifeQualificationSpec) -> dict[str, Any]:
         timezone="Asia/Shanghai",
         true_solar_time_policy="not_applied",
     )
-    compiled = compile_case(
+    compiled = compile_birth_case(
         case_ref=spec.case_ref,
         birth_input=birth_input,
-        chart=resolve_four_pillars(birth_input),
     )
     structure_fact = _select_structure_fact(compiled)
     quant_vector = MingliQuantFoundationCompiler().compile(

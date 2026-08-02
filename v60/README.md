@@ -212,17 +212,26 @@ The active local Mingli serving profile is
 `v60.model-serving.gemma4-mingli-agent.002`: one structured whole-chart call,
 temperature `0`, context `32768`, output budget `5200`. The larger output
 budget covers two fully adjudicated method cards; it does not add another
-model call. The first distilled method set is
-`v60.mingli-agent-method-distillation.001`, and its current readings remain
-private Owner-review candidates with publication disabled.
+model call. The current distilled method set is
+`v60.mingli-agent-method-distillation.003`, including the narrow
+`v60.mingli-effective-root-method.001`; its readings remain private
+Owner-review candidates with publication disabled.
 
-The current real Owner-chart qualification Reading is
+The latest sealed Owner-chart qualification Reading is a historical
+Profile/Prompt `.016/.015` result,
 `v60-mingli-agent-reading-d0aab120f2ffd51cc377`: local `gemma4:latest` judges
 the Day Master weak, selects exact 食神→财 as a conditional working primary and
 keeps exact 食神→七杀 unresolved as the alternative. Both paths inherit only
 conditional Day-Master capacity. This is a reproducible structured first
 reading, not an advanced-master qualification; relationship/family positive
 methods and real timing adjudication remain missing.
+
+The first legal synthetic A/B pair is now sealed and visible in Mingli Lab.
+The current Run passes all six hold checks and all three expected response
+checks, but both local-model outputs required server regime normalization; its
+status therefore remains `PRODUCT_SAFE_MODEL_FAIL`, not an advanced-master
+qualification. Owner charts now serve as regressions while method discovery
+moves to synthetic DEV, qualification and holdout suites.
 
 The engine and framework choices are recorded in
 [`docs/05_V60_ENGINE_AND_TECHNOLOGY_SELECTION.md`](docs/05_V60_ENGINE_AND_TECHNOLOGY_SELECTION.md).
@@ -266,5 +275,8 @@ failure are recorded in
 The Owner-approved cognitive-system constitution, shared Reading Claim Graph,
 blind/reconciliation boundary and functional delivery sequence are recorded in
 [`docs/19_V60_MINGLI_COGNITIVE_SYSTEM_CONSTITUTION_V1.md`](docs/19_V60_MINGLI_COGNITIVE_SYSTEM_CONSTITUTION_V1.md).
+The legal paired-chart method Lab, minimum anti-follow root rule, append-only
+experiment history and next synthetic qualification matrix are recorded in
+[`docs/20_V60_SYNTHETIC_MINGLI_METHOD_LAB.md`](docs/20_V60_SYNTHETIC_MINGLI_METHOD_LAB.md).
 The running implementation history is kept in
 [`docs/CHANGELOG.md`](docs/CHANGELOG.md).

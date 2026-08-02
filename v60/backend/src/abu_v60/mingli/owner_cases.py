@@ -18,9 +18,8 @@ from abu_v60.mingli.admission import (
 from abu_v60.mingli.calendar import (
     CALENDAR_ENGINE_VERSION,
     BirthInput,
-    resolve_four_pillars,
 )
-from abu_v60.mingli.compiler import compile_case
+from abu_v60.mingli.compiler import compile_birth_case
 from abu_v60.provenance import content_hash, stable_ref
 
 
@@ -105,11 +104,9 @@ class MingliOwnerCaseService:
             source_hash=content_hash(profile_payload),
             input_payload=profile_payload,
         )
-        chart = resolve_four_pillars(birth_input)
-        compiled = compile_case(
+        compiled = compile_birth_case(
             case_ref=case_ref,
             birth_input=birth_input,
-            chart=chart,
         )
         definition = MingliCaseAdmissionDefinition.from_compiled(
             compiled=compiled,
@@ -140,7 +137,7 @@ class MingliOwnerCaseService:
             "case_ref": case_ref,
             "profile_ref": profile_ref,
             "active": True,
-            "chart": chart.model_dump(mode="json"),
+            "chart": dict(compiled.pillars),
         }
 
     def activate(self, *, account_ref: str, case_ref: str) -> dict[str, object]:

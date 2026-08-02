@@ -9,8 +9,8 @@ from abu_v60.mingli import (
     MingliQuantFoundationCompiler,
     MingliTimingEvidenceCompiler,
 )
-from abu_v60.mingli.calendar import BirthInput, resolve_four_pillars
-from abu_v60.mingli.compiler import compile_case
+from abu_v60.mingli.calendar import BirthInput
+from abu_v60.mingli.compiler import compile_birth_case
 
 ANALYSIS_DATE = date(2026, 7, 29)
 
@@ -22,10 +22,9 @@ def _compile(*, case_ref: str, birth_date: date, birth_time: time):
         birth_time=birth_time,
         timezone="Asia/Shanghai",
     )
-    compiled = compile_case(
+    compiled = compile_birth_case(
         case_ref=case_ref,
         birth_input=birth_input,
-        chart=resolve_four_pillars(birth_input),
     )
     quant = MingliQuantFoundationCompiler().compile(
         case_ref=case_ref,

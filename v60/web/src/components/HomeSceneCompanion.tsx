@@ -33,14 +33,14 @@ export function HomeSceneCompanion({
       const stage = mingliContext.projection;
       return (
         <aside className="mingli-case-evidence-boundary" role="status">
-          <small>CASE-BOUND EVIDENCE</small>
+          <small>独立研究命盘</small>
           <strong>
-            {stage ? `${stage.display_name}的证据抽屉尚未接线` : "正在核对这份档案的证据边界"}
+            {stage ? `${stage.display_name}正在独立展示` : "正在切换研究命盘"}
           </strong>
           <p>
             {stage
-              ? `主舞台与命理枝已经绑定 ${stage.identity_badge}；为避免混入${home.profile.display_name}的 Reading，这里不会显示或提交当前生命树的证据。`
-              : "Case、命盘、LifeCase 与 Reading 完全一致后，证据入口才会开放。"}
+              ? `当前舞台只呈现${stage.identity_badge}；${home.profile.display_name}的生命树内容仍留在自己的档案里。`
+              : "研究命盘准备完成后再展开；当前生命树不会被改动。"}
           </p>
         </aside>
       );

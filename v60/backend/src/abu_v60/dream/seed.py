@@ -29,8 +29,8 @@ from abu_v60.mingli import (
     MingliTimingEvidenceCompiler,
     MingliTimingVectorStore,
 )
-from abu_v60.mingli.calendar import CALENDAR_ENGINE_VERSION, BirthInput, resolve_four_pillars
-from abu_v60.mingli.compiler import compile_case
+from abu_v60.mingli.calendar import CALENDAR_ENGINE_VERSION, BirthInput
+from abu_v60.mingli.compiler import compile_birth_case
 from abu_v60.provenance import content_hash
 from abu_v60.story import (
     EPISODE_SOURCE_REGISTRY_HASH,
@@ -63,11 +63,9 @@ def seed_first_slice(engine: Engine) -> dict[str, Any]:
         timezone="Asia/Shanghai",
         true_solar_time_policy="not_applied",
     )
-    chart = resolve_four_pillars(birth_input)
-    compiled = compile_case(
+    compiled = compile_birth_case(
         case_ref=SYNTHETIC_CASE_REF,
         birth_input=birth_input,
-        chart=chart,
     )
     structure_fact = next(
         fact for fact in compiled.facts if fact["fact_type"] == "six_harmony_membership"

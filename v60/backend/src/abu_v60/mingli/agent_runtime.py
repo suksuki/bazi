@@ -43,12 +43,16 @@ from abu_v60.mingli.agent_profile import (
     MINGLI_AGENT_RUNTIME_VERSION,
     MINGLI_AGENT_SYSTEM_PROMPT,
 )
+from abu_v60.mingli.agent_regime_contracts import (
+    MINGLI_AGENT_REGIME_DECISION_VERSION,
+)
+from abu_v60.mingli.agent_root_gate import MINGLI_EFFECTIVE_ROOT_METHOD_VERSION
 from abu_v60.provenance import canonical_json, content_hash, stable_ref
 from abu_v60.settings import Settings, settings
 
 OLLAMA_GENERATE_PROVIDER_ID = "ollama-generate"
-MINGLI_AGENT_PROMPT_VIEW_MAX_CHARS = 18000
-MINGLI_AGENT_OUTPUT_SCHEMA_MAX_CHARS = 12000
+MINGLI_AGENT_PROMPT_VIEW_MAX_CHARS = 24000
+MINGLI_AGENT_OUTPUT_SCHEMA_MAX_CHARS = 14000
 
 
 class MingliAgentRuntimeStatus(StrEnum):
@@ -409,7 +413,9 @@ def mingli_agent_runtime_manifest(
         "output_contract_ref": MINGLI_AGENT_READING_VERSION,
         "adjudication_contract_ref": MINGLI_AGENT_ADJUDICATION_VERSION,
         "method_distillation_ref": MINGLI_AGENT_METHOD_DISTILLATION_VERSION,
+        "effective_root_method_ref": MINGLI_EFFECTIVE_ROOT_METHOD_VERSION,
         "output_repair_contract_ref": MINGLI_AGENT_OUTPUT_REPAIR_VERSION,
+        "regime_decision_contract_ref": MINGLI_AGENT_REGIME_DECISION_VERSION,
         "method_adjudication": "TYPED_CHECK_RULINGS_AND_SERVER_DERIVED_AGGREGATE",
         "whole_chart_judgment_required": True,
         "status": status.value,

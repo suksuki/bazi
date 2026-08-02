@@ -5,11 +5,17 @@ from itertools import combinations
 from typing import Any
 
 from abu_v60.knowledge import KnowledgeAuthority
-from abu_v60.mingli.calendar import CALENDAR_ENGINE_VERSION, BirthInput, ChartPillars
+from abu_v60.mingli.calendar import (
+    CALENDAR_ENGINE_VERSION,
+    BirthInput,
+    ChartPillars,
+    resolve_four_pillars,
+)
 from abu_v60.mingli.foundation_runtime import FoundationRuntimeMaps
 from abu_v60.provenance import content_hash, stable_ref
 
 PILLAR_SLOTS = ("year", "month", "day", "hour")
+RESEARCH_CHART_COMPILER_VERSION = "v60.research-explicit-chart.001"
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,11 +33,76 @@ class CompiledCase:
     scene_payload: dict[str, Any]
 
 
+def compile_birth_case(
+    *,
+    case_ref: str,
+    birth_input: BirthInput,
+    knowledge: KnowledgeAuthority | None = None,
+) -> CompiledCase:
+    """Compile a product Case from one authoritative birth input."""
+
+    return _compile_case(
+        case_ref=case_ref,
+        birth_input_hash=birth_input.input_hash,
+        chart=resolve_four_pillars(birth_input),
+        algorithm_version=CALENDAR_ENGINE_VERSION,
+        knowledge=knowledge,
+    )
+
+
 def compile_case(
     *,
     case_ref: str,
     birth_input: BirthInput,
     chart: ChartPillars,
+    knowledge: KnowledgeAuthority | None = None,
+) -> CompiledCase:
+    """Compile a verified calendar Case, rejecting supplied-chart drift."""
+
+    resolved = resolve_four_pillars(birth_input)
+    if chart != resolved:
+        raise ValueError(
+            "birth_chart_mismatch:"
+            f"supplied={','.join(chart.ordered())}:"
+            f"resolved={','.join(resolved.ordered())}"
+        )
+    return _compile_case(
+        case_ref=case_ref,
+        birth_input_hash=birth_input.input_hash,
+        chart=resolved,
+        algorithm_version=CALENDAR_ENGINE_VERSION,
+        knowledge=knowledge,
+    )
+
+
+def compile_research_case(
+    *,
+    case_ref: str,
+    chart: ChartPillars,
+    knowledge: KnowledgeAuthority | None = None,
+) -> CompiledCase:
+    """Compile an explicit chart for isolated rule tests, never as a birth Case."""
+
+    return _compile_case(
+        case_ref=case_ref,
+        birth_input_hash=content_hash(
+            {
+                "source_kind": "EXPLICIT_RESEARCH_CHART",
+                "pillars": chart.model_dump(mode="json"),
+            }
+        ),
+        chart=chart,
+        algorithm_version=RESEARCH_CHART_COMPILER_VERSION,
+        knowledge=knowledge,
+    )
+
+
+def _compile_case(
+    *,
+    case_ref: str,
+    birth_input_hash: str,
+    chart: ChartPillars,
+    algorithm_version: str,
     knowledge: KnowledgeAuthority | None = None,
 ) -> CompiledCase:
     foundation = FoundationRuntimeMaps.from_profile(
@@ -41,9 +112,9 @@ def compile_case(
     chart_payload = {
         "case_ref": case_ref,
         "version": 1,
-        "birth_input_hash": birth_input.input_hash,
+        "birth_input_hash": birth_input_hash,
         "pillars": pillars,
-        "algorithm_version": CALENDAR_ENGINE_VERSION,
+        "algorithm_version": algorithm_version,
     }
     chart_hash = content_hash(chart_payload)
     chart_ref = stable_ref("v60-chart", chart_payload)

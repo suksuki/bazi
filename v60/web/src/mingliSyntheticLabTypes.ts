@@ -1,0 +1,95 @@
+import type { MingliStageProjection } from "./mingliStageTypes";
+
+export type MingliSyntheticVariant = "A" | "B";
+export type MingliSyntheticOutcome =
+  | "PASS"
+  | "PRODUCT_SAFE_MODEL_FAIL"
+  | "MODEL_FAIL"
+  | "INVALID_EXPERIMENT";
+
+export interface MingliSyntheticExperimentMember {
+  variant: MingliSyntheticVariant;
+  member_ref: string;
+  subject_id: string;
+}
+
+export interface MingliSyntheticExperimentDefinition {
+  catalog_version: "v60.mingli-synthetic-experiment-catalog.001";
+  experiment_ref: string;
+  definition_hash: string;
+  suite: "DEV";
+  family: "CONTROLLED_LEGAL_HOUR_PAIR";
+  title: string;
+  question: string;
+  analysis_date: string;
+  blind_protocol: "MEMBERS_INDEPENDENT_GOLD_NOT_IN_AGENT_PACKET";
+  inference_scope: "WHOLE_HOUR_PILLAR_RESPONSE_NOT_ROOT_CAUSAL_ESTIMATE";
+  inference_limit: string;
+  known_collateral_deltas: string[];
+  changed_input: {
+    field: "birth_time";
+    A: string;
+    B: string;
+  };
+  full_pillar_delta: {
+    A: string[];
+    B: string[];
+    changed_slots: ["hour"];
+    legal_hour_pillar_change: string;
+  };
+  members: MingliSyntheticExperimentMember[];
+}
+
+export interface MingliSyntheticExperimentCatalogEntry
+  extends MingliSyntheticExperimentDefinition {
+  run_status: "SEALED" | "NOT_RUN";
+  latest_run_ref: string | null;
+  latest_outcome: MingliSyntheticOutcome | null;
+}
+
+export interface MingliSyntheticExperimentCatalog {
+  catalog_version: "v60.mingli-synthetic-experiment-catalog.001";
+  experiments: MingliSyntheticExperimentCatalogEntry[];
+  browser_generation_allowed: false;
+  read_only: true;
+}
+
+export interface MingliSyntheticExperimentCheck {
+  check_ref: string;
+  group: "EXPERIMENT_VALIDITY" | "MUST_HOLD" | "EXPECTED_CHANGE";
+  status: "PASS" | "FAIL";
+  statement: string;
+  A: unknown;
+  B: unknown;
+}
+
+export interface MingliSyntheticExperimentEvaluation {
+  evaluator_version: "v60.mingli-synthetic-experiment-evaluator.001";
+  dev_gold_version: "v60.mingli-synthetic-experiment-dev-gold.001";
+  dev_gold_hash: string;
+  outcome: MingliSyntheticOutcome;
+  checks: MingliSyntheticExperimentCheck[];
+  server_issue_keys: { A: string[]; B: string[] };
+  changed_pass_count: number;
+  hold_pass_count: number;
+  drift_checks: string[];
+  qualification_effect: "DEV_EVIDENCE_ONLY_NOT_METHOD_QUALIFICATION";
+  summary: string;
+}
+
+export interface MingliSyntheticExperimentSnapshot {
+  snapshot_version: "v60.mingli-synthetic-experiment-snapshot.001";
+  snapshot_ref: string;
+  snapshot_hash: string;
+  experiment_ref: string;
+  run_ref: string;
+  run_hash: string;
+  selected_variant: MingliSyntheticVariant;
+  member_ref: string;
+  sealed_agent_reading_ref: string;
+  stage: MingliStageProjection;
+  evaluation: MingliSyntheticExperimentEvaluation;
+  definition: MingliSyntheticExperimentDefinition;
+  browser_generation_allowed: false;
+  read_only: true;
+}

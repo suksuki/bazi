@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import os
 from collections import Counter
-from datetime import date, time
 from pathlib import Path
 from typing import Any
 
@@ -11,8 +10,8 @@ from abu_v60.mingli import (
     MingliMechanismEvidenceCompiler,
     MingliQuantFoundationCompiler,
 )
-from abu_v60.mingli.calendar import BirthInput, ChartPillars
-from abu_v60.mingli.compiler import compile_case
+from abu_v60.mingli.calendar import ChartPillars
+from abu_v60.mingli.compiler import compile_research_case
 from abu_v60.provenance import canonical_json, content_hash
 from sqlalchemy import create_engine, text
 
@@ -23,7 +22,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--output",
-        default="artifacts/audits/v60-mingli-mechanism-dataset-v1.json",
+        default="artifacts/audits/v60-mingli-mechanism-dataset-v2.json",
     )
     args = parser.parse_args()
     source_url = os.getenv(
@@ -79,19 +78,9 @@ def _compile_row(row: dict[str, Any]) -> dict[str, Any]:
         day=ordered[2],
         hour=ordered[3],
     )
-    profile_json = row["profile_json"] if isinstance(row["profile_json"], dict) else {}
-    birth_input = BirthInput(
-        calendar_type=str(row["calendar_type"]),
-        birth_date=date.fromisoformat(str(row["birth_date"])),
-        birth_time=time.fromisoformat(str(row["birth_time"])),
-        timezone=str(row["timezone"]),
-        lunar_leap_month=bool(profile_json.get("lunar_leap_month", False)),
-        true_solar_time_policy=str(profile_json.get("true_solar_time_policy", "not_applied")),
-    )
     case_ref = f"v50-read-only-audit:{row['profile_id']}"
-    compiled = compile_case(
+    compiled = compile_research_case(
         case_ref=case_ref,
-        birth_input=birth_input,
         chart=chart,
     )
     quant = MingliQuantFoundationCompiler().compile(
@@ -125,7 +114,7 @@ def _report(records: list[dict[str, Any]]) -> dict[str, Any]:
     distribution = Counter(record["candidate_count"] for record in records)
     patterns = Counter(pattern for record in records for pattern in record["pattern_refs"])
     return {
-        "report_version": "v60.mingli-mechanism-dataset-audit.001",
+        "report_version": "v60.mingli-mechanism-dataset-audit.002",
         "source_database": "qiazhi_v50",
         "source_access": "READ_ONLY",
         "runtime_dependency_created": False,

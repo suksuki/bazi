@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from abu_v60.mingli.agent_adjudication import MINGLI_AGENT_NORMALIZATION_ISSUE_FIELD
 
-MINGLI_AGENT_OUTPUT_REPAIR_VERSION = "v60.mingli-agent-output-repair.002"
+MINGLI_AGENT_OUTPUT_REPAIR_VERSION = "v60.mingli-agent-output-repair.003"
 
 if TYPE_CHECKING:
     from abu_v60.mingli.agent_contracts import MingliAgentCasePacket
@@ -39,6 +39,7 @@ _TRANSFORMATIONS = {
 _TOP_LEVEL_KEYS = {
     "first_look",
     "whole_chart_thesis",
+    "regime_decision",
     "day_master_state",
     "support_selection",
     "day_master_rationale",

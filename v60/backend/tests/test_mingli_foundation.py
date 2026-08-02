@@ -1,7 +1,8 @@
 from datetime import date, time
 
+import pytest
 from abu_v60.mingli.calendar import BirthInput, resolve_four_pillars
-from abu_v60.mingli.compiler import compile_case
+from abu_v60.mingli.compiler import compile_birth_case, compile_case
 
 
 def owner_birth_input() -> BirthInput:
@@ -21,11 +22,9 @@ def test_v60_recomputes_owner_chart_without_v50_runtime() -> None:
 
 def test_bounded_case_compilation_keeps_professional_unknowns_unresolved() -> None:
     birth_input = owner_birth_input()
-    chart = resolve_four_pillars(birth_input)
-    compiled = compile_case(
+    compiled = compile_birth_case(
         case_ref="v60-test-case-owner",
         birth_input=birth_input,
-        chart=chart,
     )
 
     assert len(compiled.facts) == 22
@@ -37,9 +36,34 @@ def test_bounded_case_compilation_keeps_professional_unknowns_unresolved() -> No
 
 def test_visual_phenotype_depends_on_chart_facts_not_case_identity() -> None:
     birth_input = owner_birth_input()
-    chart = resolve_four_pillars(birth_input)
-    first = compile_case(case_ref="v60-case-a", birth_input=birth_input, chart=chart)
-    second = compile_case(case_ref="v60-case-b", birth_input=birth_input, chart=chart)
+    first = compile_birth_case(case_ref="v60-case-a", birth_input=birth_input)
+    second = compile_birth_case(case_ref="v60-case-b", birth_input=birth_input)
 
     assert first.scene_payload["tree_phenotype"] == second.scene_payload["tree_phenotype"]
     assert first.scene_ref != second.scene_ref
+
+
+def test_birth_compiler_matches_verified_compatibility_entrypoint() -> None:
+    birth_input = owner_birth_input()
+    case_ref = "v60-case-calendar-equivalence"
+
+    direct = compile_birth_case(case_ref=case_ref, birth_input=birth_input)
+    verified = compile_case(
+        case_ref=case_ref,
+        birth_input=birth_input,
+        chart=resolve_four_pillars(birth_input),
+    )
+
+    assert direct == verified
+
+
+def test_product_case_rejects_chart_that_did_not_come_from_birth_input() -> None:
+    birth_input = owner_birth_input()
+    chart = resolve_four_pillars(birth_input).model_copy(update={"hour": "甲子"})
+
+    with pytest.raises(ValueError, match="birth_chart_mismatch"):
+        compile_case(
+            case_ref="v60-case-calendar-drift",
+            birth_input=birth_input,
+            chart=chart,
+        )

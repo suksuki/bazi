@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 from abu_v60.api import mingli_stage
 from abu_v60.db import engine
+from abu_v60.mingli.agent_adjudication import repair_output_form
 from abu_v60.mingli.agent_contracts import (
     MingliAgentModelOutput,
     MingliAgentReadingEnvelope,
@@ -28,6 +29,7 @@ from abu_v60.mingli.agent_reasoning_modes import (
     RECONCILIATION_CONTRACT,
 )
 from abu_v60.mingli.agent_runtime import (
+    MINGLI_AGENT_OUTPUT_SCHEMA_MAX_CHARS,
     MINGLI_AGENT_PROMPT_VIEW_MAX_CHARS,
     MingliAgentProviderError,
     MingliAgentProviderResult,
@@ -46,11 +48,29 @@ from abu_v60.mingli.reading_store import MingliReadingStore
 from abu_v60.mingli.reading_summary import MingliReadingSummaryService
 from abu_v60.mingli.service import MingliCaseService
 from abu_v60.mingli.timing_store import MingliTimingVectorStore
-from abu_v60.provenance import canonical_json, content_hash
+from abu_v60.provenance import canonical_json, content_hash, stable_ref
 from abu_v60.settings import settings
 from fastapi import HTTPException, Response
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
+
+
+def test_copy_repair_preserves_excluded_candidate_status_enum() -> None:
+    repaired = repair_output_form(
+        {
+            "excluded_candidates": [
+                {
+                    "status": "UNRESOLVED",
+                    "rationale": "UNRESOLVED：这条候选还需要整盘比较。",
+                }
+            ]
+        }
+    )
+
+    assert repaired["excluded_candidates"][0]["status"] == "UNRESOLVED"
+    assert repaired["excluded_candidates"][0]["rationale"] == (
+        "这条候选还需要整盘比较。"
+    )
 
 
 def _base_reading_fixture() -> dict[str, str]:
@@ -206,6 +226,19 @@ def _valid_output(*, suffix: str = "", packet: Any | None = None) -> MingliAgent
                 "全盘的关键不在单个五行多少，而在月令、透藏与各柱之间能否"
                 "把分散力量导向同一条可持续的转化路径。"
             ),
+            "regime_decision": {
+                "method_asset_ref": "REGIME_WEAK_VS_FOLLOW_TREND_001",
+                "classification": "UNRESOLVED",
+                "effective_root_status": "UNRESOLVED" if roots else "ABSENT",
+                "effective_root_coordinates": [],
+                "rooted_visible_support_status": "ABSENT",
+                "dominant_chain_status": "UNRESOLVED",
+                "competition_kinds": [
+                    *(["VISIBLE_PEER"] if peers else []),
+                    *(["HIDDEN_RESOURCE"] if resources else []),
+                ],
+                "evidence_ids": [base_evidence[-1]],
+            },
             "day_master_state": "BALANCED",
             "support_selection": {
                 "root_status": "PRESENT" if roots else "NONE",
@@ -564,6 +597,10 @@ def test_ollama_adapter_sends_one_locked_packet_and_validates_output() -> None:
     assert calls[0]["payload"]["prompt"] == canonical_json(packet.model_prompt_view())
     assert calls[0]["payload"]["stream"] is False
     assert calls[0]["payload"]["think"] is False
+    assert (
+        len(canonical_json(calls[0]["payload"]["format"]))
+        <= MINGLI_AGENT_OUTPUT_SCHEMA_MAX_CHARS
+    )
     assert result.total_tokens == 360
     assert result.output.day_master_evidence_ids[0] == "E001"
     assert "E001" not in result.output.domains.career.conclusion
@@ -578,6 +615,8 @@ def test_ollama_adapter_sends_one_locked_packet_and_validates_output() -> None:
         packet.day_master_support.evidence_id,
     )
     assert result.output.hypotheses[0].role == "PRIMARY"
+    assert result.output.regime_decision is not None
+    assert result.output.regime_decision.classification == "UNRESOLVED"
 
 
 def test_ollama_adapter_repairs_partial_rulings_and_timing_scope() -> None:
@@ -831,12 +870,92 @@ def test_following_tendency_retreats_when_peer_or_resource_competition_exists() 
     raw = _valid_output(packet=packet).model_dump(mode="json")
     raw["day_master_state"] = "FOLLOWING_TENDENCY"
     raw["day_master_rationale"] = "日主无根，所以已经可以直接顺从异类力量形成从势。"
+    raw["regime_decision"]["dominant_chain_status"] = "CLOSED"
+    raw["regime_decision"]["classification"] = "FALSE_FOLLOW_COMPETITION"
 
     output = _normalize_raw(packet=packet, raw=raw)
 
     assert output.day_master_state == "UNCERTAIN"
-    assert "普通身弱与假从" in output.day_master_rationale
+    assert output.regime_decision is not None
+    assert output.regime_decision.classification == "FALSE_FOLLOW_COMPETITION"
+    assert "浮比、藏印或未决组合" in output.day_master_rationale
     assert "DAY_MASTER_REGIME" in output.server_issue_keys
+
+
+def test_regime_rejects_invented_effective_root_coordinate() -> None:
+    _, packet = _packet_with_candidate_count(1)
+    raw = _valid_output(packet=packet).model_dump(mode="json")
+    raw["day_master_state"] = "WEAK"
+    raw["regime_decision"].update(
+        {
+            "classification": "ORDINARY_WEAK",
+            "effective_root_status": "PRESENT",
+            "effective_root_coordinates": ["hour支藏甲-虚构"],
+            "dominant_chain_status": "CLOSED",
+        }
+    )
+
+    output = _normalize_raw(packet=packet, raw=raw)
+
+    assert output.regime_decision is not None
+    assert output.regime_decision.effective_root_status == "UNRESOLVED"
+    assert output.regime_decision.effective_root_coordinates == ()
+    assert output.regime_decision.classification == "UNRESOLVED"
+    assert "DAY_MASTER_REGIME" in output.server_issue_keys
+
+
+def test_candidate_root_without_invalidation_stays_unresolved_and_caps_capacity() -> None:
+    _, packet = _packet_with_candidate_count(1)
+    raw = _valid_output(packet=packet).model_dump(mode="json")
+    raw["day_master_state"] = "WEAK"
+    raw["regime_decision"].update(
+        {
+            "classification": "FALSE_FOLLOW_COMPETITION",
+            "effective_root_status": "ABSENT",
+            "effective_root_coordinates": [],
+            "dominant_chain_status": "CLOSED",
+        }
+    )
+    for hypothesis in raw["hypotheses"]:
+        for capacity in (
+            item
+            for item in hypothesis["method_rulings"]
+            if item["check_code"] == "DAY_MASTER_CAPACITY"
+        ):
+            capacity["ruling"] = "SUPPORTS"
+
+    output = _normalize_raw(packet=packet, raw=raw)
+
+    assert output.regime_decision is not None
+    assert output.regime_decision.effective_root_status == "UNRESOLVED"
+    assert output.regime_decision.classification == "UNRESOLVED"
+    capacities = tuple(
+        item
+        for hypothesis in output.hypotheses
+        for item in hypothesis.method_rulings
+        if item.check_code == "DAY_MASTER_CAPACITY"
+    )
+    assert capacities
+    for capacity in capacities:
+        assert capacity.ruling == "CONDITIONAL"
+
+
+def test_open_dominant_chain_cannot_be_normalized_to_follow_trend() -> None:
+    _, packet = _packet()
+    raw = _valid_output(packet=packet).model_dump(mode="json")
+    raw["day_master_state"] = "FOLLOWING_TENDENCY"
+    raw["regime_decision"].update(
+        {
+            "classification": "FOLLOW_TREND",
+            "dominant_chain_status": "OPEN",
+        }
+    )
+
+    output = _normalize_raw(packet=packet, raw=raw)
+
+    assert output.regime_decision is not None
+    assert output.regime_decision.classification == "UNRESOLVED"
+    assert output.day_master_state == "UNCERTAIN"
 
 
 def test_candidate_allocator_reserves_later_valid_ref_before_repairing_invalid_first() -> None:
@@ -1605,6 +1724,36 @@ def _envelope(fixture: dict[str, str], *, suffix: str = "", packet: Any | None =
         total_tokens=30,
         duration_ms=40,
     )
+
+
+def test_legacy_reading_003_replays_without_injecting_null_regime() -> None:
+    fixture = _base_reading_fixture()
+    current = _envelope(fixture)
+    payload = current.model_dump(mode="json")
+    payload["agent_reading_version"] = "v60.mingli-agent-reading.003"
+    payload["output"].pop("regime_decision")
+    identity = {
+        key: value
+        for key, value in payload.items()
+        if key not in {"agent_reading_ref", "agent_reading_hash"}
+    }
+    payload["agent_reading_ref"] = stable_ref("v60-mingli-agent-reading", identity)
+    payload["agent_reading_hash"] = content_hash(identity)
+
+    restored = MingliAgentReadingEnvelope.model_validate(payload)
+
+    assert restored.agent_reading_version == "v60.mingli-agent-reading.003"
+    assert restored.output.regime_decision is None
+    assert "regime_decision" not in restored.output.model_dump(mode="json")
+
+
+def test_reading_004_requires_typed_regime_decision() -> None:
+    fixture = _base_reading_fixture()
+    payload = _envelope(fixture).model_dump(mode="json")
+    payload["output"].pop("regime_decision")
+
+    with pytest.raises(ValueError, match="regime_decision_required"):
+        MingliAgentReadingEnvelope.model_validate(payload)
 
 
 def test_agent_reading_projects_one_deterministic_shared_claim_graph() -> None:

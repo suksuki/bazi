@@ -8,7 +8,7 @@ from abu_v60.mingli.agent_method_distillation import (
     distilled_check_guidance,
 )
 
-MINGLI_AGENT_ADJUDICATION_VERSION = "v60.mingli-agent-adjudication.005"
+MINGLI_AGENT_ADJUDICATION_VERSION = "v60.mingli-agent-adjudication.009"
 FALLBACK_METHOD_CARD_REF = "FALLBACK_WHOLE_CHART"
 
 _PATTERN_CHECKS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {

@@ -28,8 +28,8 @@ from abu_v60.mingli import (
     MingliCaseAdmissionError,
     MingliCaseAdmissionService,
 )
-from abu_v60.mingli.calendar import CALENDAR_ENGINE_VERSION, BirthInput, resolve_four_pillars
-from abu_v60.mingli.compiler import compile_case
+from abu_v60.mingli.calendar import CALENDAR_ENGINE_VERSION, BirthInput
+from abu_v60.mingli.compiler import compile_birth_case
 from abu_v60.world import (
     WorldActorAdmissionError,
     WorldActorAdmissionService,
@@ -90,10 +90,9 @@ def _seed_case_definition(
         timezone="Asia/Shanghai",
         true_solar_time_policy="not_applied",
     )
-    compiled = compile_case(
+    compiled = compile_birth_case(
         case_ref=SYNTHETIC_CASE_REF,
         birth_input=birth_input,
-        chart=resolve_four_pillars(birth_input),
     )
     return MingliCaseAdmissionDefinition.from_compiled(
         compiled=compiled,

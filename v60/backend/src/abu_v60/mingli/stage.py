@@ -26,6 +26,7 @@ from abu_v60.mingli.stage_contracts import (
     MingliStageProjection,
     MingliStageRelationMembership,
 )
+from abu_v60.mingli.synthetic_experiment_catalog import MingliResearchStageBinding
 from abu_v60.mingli.timing import MingliTimingEvidenceCompiler
 from abu_v60.mingli.timing_contracts import (
     DAYUN_CALCULATION_POLICY,
@@ -55,6 +56,10 @@ class MingliStageService:
         readings: MingliReadingStore | None = None,
         current_date_provider: Callable[[str], date] | None = None,
         runtime_settings: Settings | None = None,
+        research_subject_resolver: Callable[
+            [str], MingliResearchStageBinding | None
+        ]
+        | None = None,
     ) -> None:
         self._engine = engine
         self._cases = cases or MingliCaseService(engine)
@@ -65,6 +70,7 @@ class MingliStageService:
         self._current_date_provider = current_date_provider or (
             lambda timezone: datetime.now(ZoneInfo(timezone)).date()
         )
+        self._research_subject_resolver = research_subject_resolver
 
     def subjects(self, *, account_ref: str) -> list[dict[str, object]]:
         current = self._owner_workspace(account_ref=account_ref)
@@ -113,8 +119,10 @@ class MingliStageService:
         subject_id: str,
         stage_mode: MingliStageMode,
         selected_year: int | None = None,
+        pinned_reading_ref: str | None = None,
+        pinned_reading_hash: str | None = None,
     ) -> MingliStageProjection:
-        workspace, narrator_actor_id = self._workspace(
+        workspace, narrator_actor_id, identity_badge, privacy_scope = self._workspace(
             account_ref=account_ref,
             subject_id=subject_id,
         )
@@ -164,10 +172,12 @@ class MingliStageService:
             rule_hash=foundation.profile_hash,
         )
         subject_kind = str(workspace["case"]["subject_kind"])
-        reading_binding = self._latest_reading_binding(
+        reading_binding = self._reading_binding(
             case_ref=str(workspace["case"]["case_ref"]),
             chart_version_ref=str(workspace["chart"]["chart_version_ref"]),
             life_case_revision_ref=str(workspace["life_case"]["life_case_revision_ref"]),
+            pinned_reading_ref=pinned_reading_ref,
+            pinned_reading_hash=pinned_reading_hash,
         )
         timing_profile = self._authority.active_timing_evidence_profile()
         source_refs = {
@@ -202,20 +212,8 @@ class MingliStageService:
             ),
             display_name=str(workspace["profile"]["display_name"]),
             subject_kind=subject_kind,
-            identity_badge=(
-                "私密真实档案"
-                if subject_kind == "HUMAN_OWNER"
-                else "真实参考档案"
-                if subject_kind == "HUMAN_REFERENCE"
-                else "角色合成设定"
-            ),
-            privacy_scope=(
-                "PRIVATE_OWNER"
-                if subject_kind == "HUMAN_OWNER"
-                else "PRIVATE_REFERENCE"
-                if subject_kind == "HUMAN_REFERENCE"
-                else "PUBLIC_SYNTHETIC_SHOWCASE"
-            ),
+            identity_badge=identity_badge,
+            privacy_scope=privacy_scope,
             stage_mode=stage_mode,
             selected_year=selected_year,
             available_years=available_years,
@@ -278,9 +276,14 @@ class MingliStageService:
         *,
         account_ref: str,
         subject_id: str,
-    ) -> tuple[dict[str, Any], str]:
+    ) -> tuple[dict[str, Any], str, str, str]:
         if subject_id == "current":
-            return self._owner_workspace(account_ref=account_ref), "ABU_NARRATOR_V1"
+            return (
+                self._owner_workspace(account_ref=account_ref),
+                "ABU_NARRATOR_V1",
+                "私密真实档案",
+                "PRIVATE_OWNER",
+            )
         if subject_id.startswith(PRIVATE_CASE_SUBJECT_PREFIX):
             case_ref = subject_id.removeprefix(PRIVATE_CASE_SUBJECT_PREFIX)
             if not case_ref:
@@ -297,7 +300,34 @@ class MingliStageService:
                 "HUMAN_REFERENCE",
             }:
                 raise MingliStageError("mingli_stage_private_case_kind_mismatch")
-            return workspace, "ABU_NARRATOR_V1"
+            subject_kind = str(workspace["case"]["subject_kind"])
+            return (
+                workspace,
+                "ABU_NARRATOR_V1",
+                "私密真实档案" if subject_kind == "HUMAN_OWNER" else "真实参考档案",
+                "PRIVATE_OWNER" if subject_kind == "HUMAN_OWNER" else "PRIVATE_REFERENCE",
+            )
+        research_binding = (
+            self._research_subject_resolver(subject_id)
+            if self._research_subject_resolver is not None
+            else None
+        )
+        if research_binding is not None:
+            try:
+                workspace = self._cases.workspace(
+                    account_ref=research_binding.account_ref,
+                    case_ref=research_binding.case_ref,
+                )
+            except CaseNotFoundError as exc:
+                raise MingliStageError("mingli_stage_research_case_not_seeded") from exc
+            if workspace["case"]["subject_kind"] != "CANONICAL_SYNTHETIC":
+                raise MingliStageError("mingli_stage_research_case_kind_mismatch")
+            return (
+                workspace,
+                research_binding.narrator_actor_id,
+                research_binding.identity_badge,
+                research_binding.privacy_scope,
+            )
         definition = SHOWCASE_BY_SUBJECT.get(subject_id)
         if definition is None:
             raise MingliStageError("mingli_stage_subject_not_found")
@@ -310,7 +340,12 @@ class MingliStageService:
             raise MingliStageError("mingli_stage_showcase_not_seeded") from exc
         if workspace["case"]["subject_kind"] != "CANONICAL_SYNTHETIC":
             raise MingliStageError("mingli_stage_showcase_kind_mismatch")
-        return workspace, definition.narrator_actor_id
+        return (
+            workspace,
+            definition.narrator_actor_id,
+            "角色合成设定",
+            "PUBLIC_SYNTHETIC_SHOWCASE",
+        )
 
     def _owner_workspace(self, *, account_ref: str) -> dict[str, Any]:
         cases = [
@@ -596,13 +631,30 @@ class MingliStageService:
                 matching_refs.add(fact_ref)
         return tuple(sorted(matching_refs))
 
-    def _latest_reading_binding(
+    def _reading_binding(
         self,
         *,
         case_ref: str,
         chart_version_ref: str,
         life_case_revision_ref: str,
+        pinned_reading_ref: str | None,
+        pinned_reading_hash: str | None,
     ) -> Mapping[str, Any] | None:
+        if (pinned_reading_ref is None) != (pinned_reading_hash is None):
+            raise MingliStageError("mingli_stage_pinned_reading_binding_incomplete")
+        if pinned_reading_ref is not None:
+            reading = self._readings.get(reading_ref=pinned_reading_ref)
+            if (
+                reading.case_ref != case_ref
+                or reading.chart_version_ref != chart_version_ref
+                or reading.life_case_revision_ref != life_case_revision_ref
+                or reading.reading_hash != pinned_reading_hash
+            ):
+                raise MingliStageError("mingli_stage_pinned_reading_lineage_conflict")
+            return {
+                "reading_ref": reading.reading_ref,
+                "reading_hash": reading.reading_hash,
+            }
         with self._engine.connect() as connection:
             reading_ref = connection.execute(
                 text(

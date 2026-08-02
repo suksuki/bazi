@@ -60,7 +60,7 @@ export interface MingliStageRelation {
 export interface MingliStageProjection {
   projection_ref: string;
   projection_hash: string;
-  projection_version: "v60.mingli-stage-projection.003";
+  projection_version: "v60.mingli-stage-projection.004";
   subject_id: MingliStageSubjectId;
   case_ref: string;
   chart_version_ref: string;
@@ -69,8 +69,16 @@ export interface MingliStageProjection {
   reading_hash: string | null;
   display_name: string;
   subject_kind: "HUMAN_OWNER" | "HUMAN_REFERENCE" | "CANONICAL_SYNTHETIC";
-  identity_badge: "私密真实档案" | "真实参考档案" | "角色合成设定";
-  privacy_scope: "PRIVATE_OWNER" | "PRIVATE_REFERENCE" | "PUBLIC_SYNTHETIC_SHOWCASE";
+  identity_badge:
+    | "私密真实档案"
+    | "真实参考档案"
+    | "角色合成设定"
+    | "研究合成命盘";
+  privacy_scope:
+    | "PRIVATE_OWNER"
+    | "PRIVATE_REFERENCE"
+    | "PUBLIC_SYNTHETIC_SHOWCASE"
+    | "SYNTHETIC_RESEARCH";
   stage_mode: MingliStageMode;
   selected_year: number | null;
   available_years: number[];
@@ -181,9 +189,27 @@ export interface MingliAgentTimingLayerReading {
   confidence: "LOW" | "MEDIUM";
 }
 
+export interface MingliAgentRegimeDecision {
+  method_asset_ref: "REGIME_WEAK_VS_FOLLOW_TREND_001";
+  classification:
+    | "ORDINARY_WEAK"
+    | "FALSE_FOLLOW_COMPETITION"
+    | "FOLLOW_TREND"
+    | "UNRESOLVED";
+  effective_root_status: "PRESENT" | "ABSENT" | "UNRESOLVED";
+  effective_root_coordinates: string[];
+  rooted_visible_support_status: "PRESENT" | "ABSENT" | "UNRESOLVED";
+  dominant_chain_status: "CLOSED" | "OPEN" | "UNRESOLVED";
+  competition_kinds: Array<
+    "VISIBLE_PEER" | "HIDDEN_RESOURCE" | "COMBINATION_UNRESOLVED"
+  >;
+  evidence_ids: string[];
+}
+
 export interface MingliAgentOutput {
   first_look: string;
   whole_chart_thesis: string;
+  regime_decision?: MingliAgentRegimeDecision;
   day_master_state:
     | "STRONG"
     | "WEAK"
@@ -243,7 +269,9 @@ export interface MingliAgentOutput {
 export interface MingliAgentReading {
   agent_reading_ref: string;
   agent_reading_hash: string;
-  agent_reading_version: "v60.mingli-agent-reading.003";
+  agent_reading_version:
+    | "v60.mingli-agent-reading.003"
+    | "v60.mingli-agent-reading.004";
   generation_key: string;
   requester_account_ref: string;
   case_ref: string;

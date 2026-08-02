@@ -44,6 +44,12 @@ export function writeNavigation(
     url.searchParams.delete("mingli_entry_scene_y");
     url.searchParams.delete("mingli_light");
   }
+  if (scope !== "home" || unit !== "lab") {
+    url.searchParams.delete("lab_mode");
+    url.searchParams.delete("lab_experiment");
+    url.searchParams.delete("lab_run");
+    url.searchParams.delete("lab_variant");
+  }
   if (scope === "dream" && focusRef) url.searchParams.set("focus", focusRef);
   else url.searchParams.delete("focus");
   window.history[mode === "push" ? "pushState" : "replaceState"](

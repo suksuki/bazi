@@ -15,7 +15,7 @@ from abu_v60.architecture.contracts import (
 @lru_cache(maxsize=1)
 def runtime_architecture() -> RuntimeArchitecture:
     architecture = RuntimeArchitecture(
-        architecture_version="v60.runtime-architecture.061",
+        architecture_version="v60.runtime-architecture.065",
         modules=(
             RuntimeModule(
                 module_id="identity",
@@ -33,7 +33,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="mingli",
                 kind=ModuleKind.ENGINE,
-                version="v60.mingli-cognitive-engine.034",
+                version="v60.mingli-cognitive-engine.038",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("mingli",),
                 reads_from=("identity",),
@@ -112,6 +112,12 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "server_derived_mechanism_adjudication",
                     "all_candidate_comparison_coverage",
                     "claim_level_fact_conflict_isolation",
+                    "calendar_bound_case_compilation",
+                    "research_explicit_chart_provenance_isolation",
+                    "typed_weak_follow_regime_decision",
+                    "minimum_anti_follow_effective_root_method",
+                    "controlled_synthetic_pair_materialization",
+                    "sealed_synthetic_experiment_run",
                 ),
                 writes_canonical_state=True,
             ),
@@ -435,7 +441,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-lab",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-lab.023",
+                version="v60.unit-lab.024",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "knowledge", "cognition", "mingli"),
                 capabilities=(
@@ -462,6 +468,8 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "relation_effect_candidate_material_inspection",
                     "shared_reading_claim_graph_inspection",
                     "method_ruling_and_decisive_check_inspection",
+                    "controlled_synthetic_ab_comparison",
+                    "browser_read_only_experiment_snapshot",
                 ),
             ),
         ),

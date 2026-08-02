@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from datetime import date, time
-
 import pytest
 from abu_v60.db import engine
 from abu_v60.experience import HomeExperienceService
@@ -14,8 +12,8 @@ from abu_v60.mingli import (
     MingliSourceCoordinateReviewCompiler,
     MingliSourceReviewVectorStore,
 )
-from abu_v60.mingli.calendar import BirthInput, ChartPillars
-from abu_v60.mingli.compiler import compile_case
+from abu_v60.mingli.calendar import ChartPillars
+from abu_v60.mingli.compiler import compile_research_case
 from abu_v60.provenance import canonical_json
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
@@ -28,14 +26,8 @@ EXPECTED_SOURCE_REVIEW_PROFILE_HASH = (
 def _compile(
     pillars: ChartPillars,
 ) -> tuple[tuple[dict[str, object], ...], object]:
-    compiled = compile_case(
+    compiled = compile_research_case(
         case_ref=f"test-source-review-{pillars.year}-{pillars.month}",
-        birth_input=BirthInput(
-            calendar_type="solar",
-            birth_date=date(2000, 1, 1),
-            birth_time=time(12, 0),
-            timezone="Asia/Shanghai",
-        ),
         chart=pillars,
     )
     quant = MingliQuantFoundationCompiler().compile(

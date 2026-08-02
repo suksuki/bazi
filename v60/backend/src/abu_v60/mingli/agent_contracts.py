@@ -19,11 +19,13 @@ from abu_v60.mingli.agent_method_distillation import (
     day_master_regime_method_asset,
     domain_method_assets,
 )
+from abu_v60.mingli.agent_regime_contracts import AgentRegimeDecision
+from abu_v60.mingli.agent_root_gate import packet_root_candidate_assessments
 from abu_v60.provenance import content_hash, stable_ref
 
-MINGLI_AGENT_PACKET_VERSION = "v60.mingli-agent-case-packet.002"
-MINGLI_AGENT_PROMPT_VIEW_VERSION = "v60.mingli-agent-prompt-view.009"
-MINGLI_AGENT_READING_VERSION = "v60.mingli-agent-reading.003"
+MINGLI_AGENT_PACKET_VERSION = "v60.mingli-agent-case-packet.003"
+MINGLI_AGENT_PROMPT_VIEW_VERSION = "v60.mingli-agent-prompt-view.011"
+MINGLI_AGENT_READING_VERSION = "v60.mingli-agent-reading.004"
 
 Confidence = Literal["LOW", "MEDIUM", "HIGH"]
 EvidenceKind = Literal[
@@ -44,7 +46,7 @@ class AgentEvidenceItem(BaseModel):
     evidence_id: str = Field(pattern=r"^E\d{3}$")
     kind: EvidenceKind
     statement: str = Field(min_length=1, max_length=800)
-    source_refs: tuple[str, ...] = Field(min_length=1, max_length=24)
+    source_refs: tuple[str, ...] = Field(min_length=1, max_length=40)
 
     @model_validator(mode="after")
     def refs_are_unique(self) -> AgentEvidenceItem:
@@ -148,7 +150,7 @@ class MingliAgentCasePacket(BaseModel):
 
     packet_ref: str = Field(min_length=1)
     packet_hash: str = Field(min_length=64, max_length=64)
-    packet_version: Literal["v60.mingli-agent-case-packet.002"]
+    packet_version: Literal["v60.mingli-agent-case-packet.003"]
     case_ref: str = Field(min_length=1)
     chart_version_ref: str = Field(min_length=1)
     life_case_revision_ref: str = Field(min_length=1)
@@ -454,6 +456,7 @@ def _professional_adjudication_view(packet: MingliAgentCasePacket) -> dict[str, 
             root_candidates=packet.day_master_support.same_element_hidden_support,
             visible_peers=packet.day_master_support.visible_peer_support,
             hidden_resources=packet.day_master_support.resource_support,
+            root_candidate_assessments=packet_root_candidate_assessments(packet),
         ),
         "ten_god_occurrences": tuple(
             {
@@ -628,6 +631,10 @@ class MingliAgentModelOutput(BaseModel):
 
     first_look: str = Field(min_length=16, max_length=120)
     whole_chart_thesis: str = Field(min_length=24, max_length=320)
+    regime_decision: AgentRegimeDecision | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
     day_master_state: Literal[
         "STRONG",
         "WEAK",
@@ -662,6 +669,8 @@ class MingliAgentModelOutput(BaseModel):
 
     def validate_evidence(self, allowed: frozenset[str]) -> None:
         cited: set[str] = set(self.day_master_evidence_ids)
+        if self.regime_decision is not None:
+            cited.update(self.regime_decision.evidence_ids)
         for item in self.hypotheses:
             cited.update(item.mechanism_evidence_ids)
             cited.update(item.evidence_ids)
@@ -719,7 +728,10 @@ class MingliAgentReadingEnvelope(BaseModel):
 
     agent_reading_ref: str = Field(min_length=1)
     agent_reading_hash: str = Field(min_length=64, max_length=64)
-    agent_reading_version: Literal["v60.mingli-agent-reading.003"]
+    agent_reading_version: Literal[
+        "v60.mingli-agent-reading.003",
+        "v60.mingli-agent-reading.004",
+    ]
     generation_key: str = Field(min_length=64, max_length=64)
     requester_account_ref: str = Field(min_length=1)
     case_ref: str = Field(min_length=1)
@@ -751,6 +763,16 @@ class MingliAgentReadingEnvelope(BaseModel):
 
     @model_validator(mode="after")
     def identity_is_valid(self) -> MingliAgentReadingEnvelope:
+        if (
+            self.agent_reading_version == MINGLI_AGENT_READING_VERSION
+            and self.output.regime_decision is None
+        ):
+            raise ValueError("mingli_agent_regime_decision_required")
+        if (
+            self.agent_reading_version == "v60.mingli-agent-reading.003"
+            and self.output.regime_decision is not None
+        ):
+            raise ValueError("mingli_agent_legacy_regime_decision_forbidden")
         expected_key = mingli_agent_generation_key(
             requester_account_ref=self.requester_account_ref,
             reading_ref=self.reading_ref,

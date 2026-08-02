@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from datetime import date, time
-
 import pytest
 from abu_v60.abu import MingliAbuExpressionProjector
 from abu_v60.knowledge import (
@@ -17,8 +15,8 @@ from abu_v60.mingli import (
     MingliReadingProjector,
     StructuralCandidateCompiler,
 )
-from abu_v60.mingli.calendar import BirthInput, ChartPillars
-from abu_v60.mingli.compiler import CompiledCase, compile_case
+from abu_v60.mingli.calendar import ChartPillars
+from abu_v60.mingli.compiler import CompiledCase, compile_research_case
 from abu_v60.mingli.quant_contracts import MingliQuantFoundationVector
 from abu_v60.mingli.reading import MingliReadingEnvelope
 from abu_v60.provenance import content_hash, stable_ref
@@ -27,14 +25,8 @@ from abu_v60.provenance import content_hash, stable_ref
 def _compiled_case(
     authority: KnowledgeAuthority | None = None,
 ) -> tuple[CompiledCase, MingliQuantFoundationVector]:
-    compiled = compile_case(
+    compiled = compile_research_case(
         case_ref="case-1",
-        birth_input=BirthInput(
-            calendar_type="solar",
-            birth_date=date(2000, 1, 1),
-            birth_time=time(12, 0),
-            timezone="Asia/Shanghai",
-        ),
         chart=ChartPillars(
             year="甲子",
             month="乙丑",

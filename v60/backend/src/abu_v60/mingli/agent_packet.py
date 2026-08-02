@@ -21,7 +21,7 @@ from abu_v60.mingli.quant_contracts import MingliQuantFoundationVector, TenGodOc
 from abu_v60.mingli.reading import MingliReadingEnvelope
 from abu_v60.mingli.timing_contracts import MingliTimingEvidenceVector
 
-MINGLI_AGENT_PACKET_COMPILER_VERSION = "v60.mingli-agent-packet-compiler.002"
+MINGLI_AGENT_PACKET_COMPILER_VERSION = "v60.mingli-agent-packet-compiler.003"
 PILLAR_SLOTS = ("year", "month", "day", "hour")
 
 _ELEMENT_LABELS = {

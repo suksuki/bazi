@@ -18,6 +18,10 @@ from abu_v60.mingli.agent_method_distillation import (
     OUTPUT_TO_WEALTH,
     cross_card_discriminator,
 )
+from abu_v60.mingli.agent_regime import (
+    normalize_regime_decision,
+    reconcile_day_master_state,
+)
 
 if TYPE_CHECKING:
     from abu_v60.mingli.agent_contracts import (
@@ -165,8 +169,16 @@ def normalize_adjudication_output(
     normalized: list[Any] = []
     normalization_issues: set[str] = set()
     value.pop(MINGLI_AGENT_NORMALIZATION_ISSUE_FIELD, None)
-    _reconcile_day_master_regime(
-        value=value,
+    regime_decision = normalize_regime_decision(
+        value.get("regime_decision"),
+        packet=packet,
+        day_master_state=value.get("day_master_state"),
+        normalization_issues=normalization_issues,
+    )
+    value["regime_decision"] = regime_decision
+    reconcile_day_master_state(
+        value,
+        classification=str(regime_decision["classification"]),
         packet=packet,
         normalization_issues=normalization_issues,
     )
@@ -236,7 +248,8 @@ def normalize_adjudication_output(
                 check_code == "DAY_MASTER_CAPACITY"
                 and ruling == "SUPPORTS"
                 and value.get("day_master_state") in {"WEAK", "UNCERTAIN"}
-                and not packet.day_master_support.same_element_hidden_support
+                and regime_decision["effective_root_status"] != "PRESENT"
+                and regime_decision["rooted_visible_support_status"] != "PRESENT"
             ):
                 ruling = "CONDITIONAL"
                 rationale = "日主无根，浮比与藏印能否持续承载仍需整盘比较。"
@@ -295,31 +308,6 @@ def normalize_adjudication_output(
             "BROKEN": "BROKEN",
         }.get(primary["adjudication"], "CLOSED")
     return value
-
-
-def _reconcile_day_master_regime(
-    *,
-    value: dict[str, Any],
-    packet: MingliAgentCasePacket,
-    normalization_issues: set[str],
-) -> None:
-    """Prevent a following verdict from contradicting admitted support facts."""
-
-    if value.get("day_master_state") != "FOLLOWING_TENDENCY":
-        return
-    support = packet.day_master_support
-    if not (
-        support.same_element_hidden_support
-        or support.visible_peer_support
-        or support.resource_support
-    ):
-        return
-    value["day_master_state"] = "UNCERTAIN"
-    value["day_master_rationale"] = (
-        "原局仍有根、明干同类或印星生扶参与竞争，从势条件尚未闭合，"
-        "当前保留普通身弱与假从两种解释。"
-    )
-    normalization_issues.add("DAY_MASTER_REGIME")
 
 
 def _assign_method_card_refs(
@@ -696,21 +684,29 @@ _NON_PROSE_FIELDS = {
     MINGLI_AGENT_NORMALIZATION_ISSUE_FIELD,
     "adjudication",
     "check_code",
+    "classification",
     "closure",
+    "competition_kinds",
     "confidence",
     "coordinate_evidence_id",
     "day_master_state",
+    "dominant_chain_status",
+    "effective_root_coordinates",
+    "effective_root_status",
     "evidence_ids",
     "hypothesis_id",
     "judgment",
     "loser_id",
     "mechanism_evidence_ids",
     "method_card_ref",
+    "method_asset_ref",
     "natal_evidence_ids",
     "relation_evidence_ids",
     "role",
     "root_status",
+    "rooted_visible_support_status",
     "ruling",
+    "status",
     "transformation_codes",
     "winner_id",
 }

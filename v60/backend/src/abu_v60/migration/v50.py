@@ -26,7 +26,7 @@ from abu_v60.mingli import (
     MingliCaseAdmissionService,
 )
 from abu_v60.mingli.calendar import CALENDAR_ENGINE_VERSION, BirthInput, resolve_four_pillars
-from abu_v60.mingli.compiler import CompiledCase, compile_case
+from abu_v60.mingli.compiler import CompiledCase, compile_birth_case
 from abu_v60.provenance import content_hash, stable_ref
 
 
@@ -96,7 +96,7 @@ class V50OwnerImporter:
             "v60-case",
             {"profile_ref": profile_ref, "purpose": "owner-real-case"},
         )
-        compiled = compile_case(case_ref=case_ref, birth_input=birth_input, chart=chart)
+        compiled = compile_birth_case(case_ref=case_ref, birth_input=birth_input)
         existing = self._reuse_existing_import(
             account_ref=account_ref,
             profile_ref=profile_ref,
