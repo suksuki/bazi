@@ -710,6 +710,21 @@ therefore `WITHHELD / UNRESOLVED`, not an LLM comparison. The persistent
 preparation receipt records a requested next action only; it neither creates a
 DecisionRequest nor upgrades the evidence state.
 
+### Mingli Agent interpretation authority
+
+The whole-chart Agent is allowed to adjudicate the supplied professional method
+cards for one immutable Reading. It must answer every required check, compare all
+enumerated candidates, choose a working primary and alternative, and state the
+reversal condition. The Runtime derives each aggregate mechanism state from the
+typed rulings; model-written confidence cannot promote a broken or unresolved
+method.
+
+This is interpretation authority, not Knowledge or Rule admission. An Agent
+decision cannot create a new canonical fact, professional rule, effect rule,
+weight or probability, and it cannot write back into the dossier. A reviewed
+interpretation may later become research input for an Owner-approved versioned
+method card or Gold Reading, but never by automatic backflow from LLM prose.
+
 ## Quantitative Mingli model
 
 V60 separates four numerical meanings.

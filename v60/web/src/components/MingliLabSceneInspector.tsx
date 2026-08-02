@@ -1,14 +1,16 @@
 import type { MingliReadingClaimGraph } from "../mingliClaimGraphTypes";
-import type { MingliStageProjection } from "../mingliStageTypes";
+import type { MingliAgentReading, MingliStageProjection } from "../mingliStageTypes";
 import { visibleClaimAssessmentCodes } from "./MingliClaimPresentation";
 
 export function MingliLabSceneInspector({
+  agentReading,
   claimGraph,
   onAskGuide,
   onSelectRelation,
   selectedRelationRef,
   stage,
 }: {
+  agentReading: MingliAgentReading | null;
   claimGraph: MingliReadingClaimGraph | null;
   onAskGuide: () => void;
   onSelectRelation: (relationRef: string | null) => void;
@@ -30,6 +32,7 @@ export function MingliLabSceneInspector({
   const question = claimGraph?.claims.find(
     (claim) => claim.semantic_key === "DISCRIMINATING_QUESTION",
   );
+  const decision = agentReading?.output.hypothesis_decision ?? null;
 
   return (
     <aside className="mingli-lab-inspector" aria-label="命理 Lab 舞台观察">
@@ -80,6 +83,49 @@ export function MingliLabSceneInspector({
             <ClaimAssessment item={workPath} />
           </article>
           {question && <p>校准问题：{question.statement}</p>}
+          {agentReading && decision && (
+            <section className="mingli-lab-method-review" aria-label="主次解释裁决">
+              <article>
+                <small>为什么采用当前主解释</small>
+                <p>{decision.winner.rationale}</p>
+              </article>
+              <article>
+                <small>为什么暂不采用竞争解释</small>
+                <p>{decision.loser.rationale}</p>
+              </article>
+              <article>
+                <small>什么答案会改变主次</small>
+                <p>{decision.reversal.question}</p>
+                <span>维持当前：{decision.reversal.winner_signal}</span>
+                <span>转向替代：{decision.reversal.loser_signal}</span>
+              </article>
+              {agentReading.output.hypotheses.map((hypothesis) => (
+                <article key={hypothesis.hypothesis_id}>
+                  <small>
+                    {hypothesis.role === "PRIMARY" ? "主解释逐项判法" : "竞争解释逐项判法"}
+                    · {adjudicationLabel(hypothesis.adjudication)}
+                  </small>
+                  <strong>{hypothesis.name}</strong>
+                  <ul>
+                    {hypothesis.method_rulings.map((ruling) => (
+                      <li key={ruling.check_code}>
+                        <span>{methodCheckLabel(ruling.check_code)} · {rulingLabel(ruling.ruling)}</span>
+                        <p>{ruling.rationale}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
+              {agentReading.output.excluded_candidates.map((candidate) => (
+                <article key={candidate.method_card_ref}>
+                  <small>其余结构候选 · {candidate.status === "EXCLUDED" ? "已排除" : "尚待比较"}</small>
+                  <strong>{candidate.name}</strong>
+                  <p>{candidate.rationale}</p>
+                  <span>决定项：{methodCheckLabel(candidate.decisive_check)}</span>
+                </article>
+              ))}
+            </section>
+          )}
         </section>
       )}
       <h3 className="mingli-lab-section-title">舞台关系坐标</h3>
@@ -136,6 +182,44 @@ export function MingliLabSceneInspector({
   );
 }
 
+function adjudicationLabel(value: MingliAgentReading["output"]["hypotheses"][number]["adjudication"]) {
+  if (value === "SUPPORTED") return "成立";
+  if (value === "CONDITIONAL") return "有条件成立";
+  if (value === "BROKEN") return "路径受阻";
+  return "暂定解释";
+}
+
+function rulingLabel(value: MingliAgentReading["output"]["hypotheses"][number]["method_rulings"][number]["ruling"]) {
+  if (value === "SUPPORTS") return "支持";
+  if (value === "CONDITIONAL") return "有条件";
+  if (value === "OPPOSES") return "反对";
+  return "待校准";
+}
+
+function methodCheckLabel(code: string) {
+  const labels: Record<string, string> = {
+    OUTPUT_SOURCE_AVAILABILITY: "食伤来源能否起用",
+    OFFICIAL_KILLING_PRESSURE_ACTUALLY_PRESENT: "官杀压力是否真实成形",
+    OFFICIAL_KILLING_ROLE_POSITIONED: "官杀目标是否落到实处",
+    DAY_MASTER_CAPACITY: "日主能否承载",
+    VISIBLE_HIDDEN_REACHABILITY: "显藏之间能否接通",
+    SOURCE_AND_TARGET_SAME_LAYER: "源端与目标是否同层相接",
+    RESOURCE_OR_OTHER_BLOCKER_INTERFERENCE: "印星与竞争路径是否阻断",
+    RESOURCE_OR_OTHER_BLOCKER_RESOLUTION: "印星或其他阻断能否化开",
+    WEALTH_TARGET_REACHABILITY: "财星目标能否承接",
+    RESOURCE_SUPPRESSION: "印星是否压住输出",
+    RESOURCE_SUPPRESSION_RESOLUTION: "印星压制是否得到解决",
+    PEER_COMPETITION: "比劫是否分走财路",
+    PEER_COMPETITION_RESOLUTION: "比劫分财是否得到解决",
+    MONTH_COMMAND_AND_SEASON: "月令与季节主气",
+    ROOT_PEER_RESOURCE_ORDER: "根、同类与印星次序",
+    DRAIN_WEALTH_PRESSURE_BALANCE: "泄耗、财与官杀的权衡",
+    RESCUE_AND_BLOCKERS: "救应与阻断",
+    WHOLE_CHART_EXPLANATORY_COVERAGE: "整盘解释覆盖力",
+  };
+  return labels[code] ?? code.replaceAll("_", " ");
+}
+
 function ClaimAssessment({
   item,
 }: {
@@ -144,7 +228,9 @@ function ClaimAssessment({
   if (item.assessment_codes.length === 0) return null;
   const visibleCodes = visibleClaimAssessmentCodes(item);
   const labels = visibleCodes.map((code) => (
-    code === "PRIMARY_HYPOTHESIS_CHART_BASIS_INCOMPLETE"
+    code === "CLAIM_EVIDENCE_MISSING"
+      ? "判断没有绑定可复核的命盘依据"
+    : code === "PRIMARY_HYPOTHESIS_CHART_BASIS_INCOMPLETE"
       ? "主解释已保留，整盘命据仍需补齐"
     : code === "MECHANISM_CANDIDATE_REQUIRES_ADJUDICATION"
       ? "这仍是机制候选，尚未完成逐项专业裁决"
@@ -154,6 +240,8 @@ function ClaimAssessment({
       ? "总纲的一条局部支撑路径已经撤下"
     : code === "TIMING_COORDINATE_EVIDENCE_MISSING"
       ? "岁运判断缺少对应时间坐标证据"
+    : code === "TIMING_NATAL_BASIS_MISSING"
+      ? "岁运判断缺少原局依据，已降为待校准"
     : code === "TIMING_RELATION_EVIDENCE_MISSING"
       ? "岁运文字点名关系但未绑定关系证据"
     : code === "RELATION_MEMBERSHIP_PROMOTED_TO_EFFECT"
@@ -166,6 +254,12 @@ function ClaimAssessment({
           ? "文本虚构了地支根位"
         : code === "NAMED_COORDINATE_CONFLICTS_WITH_PACKET"
           ? "文本中的藏干坐标与命盘不符"
+        : code === "TEN_GOD_MANIFESTATION_CONFLICTS_WITH_PACKET"
+          ? "文本把藏干误写成天干透出"
+        : code === "PEER_COUNT_CONFLICTS_WITH_PACKET"
+          ? "文本写错了明干比肩数量"
+        : code === "UNSELECTED_TIMING_LAYER_ASSERTION"
+          ? "文本使用了未选择的流月层"
         : code === "UNLISTED_RELATION_COORDINATE_ASSERTION"
           ? "文本使用了卷宗未列出的地支关系"
         : code === "UNADMITTED_CLASSICAL_ASSERTION"

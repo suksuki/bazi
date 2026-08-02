@@ -142,7 +142,7 @@ export function validateReadingSummary(
   const lineage = summary.reading_brief.lineage;
   const agentReady = summary.agent_status === "READY";
   if (
-    summary.summary_version !== "v60.mingli-reading-summary.003" ||
+    summary.summary_version !== "v60.mingli-reading-summary.006" ||
     !summary.summary_ref ||
     !HASH.test(summary.summary_hash) ||
     summary.case_ref !== stage.case_ref ||
@@ -212,7 +212,13 @@ export function validateAgentReading(
       ? output.hypotheses.flatMap((item) => [
           ...item.mechanism_evidence_ids,
           ...item.evidence_ids,
+          ...(Array.isArray(item.method_rulings)
+            ? item.method_rulings.flatMap((ruling) => ruling.evidence_ids)
+            : []),
         ])
+      : []),
+    ...(Array.isArray(output.excluded_candidates)
+      ? output.excluded_candidates.flatMap((item) => item.evidence_ids)
       : []),
     ...(Array.isArray(output.work_path?.evidence_ids)
       ? output.work_path.evidence_ids
@@ -231,7 +237,7 @@ export function validateAgentReading(
     ))),
   ];
   if (
-    reading.agent_reading_version !== "v60.mingli-agent-reading.001" ||
+    reading.agent_reading_version !== "v60.mingli-agent-reading.003" ||
     !reading.agent_reading_ref ||
     !HASH.test(reading.agent_reading_hash) ||
     !HASH.test(reading.generation_key) ||
@@ -257,6 +263,43 @@ export function validateAgentReading(
     !Array.isArray(output.hypotheses) ||
     output.hypotheses.length !== 2 ||
     selected.length !== 1 ||
+    output.hypotheses.some((item) => (
+      typeof item.method_card_ref !== "string"
+      || !Array.isArray(item.method_rulings)
+      || item.method_rulings.length < 5
+      || item.method_rulings.length > 6
+      || item.method_rulings.some((ruling) => (
+        ruling.method_card_ref !== item.method_card_ref
+        || typeof ruling.check_code !== "string"
+        || !["SUPPORTS", "CONDITIONAL", "OPPOSES", "UNRESOLVED"].includes(ruling.ruling)
+        || typeof ruling.rationale !== "string"
+        || typeof ruling.condition_or_falsifier !== "string"
+        || !Array.isArray(ruling.evidence_ids)
+      ))
+      || !["SUPPORTED", "CONDITIONAL", "BROKEN", "UNRESOLVED"].includes(
+        item.adjudication,
+      )
+    )) ||
+    !Array.isArray(output.excluded_candidates) ||
+    output.excluded_candidates.some((item) => (
+      typeof item.method_card_ref !== "string"
+      || typeof item.name !== "string"
+      || !["EXCLUDED", "UNRESOLVED"].includes(item.status)
+      || typeof item.decisive_check !== "string"
+      || typeof item.rationale !== "string"
+      || !Array.isArray(item.evidence_ids)
+    )) ||
+    !isRecord(output.hypothesis_decision) ||
+    !isRecord(output.hypothesis_decision.winner) ||
+    !isRecord(output.hypothesis_decision.loser) ||
+    !isRecord(output.hypothesis_decision.reversal) ||
+    output.hypothesis_decision.winner_id !== selected[0]?.hypothesis_id ||
+    output.hypothesis_decision.loser_id === output.hypothesis_decision.winner_id ||
+    !Array.isArray(output.hypothesis_decision.winner.decisive_checks) ||
+    !Array.isArray(output.hypothesis_decision.loser.decisive_checks) ||
+    typeof output.hypothesis_decision.reversal.question !== "string" ||
+    typeof output.hypothesis_decision.reversal.winner_signal !== "string" ||
+    typeof output.hypothesis_decision.reversal.loser_signal !== "string" ||
     !isRecord(output.work_path) ||
     !isRecord(output.life_image) ||
     !isRecord(output.domains) ||

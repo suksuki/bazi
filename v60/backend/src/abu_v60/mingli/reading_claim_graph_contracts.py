@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from abu_v60.provenance import content_hash, stable_ref
 
-MINGLI_READING_CLAIM_GRAPH_VERSION = "v60.mingli-reading-claim-graph.005"
+MINGLI_READING_CLAIM_GRAPH_VERSION = "v60.mingli-reading-claim-graph.009"
 
 MingliReadingClaimLayer = Literal["PRINCIPLE", "IMAGE", "THEMES", "TIMING", "QUESTION"]
 MingliReadingClaimStatus = Literal[
@@ -18,6 +18,7 @@ MingliReadingClaimStatus = Literal[
 ]
 MingliReadingClaimConfidence = Literal["LOW", "MEDIUM", "HIGH"]
 MingliReadingClaimAssessmentCode = Literal[
+    "CLAIM_EVIDENCE_MISSING",
     "PRIMARY_HYPOTHESIS_CHART_BASIS_INCOMPLETE",
     "MECHANISM_CANDIDATE_REQUIRES_ADJUDICATION",
     "CONFIDENCE_EXCEEDS_PACKET",
@@ -25,14 +26,24 @@ MingliReadingClaimAssessmentCode = Literal[
     "NATAL_CLAIM_CITES_TIMING_EVIDENCE",
     "NATAL_CLAIM_USES_SELECTED_TIMING",
     "TIMING_COORDINATE_EVIDENCE_MISSING",
+    "TIMING_NATAL_BASIS_MISSING",
     "TIMING_RELATION_EVIDENCE_MISSING",
     "RELATION_MEMBERSHIP_PROMOTED_TO_EFFECT",
     "WORK_PATH_CLOSURE_EXCEEDS_PACKET",
     "HIGH_RISK_EVENT_ASSERTION",
     "ROOT_ASSERTION_CONFLICTS_WITH_PACKET",
     "NAMED_COORDINATE_CONFLICTS_WITH_PACKET",
+    "TEN_GOD_MANIFESTATION_CONFLICTS_WITH_PACKET",
+    "PEER_COUNT_CONFLICTS_WITH_PACKET",
+    "UNSELECTED_TIMING_LAYER_ASSERTION",
     "UNLISTED_RELATION_COORDINATE_ASSERTION",
     "UNADMITTED_CLASSICAL_ASSERTION",
+    "MODEL_FIELD_INVALID",
+    "NON_READING_LANGUAGE",
+    "LOW_INFORMATION_LANGUAGE",
+    "TIMING_LAYER_PROSE_CONFLICT",
+    "UNSUPPORTED_SOCIAL_RESOURCE_INFERENCE",
+    "DOMAIN_PRIMARY_PATH_MISSING",
 ]
 MingliReadingClaimRole = Literal[
     "SYNTHESIS",
@@ -80,7 +91,7 @@ CLAIM_SEMANTIC_KEY_ORDER = (
 
 
 class MingliReadingClaim(BaseModel):
-    """One exact Agent assertion; this layer never rewrites model prose."""
+    """One deterministic assertion; method-bound synthesis may compose ruling copy."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -104,9 +115,7 @@ class MingliReadingClaim(BaseModel):
     relation_evidence_ids: tuple[str, ...] = Field(max_length=6)
     confidence: MingliReadingClaimConfidence | None
     codes: tuple[str, ...] = Field(max_length=6)
-    assessment_codes: tuple[MingliReadingClaimAssessmentCode, ...] = Field(
-        max_length=15
-    )
+    assessment_codes: tuple[MingliReadingClaimAssessmentCode, ...] = Field(max_length=15)
 
     @model_validator(mode="after")
     def identity_is_valid(self) -> MingliReadingClaim:
@@ -117,11 +126,7 @@ class MingliReadingClaim(BaseModel):
         specialized_ids = {
             *self.mechanism_evidence_ids,
             *self.relation_evidence_ids,
-            *(
-                (self.coordinate_evidence_id,)
-                if self.coordinate_evidence_id is not None
-                else ()
-            ),
+            *((self.coordinate_evidence_id,) if self.coordinate_evidence_id is not None else ()),
         }
         if not specialized_ids.issubset(self.evidence_ids):
             raise ValueError("mingli_reading_claim_specialized_evidence_not_in_claim")
@@ -172,7 +177,7 @@ class MingliReadingClaimGraph(BaseModel):
 
     graph_ref: str = Field(min_length=1)
     graph_hash: str = Field(min_length=64, max_length=64)
-    graph_version: Literal["v60.mingli-reading-claim-graph.005"]
+    graph_version: Literal["v60.mingli-reading-claim-graph.009"]
     case_ref: str = Field(min_length=1)
     chart_version_ref: str = Field(min_length=1)
     life_case_revision_ref: str = Field(min_length=1)
@@ -206,10 +211,7 @@ class MingliReadingClaimGraph(BaseModel):
         claim_refs = tuple(item.claim_ref for item in self.claims)
         if len(set(claim_refs)) != len(claim_refs):
             raise ValueError("mingli_reading_claim_graph_claim_refs_not_unique")
-        if any(
-            item.source_agent_reading_ref != self.agent_reading_ref
-            for item in self.claims
-        ):
+        if any(item.source_agent_reading_ref != self.agent_reading_ref for item in self.claims):
             raise ValueError("mingli_reading_claim_graph_agent_lineage_mismatch")
         allowed = set(claim_refs)
         if any(
@@ -217,26 +219,22 @@ class MingliReadingClaimGraph(BaseModel):
             for edge in self.edges
         ):
             raise ValueError("mingli_reading_claim_graph_edge_endpoint_invalid")
-        withheld = {
-            item.claim_ref for item in self.claims if item.status == "WITHHELD"
-        }
+        withheld = {item.claim_ref for item in self.claims if item.status == "WITHHELD"}
         if any(
             edge.source_claim_ref in withheld or edge.target_claim_ref in withheld
             for edge in self.edges
         ):
             raise ValueError("mingli_reading_claim_graph_withheld_edge_active")
         by_key = {item.semantic_key: item for item in self.claims}
-        if any(
-            by_key[key].status == "WITHHELD"
-            for key in ("HYPOTHESIS_H1", "WORK_PATH")
-        ) and by_key["WHOLE_CHART"].status != "WITHHELD" and (
-            by_key["WHOLE_CHART"].status != "NEEDS_RECONCILIATION"
-            or "DEPENDENCY_WITHHELD"
-            not in by_key["WHOLE_CHART"].assessment_codes
-        ):
-            raise ValueError(
-                "mingli_reading_claim_graph_dependency_status_not_propagated"
+        if (
+            any(by_key[key].status == "WITHHELD" for key in ("HYPOTHESIS_H1", "WORK_PATH"))
+            and by_key["WHOLE_CHART"].status != "WITHHELD"
+            and (
+                by_key["WHOLE_CHART"].status != "NEEDS_RECONCILIATION"
+                or "DEPENDENCY_WITHHELD" not in by_key["WHOLE_CHART"].assessment_codes
             )
+        ):
+            raise ValueError("mingli_reading_claim_graph_dependency_status_not_propagated")
         if len({item.edge_ref for item in self.edges}) != len(self.edges):
             raise ValueError("mingli_reading_claim_graph_edge_refs_not_unique")
         identity = self.model_dump(

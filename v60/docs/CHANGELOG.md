@@ -2,6 +2,50 @@
 
 ## 2026-08-02
 
+### The Mingli Agent now makes an executable method decision instead of listing possibilities
+
+- Replaced the former candidate checklist with typed, per-method adjudication. Every
+  required check now returns `SUPPORTS`, `CONDITIONAL`, `OPPOSES` or `UNRESOLVED`;
+  the server derives the mechanism result and will not accept the model's confidence
+  or status as authority.
+- Required one usable whole-chart answer even when every candidate is weak. The Agent
+  must name a working primary, an alternative, the loser, the decisive checks, and the
+  exact reversal condition; zero- and one-candidate charts receive explicit fallback
+  hypotheses instead of an empty Reading.
+- Made candidate comparison complete. Charts with more than two candidates now retain
+  an explicit considered/excluded ledger, so the Agent cannot silently choose two and
+  pretend the remaining mechanisms were reviewed.
+- Changed semantic error handling from whole-reading refusal to Claim-local isolation.
+  A false root, manifestation, relation, peer count or timing statement withdraws the
+  affected Claim while the day-master judgment, whole-chart thesis and other supported
+  life-domain Claims remain readable.
+- Generated and inspected real `gemma4:latest` Owner Reading
+  `v60-mingli-agent-reading-b11fc2f2c55feffdfeb2` for
+  `丁巳／乙巳／乙丑／乙酉` in 84,133 ms. It chose `食伤制约官杀` as the working
+  primary and `食伤生财` as the alternative, exposed every check and one reversal
+  question, and persists once for branch, Lab and refresh replay.
+- Corrected four admission mistakes found by the real page: method-ruling evidence now
+  supplies the selected hypothesis's chart basis; `丙午`伤官透出 is evaluated in the
+  Annual layer instead of being compared only with natal stems; ordinary “化解冲突” is
+  no longer misread as the technical relation action “解冲”; and a domain that has not
+  yet completed the primary-path projection remains visible as a calibration Reading
+  instead of being silently treated as no Reading.
+- The user-facing whole-chart thesis is now assembled from the selected method's actual
+  supporting and limiting rulings. This removes the model's contradictory top-level
+  slogan while preserving the raw immutable output for Lab review. Natal, Dayun and
+  Annual now follow the same selected method: the page states the visible time
+  coordinate and the unresolved method condition, but does not repeat model claims
+  such as “达到顶峰” or promote 子丑六合 membership to a realized effect. Career alone
+  is withdrawn for the concrete false claim that hidden 丙 was visibly exposed.
+  Personality, Wealth, Relationship and Family stay visible as calibration candidates,
+  not qualified conclusions. This is a meaningful initial reading, not yet an
+  advanced-master qualification.
+- Advanced the Agent Profile/Prompt to `.014`, Packet to `.002`, Reading to `.003`,
+  Prompt View to `.008`, Adjudication to `.003`, Output Repair to `.001`, Claim Graph
+  to `.009`, Reading Summary to `.006`, Mingli Engine to `.032`, Runtime Architecture
+  to `.059`, Unit Mingli to `.026`, Unit Lab to `.021` and Foundation to `.021`;
+  migration head is `0029_mingli_agent_adjudication`.
+
 ### Whole-chart readings now survive local uncertainty instead of disappearing
 
 - Froze the Owner-approved Mingli Cognitive System Constitution: one specialist

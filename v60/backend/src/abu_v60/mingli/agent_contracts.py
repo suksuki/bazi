@@ -1,17 +1,23 @@
 from __future__ import annotations
 
-import json
-import re
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
-from abu_v60.mingli.agent_method_cards import mechanism_method_card
+from abu_v60.mingli.agent_adjudication import (
+    AgentExcludedCandidate,
+    AgentHypothesis,
+    AgentHypothesisDecision,
+)
+from abu_v60.mingli.agent_method_cards import (
+    fallback_hypothesis_method_card,
+    mechanism_method_card,
+)
 from abu_v60.provenance import content_hash, stable_ref
 
-MINGLI_AGENT_PACKET_VERSION = "v60.mingli-agent-case-packet.001"
-MINGLI_AGENT_PROMPT_VIEW_VERSION = "v60.mingli-agent-prompt-view.006"
-MINGLI_AGENT_READING_VERSION = "v60.mingli-agent-reading.001"
+MINGLI_AGENT_PACKET_VERSION = "v60.mingli-agent-case-packet.002"
+MINGLI_AGENT_PROMPT_VIEW_VERSION = "v60.mingli-agent-prompt-view.008"
+MINGLI_AGENT_READING_VERSION = "v60.mingli-agent-reading.003"
 
 Confidence = Literal["LOW", "MEDIUM", "HIGH"]
 EvidenceKind = Literal[
@@ -73,9 +79,7 @@ class AgentDayMasterSupportContext(BaseModel):
     same_element_hidden_support: tuple[str, ...]
     visible_peer_support: tuple[str, ...]
     resource_support: tuple[str, ...]
-    root_language_policy: Literal[
-        "ONLY_SAME_ELEMENT_HIDDEN_STEMS_ARE_ROOT_CANDIDATES"
-    ]
+    root_language_policy: Literal["ONLY_SAME_ELEMENT_HIDDEN_STEMS_ARE_ROOT_CANDIDATES"]
     evidence_id: str = Field(pattern=r"^E\d{3}$")
 
 
@@ -112,6 +116,7 @@ class AgentMechanismContext(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     candidate_ref: str = Field(min_length=1)
+    pattern_ref: str = Field(min_length=1)
     label: str = Field(min_length=1, max_length=80)
     structural_statement: str = Field(min_length=1, max_length=500)
     role_summary: tuple[str, ...] = Field(min_length=2, max_length=3)
@@ -137,7 +142,7 @@ class MingliAgentCasePacket(BaseModel):
 
     packet_ref: str = Field(min_length=1)
     packet_hash: str = Field(min_length=64, max_length=64)
-    packet_version: Literal["v60.mingli-agent-case-packet.001"]
+    packet_version: Literal["v60.mingli-agent-case-packet.002"]
     case_ref: str = Field(min_length=1)
     chart_version_ref: str = Field(min_length=1)
     life_case_revision_ref: str = Field(min_length=1)
@@ -213,9 +218,7 @@ class MingliAgentCasePacket(BaseModel):
                 "historical_answers_allowed": False,
                 "previous_reading_prose_allowed": False,
                 "whole_chart_judgment_required": True,
-                "uncertainty_expression": (
-                    "COMPETING_HYPOTHESIS_CONDITION_AND_CONFIDENCE"
-                ),
+                "uncertainty_expression": ("COMPETING_HYPOTHESIS_CONDITION_AND_CONFIDENCE"),
             },
             "chart": {
                 "day_master_stem": self.day_master_stem,
@@ -240,29 +243,23 @@ class MingliAgentCasePacket(BaseModel):
             },
             "day_master_support": self.day_master_support.model_dump(mode="json"),
             "professional_adjudication": _professional_adjudication_view(self),
-            "natal_relations": [
-                item.model_dump(mode="json") for item in self.natal_relations
-            ],
-            "source_contexts": [
-                item.model_dump(mode="json") for item in self.source_contexts
-            ],
+            "natal_relations": [item.model_dump(mode="json") for item in self.natal_relations],
+            "source_contexts": [item.model_dump(mode="json") for item in self.source_contexts],
             "mechanism_observations": [
                 {
+                    "pattern_ref": item.pattern_ref,
                     "label": item.label,
                     "structural_statement": item.structural_statement,
                     "role_summary": item.role_summary,
+                    "blocker_codes": item.blocker_codes,
                     "evidence_id": item.evidence_id,
                 }
                 for item in self.mechanism_observations
             ],
             "timing": {
                 "analysis_date": self.timing_analysis_date,
-                "coordinates": [
-                    item.model_dump(mode="json") for item in self.timing_coordinates
-                ],
-                "relations": [
-                    item.model_dump(mode="json") for item in self.timing_relations
-                ],
+                "coordinates": [item.model_dump(mode="json") for item in self.timing_coordinates],
+                "relations": [item.model_dump(mode="json") for item in self.timing_relations],
             },
             "fact_policy": (
                 "Only the listed coordinates, relations, support roles, and evidence IDs "
@@ -291,9 +288,7 @@ class MingliAgentCasePacket(BaseModel):
                 for item in identity[key]
             )
         if isinstance(identity["day_master_support"], BaseModel):
-            identity["day_master_support"] = identity[
-                "day_master_support"
-            ].model_dump(mode="json")
+            identity["day_master_support"] = identity["day_master_support"].model_dump(mode="json")
         return cls(
             packet_ref=stable_ref("v60-mingli-agent-packet", identity),
             packet_hash=content_hash(identity),
@@ -373,9 +368,7 @@ def _professional_adjudication_view(packet: MingliAgentCasePacket) -> dict[str, 
         if not set(members).issubset(present_branches):
             continue
         member_coordinates = tuple(
-            coordinate
-            for member in members
-            for coordinate in branch_coordinates[member]
+            coordinate for member in members for coordinate in branch_coordinates[member]
         )
         structure_candidates.append(
             {
@@ -385,10 +378,7 @@ def _professional_adjudication_view(packet: MingliAgentCasePacket) -> dict[str, 
                 "result_element": result_element,
                 "member_coordinates": member_coordinates,
                 "evidence_ids": tuple(
-                    dict.fromkeys(
-                        coordinate["evidence_id"]
-                        for coordinate in member_coordinates
-                    )
+                    dict.fromkeys(coordinate["evidence_id"] for coordinate in member_coordinates)
                 ),
                 "membership_status": "CLASSICAL_MEMBER_SET_PRESENT",
                 "effect_status": "REQUIRES_WHOLE_CHART_ADJUDICATION",
@@ -405,22 +395,14 @@ def _professional_adjudication_view(packet: MingliAgentCasePacket) -> dict[str, 
             pillar.hidden_ten_gods,
             strict=True,
         ):
-            occurrence_map.setdefault(ten_god, []).append(
-                f"{pillar.slot}支藏{hidden_stem}"
-            )
+            occurrence_map.setdefault(ten_god, []).append(f"{pillar.slot}支藏{hidden_stem}")
     natal_evidence_ids = tuple(
-        item.evidence_id
-        for item in packet.evidence_catalog
-        if item.kind != "TIMING"
+        item.evidence_id for item in packet.evidence_catalog if item.kind != "TIMING"
     )
     timing_evidence_ids = tuple(
-        item.evidence_id
-        for item in packet.evidence_catalog
-        if item.kind == "TIMING"
+        item.evidence_id for item in packet.evidence_catalog if item.kind == "TIMING"
     )
-    mechanism_evidence_ids = {
-        item.evidence_id for item in packet.mechanism_observations
-    }
+    mechanism_evidence_ids = {item.evidence_id for item in packet.mechanism_observations}
     chart_basis_evidence_ids = tuple(
         item for item in natal_evidence_ids if item not in mechanism_evidence_ids
     )
@@ -470,7 +452,7 @@ def _professional_adjudication_view(packet: MingliAgentCasePacket) -> dict[str, 
         ),
         "professional_structure_candidates": tuple(structure_candidates),
         "candidate_method_cards": {
-            "authority": "RESEARCH_CHECKLIST_NOT_PROFESSIONAL_CONCLUSION",
+            "authority": "CHECKS_REQUIRE_AGENT_RULING",
             "three_harmony": tuple(
                 {
                     "candidate_label": item["label"],
@@ -490,13 +472,10 @@ def _professional_adjudication_view(packet: MingliAgentCasePacket) -> dict[str, 
             "mechanisms": tuple(
                 mechanism_method_card(item) for item in packet.mechanism_observations
             ),
+            "fallback_hypothesis": fallback_hypothesis_method_card(),
             "work_path_closure": {
-                "closed_allowed": False,
-                "reason": (
-                    "SOURCE_USABILITY_TARGET_REACHABILITY_CAPACITY_AND_BLOCKERS_"
-                    "ARE_NOT_PROFESSIONALLY_ADMITTED"
-                ),
-                "allowed": ("CONDITIONAL", "UNCERTAIN", "BROKEN"),
+                "closed_allowed_when": ("ALL_PRIMARY_BLOCKING_AND_CONDITIONING_CHECKS_SUPPORT"),
+                "otherwise_allowed": ("CONDITIONAL", "UNCERTAIN", "BROKEN"),
             },
         },
         "required_decision_order": (
@@ -521,20 +500,6 @@ class AgentSupportSelection(BaseModel):
     resource_coordinates: tuple[str, ...]
 
 
-class AgentHypothesis(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    hypothesis_id: Literal["H1", "H2"]
-    role: Literal["PRIMARY", "ALTERNATIVE"]
-    name: str = Field(min_length=2, max_length=48)
-    judgment: Literal["WORKS_IF", "PARTIAL", "BLOCKED", "COMPETING"]
-    mechanism_evidence_ids: tuple[str, ...] = Field(max_length=4)
-    thesis: str = Field(min_length=12, max_length=300)
-    failure_condition: str = Field(min_length=6, max_length=140)
-    evidence_ids: tuple[str, ...] = Field(min_length=2, max_length=10)
-    confidence: Confidence
-
-
 class AgentWorkPath(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -552,7 +517,7 @@ class AgentWorkPath(BaseModel):
     ] = Field(min_length=1, max_length=4)
     closure: Literal["CLOSED", "CONDITIONAL", "BROKEN", "UNCERTAIN"]
     condition: str = Field(min_length=6, max_length=160)
-    evidence_ids: tuple[str, ...] = Field(min_length=2, max_length=10)
+    evidence_ids: tuple[str, ...] = Field(max_length=10)
 
 
 class AgentDomainReading(BaseModel):
@@ -562,7 +527,7 @@ class AgentDomainReading(BaseModel):
     conclusion: str = Field(min_length=16, max_length=260)
     causal_chain: tuple[NarrativeStep, ...] = Field(min_length=1, max_length=1)
     condition: str = Field(min_length=6, max_length=160)
-    evidence_ids: tuple[str, ...] = Field(min_length=2, max_length=8)
+    evidence_ids: tuple[str, ...] = Field(max_length=8)
     confidence: Literal["LOW", "MEDIUM"]
 
 
@@ -595,7 +560,7 @@ class AgentTimingLayerReading(BaseModel):
     relation_evidence_ids: tuple[str, ...] = Field(max_length=6)
     conclusion: str = Field(min_length=12, max_length=260)
     activation_chain: tuple[NarrativeStep, ...] = Field(min_length=1, max_length=1)
-    evidence_ids: tuple[str, ...] = Field(min_length=2, max_length=8)
+    evidence_ids: tuple[str, ...] = Field(min_length=1, max_length=8)
     confidence: Literal["LOW", "MEDIUM"]
 
 
@@ -603,7 +568,7 @@ class AgentTimingReading(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     natal_baseline: str = Field(min_length=12, max_length=180)
-    natal_evidence_ids: tuple[str, ...] = Field(min_length=2, max_length=8)
+    natal_evidence_ids: tuple[str, ...] = Field(max_length=8)
     dayun: AgentTimingLayerReading
     annual: AgentTimingLayerReading
     verification_signals: tuple[str, ...] = Field(min_length=1, max_length=2)
@@ -615,7 +580,7 @@ class AgentLifeImage(BaseModel):
     title: str = Field(min_length=2, max_length=24)
     image: str = Field(min_length=8, max_length=140)
     explanation: str = Field(min_length=16, max_length=280)
-    evidence_ids: tuple[str, ...] = Field(min_length=2, max_length=8)
+    evidence_ids: tuple[str, ...] = Field(max_length=8)
 
 
 class MingliAgentModelOutput(BaseModel):
@@ -635,13 +600,15 @@ class MingliAgentModelOutput(BaseModel):
     ]
     support_selection: AgentSupportSelection
     day_master_rationale: str = Field(min_length=16, max_length=280)
-    day_master_evidence_ids: tuple[str, ...] = Field(min_length=2, max_length=8)
+    day_master_evidence_ids: tuple[str, ...] = Field(max_length=8)
     hypotheses: tuple[AgentHypothesis, ...] = Field(min_length=2, max_length=2)
+    excluded_candidates: tuple[AgentExcludedCandidate, ...] = Field(max_length=8)
+    hypothesis_decision: AgentHypothesisDecision
     work_path: AgentWorkPath
     life_image: AgentLifeImage
     domains: AgentDomainReadings
     timing: AgentTimingReading
-    discriminating_question: str = Field(min_length=4, max_length=160)
+    server_issue_keys: tuple[str, ...] = Field(default=(), max_length=12)
 
     @model_validator(mode="after")
     def professional_shape_is_valid(self) -> MingliAgentModelOutput:
@@ -651,72 +618,18 @@ class MingliAgentModelOutput(BaseModel):
         primary = tuple(item for item in self.hypotheses if item.role == "PRIMARY")
         if len(primary) != 1:
             raise ValueError("mingli_agent_primary_hypothesis_invalid")
-        first, second = self.hypotheses
-        if (
-            first.name.strip() == second.name.strip()
-            or first.thesis.strip() == second.thesis.strip()
-            or (
-                first.thesis.strip() in second.thesis.strip()
-                and first.failure_condition.strip()
-                == second.failure_condition.strip()
-            )
-        ):
-            raise ValueError("mingli_agent_hypotheses_not_competing")
-        corpus = json.dumps(self.model_dump(mode="json"), ensure_ascii=False)
-        forbidden = (
-            "Case",
-            "Hash",
-            "canonical",
-            "UNRESOLVED",
-            "尚未接线",
-            "证据缺口",
-            "候选准入",
-            "有机会也有挑战",
-            "保持平衡",
-            "值得继续观察",
-            "当前证据适合观察",
-            "不可避免",
-            "必然发生",
-            "必致",
-            "第三者",
-            "第三人",
-            "外遇",
-            "婚外",
-            "外情",
-            "背叛",
-            "离婚",
-            "分手",
-            "感情破裂",
-            "身体出现",
-            "健康问题",
-            "疾病",
-            "崩盘",
-            "灾祸",
-            "男命以财为妻",
-        )
-        offending = next((phrase for phrase in forbidden if phrase in corpus), None)
-        if offending is not None:
-            raise ValueError(
-                f"mingli_agent_output_contains_non_reading_language:{offending}"
-            )
-        if any(
-            phrase in self.life_image.title
-            for phrase in ("格", "身强", "身弱", "用神", "忌神")
-        ):
-            raise ValueError("mingli_agent_life_image_title_not_image")
-        narrative_steps = (
-            *(step for item in self.domains.ordered for step in item[1].causal_chain),
-            *self.timing.dayun.activation_chain,
-            *self.timing.annual.activation_chain,
-        )
-        if any(re.fullmatch(r"E\d{1,3}", step) for step in narrative_steps):
-            raise ValueError("mingli_agent_evidence_id_used_as_narrative_step")
+        if self.hypothesis_decision.winner_id != primary[0].hypothesis_id:
+            raise ValueError("mingli_agent_decision_primary_mismatch")
         return self
 
     def validate_evidence(self, allowed: frozenset[str]) -> None:
         cited: set[str] = set(self.day_master_evidence_ids)
         for item in self.hypotheses:
             cited.update(item.mechanism_evidence_ids)
+            cited.update(item.evidence_ids)
+            for ruling in item.method_rulings:
+                cited.update(ruling.evidence_ids)
+        for item in self.excluded_candidates:
             cited.update(item.evidence_ids)
         cited.update(self.work_path.evidence_ids)
         cited.update(self.life_image.evidence_ids)
@@ -768,7 +681,7 @@ class MingliAgentReadingEnvelope(BaseModel):
 
     agent_reading_ref: str = Field(min_length=1)
     agent_reading_hash: str = Field(min_length=64, max_length=64)
-    agent_reading_version: Literal["v60.mingli-agent-reading.001"]
+    agent_reading_version: Literal["v60.mingli-agent-reading.003"]
     generation_key: str = Field(min_length=64, max_length=64)
     requester_account_ref: str = Field(min_length=1)
     case_ref: str = Field(min_length=1)

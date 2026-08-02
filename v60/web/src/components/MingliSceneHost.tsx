@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
 import type { RuntimeMediaManifest } from "../api";
 import {
   generateMingliAgentReading,
@@ -447,6 +446,7 @@ export function MingliSceneHost({
             />
           ) : surface === "LAB" ? (
             <MingliLabSceneInspector
+              agentReading={currentSummary?.agent_reading ?? null}
               claimGraph={currentClaimGraph}
               onAskGuide={() => setNarrationOpen(true)}
               onSelectRelation={setSelectedRelationRef}

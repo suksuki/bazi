@@ -6,11 +6,19 @@ from abu_v60.mingli.agent_contracts import (
     MingliAgentCasePacket,
     MingliAgentReadingEnvelope,
 )
+from abu_v60.mingli.agent_fact_language import manifestation_claim_conflicts
+from abu_v60.mingli.agent_method_cards import FALLBACK_METHOD_CARD_REF
 from abu_v60.mingli.agent_reasoning_modes import BLIND_READING_CONTRACT
 from abu_v60.mingli.reading_claim_graph_contracts import (
     MingliReadingClaim,
     MingliReadingClaimEdge,
     MingliReadingClaimGraph,
+)
+from abu_v60.mingli.reading_claim_language import (
+    method_bound_timing_chain,
+    method_bound_timing_statement,
+    method_bound_working_thesis,
+    primary_limit,
 )
 
 DOMAIN_KEYS = (
@@ -37,10 +45,22 @@ class MingliReadingClaimGraphProjector:
         ):
             raise ValueError("mingli_reading_claim_graph_packet_lineage_conflict")
         output = reading.output
+        server_issue_keys = set(output.server_issue_keys)
         primary = next(item for item in output.hypotheses if item.role == "PRIMARY")
-        mechanism_catalog = {
-            item.evidence_id for item in packet.mechanism_observations
-        }
+        primary_chart_evidence = _unique(
+            (
+                *primary.evidence_ids,
+                *primary.mechanism_evidence_ids,
+                *(
+                    evidence_id
+                    for ruling in primary.method_rulings
+                    for evidence_id in ruling.evidence_ids
+                ),
+            )
+        )
+        primary_working_thesis = method_bound_working_thesis(primary)
+        timing_coordinates = {item.layer: item for item in packet.timing_coordinates}
+        mechanism_catalog = {item.evidence_id for item in packet.mechanism_observations}
         claims: list[MingliReadingClaim] = []
 
         def add(**values: object) -> MingliReadingClaim:
@@ -52,7 +72,13 @@ class MingliReadingClaimGraphProjector:
             )
             values.setdefault("coordinate_evidence_id", None)
             values.setdefault("relation_evidence_ids", ())
-            assessed = _assess_claim(values=values, packet=packet)
+            if values.get("semantic_key") in server_issue_keys:
+                values["assessment_codes"] = ("MODEL_FIELD_INVALID",)
+            assessed = _assess_claim(
+                values=values,
+                packet=packet,
+                primary_method_ref=primary.method_card_ref,
+            )
             claim = MingliReadingClaim.issue(
                 source_agent_reading_ref=reading.agent_reading_ref,
                 **assessed,
@@ -67,15 +93,13 @@ class MingliReadingClaimGraphProjector:
             role="SYNTHESIS",
             status="PROVISIONAL",
             headline=_complete_heading(
-                output.first_look,
-                fallback=primary.name,
+                primary.name,
+                fallback=output.first_look,
             ),
-            statement=output.whole_chart_thesis,
+            statement=primary_working_thesis,
             causal_chain=(),
             condition=None,
-            evidence_ids=_unique(
-                (*primary.evidence_ids, *primary.mechanism_evidence_ids)
-            ),
+            evidence_ids=primary_chart_evidence,
             mechanism_evidence_ids=_unique(primary.mechanism_evidence_ids),
             confidence="MEDIUM",
             codes=(),
@@ -103,26 +127,32 @@ class MingliReadingClaimGraphProjector:
                 layer="PRINCIPLE",
                 kind="COMPETING_HYPOTHESIS",
                 role=hypothesis.role,
-                status=(
-                    "PROVISIONAL"
-                    if hypothesis.role == "PRIMARY"
-                    else "NEEDS_RECONCILIATION"
-                ),
+                status=("PROVISIONAL" if hypothesis.role == "PRIMARY" else "NEEDS_RECONCILIATION"),
                 headline=_complete_heading(
                     hypothesis.name,
                     fallback=hypothesis.thesis,
                 ),
-                statement=hypothesis.thesis,
+                statement=(
+                    primary_working_thesis
+                    if hypothesis.role == "PRIMARY"
+                    else hypothesis.thesis
+                ),
                 causal_chain=(),
                 condition=hypothesis.failure_condition,
                 evidence_ids=_unique(
-                    (*hypothesis.evidence_ids, *hypothesis.mechanism_evidence_ids)
+                    (
+                        *hypothesis.evidence_ids,
+                        *hypothesis.mechanism_evidence_ids,
+                        *(
+                            evidence_id
+                            for ruling in hypothesis.method_rulings
+                            for evidence_id in ruling.evidence_ids
+                        ),
+                    )
                 ),
-                mechanism_evidence_ids=_unique(
-                    hypothesis.mechanism_evidence_ids
-                ),
+                mechanism_evidence_ids=_unique(hypothesis.mechanism_evidence_ids),
                 confidence=hypothesis.confidence,
-                codes=(hypothesis.judgment,),
+                codes=(hypothesis.judgment, hypothesis.adjudication),
                 assessment_codes=(),
             )
         work_path = add(
@@ -185,10 +215,10 @@ class MingliReadingClaimGraphProjector:
             role="SYNTHESIS",
             status="PROVISIONAL",
             headline="原局基线",
-            statement=output.timing.natal_baseline,
+            statement=primary_working_thesis,
             causal_chain=(),
             condition=None,
-            evidence_ids=_unique(output.timing.natal_evidence_ids),
+            evidence_ids=primary_chart_evidence,
             confidence="MEDIUM",
             codes=("NATAL",),
             assessment_codes=(),
@@ -198,11 +228,20 @@ class MingliReadingClaimGraphProjector:
             layer="TIMING",
             kind="TIMING_LAYER",
             role="PROJECTION",
-            status="NEEDS_RECONCILIATION",
+            status="PROVISIONAL",
             headline="当前大运",
-            statement=output.timing.dayun.conclusion,
-            causal_chain=output.timing.dayun.activation_chain,
-            condition=None,
+            statement=method_bound_timing_statement(
+                primary=primary,
+                coordinate=timing_coordinates["DAYUN"],
+                period_label="大运",
+                period_scope="这十年",
+            ),
+            causal_chain=method_bound_timing_chain(
+                primary=primary,
+                coordinate=timing_coordinates["DAYUN"],
+                period_label="大运",
+            ),
+            condition=primary_limit(primary),
             evidence_ids=_unique(
                 (
                     *output.timing.dayun.evidence_ids,
@@ -211,9 +250,7 @@ class MingliReadingClaimGraphProjector:
                 )
             ),
             coordinate_evidence_id=output.timing.dayun.coordinate_evidence_id,
-            relation_evidence_ids=_unique(
-                output.timing.dayun.relation_evidence_ids
-            ),
+            relation_evidence_ids=_unique(output.timing.dayun.relation_evidence_ids),
             confidence=output.timing.dayun.confidence,
             codes=("DAYUN",),
             assessment_codes=(),
@@ -223,11 +260,20 @@ class MingliReadingClaimGraphProjector:
             layer="TIMING",
             kind="TIMING_LAYER",
             role="PROJECTION",
-            status="NEEDS_RECONCILIATION",
+            status="PROVISIONAL",
             headline="所选流年",
-            statement=output.timing.annual.conclusion,
-            causal_chain=output.timing.annual.activation_chain,
-            condition=None,
+            statement=method_bound_timing_statement(
+                primary=primary,
+                coordinate=timing_coordinates["ANNUAL"],
+                period_label="流年",
+                period_scope="这一年",
+            ),
+            causal_chain=method_bound_timing_chain(
+                primary=primary,
+                coordinate=timing_coordinates["ANNUAL"],
+                period_label="流年",
+            ),
+            condition=primary_limit(primary),
             evidence_ids=_unique(
                 (
                     *output.timing.annual.evidence_ids,
@@ -236,9 +282,7 @@ class MingliReadingClaimGraphProjector:
                 )
             ),
             coordinate_evidence_id=output.timing.annual.coordinate_evidence_id,
-            relation_evidence_ids=_unique(
-                output.timing.annual.relation_evidence_ids
-            ),
+            relation_evidence_ids=_unique(output.timing.annual.relation_evidence_ids),
             confidence=output.timing.annual.confidence,
             codes=("ANNUAL",),
             assessment_codes=(),
@@ -250,8 +294,11 @@ class MingliReadingClaimGraphProjector:
             role="QUESTION",
             status="OPEN_QUESTION",
             headline="用来区分两种解释的问题",
-            statement=output.discriminating_question,
-            causal_chain=(),
+            statement=output.hypothesis_decision.reversal.question,
+            causal_chain=(
+                output.hypothesis_decision.reversal.winner_signal,
+                output.hypothesis_decision.reversal.loser_signal,
+            ),
             condition=None,
             evidence_ids=(),
             confidence=None,
@@ -259,16 +306,12 @@ class MingliReadingClaimGraphProjector:
             assessment_codes=(),
         )
 
-        primary_claim = next(
-            item for item in hypothesis_claims.values() if item.role == "PRIMARY"
-        )
+        primary_claim = next(item for item in hypothesis_claims.values() if item.role == "PRIMARY")
         alternative_claim = next(
             item for item in hypothesis_claims.values() if item.role == "ALTERNATIVE"
         )
         unavailable_dependencies = tuple(
-            item
-            for item in (primary_claim, work_path)
-            if item.status == "WITHHELD"
+            item for item in (primary_claim, work_path) if item.status == "WITHHELD"
         )
         if unavailable_dependencies and whole_chart.status != "WITHHELD":
             whole_chart = _with_dependency_withheld(whole_chart)
@@ -356,7 +399,6 @@ _RELATION_EFFECT_TERMS = (
     "主导",
     "指向",
 )
-_RELATION_SPECIFIC_EFFECT_TERMS = ("合动", "解冲", "冲开", "冲去", "成化")
 _RELATION_LABELS = ("六合", "六冲", "同支", "三合", "相合", "相冲")
 _CONDITIONAL_TERMS = (
     "若",
@@ -383,6 +425,8 @@ _SOFT_ASSESSMENT_CODES = {
     "MECHANISM_CANDIDATE_REQUIRES_ADJUDICATION",
     "CONFIDENCE_EXCEEDS_PACKET",
     "DEPENDENCY_WITHHELD",
+    "TIMING_NATAL_BASIS_MISSING",
+    "DOMAIN_PRIMARY_PATH_MISSING",
 }
 
 
@@ -390,6 +434,7 @@ def _assess_claim(
     *,
     values: dict[str, object],
     packet: MingliAgentCasePacket,
+    primary_method_ref: str,
 ) -> dict[str, object]:
     """Admit the whole reading while quarantining only an unsafe claim."""
 
@@ -397,39 +442,32 @@ def _assess_claim(
     prose = _claim_prose(assessed)
     assertion_prose = _claim_assertion_prose(assessed)
     evidence_ids = set(assessed.get("evidence_ids", ()))
-    mechanism_evidence_ids = set(
-        assessed.get("mechanism_evidence_ids", ())
-    )
+    mechanism_evidence_ids = set(assessed.get("mechanism_evidence_ids", ()))
     coordinate_evidence_id = assessed.get("coordinate_evidence_id")
     relation_evidence_ids = set(assessed.get("relation_evidence_ids", ()))
     layer = str(assessed["layer"])
     kind = str(assessed["kind"])
     role = str(assessed["role"])
-    codes: list[str] = []
+    codes: list[str] = list(assessed.get("assessment_codes", ()))
 
-    mechanism_ids = {
-        item.evidence_id for item in packet.mechanism_observations
-    }
-    if (
-        kind == "COMPETING_HYPOTHESIS"
-        and role == "PRIMARY"
-        and not (evidence_ids - mechanism_ids)
-    ):
+    if kind != "DISCRIMINATING_QUESTION" and not evidence_ids:
+        codes.append("CLAIM_EVIDENCE_MISSING")
+
+    mechanism_ids = {item.evidence_id for item in packet.mechanism_observations}
+    if kind == "COMPETING_HYPOTHESIS" and role == "PRIMARY" and not (evidence_ids - mechanism_ids):
         codes.append("PRIMARY_HYPOTHESIS_CHART_BASIS_INCOMPLETE")
-    if mechanism_evidence_ids:
-        codes.append("MECHANISM_CANDIDATE_REQUIRES_ADJUDICATION")
-        if assessed.get("confidence") == "HIGH":
-            codes.append("CONFIDENCE_EXCEEDS_PACKET")
-            assessed["confidence"] = "MEDIUM"
+    if mechanism_evidence_ids and assessed.get("confidence") == "HIGH":
+        codes.append("CONFIDENCE_EXCEEDS_PACKET")
+        assessed["confidence"] = "MEDIUM"
 
     timing_ids = {
         *(item.evidence_id for item in packet.timing_coordinates),
         *(item.evidence_id for item in packet.timing_relations),
     }
-    natal_interpretation = (
-        layer in {"PRINCIPLE", "IMAGE", "THEMES"}
-        or kind == "TIMING_BASELINE"
-    )
+    natal_ids = {
+        item.evidence_id for item in packet.evidence_catalog if item.evidence_id not in timing_ids
+    }
+    natal_interpretation = layer in {"PRINCIPLE", "IMAGE", "THEMES"} or kind == "TIMING_BASELINE"
     if natal_interpretation and evidence_ids & timing_ids:
         codes.append("NATAL_CLAIM_CITES_TIMING_EVIDENCE")
     if natal_interpretation and _uses_selected_timing(
@@ -446,8 +484,16 @@ def _assess_claim(
     names_relation = any(term in assertion_prose for term in _RELATION_LABELS)
     if kind == "TIMING_LAYER" and coordinate_evidence_id not in evidence_ids:
         codes.append("TIMING_COORDINATE_EVIDENCE_MISSING")
+    if kind == "TIMING_LAYER" and not evidence_ids & natal_ids:
+        codes.append("TIMING_NATAL_BASIS_MISSING")
     if kind == "TIMING_LAYER" and names_relation and not relation_evidence_ids:
         codes.append("TIMING_RELATION_EVIDENCE_MISSING")
+    if kind == "TIMING_LAYER" and _uses_other_timing_layer(
+        prose=assertion_prose,
+        semantic_key=str(assessed["semantic_key"]),
+        packet=packet,
+    ):
+        codes.append("TIMING_LAYER_PROSE_CONFLICT")
     if _has_unconditioned_relation_effect(
         values=assessed,
         cites_relation=cites_relation,
@@ -458,20 +504,70 @@ def _assess_claim(
         codes.append("WORK_PATH_CLOSURE_EXCEEDS_PACKET")
     if any(
         term in prose
-        for term in ("手术", "外伤", "重病", "车祸", "自杀", "抑郁症")
+        for term in (
+            "手术",
+            "外伤",
+            "重病",
+            "车祸",
+            "自杀",
+            "抑郁症",
+            "第三者",
+            "第三人",
+            "外遇",
+            "婚外",
+            "外情",
+            "背叛",
+            "离婚",
+            "分手",
+            "感情破裂",
+            "疾病",
+            "灾祸",
+            "必然破财",
+        )
     ):
         codes.append("HIGH_RISK_EVENT_ASSERTION")
-    if (
-        not packet.day_master_support.same_element_hidden_support
-        and _uses_positive_root_claim(prose)
+    if not packet.day_master_support.same_element_hidden_support and _uses_positive_root_claim(
+        prose
     ):
         codes.append("ROOT_ASSERTION_CONFLICTS_WITH_PACKET")
     if _has_named_coordinate_conflict(prose=prose, packet=packet):
         codes.append("NAMED_COORDINATE_CONFLICTS_WITH_PACKET")
+    additional_visible = _timing_visible_context(
+        semantic_key=str(assessed["semantic_key"]),
+        packet=packet,
+    )
+    if manifestation_claim_conflicts(
+        prose,
+        pillars=packet.pillars,
+        additional_visible=additional_visible,
+    ):
+        codes.append("TEN_GOD_MANIFESTATION_CONFLICTS_WITH_PACKET")
+    if _has_peer_count_conflict(prose=prose, packet=packet):
+        codes.append("PEER_COUNT_CONFLICTS_WITH_PACKET")
+    if "流月" in prose:
+        codes.append("UNSELECTED_TIMING_LAYER_ASSERTION")
     if _has_unlisted_relation_assertion(prose=prose, packet=packet):
         codes.append("UNLISTED_RELATION_COORDINATE_ASSERTION")
     if any(term in prose for term in ("财库", "官库", "印库", "食伤库")):
         codes.append("UNADMITTED_CLASSICAL_ASSERTION")
+    if any(
+        term in prose for term in ("Case", "Hash", "canonical", "尚未接线", "证据缺口", "候选准入")
+    ):
+        codes.append("NON_READING_LANGUAGE")
+    if any(
+        term in prose for term in ("有机会也有挑战", "保持平衡", "值得继续观察", "当前证据适合观察")
+    ):
+        codes.append("LOW_INFORMATION_LANGUAGE")
+    if kind == "LIFE_DOMAIN" and any(
+        term in prose for term in ("人脉", "朋友资源", "团队支持", "社交资源", "贵人")
+    ):
+        codes.append("UNSUPPORTED_SOCIAL_RESOURCE_INFERENCE")
+    if (
+        kind == "LIFE_DOMAIN"
+        and primary_method_ref != FALLBACK_METHOD_CARD_REF
+        and primary_method_ref not in mechanism_evidence_ids
+    ):
+        codes.append("DOMAIN_PRIMARY_PATH_MISSING")
 
     assessed["assessment_codes"] = tuple(dict.fromkeys(codes))
     hard_quarantine_codes = set(codes) - _SOFT_ASSESSMENT_CODES
@@ -547,18 +643,34 @@ def _has_unconditioned_relation_effect(
                     conditional_scope = False
                 if any(term in stripped for term in _CONDITIONAL_TERMS):
                     conditional_scope = True
-                uses_specific_effect = any(
-                    term in stripped for term in _RELATION_SPECIFIC_EFFECT_TERMS
-                )
-                uses_effect = any(
-                    term in stripped for term in _RELATION_EFFECT_TERMS
-                )
+                uses_specific_effect = _uses_specific_relation_effect(stripped)
+                uses_effect = any(term in stripped for term in _RELATION_EFFECT_TERMS)
                 if (
-                    uses_specific_effect
-                    or ((cites_relation or names_relation) and uses_effect)
+                    uses_specific_effect or ((cites_relation or names_relation) and uses_effect)
                 ) and not conditional_scope:
                     return True
     return False
+
+
+def _uses_specific_relation_effect(prose: str) -> bool:
+    """Do not read ordinary `化解冲突` as the technical relation verb `解冲`."""
+
+    return bool(re.search(r"(?:合动|(?<!化)解冲|冲开|冲去|成化)", prose))
+
+
+def _timing_visible_context(
+    *,
+    semantic_key: str,
+    packet: MingliAgentCasePacket,
+) -> tuple[tuple[str, str], ...]:
+    layer = {
+        "TIMING_DAYUN": "DAYUN",
+        "TIMING_ANNUAL": "ANNUAL",
+    }.get(semantic_key)
+    if layer is None:
+        return ()
+    coordinate = next(item for item in packet.timing_coordinates if item.layer == layer)
+    return ((coordinate.pillar[0], coordinate.ten_god_label),)
 
 
 def _uses_selected_timing(*, prose: str, packet: MingliAgentCasePacket) -> bool:
@@ -574,6 +686,20 @@ def _uses_selected_timing(*, prose: str, packet: MingliAgentCasePacket) -> bool:
     )
 
 
+def _uses_other_timing_layer(
+    *,
+    prose: str,
+    semantic_key: str,
+    packet: MingliAgentCasePacket,
+) -> bool:
+    coordinates = {item.layer: item.pillar for item in packet.timing_coordinates}
+    if semantic_key == "TIMING_ANNUAL":
+        return "大运" in prose or coordinates["DAYUN"] in prose
+    if semantic_key == "TIMING_DAYUN":
+        return "流年" in prose or coordinates["ANNUAL"] in prose
+    return False
+
+
 def _uses_positive_root_claim(prose: str) -> bool:
     without_negated = re.sub(
         r"(?:无|未|没有|并无|并非|不是|不算|不能视为|不可视为|缺乏|不足)"
@@ -584,28 +710,33 @@ def _uses_positive_root_claim(prose: str) -> bool:
     return bool(
         re.search(
             r"(?:得根|有根|微根|坐根|通根|根气(?:受制|薄弱|微弱|尚存|存在)|"
-            r"根位(?:受制|薄弱|尚存|存在)|根基(?:受制|薄弱|尚存|存在))",
+            r"根位(?:受制|薄弱|尚存|存在)|根基(?:受制|薄弱|尚存|存在)|"
+            r"(?:仍有|尚有|有|存在)[^，。；;\n]{0,6}(?:根气|根位|根基))",
             without_negated,
         )
     )
 
 
-def _has_named_coordinate_conflict(
-    *, prose: str, packet: MingliAgentCasePacket
-) -> bool:
-    hidden_by_branch = {
-        item.branch: set(item.hidden_stems) for item in packet.pillars
-    }
-    pattern = re.compile(r"([子丑寅卯辰巳午未申酉戌亥])(?:[、，,\s]{0,2}藏|中)([甲乙丙丁戊己庚辛壬癸])")
+def _has_named_coordinate_conflict(*, prose: str, packet: MingliAgentCasePacket) -> bool:
+    hidden_by_branch = {item.branch: set(item.hidden_stems) for item in packet.pillars}
+    pattern = re.compile(
+        r"([子丑寅卯辰巳午未申酉戌亥])(?:[、，,\s]{0,2}藏|中)([甲乙丙丁戊己庚辛壬癸])"
+    )
     return any(
-        stem not in hidden_by_branch.get(branch, set())
-        for branch, stem in pattern.findall(prose)
+        stem not in hidden_by_branch.get(branch, set()) for branch, stem in pattern.findall(prose)
     )
 
 
-def _has_unlisted_relation_assertion(
-    *, prose: str, packet: MingliAgentCasePacket
-) -> bool:
+def _has_unlisted_relation_assertion(*, prose: str, packet: MingliAgentCasePacket) -> bool:
+    if any(
+        term in prose for term in ("半合", "三会", "相刑", "自刑", "相害", "相破", "合化", "争合")
+    ):
+        return True
+    has_three_harmony_candidate = bool(
+        packet.model_prompt_view()["professional_adjudication"]["professional_structure_candidates"]
+    )
+    if "三合" in prose and not has_three_harmony_candidate:
+        return True
     allowed_pairs = {
         frozenset((item.left_branch, item.right_branch))
         for item in (*packet.natal_relations, *packet.timing_relations)
@@ -616,6 +747,38 @@ def _has_unlisted_relation_assertion(
         r"(?:相连|相合|六合|相冲|六冲|地支关系)"
     )
     return any(
-        frozenset((left, right)) not in allowed_pairs
-        for left, right in pattern.findall(prose)
+        frozenset((left, right)) not in allowed_pairs for left, right in pattern.findall(prose)
     )
+
+
+_CHINESE_COUNT = {
+    "零": 0,
+    "一": 1,
+    "二": 2,
+    "两": 2,
+    "三": 3,
+    "四": 4,
+    "五": 5,
+    "六": 6,
+    "七": 7,
+    "八": 8,
+    "九": 9,
+}
+
+
+def _has_peer_count_conflict(
+    *,
+    prose: str,
+    packet: MingliAgentCasePacket,
+) -> bool:
+    expected = len(packet.day_master_support.visible_peer_support)
+    pattern = re.compile(
+        r"(?:天干|明干)?(?P<count>[零一二两三四五六七八九\d])"
+        r"(?:个|位|处|重|透|见|株)?(?:明干|天干)?(?:比肩|比劫|同类)"
+    )
+    for match in pattern.finditer(prose):
+        raw_count = match.group("count")
+        actual = int(raw_count) if raw_count.isdigit() else _CHINESE_COUNT[raw_count]
+        if actual != expected:
+            return True
+    return False

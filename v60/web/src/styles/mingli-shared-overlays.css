@@ -244,6 +244,36 @@
   line-height: 1.6;
 }
 
+.mingli-lab-method-review {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(213, 190, 130, 0.2);
+}
+
+.mingli-lab-method-review article {
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid rgba(203, 222, 210, 0.1);
+  border-radius: 9px;
+  background: rgba(2, 18, 13, 0.3);
+}
+
+.mingli-lab-method-review ul {
+  display: grid;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mingli-lab-method-review li {
+  display: grid;
+  gap: 2px;
+  padding-left: 7px;
+  border-left: 1px solid rgba(213, 190, 130, 0.28);
+}
+
 .mingli-lab-section-title {
   margin: 1px 0 -2px;
   color: #a9b9af;

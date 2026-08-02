@@ -48,6 +48,7 @@ export interface MingliReadingClaim {
   confidence: "LOW" | "MEDIUM" | "HIGH" | null;
   codes: string[];
   assessment_codes: Array<
+    | "CLAIM_EVIDENCE_MISSING"
     | "PRIMARY_HYPOTHESIS_CHART_BASIS_INCOMPLETE"
     | "MECHANISM_CANDIDATE_REQUIRES_ADJUDICATION"
     | "CONFIDENCE_EXCEEDS_PACKET"
@@ -55,14 +56,24 @@ export interface MingliReadingClaim {
     | "NATAL_CLAIM_CITES_TIMING_EVIDENCE"
     | "NATAL_CLAIM_USES_SELECTED_TIMING"
     | "TIMING_COORDINATE_EVIDENCE_MISSING"
+    | "TIMING_NATAL_BASIS_MISSING"
     | "TIMING_RELATION_EVIDENCE_MISSING"
     | "RELATION_MEMBERSHIP_PROMOTED_TO_EFFECT"
     | "WORK_PATH_CLOSURE_EXCEEDS_PACKET"
     | "HIGH_RISK_EVENT_ASSERTION"
     | "ROOT_ASSERTION_CONFLICTS_WITH_PACKET"
     | "NAMED_COORDINATE_CONFLICTS_WITH_PACKET"
+    | "TEN_GOD_MANIFESTATION_CONFLICTS_WITH_PACKET"
+    | "PEER_COUNT_CONFLICTS_WITH_PACKET"
+    | "UNSELECTED_TIMING_LAYER_ASSERTION"
     | "UNLISTED_RELATION_COORDINATE_ASSERTION"
     | "UNADMITTED_CLASSICAL_ASSERTION"
+    | "MODEL_FIELD_INVALID"
+    | "NON_READING_LANGUAGE"
+    | "LOW_INFORMATION_LANGUAGE"
+    | "TIMING_LAYER_PROSE_CONFLICT"
+    | "UNSUPPORTED_SOCIAL_RESOURCE_INFERENCE"
+    | "DOMAIN_PRIMARY_PATH_MISSING"
   >;
 }
 
@@ -81,7 +92,7 @@ export interface MingliReadingClaimEdge {
 export interface MingliReadingClaimGraph {
   graph_ref: string;
   graph_hash: string;
-  graph_version: "v60.mingli-reading-claim-graph.005";
+  graph_version: "v60.mingli-reading-claim-graph.009";
   case_ref: string;
   chart_version_ref: string;
   life_case_revision_ref: string;

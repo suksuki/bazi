@@ -9,12 +9,25 @@ from typing import Any, Protocol
 from pydantic import BaseModel, ConfigDict, Field
 
 from abu_v60.llm_transport import JsonTransport, LlmTransportError, default_json_transport
+from abu_v60.mingli.agent_adjudication import (
+    bind_packet_fact_fields,
+    normalize_adjudication_output,
+    repair_output_form,
+    validate_adjudication_output,
+)
 from abu_v60.mingli.agent_contracts import (
+    MINGLI_AGENT_PACKET_VERSION,
     MINGLI_AGENT_PROMPT_VIEW_VERSION,
+    MINGLI_AGENT_READING_VERSION,
     MingliAgentCasePacket,
     MingliAgentModelOutput,
     MingliAgentReadingEnvelope,
     mingli_agent_generation_key,
+)
+from abu_v60.mingli.agent_method_cards import MINGLI_AGENT_ADJUDICATION_VERSION
+from abu_v60.mingli.agent_output_repair import (
+    MINGLI_AGENT_OUTPUT_REPAIR_VERSION,
+    repair_local_output_fields,
 )
 from abu_v60.mingli.agent_profile import (
     MINGLI_AGENT_OWNER_REVIEW_ALLOWED,
@@ -31,8 +44,8 @@ from abu_v60.provenance import canonical_json, content_hash, stable_ref
 from abu_v60.settings import Settings, settings
 
 OLLAMA_GENERATE_PROVIDER_ID = "ollama-generate"
-MINGLI_AGENT_PROMPT_VIEW_MAX_CHARS = 6500
-MINGLI_AGENT_OUTPUT_SCHEMA_MAX_CHARS = 8000
+MINGLI_AGENT_PROMPT_VIEW_MAX_CHARS = 12000
+MINGLI_AGENT_OUTPUT_SCHEMA_MAX_CHARS = 12000
 
 
 class MingliAgentRuntimeStatus(StrEnum):
@@ -160,17 +173,23 @@ class OllamaMingliAgentProvider:
                 raw_output,
                 allowed=packet.allowed_evidence_ids,
             )
-            normalized_output = _bind_packet_fact_fields(
+            normalized_output = bind_packet_fact_fields(
+                normalized_output,
+                packet=packet,
+            )
+            normalized_output = normalize_adjudication_output(
                 normalized_output,
                 packet=packet,
             )
             normalized_output = _strip_evidence_ids_from_prose(normalized_output)
-            normalized_output = _repair_output_form(normalized_output)
+            normalized_output = repair_output_form(normalized_output)
+            normalized_output = repair_local_output_fields(
+                normalized_output,
+                packet=packet,
+            )
             output = MingliAgentModelOutput.model_validate(normalized_output)
         except ValueError as exc:
-            raise MingliAgentProviderError(
-                f"mingli_agent_provider_output_invalid:{exc}"
-            ) from exc
+            raise MingliAgentProviderError(f"mingli_agent_provider_output_invalid:{exc}") from exc
         input_tokens = _nonnegative_int(response.get("prompt_eval_count"))
         output_tokens = _nonnegative_int(response.get("eval_count"))
         response_ref = stable_ref(
@@ -267,9 +286,7 @@ class MingliAgentRuntime:
             result.output.validate_evidence(packet.allowed_evidence_ids)
             _validate_packet_bound_reasoning(output=result.output, packet=packet)
         except ValueError as exc:
-            raise MingliAgentProviderError(
-                f"mingli_agent_provider_output_invalid:{exc}"
-            ) from exc
+            raise MingliAgentProviderError(f"mingli_agent_provider_output_invalid:{exc}") from exc
         return MingliAgentReadingEnvelope.issue(
             generation_key=self.generation_key(
                 requester_account_ref=requester_account_ref,
@@ -385,6 +402,12 @@ def mingli_agent_runtime_manifest(
     }
     return {
         "runtime_ref": MINGLI_AGENT_RUNTIME_VERSION,
+        "packet_contract_ref": MINGLI_AGENT_PACKET_VERSION,
+        "output_contract_ref": MINGLI_AGENT_READING_VERSION,
+        "adjudication_contract_ref": MINGLI_AGENT_ADJUDICATION_VERSION,
+        "output_repair_contract_ref": MINGLI_AGENT_OUTPUT_REPAIR_VERSION,
+        "method_adjudication": "TYPED_CHECK_RULINGS_AND_SERVER_DERIVED_AGGREGATE",
+        "whole_chart_judgment_required": True,
         "status": status.value,
         "model_qualification_status": MINGLI_AGENT_PROFESSIONAL_REVIEW_STATUS,
         "reasoning_mode": "BLIND_READING",
@@ -407,16 +430,35 @@ def _nonnegative_int(value: object) -> int:
     return value if isinstance(value, int) and value >= 0 else 0
 
 
-def _normalize_evidence_ids(value: Any, *, allowed: frozenset[str]) -> Any:
+_EVIDENCE_LIST_FIELDS = {
+    "day_master_evidence_ids",
+    "evidence_ids",
+    "mechanism_evidence_ids",
+    "natal_evidence_ids",
+    "relation_evidence_ids",
+}
+
+
+def _normalize_evidence_ids(
+    value: Any,
+    *,
+    allowed: frozenset[str],
+    field_name: str = "",
+) -> Any:
     """Normalize E12 to E012 only when that exact catalog item exists."""
 
     if isinstance(value, dict):
         return {
-            key: _normalize_evidence_ids(item, allowed=allowed)
+            key: _normalize_evidence_ids(item, allowed=allowed, field_name=key)
             for key, item in value.items()
         }
     if isinstance(value, list):
-        return [_normalize_evidence_ids(item, allowed=allowed) for item in value]
+        normalized = [
+            _normalize_evidence_ids(item, allowed=allowed, field_name=field_name) for item in value
+        ]
+        if field_name in _EVIDENCE_LIST_FIELDS:
+            return list(dict.fromkeys(item for item in normalized if item in allowed))
+        return normalized
     if isinstance(value, str):
         match = re.fullmatch(r"E(\d{1,3})", value)
         if match is not None:
@@ -435,19 +477,16 @@ def _strip_evidence_ids_from_prose(value: Any, *, field_name: str = "") -> Any:
         "evidence_id",
         "evidence_ids",
         "mechanism_evidence_ids",
+        "method_card_ref",
         "natal_evidence_ids",
         "relation_evidence_ids",
     }
     if isinstance(value, dict):
         return {
-            key: _strip_evidence_ids_from_prose(item, field_name=key)
-            for key, item in value.items()
+            key: _strip_evidence_ids_from_prose(item, field_name=key) for key, item in value.items()
         }
     if isinstance(value, list):
-        return [
-            _strip_evidence_ids_from_prose(item, field_name=field_name)
-            for item in value
-        ]
+        return [_strip_evidence_ids_from_prose(item, field_name=field_name) for item in value]
     if isinstance(value, str) and field_name not in evidence_fields:
         cleaned = re.sub(
             r"(?:证据(?:编号)?\s*)?[（(]?\s*(?<![A-Za-z0-9])E\d{1,3}(?!\d)\s*[）)]?",
@@ -460,168 +499,18 @@ def _strip_evidence_ids_from_prose(value: Any, *, field_name: str = "") -> Any:
     return value
 
 
-def _bind_packet_fact_fields(
-    value: Any,
-    *,
-    packet: MingliAgentCasePacket,
-) -> Any:
-    """Server-own redundant fact copies; the model owns only interpretation."""
-
-    if not isinstance(value, dict):
-        return value
-    value = dict(value)
-    roots = packet.day_master_support.same_element_hidden_support
-    value["support_selection"] = {
-        "root_status": "PRESENT" if roots else "NONE",
-        "root_coordinates": list(roots),
-        "peer_coordinates": list(packet.day_master_support.visible_peer_support),
-        "resource_coordinates": list(packet.day_master_support.resource_support),
-    }
-    mechanism_ids = {
-        item.evidence_id for item in packet.mechanism_observations
-    }
-    hypotheses = value.get("hypotheses")
-    if isinstance(hypotheses, list):
-        normalized_hypotheses: list[Any] = []
-        for hypothesis in hypotheses:
-            if not isinstance(hypothesis, dict):
-                normalized_hypotheses.append(hypothesis)
-                continue
-            hypothesis = dict(hypothesis)
-            selected = hypothesis.get("mechanism_evidence_ids")
-            selected_values = selected if isinstance(selected, list) else []
-            evidence = hypothesis.get("evidence_ids")
-            evidence_values = evidence if isinstance(evidence, list) else []
-            hypothesis["mechanism_evidence_ids"] = list(
-                dict.fromkeys(
-                    item
-                    for item in (*selected_values, *evidence_values)
-                    if item in mechanism_ids
-                )
-            )
-            normalized_hypotheses.append(hypothesis)
-        value["hypotheses"] = normalized_hypotheses
-    timing = value.get("timing")
-    if isinstance(timing, dict):
-        timing = dict(timing)
-        coordinates = {
-            item.layer: item.evidence_id for item in packet.timing_coordinates
-        }
-        relation_ids = {
-            layer: {
-                item.evidence_id
-                for item in packet.timing_relations
-                if item.left_layer == layer
-            }
-            for layer in ("DAYUN", "ANNUAL")
-        }
-        for key, layer in (("dayun", "DAYUN"), ("annual", "ANNUAL")):
-            layer_reading = timing.get(key)
-            if not isinstance(layer_reading, dict):
-                continue
-            layer_reading = dict(layer_reading)
-            evidence_ids = layer_reading.get("evidence_ids")
-            evidence_values = evidence_ids if isinstance(evidence_ids, list) else []
-            layer_reading["coordinate_evidence_id"] = coordinates[layer]
-            layer_reading["relation_evidence_ids"] = [
-                item for item in evidence_values if item in relation_ids[layer]
-            ]
-            timing[key] = layer_reading
-        value["timing"] = timing
-    return value
-
-
-def _repair_output_form(value: Any) -> Any:
-    """Deterministically repair role labels and a missing discriminating question."""
-
-    if not isinstance(value, dict):
-        return value
-    value = dict(value)
-    first_look = value.get("first_look")
-    if isinstance(first_look, str):
-        value["first_look"] = re.sub(
-            r"^(?:PRIMARY|ALTERNATIVE|H1|H2)\s*[:：·-]\s*",
-            "",
-            first_look,
-            flags=re.IGNORECASE,
-        )
-    hypotheses = value.get("hypotheses")
-    names: list[str] = []
-    if isinstance(hypotheses, list):
-        for hypothesis in hypotheses:
-            if not isinstance(hypothesis, dict):
-                continue
-            name = hypothesis.get("name")
-            if isinstance(name, str):
-                repaired = re.sub(
-                    r"\s*[（(](?:PRIMARY|ALTERNATIVE|H1|H2)[）)]\s*$",
-                    "",
-                    name,
-                    flags=re.IGNORECASE,
-                ).strip()
-                hypothesis["name"] = repaired
-                names.append(repaired)
-    question = value.get("discriminating_question")
-    if (
-        not isinstance(question, str)
-        or not question.rstrip().endswith(("？", "?"))
-    ) and len(names) >= 2:
-        value["discriminating_question"] = (
-            f"在长期反复出现的现实经历中，{names[0]}与{names[1]}，"
-            "哪一种更接近你的主要模式？"
-        )
-    return value
-
-
 def _validate_packet_bound_reasoning(
     *,
     output: MingliAgentModelOutput,
     packet: MingliAgentCasePacket,
 ) -> None:
-    corpus = canonical_json(output.model_dump(mode="json"))
     prose_segments = _output_prose_segments(output)
-    prose = "\n".join(prose_segments)
-    has_three_harmony_candidate = bool(
-        packet.model_prompt_view()["professional_adjudication"][
-            "professional_structure_candidates"
-        ]
-    )
-    unsupported_relations = (
-        *(("三合",) if not has_three_harmony_candidate else ()),
-        "半合",
-        "三会",
-        "相刑",
-        "自刑",
-        "相害",
-        "相破",
-        "合化",
-        "争合",
-    )
-    unsupported_relation = next(
-        (phrase for phrase in unsupported_relations if phrase in corpus),
-        None,
-    )
-    if unsupported_relation is not None:
-        raise ValueError(
-            f"mingli_agent_output_uses_unlisted_relation:{unsupported_relation}"
-        )
-    if (
-        not packet.day_master_support.same_element_hidden_support
-        and _claims_positive_root(prose)
-    ):
-        raise ValueError("mingli_agent_output_root_claim_conflicts_with_packet")
-    if any(
-        re.search(r"(?<![A-Za-z0-9])E\d{1,3}(?!\d)", item)
-        for item in prose_segments
-    ):
+    if any(re.search(r"(?<![A-Za-z0-9])E\d{1,3}(?!\d)", item) for item in prose_segments):
         raise ValueError("mingli_agent_output_evidence_id_leaked_into_prose")
-    if "流月" in corpus:
-        raise ValueError("mingli_agent_output_exceeds_selected_timing_layers")
     _validate_support_selection(output=output, packet=packet)
     _validate_hypothesis_evidence(output=output, packet=packet)
+    validate_adjudication_output(output=output, packet=packet)
     _validate_timing_scope(output=output, packet=packet)
-    _validate_peer_count_language(output=output, packet=packet)
-    _validate_named_coordinates(output=output, packet=packet)
 
 
 def _output_prose_segments(output: MingliAgentModelOutput) -> tuple[str, ...]:
@@ -638,7 +527,11 @@ def _output_prose_segments(output: MingliAgentModelOutput) -> tuple[str, ...]:
         output.life_image.explanation,
         output.timing.natal_baseline,
         *output.timing.verification_signals,
-        output.discriminating_question,
+        output.hypothesis_decision.winner.rationale,
+        output.hypothesis_decision.loser.rationale,
+        output.hypothesis_decision.reversal.question,
+        output.hypothesis_decision.reversal.winner_signal,
+        output.hypothesis_decision.reversal.loser_signal,
     ]
     for hypothesis in output.hypotheses:
         segments.extend(
@@ -646,8 +539,12 @@ def _output_prose_segments(output: MingliAgentModelOutput) -> tuple[str, ...]:
                 hypothesis.name,
                 hypothesis.thesis,
                 hypothesis.failure_condition,
+                *(ruling.rationale for ruling in hypothesis.method_rulings),
+                *(ruling.condition_or_falsifier for ruling in hypothesis.method_rulings),
             )
         )
+    for candidate in output.excluded_candidates:
+        segments.extend((candidate.name, candidate.rationale))
     for _, domain in output.domains.ordered:
         segments.extend(
             (
@@ -660,36 +557,6 @@ def _output_prose_segments(output: MingliAgentModelOutput) -> tuple[str, ...]:
     for timing in (output.timing.dayun, output.timing.annual):
         segments.extend((timing.conclusion, *timing.activation_chain))
     return tuple(segments)
-
-
-def _claims_positive_root(prose: str) -> bool:
-    """Reject invented root claims while allowing explicit statements of no root."""
-
-    without_negated_claims = re.sub(
-        r"(?:无|未|没有|并无|并非|不是|不算|不能视为|不可视为|不能说)"
-        r"[^，。；;\n]{0,12}"
-        r"(?:得根|有根|微根|扎根|坐根|通根|根气|根位)",
-        "",
-        prose,
-    )
-    positive_patterns = (
-        r"(?:得根|有根|微根|扎根|坐根|通根)",
-        (
-            r"(?:有|具|存|带|见|得|留|尚有|仍有|微弱|少许|一线)"
-            r"[^，。；;\n]{0,4}根气"
-        ),
-        r"根气(?:尚存|犹存|存在|可用|充足|强|稳)",
-        (
-            r"(?:仍有|尚有|存在|形成|具备|保有|留有|可用)"
-            r"[^，。；;\n]{0,4}根位"
-        ),
-        r"根位(?:尚存|犹存|存在|可用|明确|稳定)",
-        (
-            r"(?:偏印|正印|印星|生扶)[^，。；;\n]{0,8}"
-            r"(?:作为|构成|形成|就是|是)(?:日主)?(?:的)?根(?:位|气)?"
-        ),
-    )
-    return any(re.search(pattern, without_negated_claims) for pattern in positive_patterns)
 
 
 def _validate_support_selection(
@@ -714,9 +581,7 @@ def _validate_hypothesis_evidence(
     output: MingliAgentModelOutput,
     packet: MingliAgentCasePacket,
 ) -> None:
-    mechanism_ids = {
-        item.evidence_id for item in packet.mechanism_observations
-    }
+    mechanism_ids = {item.evidence_id for item in packet.mechanism_observations}
     for item in output.hypotheses:
         if not set(item.mechanism_evidence_ids).issubset(mechanism_ids):
             raise ValueError("mingli_agent_output_unknown_mechanism")
@@ -732,24 +597,12 @@ def _validate_timing_scope(
 ) -> None:
     coordinates = {item.layer: item.evidence_id for item in packet.timing_coordinates}
     relation_ids = {
-        layer: {
-            item.evidence_id
-            for item in packet.timing_relations
-            if item.left_layer == layer
-        }
+        layer: {item.evidence_id for item in packet.timing_relations if item.left_layer == layer}
         for layer in ("DAYUN", "ANNUAL")
     }
-    natal_ids = {
-        item.evidence_id
-        for item in packet.evidence_catalog
-        if item.kind != "TIMING"
-    }
+    natal_ids = {item.evidence_id for item in packet.evidence_catalog if item.kind != "TIMING"}
     dayun_allowed = natal_ids | {coordinates["DAYUN"]} | relation_ids["DAYUN"]
-    annual_allowed = (
-        dayun_allowed
-        | {coordinates["ANNUAL"]}
-        | relation_ids["ANNUAL"]
-    )
+    annual_allowed = dayun_allowed | {coordinates["ANNUAL"]} | relation_ids["ANNUAL"]
     for layer, reading, allowed in (
         ("DAYUN", output.timing.dayun, dayun_allowed),
         ("ANNUAL", output.timing.annual, annual_allowed),
@@ -758,79 +611,9 @@ def _validate_timing_scope(
             raise ValueError("mingli_agent_output_timing_coordinate_conflict")
         if not set(reading.relation_evidence_ids).issubset(relation_ids[layer]):
             raise ValueError("mingli_agent_output_timing_relation_scope_conflict")
-        if (
-            set(reading.evidence_ids) & relation_ids[layer]
-            != set(reading.relation_evidence_ids)
-        ):
+        if set(reading.evidence_ids) & relation_ids[layer] != set(reading.relation_evidence_ids):
             raise ValueError("mingli_agent_output_relation_evidence_field_mismatch")
         if not set(reading.evidence_ids).issubset(allowed):
             raise ValueError("mingli_agent_output_timing_evidence_scope_conflict")
     if not set(output.timing.natal_evidence_ids).issubset(natal_ids):
         raise ValueError("mingli_agent_output_natal_timing_basis_conflict")
-
-
-_CHINESE_COUNT = {
-    "零": 0,
-    "一": 1,
-    "二": 2,
-    "两": 2,
-    "三": 3,
-    "四": 4,
-    "五": 5,
-    "六": 6,
-    "七": 7,
-    "八": 8,
-    "九": 9,
-}
-_STEMS = "甲乙丙丁戊己庚辛壬癸"
-_BRANCHES = "子丑寅卯辰巳午未申酉戌亥"
-
-
-def _validate_peer_count_language(
-    *,
-    output: MingliAgentModelOutput,
-    packet: MingliAgentCasePacket,
-) -> None:
-    corpus = canonical_json(output.model_dump(mode="json"))
-    expected = len(packet.day_master_support.visible_peer_support)
-    pattern = re.compile(
-        r"(?:天干|明干)?(?P<count>[零一二两三四五六七八九\d])"
-        r"(?:个|位|处|重|透|见|株)?(?:明干|天干)?(?:比肩|比劫|同类)"
-    )
-    for match in pattern.finditer(corpus):
-        raw_count = match.group("count")
-        actual = int(raw_count) if raw_count.isdigit() else _CHINESE_COUNT[raw_count]
-        if actual != expected:
-            raise ValueError("mingli_agent_output_peer_count_conflicts_with_packet")
-
-
-def _validate_named_coordinates(
-    *,
-    output: MingliAgentModelOutput,
-    packet: MingliAgentCasePacket,
-) -> None:
-    """Reject explicit stems/branches absent from the selected six-column dossier."""
-
-    corpus = canonical_json(output.model_dump(mode="json"))
-    allowed_stems = {
-        *(item.stem for item in packet.pillars),
-        *(item.pillar[0] for item in packet.timing_coordinates),
-        *(stem for item in packet.pillars for stem in item.hidden_stems),
-    }
-    allowed_branches = {
-        *(item.branch for item in packet.pillars),
-        *(item.pillar[1] for item in packet.timing_coordinates),
-    }
-    for stem in set(_STEMS) - allowed_stems:
-        if re.search(
-            rf"(?:年|月|日|时|大运|流年)(?:柱|干)?{stem}|{stem}(?:干|[木火土金水])",
-            corpus,
-        ):
-            raise ValueError("mingli_agent_output_names_unlisted_stem")
-    for branch in set(_BRANCHES) - allowed_branches:
-        if re.search(
-            rf"(?:年|月|日|时|大运|流年)(?:柱|支)?{branch}|"
-            rf"{branch}(?:支|[木火土金水]|冲|合|刑|害|破|年|月|运|柱)",
-            corpus,
-        ):
-            raise ValueError("mingli_agent_output_names_unlisted_branch")

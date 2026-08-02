@@ -104,7 +104,7 @@ export interface MingliStageProjection {
 export interface MingliReadingSummaryProjection {
   summary_ref: string;
   summary_hash: string;
-  summary_version: "v60.mingli-reading-summary.003";
+  summary_version: "v60.mingli-reading-summary.006";
   case_ref: string;
   chart_version_ref: string;
   life_case_revision_ref: string;
@@ -130,16 +130,37 @@ export interface MingliReadingSummaryProjection {
 
 export type MingliAgentConfidence = "LOW" | "MEDIUM" | "HIGH";
 
+export interface MingliAgentMethodRuling {
+  method_card_ref: string;
+  check_code: string;
+  ruling: "SUPPORTS" | "CONDITIONAL" | "OPPOSES" | "UNRESOLVED";
+  rationale: string;
+  condition_or_falsifier: string;
+  evidence_ids: string[];
+}
+
 export interface MingliAgentHypothesis {
   hypothesis_id: "H1" | "H2";
   role: "PRIMARY" | "ALTERNATIVE";
   name: string;
-  judgment: "WORKS_IF" | "PARTIAL" | "BLOCKED" | "COMPETING";
+  judgment: "SUPPORTED" | "WORKS_IF" | "PARTIAL" | "BLOCKED" | "COMPETING";
   mechanism_evidence_ids: string[];
+  method_card_ref: string;
+  method_rulings: MingliAgentMethodRuling[];
+  adjudication: "SUPPORTED" | "CONDITIONAL" | "BROKEN" | "UNRESOLVED";
   thesis: string;
   failure_condition: string;
   evidence_ids: string[];
   confidence: MingliAgentConfidence;
+}
+
+export interface MingliAgentExcludedCandidate {
+  method_card_ref: string;
+  name: string;
+  status: "EXCLUDED" | "UNRESOLVED";
+  decisive_check: string;
+  rationale: string;
+  evidence_ids: string[];
 }
 
 export interface MingliAgentDomainReading {
@@ -179,6 +200,18 @@ export interface MingliAgentOutput {
   day_master_rationale: string;
   day_master_evidence_ids: string[];
   hypotheses: MingliAgentHypothesis[];
+  excluded_candidates: MingliAgentExcludedCandidate[];
+  hypothesis_decision: {
+    winner_id: "H1" | "H2";
+    loser_id: "H1" | "H2";
+    winner: { rationale: string; decisive_checks: string[] };
+    loser: { rationale: string; decisive_checks: string[] };
+    reversal: {
+      question: string;
+      winner_signal: string;
+      loser_signal: string;
+    };
+  };
   work_path: {
     path_statement: string;
     transformation_codes: Array<
@@ -205,13 +238,12 @@ export interface MingliAgentOutput {
     annual: MingliAgentTimingLayerReading;
     verification_signals: string[];
   };
-  discriminating_question: string;
 }
 
 export interface MingliAgentReading {
   agent_reading_ref: string;
   agent_reading_hash: string;
-  agent_reading_version: "v60.mingli-agent-reading.001";
+  agent_reading_version: "v60.mingli-agent-reading.003";
   generation_key: string;
   requester_account_ref: string;
   case_ref: string;

@@ -23,7 +23,7 @@ from abu_v60.mingli.showcases import SHOWCASE_ACCOUNT_REF, SHOWCASE_BY_SUBJECT
 from abu_v60.mingli.timing_store import MingliTimingVectorStore
 from abu_v60.provenance import content_hash, stable_ref
 
-MINGLI_READING_SUMMARY_VERSION = "v60.mingli-reading-summary.003"
+MINGLI_READING_SUMMARY_VERSION = "v60.mingli-reading-summary.006"
 SUPPORTED_SUBJECT_KINDS = frozenset(
     {"HUMAN_OWNER", "HUMAN_REFERENCE", "CANONICAL_SYNTHETIC"}
 )
@@ -41,7 +41,7 @@ class MingliReadingSummaryProjection(BaseModel):
 
     summary_ref: str = Field(min_length=1)
     summary_hash: str = Field(min_length=64, max_length=64)
-    summary_version: Literal["v60.mingli-reading-summary.003"]
+    summary_version: Literal["v60.mingli-reading-summary.006"]
     case_ref: str = Field(min_length=1)
     chart_version_ref: str = Field(min_length=1)
     life_case_revision_ref: str = Field(min_length=1)

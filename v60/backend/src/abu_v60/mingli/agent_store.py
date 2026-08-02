@@ -5,7 +5,10 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine
 
-from abu_v60.mingli.agent_contracts import MingliAgentReadingEnvelope
+from abu_v60.mingli.agent_contracts import (
+    MINGLI_AGENT_READING_VERSION,
+    MingliAgentReadingEnvelope,
+)
 from abu_v60.provenance import canonical_json
 
 
@@ -136,6 +139,7 @@ class MingliAgentReadingStore:
                           AND case_ref = :case_ref
                           AND reading_ref = :reading_ref
                           AND reading_hash = :reading_hash
+                          AND agent_reading_version = :agent_reading_version
                           AND agent_profile_ref = :agent_profile_ref
                           AND agent_profile_hash = :agent_profile_hash
                           AND provider_profile_ref = :provider_profile_ref
@@ -151,6 +155,7 @@ class MingliAgentReadingStore:
                         "case_ref": case_ref,
                         "reading_ref": reading_ref,
                         "reading_hash": reading_hash,
+                        "agent_reading_version": MINGLI_AGENT_READING_VERSION,
                         "agent_profile_ref": agent_profile_ref,
                         "agent_profile_hash": agent_profile_hash,
                         "provider_profile_ref": provider_profile_ref,

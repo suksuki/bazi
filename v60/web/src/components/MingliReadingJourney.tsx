@@ -5,6 +5,7 @@ import type {
   MingliReadingClaimSemanticKey,
 } from "../mingliClaimGraphTypes";
 import type {
+  MingliAgentOutput,
   MingliReadingSummaryProjection,
   MingliStageProjection,
 } from "../mingliStageTypes";
@@ -176,7 +177,10 @@ export function MingliReadingLayerContent({
   return (
     <>
       {layer === "principle" && (
-        <PrincipleLayer claimGraph={claimGraph} />
+        <PrincipleLayer
+          claimGraph={claimGraph}
+          decision={summary?.agent_reading?.output.hypothesis_decision ?? null}
+        />
       )}
       {layer === "image" && <ImageLayer claimGraph={claimGraph} stage={stage} />}
       {layer === "themes" && <ThemeLayer claimGraph={claimGraph} />}
@@ -275,7 +279,13 @@ function AgentPendingLayer({
   );
 }
 
-function PrincipleLayer({ claimGraph }: { claimGraph: MingliReadingClaimGraph }) {
+function PrincipleLayer({
+  claimGraph,
+  decision,
+}: {
+  claimGraph: MingliReadingClaimGraph;
+  decision: MingliAgentOutput["hypothesis_decision"] | null;
+}) {
   const wholeChart = claim(claimGraph, "WHOLE_CHART");
   const dayMaster = claim(claimGraph, "DAY_MASTER");
   const primary = claimGraph.claims.find((item) => item.role === "PRIMARY")!;
@@ -316,6 +326,7 @@ function PrincipleLayer({ claimGraph }: { claimGraph: MingliReadingClaimGraph })
           {workPathAdmitted
             ? <p>{workPath.statement}</p>
             : <ClaimReviewNotice context="原局做功路径" item={workPath} />}
+          {decision && <p>为什么取它：{decision.winner.rationale}</p>}
         </article>
       ) : (
         <ClaimReviewNotice item={primary} />
@@ -323,6 +334,7 @@ function PrincipleLayer({ claimGraph }: { claimGraph: MingliReadingClaimGraph })
       {alternative && claimIsAdmitted(alternative) && (
         <p className="mingli-reading-boundary">
           竞争解释：{alternative.headline}。{alternative.statement}
+          {decision && ` 暂不采用：${decision.loser.rationale}`}
         </p>
       )}
     </div>
