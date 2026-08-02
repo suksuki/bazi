@@ -13,10 +13,16 @@ from abu_v60.mingli.agent_method_cards import (
     fallback_hypothesis_method_card,
     mechanism_method_card,
 )
+from abu_v60.mingli.agent_method_distillation import (
+    bound_method_context,
+    cross_card_discriminator,
+    day_master_regime_method_asset,
+    domain_method_assets,
+)
 from abu_v60.provenance import content_hash, stable_ref
 
 MINGLI_AGENT_PACKET_VERSION = "v60.mingli-agent-case-packet.002"
-MINGLI_AGENT_PROMPT_VIEW_VERSION = "v60.mingli-agent-prompt-view.008"
+MINGLI_AGENT_PROMPT_VIEW_VERSION = "v60.mingli-agent-prompt-view.009"
 MINGLI_AGENT_READING_VERSION = "v60.mingli-agent-reading.003"
 
 Confidence = Literal["LOW", "MEDIUM", "HIGH"]
@@ -443,6 +449,12 @@ def _professional_adjudication_view(packet: MingliAgentCasePacket) -> dict[str, 
                 "SEASON_AND_ROOT_STATUS"
             ),
         },
+        "day_master_regime_method": day_master_regime_method_asset(
+            seasonal_relation=seasonal_relation,
+            root_candidates=packet.day_master_support.same_element_hidden_support,
+            visible_peers=packet.day_master_support.visible_peer_support,
+            hidden_resources=packet.day_master_support.resource_support,
+        ),
         "ten_god_occurrences": tuple(
             {
                 "ten_god": ten_god,
@@ -470,14 +482,40 @@ def _professional_adjudication_view(packet: MingliAgentCasePacket) -> dict[str, 
                 for item in structure_candidates
             ),
             "mechanisms": tuple(
-                mechanism_method_card(item) for item in packet.mechanism_observations
+                mechanism_method_card(
+                    item,
+                    include_distilled_guidance=True,
+                    distilled_context=bound_method_context(
+                        pattern_ref=item.pattern_ref,
+                        ten_god_occurrences=occurrence_map,
+                        root_candidates=(
+                            packet.day_master_support.same_element_hidden_support
+                        ),
+                        visible_peers=packet.day_master_support.visible_peer_support,
+                        hidden_resources=packet.day_master_support.resource_support,
+                    ),
+                )
+                for item in packet.mechanism_observations
             ),
             "fallback_hypothesis": fallback_hypothesis_method_card(),
+            "cross_card_discriminator": cross_card_discriminator(),
             "work_path_closure": {
                 "closed_allowed_when": ("ALL_PRIMARY_BLOCKING_AND_CONDITIONING_CHECKS_SUPPORT"),
                 "otherwise_allowed": ("CONDITIONAL", "UNCERTAIN", "BROKEN"),
             },
         },
+        "domain_method_assets": domain_method_assets(
+            gender=packet.gender,
+            ten_god_occurrences=occurrence_map,
+            spouse_palace={
+                "slot": "day",
+                "pillar": packet.pillars[2].pillar,
+                "branch": packet.pillars[2].branch,
+                "evidence_id": packet.pillars[2].evidence_id,
+                "hidden_stems": packet.pillars[2].hidden_stems,
+                "hidden_ten_gods": packet.pillars[2].hidden_ten_gods,
+            },
+        ),
         "required_decision_order": (
             "WEIGH_SEASON_ROOT_PEER_RESOURCE_DRAIN_WEALTH_AND_PRESSURE",
             "LOCK_NATAL_PRIMARY_AND_ALTERNATIVE_EXPLANATIONS",

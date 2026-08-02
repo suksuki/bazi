@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query, Response, status
@@ -20,6 +21,7 @@ from abu_v60.mingli.stage import MingliStageError, MingliStageService
 from abu_v60.mingli.stage_contracts import MingliStageMode
 
 router = APIRouter(prefix="/api/v60/mingli", tags=["mingli-stage"])
+logger = logging.getLogger(__name__)
 service = MingliStageService(engine)
 reading_summaries = MingliReadingSummaryService(engine)
 agent_readings = MingliAgentService(engine)
@@ -120,6 +122,7 @@ def generate_agent_reading(
         )
     except MingliAgentServiceError as exc:
         reason = str(exc)
+        logger.warning("mingli_agent_generation_failed reason=%s", reason)
         if reason in {
             "mingli_agent_case_not_found",
             "mingli_agent_base_reading_not_found",

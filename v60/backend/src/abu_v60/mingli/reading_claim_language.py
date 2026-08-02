@@ -83,6 +83,13 @@ def method_bound_timing_chain(
 
 
 def _clean_ruling_copy(value: str) -> str:
+    value = value.replace(
+        "原回答描述了阻断，却没有说明阻断如何解除；本项仍未决。",
+        "当前命盘里，这项阻断尚未找到清楚的解除路径；因此仍需复核。",
+    ).replace(
+        "显藏或柱位事实不支持原判断；本项仍未决。",
+        "显藏或柱位事实与这项判断冲突；因此仍需复核。",
+    )
     value = re.sub(
         r"(?:此项(?:通过|成立条件明确|为关键限制点|为潜在弱点))。?",
         "",

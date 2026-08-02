@@ -10,7 +10,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from abu_v60.llm_transport import JsonTransport, LlmTransportError, default_json_transport
 from abu_v60.mingli.agent_adjudication import (
-    bind_packet_fact_fields,
     normalize_adjudication_output,
     repair_output_form,
     validate_adjudication_output,
@@ -24,7 +23,11 @@ from abu_v60.mingli.agent_contracts import (
     MingliAgentReadingEnvelope,
     mingli_agent_generation_key,
 )
+from abu_v60.mingli.agent_fact_binding import bind_packet_fact_fields
 from abu_v60.mingli.agent_method_cards import MINGLI_AGENT_ADJUDICATION_VERSION
+from abu_v60.mingli.agent_method_distillation import (
+    MINGLI_AGENT_METHOD_DISTILLATION_VERSION,
+)
 from abu_v60.mingli.agent_output_repair import (
     MINGLI_AGENT_OUTPUT_REPAIR_VERSION,
     repair_local_output_fields,
@@ -44,7 +47,7 @@ from abu_v60.provenance import canonical_json, content_hash, stable_ref
 from abu_v60.settings import Settings, settings
 
 OLLAMA_GENERATE_PROVIDER_ID = "ollama-generate"
-MINGLI_AGENT_PROMPT_VIEW_MAX_CHARS = 12000
+MINGLI_AGENT_PROMPT_VIEW_MAX_CHARS = 18000
 MINGLI_AGENT_OUTPUT_SCHEMA_MAX_CHARS = 12000
 
 
@@ -405,6 +408,7 @@ def mingli_agent_runtime_manifest(
         "packet_contract_ref": MINGLI_AGENT_PACKET_VERSION,
         "output_contract_ref": MINGLI_AGENT_READING_VERSION,
         "adjudication_contract_ref": MINGLI_AGENT_ADJUDICATION_VERSION,
+        "method_distillation_ref": MINGLI_AGENT_METHOD_DISTILLATION_VERSION,
         "output_repair_contract_ref": MINGLI_AGENT_OUTPUT_REPAIR_VERSION,
         "method_adjudication": "TYPED_CHECK_RULINGS_AND_SERVER_DERIVED_AGGREGATE",
         "whole_chart_judgment_required": True,

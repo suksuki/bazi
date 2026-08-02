@@ -73,7 +73,11 @@ export interface MingliReadingClaim {
     | "LOW_INFORMATION_LANGUAGE"
     | "TIMING_LAYER_PROSE_CONFLICT"
     | "UNSUPPORTED_SOCIAL_RESOURCE_INFERENCE"
+    | "EXACT_ROLE_PATH_MISSING"
     | "DOMAIN_PRIMARY_PATH_MISSING"
+    | "DOMAIN_METHOD_AXES_INCOMPLETE"
+    | "DOMAIN_METHOD_POSITIVE_RULE_NOT_ADMITTED"
+    | "TEN_GOD_TO_LIFE_STORY_SHORTCUT"
   >;
 }
 
@@ -92,7 +96,7 @@ export interface MingliReadingClaimEdge {
 export interface MingliReadingClaimGraph {
   graph_ref: string;
   graph_hash: string;
-  graph_version: "v60.mingli-reading-claim-graph.009";
+  graph_version: "v60.mingli-reading-claim-graph.010";
   case_ref: string;
   chart_version_ref: string;
   life_case_revision_ref: string;

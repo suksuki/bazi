@@ -264,6 +264,14 @@ function ClaimAssessment({
           ? "文本使用了卷宗未列出的地支关系"
         : code === "UNADMITTED_CLASSICAL_ASSERTION"
           ? "文本使用了尚未完成专业判定的传统标签"
+        : code === "EXACT_ROLE_PATH_MISSING"
+          ? "假设没有锁定具体十神子路径"
+        : code === "DOMAIN_METHOD_AXES_INCOMPLETE"
+          ? "关系或家庭判断缺少专题所需的两条命盘轴"
+        : code === "DOMAIN_METHOD_POSITIVE_RULE_NOT_ADMITTED"
+          ? "关系或家庭的正向专题判法尚未准入"
+        : code === "TEN_GOD_TO_LIFE_STORY_SHORTCUT"
+          ? "单枚十神被直接扩写成了关系或家庭故事"
       : "岁运信息反写进原局判断"
   ));
   return <em>{item.status === "WITHHELD" ? "本条未采纳" : "本条待校准"}：{[...new Set(labels)].join("；")}</em>;

@@ -50,7 +50,7 @@ class Settings:
         "c6eb396dbd5992bbe3f5cdb947e8bbc0ee413d7c17e2beaae69f5d569cf982eb"
     )
     mingli_agent_profile_ref: str = (
-        "v60.model-serving.gemma4-mingli-agent.001"
+        "v60.model-serving.gemma4-mingli-agent.002"
     )
     mingli_agent_base_url: str = "http://127.0.0.1:11434"
     mingli_agent_timeout_seconds: float = 420.0
@@ -59,7 +59,7 @@ class Settings:
     mingli_agent_top_p: float = 0.95
     mingli_agent_top_k: int = 64
     mingli_agent_num_ctx: int = 32768
-    mingli_agent_num_predict: int = 4096
+    mingli_agent_num_predict: int = 5200
     mingli_agent_keep_alive: str = "30m"
     tts_enabled: bool = True
     tts_url: str = "https://dblife.com/abu-tts/tts"
@@ -149,7 +149,7 @@ class Settings:
             os.getenv("V60_MINGLI_AGENT_NUM_CTX", "32768")
         )
         mingli_agent_num_predict = int(
-            os.getenv("V60_MINGLI_AGENT_NUM_PREDICT", "4096")
+            os.getenv("V60_MINGLI_AGENT_NUM_PREDICT", "5200")
         )
         mingli_agent_keep_alive = os.getenv(
             "V60_MINGLI_AGENT_KEEP_ALIVE",
@@ -223,7 +223,7 @@ class Settings:
             ).strip(),
             mingli_agent_profile_ref=os.getenv(
                 "V60_MINGLI_AGENT_PROFILE_REF",
-                "v60.model-serving.gemma4-mingli-agent.001",
+                "v60.model-serving.gemma4-mingli-agent.002",
             ).strip(),
             mingli_agent_base_url=os.getenv(
                 "V60_MINGLI_AGENT_BASE_URL",

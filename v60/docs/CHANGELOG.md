@@ -2,6 +2,104 @@
 
 ## 2026-08-02
 
+### First distilled Mingli methods change the local model's actual verdict
+
+- Added the first versioned teacher-distillation asset
+  `v60.mingli-agent-method-distillation.001`. It turns weak-vs-following,
+  output-to-wealth vs output-to-pressure, and relationship/family domain
+  review into explicit research methods instead of adding more generic Prompt
+  prose. Each method records necessary, opposing and conditional rules plus
+  counterexamples; teacher text still has no canonical write authority.
+- Split the broad 食伤／官杀／财星 grammar into chart-bound exact role paths:
+  食神→七杀, 伤官→七杀, 伤官→正官 and each 食神／伤官→正财／偏财 route.
+  The prompt now receives the actual visible/hidden coordinates for each
+  route and a cross-card discriminator, so shared source/capacity checks alone
+  cannot decide which mechanism wins.
+- Added synthetic flip/hold regressions for effective root, rooted support,
+  visible-peer/hidden-resource competition, source-target reachability,
+  wealth target presence, wealth bridge, peer competition and male/female
+  spouse-star routing. These are method consistency tests, not claimed life
+  outcome accuracy; the next suite upgrades them to paired calendars that are
+  independently resolved from birth inputs.
+- Added relationship/family negative admission gates. Relationship must
+  eventually combine declared scope, spouse-star and spouse-palace evidence;
+  Family must declare family-of-origin, current-household or parent-child
+  scope before positive rules can be admitted. The present output contract
+  does not yet carry those typed axes, so keywords cannot launder a story into
+  a qualified conclusion. Single-印 “精神共鸣／安全感” stories and a ten-god
+  falsely placed in the spouse palace are withdrawn locally without silencing
+  the whole Reading.
+- Made exact role paths a server-enforced condition rather than a Prompt-only
+  request. A mechanism that says only generic 食伤／财星／官杀 but never names an
+  admitted source-target pair is withheld. The same hardening fixes named-
+  coordinate clause bleed, H2-primary dependency validation and unsupported
+  social inferences such as turning visible peers into “人际合作”.
+- Re-ran the real Owner chart `丁巳／乙巳／乙丑／乙酉` with local
+  `gemma4:latest`. The first attempt reached the old 4,096 output limit and
+  wrote nothing. Serving profile `.002` now uses a 5,200 structured-output
+  budget. After an intermediate regression exposed a bad cross-card ranking,
+  the final append-only Reading
+  `v60-mingli-agent-reading-d0aab120f2ffd51cc377` used 9,690 input and 3,700
+  output tokens in 84,061 ms with no server issue repair.
+- The final Gemma result judges the Day Master `WEAK`, caps both mechanism
+  capacity checks at `CONDITIONAL`, selects exact `食神→财` as a conditional
+  primary and leaves exact `食神→七杀` unresolved as the alternative. Cross-
+  card ranking now compares the weakest specialized decisive check before
+  totals, so target presence and shared source/capacity support cannot hide an
+  unresolved reachability or blocker. That direction matches the first
+  frontier-teacher review without copying teacher prose into the product.
+- The result is still not advanced-master qualified. Both mechanisms remain
+  bounded, the model still turns peers into a social story, downstream life
+  domains do not all inherit the selected primary path, relationship/family
+  lack admitted positive methods, and real timing adjudication is absent.
+  Claim Graph `.010` withdraws the affected Wealth/Relationship/Family claims,
+  while Principle, Day Master, the conditional working hypothesis and Life
+  Image remain visible and refresh-stable. Publication remains blocked.
+- Advanced Agent Runtime/Profile to `.016`, Prompt to `.015`, Prompt View to
+  `.009`, Adjudication to `.005`, Claim Graph to `.010`, Mingli Engine to
+  `.034`, Runtime Architecture to `.061`, Unit Mingli to `.028`, Unit Lab to
+  `.023` and Foundation to `.023`; migration head is
+  `0031_mingli_method_distillation`. All 376 backend tests, Ruff,
+  TypeScript/Vite build, Runtime Architecture and source maintainability pass;
+  the integrated flow was also audited in real signed-in Desktop Chrome before
+  the final deterministic Claim-admission hardening.
+
+### Frontier-model method distillation starts with semantic identity preserved
+
+- Froze the Owner-approved research route: a version-locked frontier teacher
+  and the local product candidate read the same Case Packet/Prompt/Schema;
+  Codex extracts candidate method cards, rules, prompts, counterexamples and
+  tests; Owner/professional review admits them; synthetic mutation, hold,
+  stability and adversarial suites qualify the local candidate; paid frontier
+  calls are reserved for baseline and milestone blind reviews. Teacher prose is
+  research evidence, never canonical truth or a normal user Runtime call.
+- Recorded the first `gpt-5.6-sol` comparison on Packet
+  `v60-mingli-agent-packet-9e171728a96a776f8692`: 7,807 input tokens, 5,053
+  output tokens including 1,756 reasoning tokens, 69,740 ms and an estimated
+  `US$0.190625`, with no database write. Its raw answer preferred conditional
+  食伤生财 over blocked 食伤制杀, opposite to the Gemma4 `.014` baseline. This
+  disagreement remains research material, not a formal Mingli verdict.
+- Found and removed a P0 Normalizer corruption exposed by that comparison. The
+  server no longer rebinds valid model hypotheses by Packet order. Valid unique
+  method identities are preserved; invalid or duplicate refs are neutralized
+  and issue-marked; and reversal signals follow their original hypotheses when
+  deterministic adjudication flips primary and alternative roles.
+- Added regression coverage for reversed valid candidates, an invalid first ref
+  with a later valid ref, one candidate plus fallback, duplicate refs, zero
+  candidates, server role reversal and the downstream Claim Graph/domain path.
+- Split packet-owned fact binding from adjudication normalization after the P0
+  work pushed the original module beyond its source budget. The adjudication
+  owner is back to 771 lines and the focused fact-binding owner is 156 lines;
+  no maintainability exemption was added.
+- Kept `gemma4:latest` as the current local product qualification candidate.
+  Qwen3.8 is only a future candidate and is not integrated, qualified or the
+  default. Publication remains blocked while method qualification continues.
+- Advanced Agent Runtime/Profile to `.015`, Adjudication to `.004`, Output
+  Repair to `.002`, Mingli Engine to `.033`, Runtime Architecture to `.060`,
+  Unit Mingli to `.027`, Unit Lab to `.022` and Foundation to `.022`; migration
+  head is `0030_mingli_agent_identity`. All 355 backend tests, Ruff,
+  TypeScript/Vite build, Runtime Architecture and source maintainability pass.
+
 ### The Mingli Agent now makes an executable method decision instead of listing possibilities
 
 - Replaced the former candidate checklist with typed, per-method adjudication. Every

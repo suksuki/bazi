@@ -1,8 +1,14 @@
 from __future__ import annotations
 
-from typing import Protocol
+from collections.abc import Mapping
+from typing import Any, Protocol
 
-MINGLI_AGENT_ADJUDICATION_VERSION = "v60.mingli-agent-adjudication.003"
+from abu_v60.mingli.agent_method_distillation import (
+    MINGLI_AGENT_METHOD_DISTILLATION_VERSION,
+    distilled_check_guidance,
+)
+
+MINGLI_AGENT_ADJUDICATION_VERSION = "v60.mingli-agent-adjudication.005"
 FALLBACK_METHOD_CARD_REF = "FALLBACK_WHOLE_CHART"
 
 _PATTERN_CHECKS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
@@ -77,7 +83,12 @@ class MechanismContext(Protocol):
     role_summary: tuple[str, ...]
 
 
-def mechanism_method_card(item: MechanismContext) -> dict[str, object]:
+def mechanism_method_card(
+    item: MechanismContext,
+    *,
+    distilled_context: Mapping[str, Any] | None = None,
+    include_distilled_guidance: bool = False,
+) -> dict[str, object]:
     """Return the exact checks required before one candidate can be selected."""
 
     blocking, conditioning = _PATTERN_CHECKS.get(
@@ -88,7 +99,7 @@ def mechanism_method_card(item: MechanismContext) -> dict[str, object]:
         ),
     )
     required = (*blocking, *conditioning)
-    return {
+    card: dict[str, object] = {
         "method_card_ref": item.evidence_id,
         "pattern_ref": item.pattern_ref,
         "label": item.label,
@@ -103,6 +114,20 @@ def mechanism_method_card(item: MechanismContext) -> dict[str, object]:
         "observed_blocker_codes": item.blocker_codes,
         "status": "PROFESSIONAL_RULING_REQUIRED",
     }
+    guidance = distilled_check_guidance(
+        item.pattern_ref,
+        required,
+        compact=distilled_context is not None,
+    )
+    if guidance and include_distilled_guidance:
+        card["distilled_method"] = {
+            "method_asset_ref": MINGLI_AGENT_METHOD_DISTILLATION_VERSION,
+            "governance_status": "OWNER_AUTHORIZED_RESEARCH_CANDIDATE",
+            "check_guidance": guidance,
+        }
+    if distilled_context is not None:
+        card["bound_method_context"] = dict(distilled_context)
+    return card
 
 
 def fallback_hypothesis_method_card() -> dict[str, object]:

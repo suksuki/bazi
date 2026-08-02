@@ -199,6 +199,31 @@ models retain their historical Research/Teacher role; the earlier
 `qwen3.5:35b` DecisionRecord remains append-only trial evidence and is not the
 active V60 product model.
 
+Model roles are deliberately separate. `gemma4:latest` is the current local
+student/product qualification candidate. Version-locked frontier models and
+Codex/Sol are development-only teachers and reviewers: their differences may
+be distilled into candidate method cards, rules, prompts, schemas and tests,
+but their prose never becomes canonical truth or a normal user call. A future
+Qwen3.8 integration is only a candidate until it passes the same synthetic
+mutation, stability, adversarial and professional qualification contract; it
+is not currently integrated, qualified or the default.
+
+The active local Mingli serving profile is
+`v60.model-serving.gemma4-mingli-agent.002`: one structured whole-chart call,
+temperature `0`, context `32768`, output budget `5200`. The larger output
+budget covers two fully adjudicated method cards; it does not add another
+model call. The first distilled method set is
+`v60.mingli-agent-method-distillation.001`, and its current readings remain
+private Owner-review candidates with publication disabled.
+
+The current real Owner-chart qualification Reading is
+`v60-mingli-agent-reading-d0aab120f2ffd51cc377`: local `gemma4:latest` judges
+the Day Master weak, selects exact 食神→财 as a conditional working primary and
+keeps exact 食神→七杀 unresolved as the alternative. Both paths inherit only
+conditional Day-Master capacity. This is a reproducible structured first
+reading, not an advanced-master qualification; relationship/family positive
+methods and real timing adjudication remain missing.
+
 The engine and framework choices are recorded in
 [`docs/05_V60_ENGINE_AND_TECHNOLOGY_SELECTION.md`](docs/05_V60_ENGINE_AND_TECHNOLOGY_SELECTION.md).
 

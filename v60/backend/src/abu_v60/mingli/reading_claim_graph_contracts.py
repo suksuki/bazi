@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from abu_v60.provenance import content_hash, stable_ref
 
-MINGLI_READING_CLAIM_GRAPH_VERSION = "v60.mingli-reading-claim-graph.009"
+MINGLI_READING_CLAIM_GRAPH_VERSION = "v60.mingli-reading-claim-graph.010"
 
 MingliReadingClaimLayer = Literal["PRINCIPLE", "IMAGE", "THEMES", "TIMING", "QUESTION"]
 MingliReadingClaimStatus = Literal[
@@ -43,7 +43,11 @@ MingliReadingClaimAssessmentCode = Literal[
     "LOW_INFORMATION_LANGUAGE",
     "TIMING_LAYER_PROSE_CONFLICT",
     "UNSUPPORTED_SOCIAL_RESOURCE_INFERENCE",
+    "EXACT_ROLE_PATH_MISSING",
     "DOMAIN_PRIMARY_PATH_MISSING",
+    "DOMAIN_METHOD_AXES_INCOMPLETE",
+    "DOMAIN_METHOD_POSITIVE_RULE_NOT_ADMITTED",
+    "TEN_GOD_TO_LIFE_STORY_SHORTCUT",
 ]
 MingliReadingClaimRole = Literal[
     "SYNTHESIS",
@@ -177,7 +181,7 @@ class MingliReadingClaimGraph(BaseModel):
 
     graph_ref: str = Field(min_length=1)
     graph_hash: str = Field(min_length=64, max_length=64)
-    graph_version: Literal["v60.mingli-reading-claim-graph.009"]
+    graph_version: Literal["v60.mingli-reading-claim-graph.010"]
     case_ref: str = Field(min_length=1)
     chart_version_ref: str = Field(min_length=1)
     life_case_revision_ref: str = Field(min_length=1)
@@ -226,8 +230,16 @@ class MingliReadingClaimGraph(BaseModel):
         ):
             raise ValueError("mingli_reading_claim_graph_withheld_edge_active")
         by_key = {item.semantic_key: item for item in self.claims}
+        primary_hypothesis = next(
+            item
+            for item in self.claims
+            if item.kind == "COMPETING_HYPOTHESIS" and item.role == "PRIMARY"
+        )
         if (
-            any(by_key[key].status == "WITHHELD" for key in ("HYPOTHESIS_H1", "WORK_PATH"))
+            (
+                primary_hypothesis.status == "WITHHELD"
+                or by_key["WORK_PATH"].status == "WITHHELD"
+            )
             and by_key["WHOLE_CHART"].status != "WITHHELD"
             and (
                 by_key["WHOLE_CHART"].status != "NEEDS_RECONCILIATION"

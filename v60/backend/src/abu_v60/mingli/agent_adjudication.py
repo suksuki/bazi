@@ -13,6 +13,11 @@ from abu_v60.mingli.agent_method_cards import (
     FALLBACK_METHOD_CARD_REF,
     method_card_catalog,
 )
+from abu_v60.mingli.agent_method_distillation import (
+    OUTPUT_TO_PRESSURE,
+    OUTPUT_TO_WEALTH,
+    cross_card_discriminator,
+)
 
 if TYPE_CHECKING:
     from abu_v60.mingli.agent_contracts import (
@@ -32,6 +37,8 @@ AgentMechanismAdjudication = Literal[
     "BROKEN",
     "UNRESOLVED",
 ]
+
+MINGLI_AGENT_NORMALIZATION_ISSUE_FIELD = "_server_normalization_issue_keys"
 
 
 class AgentMethodRuling(BaseModel):
@@ -150,33 +157,25 @@ def normalize_adjudication_output(
         return value
     cards = method_card_catalog(packet.mechanism_observations)
     candidate_refs = [item.evidence_id for item in packet.mechanism_observations]
-    available_refs = [*candidate_refs, FALLBACK_METHOD_CARD_REF]
-    forced_refs = (
-        [FALLBACK_METHOD_CARD_REF, FALLBACK_METHOD_CARD_REF]
-        if not candidate_refs
-        else [candidate_refs[0], FALLBACK_METHOD_CARD_REF]
-        if len(candidate_refs) == 1
-        else candidate_refs
-        if len(candidate_refs) == 2
-        else None
+    assigned_refs, identity_repaired = _assign_method_card_refs(
+        hypotheses=hypotheses[:2],
+        candidate_refs=candidate_refs,
     )
     natal_ids = {item.evidence_id for item in packet.evidence_catalog if item.kind != "TIMING"}
     normalized: list[Any] = []
-    used_refs: set[str] = set()
+    normalization_issues: set[str] = set()
+    value.pop(MINGLI_AGENT_NORMALIZATION_ISSUE_FIELD, None)
+    _reconcile_day_master_regime(
+        value=value,
+        packet=packet,
+        normalization_issues=normalization_issues,
+    )
     for index, hypothesis in enumerate(hypotheses[:2]):
         if not isinstance(hypothesis, dict):
             normalized.append(hypothesis)
             continue
         hypothesis = dict(hypothesis)
-        card_ref = (
-            forced_refs[index] if forced_refs is not None else hypothesis.get("method_card_ref")
-        )
-        if card_ref not in cards or (card_ref in used_refs and len(candidate_refs) >= 2):
-            card_ref = next(
-                (item for item in available_refs if item not in used_refs),
-                FALLBACK_METHOD_CARD_REF,
-            )
-        used_refs.add(str(card_ref))
+        card_ref = assigned_refs[index]
         hypothesis["hypothesis_id"] = f"H{index + 1}"
         hypothesis["method_card_ref"] = card_ref
         hypothesis["mechanism_evidence_ids"] = (
@@ -187,6 +186,14 @@ def normalize_adjudication_output(
         if card is None:
             normalized.append(hypothesis)
             continue
+        if index in identity_repaired:
+            _neutralize_rebound_hypothesis(
+                hypothesis=hypothesis,
+                card_ref=card_ref,
+                card=card,
+            )
+            raw_rulings = []
+            normalization_issues.add(f"HYPOTHESIS_H{index + 1}")
         raw_rulings = raw_rulings if isinstance(raw_rulings, list) else []
         existing = {
             item.get("check_code"): item
@@ -217,14 +224,24 @@ def normalize_adjudication_output(
                 pillars=packet.pillars,
             ):
                 ruling = "UNRESOLVED"
-                rationale = "显藏或柱位事实不支持原判断；本项仍未决。"
+                rationale = "显藏或柱位事实与这项判断冲突；因此仍需复核。"
             if resolution_ruling_conflicts(
                 check_code=check_code,
                 ruling=ruling,
                 rationale=rationale,
             ):
                 ruling = "UNRESOLVED"
-                rationale = "原回答描述了阻断，却没有说明阻断如何解除；本项仍未决。"
+                rationale = "当前命盘里，这项阻断尚未找到清楚的解除路径；因此仍需复核。"
+            if (
+                check_code == "DAY_MASTER_CAPACITY"
+                and ruling == "SUPPORTS"
+                and value.get("day_master_state") in {"WEAK", "UNCERTAIN"}
+                and not packet.day_master_support.same_element_hidden_support
+            ):
+                ruling = "CONDITIONAL"
+                rationale = "日主无根，浮比与藏印能否持续承载仍需整盘比较。"
+                falsifier = "若获得有效根或从势条件闭合，再重判承载。"
+                normalization_issues.add(f"DAY_MASTER_CAPACITY_H{index + 1}")
             raw_evidence = raw.get("evidence_ids")
             evidence = raw_evidence if isinstance(raw_evidence, list) else []
             evidence = list(dict.fromkeys(item for item in evidence if item in natal_ids))
@@ -248,7 +265,12 @@ def normalize_adjudication_output(
     if len(normalized) != 2 or not all(isinstance(item, dict) for item in normalized):
         value["hypotheses"] = normalized
         return value
-    _normalize_hypothesis_roles(normalized=normalized, cards=cards, packet=packet)
+    _normalize_hypothesis_roles(
+        normalized=normalized,
+        cards=cards,
+        packet=packet,
+        identity_repaired=identity_repaired,
+    )
     value["hypotheses"] = normalized
     value["excluded_candidates"] = _normalize_excluded_candidates(
         value.get("excluded_candidates"),
@@ -260,7 +282,10 @@ def normalize_adjudication_output(
     value["hypothesis_decision"] = _normalize_decision(
         value.get("hypothesis_decision"),
         normalized=normalized,
+        identity_repaired=identity_repaired,
     )
+    if normalization_issues:
+        value[MINGLI_AGENT_NORMALIZATION_ISSUE_FIELD] = sorted(normalization_issues)
     primary = next(item for item in normalized if item["role"] == "PRIMARY")
     work_path = value.get("work_path")
     if isinstance(work_path, dict) and work_path.get("closure") == "CLOSED":
@@ -270,6 +295,109 @@ def normalize_adjudication_output(
             "BROKEN": "BROKEN",
         }.get(primary["adjudication"], "CLOSED")
     return value
+
+
+def _reconcile_day_master_regime(
+    *,
+    value: dict[str, Any],
+    packet: MingliAgentCasePacket,
+    normalization_issues: set[str],
+) -> None:
+    """Prevent a following verdict from contradicting admitted support facts."""
+
+    if value.get("day_master_state") != "FOLLOWING_TENDENCY":
+        return
+    support = packet.day_master_support
+    if not (
+        support.same_element_hidden_support
+        or support.visible_peer_support
+        or support.resource_support
+    ):
+        return
+    value["day_master_state"] = "UNCERTAIN"
+    value["day_master_rationale"] = (
+        "原局仍有根、明干同类或印星生扶参与竞争，从势条件尚未闭合，"
+        "当前保留普通身弱与假从两种解释。"
+    )
+    normalization_issues.add("DAY_MASTER_REGIME")
+
+
+def _assign_method_card_refs(
+    *,
+    hypotheses: list[Any],
+    candidate_refs: list[str],
+) -> tuple[tuple[str, str], set[int]]:
+    """Preserve valid semantic identities before repairing missing or duplicate refs."""
+
+    raw_refs = [
+        item.get("method_card_ref") if isinstance(item, dict) else None
+        for item in hypotheses
+    ]
+    raw_refs.extend([None] * (2 - len(raw_refs)))
+    raw_refs = raw_refs[:2]
+    if not candidate_refs:
+        assigned = (FALLBACK_METHOD_CARD_REF, FALLBACK_METHOD_CARD_REF)
+        repaired = {
+            index for index, raw_ref in enumerate(raw_refs) if raw_ref != assigned[index]
+        }
+        return assigned, repaired
+
+    available_refs = (
+        [candidate_refs[0], FALLBACK_METHOD_CARD_REF]
+        if len(candidate_refs) == 1
+        else list(candidate_refs)
+    )
+    counts = {
+        card_ref: sum(raw_ref == card_ref for raw_ref in raw_refs)
+        for card_ref in available_refs
+    }
+    assigned: list[str | None] = [None, None]
+    used_refs: set[str] = set()
+
+    # First reserve every valid identity that occurs exactly once. This prevents
+    # an invalid earlier slot from taking the later slot's legitimate card.
+    for index, raw_ref in enumerate(raw_refs):
+        if raw_ref in counts and counts[raw_ref] == 1 and raw_ref not in used_refs:
+            assigned[index] = raw_ref
+            used_refs.add(raw_ref)
+
+    for index, card_ref in enumerate(assigned):
+        if card_ref is not None:
+            continue
+        assigned[index] = next(item for item in available_refs if item not in used_refs)
+        used_refs.add(str(assigned[index]))
+
+    resolved = (str(assigned[0]), str(assigned[1]))
+    duplicate_indices = {
+        index
+        for index, raw_ref in enumerate(raw_refs)
+        if raw_ref in counts and counts[raw_ref] > 1
+    }
+    repaired = {
+        index for index, raw_ref in enumerate(raw_refs) if raw_ref != resolved[index]
+    } | duplicate_indices
+    return resolved, repaired
+
+
+def _neutralize_rebound_hypothesis(
+    *,
+    hypothesis: dict[str, Any],
+    card_ref: str,
+    card: dict[str, object],
+) -> None:
+    label = str(card.get("label") or "月令与整盘主线解释")
+    name = label.removesuffix("候选")[:48]
+    hypothesis.update(
+        {
+            "name": name,
+            "thesis": (
+                f"{name}需要重新完成全部条件比较，当前只保留为低置信度工作解释。"
+            )[:300],
+            "failure_condition": "关键来源、目标、承载或阻断条件不成立时不采用",
+            "evidence_ids": [] if card_ref == FALLBACK_METHOD_CARD_REF else [card_ref],
+            "confidence": "LOW",
+        }
+    )
 
 
 def _normalize_excluded_candidates(
@@ -327,9 +455,18 @@ def _normalize_hypothesis_roles(
     normalized: list[dict[str, Any]],
     cards: dict[str, dict[str, object]],
     packet: MingliAgentCasePacket,
+    identity_repaired: set[int],
 ) -> None:
     rank = {"BROKEN": 0, "UNRESOLVED": 1, "CONDITIONAL": 2, "SUPPORTED": 3}
     ruling_score = {"OPPOSES": 0, "UNRESOLVED": 1, "CONDITIONAL": 2, "SUPPORTS": 3}
+    pattern_by_card = {
+        item.evidence_id: item.pattern_ref for item in packet.mechanism_observations
+    }
+    discriminator = cross_card_discriminator()
+    decisive_by_pattern = {
+        OUTPUT_TO_PRESSURE: tuple(discriminator["pressure_decisive_checks"]),
+        OUTPUT_TO_WEALTH: tuple(discriminator["wealth_decisive_checks"]),
+    }
 
     def selection_key(index: int) -> tuple[float, ...]:
         item = normalized[index]
@@ -341,10 +478,24 @@ def _normalize_hypothesis_roles(
             if ruling["check_code"] in blocking
         ]
         all_values = [ruling_score[ruling["ruling"]] for ruling in item["method_rulings"]]
+        decisive_checks = set(
+            decisive_by_pattern.get(
+                pattern_by_card.get(item["method_card_ref"], ""),
+                tuple(blocking),
+            )
+        )
+        decisive_values = [
+            ruling_score[ruling["ruling"]]
+            for ruling in item["method_rulings"]
+            if ruling["check_code"] in decisive_checks
+        ]
         return (
             float(rank[item["adjudication"]]),
+            float(min(decisive_values, default=0)),
+            sum(decisive_values) / max(1, len(decisive_values)),
             sum(blocker_values) / max(1, len(blocker_values)),
             sum(all_values) / max(1, len(all_values)),
+            float(index not in identity_repaired),
             float(-index),
         )
 
@@ -388,6 +539,7 @@ def _normalize_decision(
     value: Any,
     *,
     normalized: list[dict[str, Any]],
+    identity_repaired: set[int],
 ) -> dict[str, Any]:
     raw = value if isinstance(value, dict) else {}
     primary = next(item for item in normalized if item["role"] == "PRIMARY")
@@ -430,12 +582,33 @@ def _normalize_decision(
         question = "现实中更常先出现成果转化，还是先出现责任压力？"
     if not question.rstrip().endswith(("？", "?")):
         question = f"{question.rstrip('。！!')}？"
-    winner_signal = reversal.get("winner_signal")
+    raw_winner_id = raw.get("winner_id")
+    raw_loser_id = raw.get("loser_id")
+    signal_by_hypothesis: dict[str, Any] = {}
+    if (
+        raw_winner_id in {"H1", "H2"}
+        and raw_loser_id in {"H1", "H2"}
+        and raw_winner_id != raw_loser_id
+    ):
+        signal_by_hypothesis = {
+            str(raw_winner_id): reversal.get("winner_signal"),
+            str(raw_loser_id): reversal.get("loser_signal"),
+        }
+    repaired_ids = {f"H{index + 1}" for index in identity_repaired}
+    winner_signal = (
+        None
+        if primary["hypothesis_id"] in repaired_ids
+        else signal_by_hypothesis.get(primary["hypothesis_id"])
+    )
     if not isinstance(winner_signal, str) or len(winner_signal.strip()) < 8:
         winner_signal = f"若更符合{primary.get('name', '主解释')}，维持当前判断。"
     elif primary.get("name") not in winner_signal:
         winner_signal = f"更符合{primary['name']}：{winner_signal}"
-    loser_signal = reversal.get("loser_signal")
+    loser_signal = (
+        None
+        if alternative["hypothesis_id"] in repaired_ids
+        else signal_by_hypothesis.get(alternative["hypothesis_id"])
+    )
     if not isinstance(loser_signal, str) or len(loser_signal.strip()) < 8:
         loser_signal = f"若更符合{alternative.get('name', '替代解释')}，就翻转主次。"
     elif alternative.get("name") not in loser_signal:
@@ -451,156 +624,6 @@ def _normalize_decision(
             "loser_signal": loser_signal[:160],
         },
     }
-
-
-def bind_packet_fact_fields(
-    value: Any,
-    *,
-    packet: MingliAgentCasePacket,
-) -> Any:
-    """Replace model-copied facts with packet-owned coordinates and scope."""
-
-    if not isinstance(value, dict):
-        return value
-    value = dict(value)
-    roots = packet.day_master_support.same_element_hidden_support
-    value["support_selection"] = {
-        "root_status": "PRESENT" if roots else "NONE",
-        "root_coordinates": list(roots),
-        "peer_coordinates": list(packet.day_master_support.visible_peer_support),
-        "resource_coordinates": list(packet.day_master_support.resource_support),
-    }
-    _bind_life_image(value=value, packet=packet)
-    _bind_timing_fact_fields(value=value, packet=packet)
-    return value
-
-
-_IMAGE_SUBJECTS = {
-    "甲": "挺直乔木",
-    "乙": "柔韧藤木",
-    "丙": "高悬日火",
-    "丁": "守夜灯火",
-    "戊": "厚重山岭",
-    "己": "细作田畴",
-    "庚": "待炼矿铁",
-    "辛": "经琢珠玉",
-    "壬": "奔行江水",
-    "癸": "润物雨露",
-}
-_SEASON_SCENES = {
-    **{branch: "早春原野" for branch in "寅卯辰"},
-    **{branch: "盛夏旷野" for branch in "巳午未"},
-    **{branch: "清秋庭野" for branch in "申酉戌"},
-    **{branch: "寒冬山野" for branch in "亥子丑"},
-}
-_ELEMENT_LABELS = {
-    "wood": "木",
-    "fire": "火",
-    "earth": "土",
-    "metal": "金",
-    "water": "水",
-}
-_NON_IMAGE_TERMS = (
-    "知识分子",
-    "知识工作者",
-    "专业技术",
-    "艺术家",
-    "思考者",
-    "技能变现",
-    "模型",
-    "框架",
-    "工坊",
-    "身强",
-    "身弱",
-    "用神",
-    "忌神",
-    "格局",
-)
-
-
-def _bind_life_image(*, value: dict[str, Any], packet: MingliAgentCasePacket) -> None:
-    life_image = value.get("life_image")
-    life_image = life_image if isinstance(life_image, dict) else {}
-    corpus = "\n".join(str(life_image.get(key, "")) for key in ("title", "image", "explanation"))
-    valid_shape = (
-        isinstance(life_image.get("title"), str)
-        and len(life_image["title"].strip()) >= 2
-        and isinstance(life_image.get("image"), str)
-        and len(life_image["image"].strip()) >= 8
-        and isinstance(life_image.get("explanation"), str)
-        and len(life_image["explanation"].strip()) >= 16
-    )
-    if valid_shape and not any(term in corpus for term in _NON_IMAGE_TERMS):
-        return
-    scene = _SEASON_SCENES[packet.month_command_branch]
-    subject = _IMAGE_SUBJECTS[packet.day_master_stem]
-    roots = len(packet.day_master_support.same_element_hidden_support)
-    peers = len(packet.day_master_support.visible_peer_support)
-    resources = len(packet.day_master_support.resource_support)
-    root_image = "脚下已有同类根系可依" if roots else "脚下没有同类根系可依"
-    peer_image = f"近旁有{peers}处同类彼此呼应" if peers else "近旁少见同类呼应"
-    resource_image = f"暗处仍有{resources}处生扶维持气息" if resources else "暗处也少见生扶接续"
-    life_image.update(
-        {
-            "title": f"{scene}里的{subject}"[:24],
-            "image": f"{scene}里，{subject}迎着时令展开；{root_image}，{peer_image}，{resource_image}。",
-            "explanation": (
-                f"日主为{packet.day_master_stem}{_ELEMENT_LABELS[packet.day_master_element]}，"
-                f"生在{packet.month_command_branch}月；地支同类根{roots}处，"
-                f"明干同类{peers}处，印星生扶{resources}处。"
-                "因此画面强调的是它如何承载、借力并继续生长。"
-            ),
-            "evidence_ids": [
-                packet.pillars[1].evidence_id,
-                packet.day_master_support.evidence_id,
-            ],
-        }
-    )
-    value["life_image"] = life_image
-
-
-def _bind_timing_fact_fields(
-    *,
-    value: dict[str, Any],
-    packet: MingliAgentCasePacket,
-) -> None:
-    timing = value.get("timing")
-    if not isinstance(timing, dict):
-        return
-    timing = dict(timing)
-    coordinates = {item.layer: item.evidence_id for item in packet.timing_coordinates}
-    relations = {
-        layer: {item.evidence_id for item in packet.timing_relations if item.left_layer == layer}
-        for layer in ("DAYUN", "ANNUAL")
-    }
-    natal = {item.evidence_id for item in packet.evidence_catalog if item.kind != "TIMING"}
-    dayun_allowed = natal | {coordinates["DAYUN"]} | relations["DAYUN"]
-    allowed_by_layer = {
-        "DAYUN": dayun_allowed,
-        "ANNUAL": dayun_allowed | {coordinates["ANNUAL"]} | relations["ANNUAL"],
-    }
-    for key, layer in (("dayun", "DAYUN"), ("annual", "ANNUAL")):
-        reading = timing.get(key)
-        if not isinstance(reading, dict):
-            continue
-        reading = dict(reading)
-        raw_evidence = reading.get("evidence_ids")
-        evidence = raw_evidence if isinstance(raw_evidence, list) else []
-        raw_relations = reading.get("relation_evidence_ids")
-        relation_values = raw_relations if isinstance(raw_relations, list) else []
-        selected_relations = list(
-            dict.fromkeys(
-                item for item in (*relation_values, *evidence) if item in relations[layer]
-            )
-        )
-        filtered = [item for item in evidence if item in allowed_by_layer[layer]]
-        reading["coordinate_evidence_id"] = coordinates[layer]
-        reading["relation_evidence_ids"] = selected_relations
-        reading["evidence_ids"] = list(
-            dict.fromkeys((*filtered, coordinates[layer], *selected_relations))
-        )[:8]
-        timing[key] = reading
-    value["timing"] = timing
 
 
 def repair_output_form(value: Any) -> Any:
@@ -670,6 +693,7 @@ def _repair_decision_copy(value: str, names: dict[str, str]) -> str:
 
 
 _NON_PROSE_FIELDS = {
+    MINGLI_AGENT_NORMALIZATION_ISSUE_FIELD,
     "adjudication",
     "check_code",
     "closure",

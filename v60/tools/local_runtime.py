@@ -56,7 +56,7 @@ LOCAL_MINGLI_AGENT_DEFAULTS = {
         "c6eb396dbd5992bbe3f5cdb947e8bbc0ee413d7c17e2beaae69f5d569cf982eb"
     ),
     "V60_MINGLI_AGENT_PROFILE_REF": (
-        "v60.model-serving.gemma4-mingli-agent.001"
+        "v60.model-serving.gemma4-mingli-agent.002"
     ),
     "V60_MINGLI_AGENT_BASE_URL": "http://dblife.com:11888",
     "V60_MINGLI_AGENT_TIMEOUT_SECONDS": "420",
@@ -65,7 +65,7 @@ LOCAL_MINGLI_AGENT_DEFAULTS = {
     "V60_MINGLI_AGENT_TOP_P": "0.95",
     "V60_MINGLI_AGENT_TOP_K": "64",
     "V60_MINGLI_AGENT_NUM_CTX": "32768",
-    "V60_MINGLI_AGENT_NUM_PREDICT": "4096",
+    "V60_MINGLI_AGENT_NUM_PREDICT": "5200",
     "V60_MINGLI_AGENT_KEEP_ALIVE": "30m",
 }
 LOCAL_TTS_DEFAULTS = {

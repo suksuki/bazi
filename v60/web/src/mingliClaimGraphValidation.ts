@@ -45,7 +45,11 @@ const CLAIM_ASSESSMENT_CODES = new Set([
   "LOW_INFORMATION_LANGUAGE",
   "TIMING_LAYER_PROSE_CONFLICT",
   "UNSUPPORTED_SOCIAL_RESOURCE_INFERENCE",
+  "EXACT_ROLE_PATH_MISSING",
   "DOMAIN_PRIMARY_PATH_MISSING",
+  "DOMAIN_METHOD_AXES_INCOMPLETE",
+  "DOMAIN_METHOD_POSITIVE_RULE_NOT_ADMITTED",
+  "TEN_GOD_TO_LIFE_STORY_SHORTCUT",
 ]);
 const SOFT_CLAIM_ASSESSMENT_CODES = new Set([
   "PRIMARY_HYPOTHESIS_CHART_BASIS_INCOMPLETE",
@@ -97,7 +101,7 @@ export function validateReadingClaimGraph(
   const claimRefs = new Set(claims.map((item) => item.claim_ref));
   const edges = Array.isArray(graph.edges) ? graph.edges : [];
   if (
-    graph.graph_version !== "v60.mingli-reading-claim-graph.009"
+    graph.graph_version !== "v60.mingli-reading-claim-graph.010"
     || !graph.graph_ref
     || !HASH.test(graph.graph_hash)
     || graph.case_ref !== stage.case_ref

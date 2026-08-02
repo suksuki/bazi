@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-MINGLI_AGENT_OUTPUT_REPAIR_VERSION = "v60.mingli-agent-output-repair.001"
+from abu_v60.mingli.agent_adjudication import MINGLI_AGENT_NORMALIZATION_ISSUE_FIELD
+
+MINGLI_AGENT_OUTPUT_REPAIR_VERSION = "v60.mingli-agent-output-repair.002"
 
 if TYPE_CHECKING:
     from abu_v60.mingli.agent_contracts import MingliAgentCasePacket
@@ -62,7 +64,19 @@ def repair_local_output_fields(
     if not isinstance(value, dict):
         return value
     result = {key: item for key, item in value.items() if key in _TOP_LEVEL_KEYS}
-    issues: set[str] = set()
+    upstream_issues = value.get(MINGLI_AGENT_NORMALIZATION_ISSUE_FIELD)
+    allowed_normalization_issues = {
+        "HYPOTHESIS_H1",
+        "HYPOTHESIS_H2",
+        "DAY_MASTER_CAPACITY_H1",
+        "DAY_MASTER_CAPACITY_H2",
+        "DAY_MASTER_REGIME",
+    }
+    issues = {
+        item
+        for item in (upstream_issues if isinstance(upstream_issues, list) else [])
+        if item in allowed_normalization_issues
+    }
     _repair_day_master(result=result, packet=packet, issues=issues)
     _repair_hypotheses(result=result, issues=issues)
     _repair_work_path(result=result, packet=packet, issues=issues)

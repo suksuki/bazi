@@ -9,6 +9,10 @@ from abu_v60.mingli.agent_contracts import (
 from abu_v60.mingli.agent_fact_language import manifestation_claim_conflicts
 from abu_v60.mingli.agent_method_cards import FALLBACK_METHOD_CARD_REF
 from abu_v60.mingli.agent_reasoning_modes import BLIND_READING_CONTRACT
+from abu_v60.mingli.reading_claim_admission import (
+    domain_method_assessment_codes,
+    exact_role_path_assessment_codes,
+)
 from abu_v60.mingli.reading_claim_graph_contracts import (
     MingliReadingClaim,
     MingliReadingClaimEdge,
@@ -153,7 +157,10 @@ class MingliReadingClaimGraphProjector:
                 mechanism_evidence_ids=_unique(hypothesis.mechanism_evidence_ids),
                 confidence=hypothesis.confidence,
                 codes=(hypothesis.judgment, hypothesis.adjudication),
-                assessment_codes=(),
+                assessment_codes=exact_role_path_assessment_codes(
+                    hypothesis=hypothesis,
+                    packet=packet,
+                ),
             )
         work_path = add(
             semantic_key="WORK_PATH",
@@ -559,7 +566,17 @@ def _assess_claim(
     ):
         codes.append("LOW_INFORMATION_LANGUAGE")
     if kind == "LIFE_DOMAIN" and any(
-        term in prose for term in ("人脉", "朋友资源", "团队支持", "社交资源", "贵人")
+        term in prose
+        for term in (
+            "人脉",
+            "朋友资源",
+            "团队支持",
+            "社交资源",
+            "贵人",
+            "人际合作",
+            "合作伙伴支持",
+            "同伴支持",
+        )
     ):
         codes.append("UNSUPPORTED_SOCIAL_RESOURCE_INFERENCE")
     if (
@@ -568,6 +585,13 @@ def _assess_claim(
         and primary_method_ref not in mechanism_evidence_ids
     ):
         codes.append("DOMAIN_PRIMARY_PATH_MISSING")
+    if kind == "LIFE_DOMAIN":
+        codes.extend(
+            domain_method_assessment_codes(
+                semantic_key=str(assessed["semantic_key"]),
+                prose=assertion_prose,
+            )
+        )
 
     assessed["assessment_codes"] = tuple(dict.fromkeys(codes))
     hard_quarantine_codes = set(codes) - _SOFT_ASSESSMENT_CODES
@@ -722,9 +746,19 @@ def _has_named_coordinate_conflict(*, prose: str, packet: MingliAgentCasePacket)
     pattern = re.compile(
         r"([子丑寅卯辰巳午未申酉戌亥])(?:[、，,\s]{0,2}藏|中)([甲乙丙丁戊己庚辛壬癸])"
     )
-    return any(
+    if any(
         stem not in hidden_by_branch.get(branch, set()) for branch, stem in pattern.findall(prose)
+    ):
+        return True
+    scoped_hidden = re.compile(
+        r"([子丑寅卯辰巳午未申酉戌亥])(?:木|火|土|金|水)?[^。；，,\n]{0,12}"
+        r"(?:[，,]\s*)?(?:藏干中|内藏|中藏)([^。；，,\n]{0,48})"
     )
+    for branch, body in scoped_hidden.findall(prose):
+        stems = re.findall(r"[（(]([甲乙丙丁戊己庚辛壬癸])[）)]", body)
+        if any(stem not in hidden_by_branch.get(branch, set()) for stem in stems):
+            return True
+    return False
 
 
 def _has_unlisted_relation_assertion(*, prose: str, packet: MingliAgentCasePacket) -> bool:

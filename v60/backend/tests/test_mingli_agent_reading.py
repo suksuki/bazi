@@ -21,6 +21,7 @@ from abu_v60.mingli.agent_method_cards import (
     mechanism_method_card,
     method_card_catalog,
 )
+from abu_v60.mingli.agent_method_distillation import exact_role_paths
 from abu_v60.mingli.agent_packet import MingliAgentCasePacketCompiler
 from abu_v60.mingli.agent_reasoning_modes import (
     BLIND_READING_CONTRACT,
@@ -132,6 +133,40 @@ def _valid_output(*, suffix: str = "", packet: Any | None = None) -> MingliAgent
         mechanism_ids[1] if len(mechanism_ids) > 1 else FALLBACK_METHOD_CARD_REF,
     )
 
+    def exact_path_copy(card_ref: str, *, fallback_name: str) -> tuple[str, str]:
+        if packet is None or card_ref == FALLBACK_METHOD_CARD_REF:
+            return fallback_name, (
+                f"{fallback_name}需要比较月令、透藏和整盘承接后才可作为工作解释。"
+            )
+        observation = next(
+            item for item in packet.mechanism_observations if item.evidence_id == card_ref
+        )
+        occurrences: dict[str, list[str]] = {}
+        for pillar in packet.pillars:
+            occurrences.setdefault(pillar.visible_ten_god, []).append(
+                f"{pillar.slot}干{pillar.stem}"
+            )
+            for hidden_stem, ten_god in zip(
+                pillar.hidden_stems,
+                pillar.hidden_ten_gods,
+                strict=True,
+            ):
+                occurrences.setdefault(ten_god, []).append(
+                    f"{pillar.slot}支藏{hidden_stem}"
+                )
+        paths = exact_role_paths(observation.pattern_ref, occurrences)
+        if not paths:
+            name = observation.label.removesuffix("候选")[:48]
+            return name, f"{name}需要比较月令、透藏和整盘承接后才可作为工作解释。"
+        path = paths[0]
+        source = str(path["source"]["ten_god"])
+        target = str(path["target"]["ten_god"])
+        name = f"{source}到{target}路径"
+        return name, f"暂以{source}能否作用于{target}作为本候选的具体工作解释。"
+
+    h1_name, h1_thesis = exact_path_copy(card_refs[0], fallback_name="主结构承接")
+    h2_name, h2_thesis = exact_path_copy(card_refs[1], fallback_name="局部力量主导")
+
     def method_rulings(card_ref: str) -> list[dict[str, object]]:
         evidence_id = base_evidence[0] if card_ref == FALLBACK_METHOD_CARD_REF else card_ref
         return [
@@ -187,13 +222,13 @@ def _valid_output(*, suffix: str = "", packet: Any | None = None) -> MingliAgent
                 {
                     "hypothesis_id": "H1",
                     "role": "PRIMARY",
-                    "name": "主结构承接",
+                    "name": h1_name,
                     "judgment": "WORKS_IF",
                     "mechanism_evidence_ids": mechanism_ids[:1],
                     "method_card_ref": card_refs[0],
                     "method_rulings": method_rulings(card_refs[0]),
                     "adjudication": "CONDITIONAL",
-                    "thesis": "以月令为起点，各位置彼此承接，构成全盘最连贯的主解释。",
+                    "thesis": h1_thesis,
                     "failure_condition": "关键转化被持续截断时不成立",
                     "evidence_ids": (*base_evidence, *mechanism_ids[:1]),
                     "confidence": "MEDIUM",
@@ -201,13 +236,13 @@ def _valid_output(*, suffix: str = "", packet: Any | None = None) -> MingliAgent
                 {
                     "hypothesis_id": "H2",
                     "role": "ALTERNATIVE",
-                    "name": "局部力量主导",
+                    "name": h2_name,
                     "judgment": "PARTIAL",
                     "mechanism_evidence_ids": mechanism_ids[1:2],
                     "method_card_ref": card_refs[1],
                     "method_rulings": method_rulings(card_refs[1]),
                     "adjudication": "CONDITIONAL",
-                    "thesis": "另一种解释是局部力量暂时占先，但对全盘位置关系的解释较弱。",
+                    "thesis": h2_thesis,
                     "failure_condition": "岁运转向后迅速失去主导",
                     "evidence_ids": (*base_evidence, *mechanism_ids[1:2]),
                     "confidence": "LOW",
@@ -394,6 +429,29 @@ class _OutputProvider(_FakeProvider):
         )
 
 
+def _normalize_raw(*, packet: Any, raw: dict[str, Any]) -> MingliAgentModelOutput:
+    provider = OllamaMingliAgentProvider(
+        model_ref="gemma4:test",
+        model_digest="b" * 64,
+        provider_profile_ref="v60.test-provider.semantic-normalization",
+        base_url="http://private-model.invalid",
+        timeout_seconds=3,
+        think=False,
+        temperature=0,
+        top_p=0.95,
+        top_k=64,
+        num_ctx=32768,
+        num_predict=4096,
+        keep_alive="30m",
+        transport=lambda **_: {
+            "response": json.dumps(raw, ensure_ascii=False),
+            "prompt_eval_count": 10,
+            "eval_count": 20,
+        },
+    )
+    return provider.generate(packet=packet).output
+
+
 class _MemoryStore:
     def __init__(self) -> None:
         self.values: dict[str, MingliAgentReadingEnvelope] = {}
@@ -459,7 +517,9 @@ def test_blind_and_reconciliation_modes_are_physically_distinct() -> None:
     assert prompt_view["reasoning_contract"]["profile_context_allowed"] is False
     assert prompt_view["reasoning_contract"]["life_case_observations_allowed"] is False
     serialized = canonical_json(prompt_view)
-    assert packet.gender not in serialized
+    assert prompt_view["professional_adjudication"]["domain_method_assets"][
+        "relationship"
+    ]["gender_fact"] == packet.gender
     assert packet.birth_timezone not in serialized
     assert packet.subject_kind not in serialized
 
@@ -599,6 +659,287 @@ def test_ollama_adapter_repairs_partial_rulings_and_timing_scope() -> None:
     assert "DOMAIN_WEALTH" in result.output.server_issue_keys
     assert result.output.life_image.title == "盛夏旷野里的柔韧藤木"
     assert "地支同类根0处" in result.output.life_image.explanation
+
+
+def test_ollama_adapter_preserves_reversed_valid_candidate_identity() -> None:
+    fixture, packet = _packet()
+    raw = _valid_output(packet=packet).model_dump(mode="json")
+    pressure_ref, wealth_ref = (
+        item.evidence_id for item in packet.mechanism_observations[:2]
+    )
+    pressure, wealth = raw["hypotheses"]
+    raw["hypotheses"] = [wealth, pressure]
+    wealth.update(
+        {
+            "hypothesis_id": "H1",
+            "role": "PRIMARY",
+            "name": "食伤生财条件主线",
+            "judgment": "WORKS_IF",
+            "confidence": "MEDIUM",
+        }
+    )
+    pressure.update(
+        {
+            "hypothesis_id": "H2",
+            "role": "ALTERNATIVE",
+            "name": "食伤制杀受阻线",
+            "judgment": "BLOCKED",
+            "adjudication": "BROKEN",
+            "confidence": "LOW",
+        }
+    )
+    reachability = next(
+        item
+        for item in pressure["method_rulings"]
+        if item["check_code"] == "VISIBLE_HIDDEN_REACHABILITY"
+    )
+    reachability.update(
+        {
+            "ruling": "OPPOSES",
+            "rationale": "官杀全部藏而未透，不能证明食伤已经直接制到压力目标。",
+        }
+    )
+    raw["hypothesis_decision"].update(
+        {
+            "winner_id": "H1",
+            "loser_id": "H2",
+            "reversal": {
+                "question": "成果更常形成明确价值，还是更常用于处理规则压力？",
+                "winner_signal": "成果稳定进入定价和回报环节，维持食伤生财主线。",
+                "loser_signal": "输出长期直接降低规则压力，食伤制杀才可能翻盘。",
+            },
+        }
+    )
+    raw["work_path"]["evidence_ids"] = [
+        wealth_ref if item == pressure_ref else item
+        for item in raw["work_path"]["evidence_ids"]
+    ]
+    for domain in raw["domains"].values():
+        domain["evidence_ids"] = [
+            wealth_ref if item == pressure_ref else item for item in domain["evidence_ids"]
+        ]
+
+    output = _normalize_raw(packet=packet, raw=raw)
+    first, second = output.hypotheses
+
+    assert first.method_card_ref == wealth_ref
+    assert first.name == "食伤生财条件主线"
+    assert first.role == "PRIMARY"
+    assert tuple(item.check_code for item in first.method_rulings) == tuple(
+        method_card_catalog(packet.mechanism_observations)[wealth_ref]["required_checks"]
+    )
+    assert all(item.method_card_ref == wealth_ref for item in first.method_rulings)
+    assert second.method_card_ref == pressure_ref
+    assert second.name == "食伤制杀受阻线"
+    assert second.role == "ALTERNATIVE"
+    assert second.adjudication == "BROKEN"
+    assert output.hypothesis_decision.winner_id == "H1"
+    assert "食伤生财" in output.hypothesis_decision.reversal.winner_signal
+    assert "食伤制杀" in output.hypothesis_decision.reversal.loser_signal
+    assert "HYPOTHESIS_H1" not in output.server_issue_keys
+    assert "HYPOTHESIS_H2" not in output.server_issue_keys
+
+    reading = MingliAgentRuntime(
+        provider=_OutputProvider(output),
+        enabled=True,
+    ).run(requester_account_ref=fixture["owner_account_ref"], packet=packet)
+    graph = MingliReadingClaimGraphProjector().project(reading, packet=packet)
+    by_key = {item.semantic_key: item for item in graph.claims}
+    assert by_key["WHOLE_CHART"].headline == "食伤生财条件主线"
+    assert by_key["HYPOTHESIS_H1"].mechanism_evidence_ids == (wealth_ref,)
+    assert by_key["HYPOTHESIS_H2"].mechanism_evidence_ids == (pressure_ref,)
+    for semantic_key in (
+        "DOMAIN_PERSONALITY",
+        "DOMAIN_CAREER",
+        "DOMAIN_WEALTH",
+        "DOMAIN_RELATIONSHIP",
+        "DOMAIN_FAMILY",
+    ):
+        assert "DOMAIN_PRIMARY_PATH_MISSING" not in by_key[semantic_key].assessment_codes
+
+
+def test_no_root_weak_regime_caps_mechanism_capacity_at_conditional() -> None:
+    _, packet = _packet()
+    assert packet.day_master_support.same_element_hidden_support == ()
+    raw = _valid_output(packet=packet).model_dump(mode="json")
+    raw["day_master_state"] = "WEAK"
+    for hypothesis in raw["hypotheses"]:
+        capacity = next(
+            item
+            for item in hypothesis["method_rulings"]
+            if item["check_code"] == "DAY_MASTER_CAPACITY"
+        )
+        capacity.update(
+            {
+                "ruling": "SUPPORTS",
+                "rationale": "两处浮透比肩能够持续帮身，所以日主足以承担全部泄耗。",
+            }
+        )
+
+    output = _normalize_raw(packet=packet, raw=raw)
+
+    for hypothesis in output.hypotheses:
+        capacity = next(
+            item
+            for item in hypothesis.method_rulings
+            if item.check_code == "DAY_MASTER_CAPACITY"
+        )
+        assert capacity.ruling == "CONDITIONAL"
+        assert "日主无根" in capacity.rationale
+    assert {"DAY_MASTER_CAPACITY_H1", "DAY_MASTER_CAPACITY_H2"}.issubset(
+        output.server_issue_keys
+    )
+
+
+def test_cross_card_decisive_checks_prefer_complete_wealth_path_over_pressure_presence() -> None:
+    _, packet = _packet()
+    raw = _valid_output(packet=packet).model_dump(mode="json")
+    pressure, wealth = raw["hypotheses"]
+    pressure_values = {
+        "OUTPUT_SOURCE_AVAILABILITY": "SUPPORTS",
+        "OFFICIAL_KILLING_ROLE_POSITIONED": "SUPPORTS",
+        "DAY_MASTER_CAPACITY": "CONDITIONAL",
+        "VISIBLE_HIDDEN_REACHABILITY": "CONDITIONAL",
+        "RESOURCE_OR_OTHER_BLOCKER_RESOLUTION": "SUPPORTS",
+        "SOURCE_AND_TARGET_SAME_LAYER": "UNRESOLVED",
+    }
+    wealth_values = {
+        "OUTPUT_SOURCE_AVAILABILITY": "SUPPORTS",
+        "WEALTH_TARGET_REACHABILITY": "CONDITIONAL",
+        "DAY_MASTER_CAPACITY": "CONDITIONAL",
+        "RESOURCE_SUPPRESSION_RESOLUTION": "SUPPORTS",
+        "PEER_COMPETITION_RESOLUTION": "CONDITIONAL",
+    }
+    for ruling in pressure["method_rulings"]:
+        ruling["ruling"] = pressure_values[ruling["check_code"]]
+    for ruling in wealth["method_rulings"]:
+        ruling["ruling"] = wealth_values[ruling["check_code"]]
+
+    output = _normalize_raw(packet=packet, raw=raw)
+    primary = next(item for item in output.hypotheses if item.role == "PRIMARY")
+
+    assert primary.method_card_ref == wealth["method_card_ref"]
+    assert "食神到正财" in primary.name
+
+
+def test_following_tendency_retreats_when_peer_or_resource_competition_exists() -> None:
+    _, packet = _packet()
+    assert (
+        packet.day_master_support.visible_peer_support
+        or packet.day_master_support.resource_support
+    )
+    raw = _valid_output(packet=packet).model_dump(mode="json")
+    raw["day_master_state"] = "FOLLOWING_TENDENCY"
+    raw["day_master_rationale"] = "日主无根，所以已经可以直接顺从异类力量形成从势。"
+
+    output = _normalize_raw(packet=packet, raw=raw)
+
+    assert output.day_master_state == "UNCERTAIN"
+    assert "普通身弱与假从" in output.day_master_rationale
+    assert "DAY_MASTER_REGIME" in output.server_issue_keys
+
+
+def test_candidate_allocator_reserves_later_valid_ref_before_repairing_invalid_first() -> None:
+    _, packet = _packet()
+    raw = _valid_output(packet=packet).model_dump(mode="json")
+    pressure_ref, wealth_ref = (
+        item.evidence_id for item in packet.mechanism_observations[:2]
+    )
+    pressure, wealth = raw["hypotheses"]
+    raw["hypotheses"] = [wealth, pressure]
+    raw["hypotheses"][0].update(
+        {
+            "hypothesis_id": "H1",
+            "method_card_ref": "INVALID_METHOD_CARD",
+            "mechanism_evidence_ids": [],
+        }
+    )
+    raw["hypotheses"][1].update(
+        {
+            "hypothesis_id": "H2",
+            "method_card_ref": pressure_ref,
+            "mechanism_evidence_ids": [pressure_ref],
+        }
+    )
+
+    output = _normalize_raw(packet=packet, raw=raw)
+
+    assert output.hypotheses[0].method_card_ref == wealth_ref
+    assert output.hypotheses[1].method_card_ref == pressure_ref
+    assert output.hypotheses[1].name == _valid_output(packet=packet).hypotheses[0].name
+    assert "HYPOTHESIS_H1" in output.server_issue_keys
+    assert "HYPOTHESIS_H2" not in output.server_issue_keys
+
+
+def test_adapter_preserves_reversed_single_candidate_and_fallback() -> None:
+    _, packet = _packet_with_candidate_count(1)
+    raw = _valid_output(packet=packet).model_dump(mode="json")
+    candidate_ref = packet.mechanism_observations[0].evidence_id
+    candidate, fallback = raw["hypotheses"]
+    raw["hypotheses"] = [fallback, candidate]
+    raw["hypotheses"][0].update(
+        {
+            "hypothesis_id": "H1",
+            "name": "月令整盘替代解释",
+        }
+    )
+    raw["hypotheses"][1].update(
+        {
+            "hypothesis_id": "H2",
+            "name": "唯一机制条件解释",
+        }
+    )
+
+    output = _normalize_raw(packet=packet, raw=raw)
+
+    assert output.hypotheses[0].method_card_ref == FALLBACK_METHOD_CARD_REF
+    assert output.hypotheses[0].name == "月令整盘替代解释"
+    assert output.hypotheses[1].method_card_ref == candidate_ref
+    assert output.hypotheses[1].name == "唯一机制条件解释"
+    assert output.server_issue_keys == ()
+
+
+def test_duplicate_candidate_refs_are_neutralized_instead_of_silently_rebound() -> None:
+    _, packet = _packet()
+    raw = _valid_output(packet=packet).model_dump(mode="json")
+    pressure_ref, wealth_ref = (
+        item.evidence_id for item in packet.mechanism_observations[:2]
+    )
+    raw["hypotheses"][1]["method_card_ref"] = pressure_ref
+    raw["hypotheses"][1]["mechanism_evidence_ids"] = [pressure_ref]
+
+    output = _normalize_raw(packet=packet, raw=raw)
+
+    assert tuple(item.method_card_ref for item in output.hypotheses) == (
+        pressure_ref,
+        wealth_ref,
+    )
+    assert set(output.server_issue_keys) == {"HYPOTHESIS_H1", "HYPOTHESIS_H2"}
+    assert all(item.adjudication == "UNRESOLVED" for item in output.hypotheses)
+    assert all(
+        ruling.ruling == "UNRESOLVED"
+        for item in output.hypotheses
+        for ruling in item.method_rulings
+    )
+
+
+def test_adapter_allows_two_fallback_hypotheses_when_packet_has_no_candidates() -> None:
+    _, packet = _packet()
+    packet_values = packet.model_dump(
+        mode="python",
+        exclude={"packet_version", "packet_ref", "packet_hash", "read_only"},
+    )
+    packet_values["mechanism_observations"] = ()
+    zero_packet = type(packet).issue(**packet_values)
+    raw = _valid_output(packet=zero_packet).model_dump(mode="json")
+
+    output = _normalize_raw(packet=zero_packet, raw=raw)
+
+    assert tuple(item.method_card_ref for item in output.hypotheses) == (
+        FALLBACK_METHOD_CARD_REF,
+        FALLBACK_METHOD_CARD_REF,
+    )
+    assert output.server_issue_keys == ()
 
 
 def test_one_malformed_projection_never_erases_the_whole_reading() -> None:
@@ -844,7 +1185,18 @@ def test_equal_aggregate_uses_blocker_coverage_instead_of_original_order() -> No
     raw = _valid_output(packet=packet).model_dump(mode="json")
     for ruling in raw["hypotheses"][0]["method_rulings"][:3]:
         ruling["ruling"] = "UNRESOLVED"
+    next(
+        item
+        for item in raw["hypotheses"][0]["method_rulings"]
+        if item["check_code"] == "SOURCE_AND_TARGET_SAME_LAYER"
+    )["ruling"] = "UNRESOLVED"
     raw["hypotheses"][1]["method_rulings"][0]["ruling"] = "UNRESOLVED"
+    raw["hypothesis_decision"]["reversal"].update(
+        {
+            "winner_signal": "原来属于H1的收束路径信号仍然成立。",
+            "loser_signal": "原来属于H2的分散路径信号足以翻盘。",
+        }
+    )
     peer_resolution = next(
         item
         for item in raw["hypotheses"][1]["method_rulings"]
@@ -884,6 +1236,12 @@ def test_equal_aggregate_uses_blocker_coverage_instead_of_original_order() -> No
     assert repaired_peer.ruling == "UNRESOLVED"
     assert output.hypothesis_decision.winner_id == "H2"
     assert "项未决" in output.hypothesis_decision.winner.rationale
+    assert "原来属于食神到正财路径的分散路径信号" in (
+        output.hypothesis_decision.reversal.winner_signal
+    )
+    assert "原来属于食神到七杀路径的收束路径信号" in (
+        output.hypothesis_decision.reversal.loser_signal
+    )
 
 
 def test_common_runtime_rejects_support_and_timing_scope_drift() -> None:
@@ -1340,6 +1698,232 @@ def test_condition_field_cannot_launder_unconditional_relation_effect() -> None:
     assert "RELATION_MEMBERSHIP_PROMOTED_TO_EFFECT" in career.assessment_codes
 
 
+def test_relationship_and_family_single_ten_god_stories_are_withheld() -> None:
+    fixture, packet = _packet()
+    output = _valid_output(packet=packet).model_dump(mode="json")
+    output["domains"]["relationship"].update(
+        {
+            "headline": "寻找精神共鸣的关系",
+            "conclusion": "日支所藏偏印代表精神依恋，因此关系更需要理解和陪伴。",
+            "causal_chain": ["偏印进入夫妻宫并形成情感安全需求"],
+        }
+    )
+    output["domains"]["family"].update(
+        {
+            "headline": "重视精神滋养的家庭",
+            "conclusion": "日支所藏偏印使家庭天然围绕精神交流和情感安全展开。",
+            "causal_chain": ["偏印直接形成家庭里的精神滋养"],
+        }
+    )
+    reading = MingliAgentRuntime(
+        provider=_OutputProvider(MingliAgentModelOutput.model_validate(output)),
+        enabled=True,
+    ).run(requester_account_ref=fixture["owner_account_ref"], packet=packet)
+
+    graph = MingliReadingClaimGraphProjector().project(reading, packet=packet)
+    by_key = {item.semantic_key: item for item in graph.claims}
+
+    for semantic_key in ("DOMAIN_RELATIONSHIP", "DOMAIN_FAMILY"):
+        claim = by_key[semantic_key]
+        assert claim.status == "WITHHELD"
+        assert "TEN_GOD_TO_LIFE_STORY_SHORTCUT" in claim.assessment_codes
+        assert "DOMAIN_METHOD_POSITIVE_RULE_NOT_ADMITTED" in claim.assessment_codes
+
+
+def test_relationship_and_family_keywords_cannot_bypass_missing_positive_method() -> None:
+    fixture, packet = _packet()
+    output = _valid_output(packet=packet).model_dump(mode="json")
+    output["domains"]["relationship"].update(
+        {
+            "headline": "承诺与资源分配要同时校准",
+            "conclusion": (
+                "男命财星落入日支夫妻宫提供现实承诺的一轴，但关系质量仍取决于"
+                "整盘财路能否被日主持久承接。"
+            ),
+            "causal_chain": ["偏财位于日支夫妻宫，再与整盘主路径共同决定责任分配"],
+        }
+    )
+    output["domains"]["family"].update(
+        {
+            "headline": "当前家庭先校准责任边界",
+            "conclusion": (
+                "当前家庭先看日支所承载的现实责任，再结合整盘主路径判断资源与"
+                "照料如何分配。"
+            ),
+            "causal_chain": ["当前家庭范围结合日支宫位与整盘主路径形成责任分配"],
+        }
+    )
+    reading = MingliAgentRuntime(
+        provider=_OutputProvider(MingliAgentModelOutput.model_validate(output)),
+        enabled=True,
+    ).run(requester_account_ref=fixture["owner_account_ref"], packet=packet)
+
+    graph = MingliReadingClaimGraphProjector().project(reading, packet=packet)
+    by_key = {item.semantic_key: item for item in graph.claims}
+
+    for semantic_key in ("DOMAIN_RELATIONSHIP", "DOMAIN_FAMILY"):
+        claim = by_key[semantic_key]
+        assert "TEN_GOD_TO_LIFE_STORY_SHORTCUT" not in claim.assessment_codes
+        assert "DOMAIN_METHOD_AXES_INCOMPLETE" not in claim.assessment_codes
+        assert "DOMAIN_METHOD_POSITIVE_RULE_NOT_ADMITTED" in claim.assessment_codes
+        assert claim.status == "WITHHELD"
+
+
+@pytest.mark.parametrize(
+    "conclusion",
+    (
+        "当前家庭里，偏财天然代表重物质，因此责任一定围绕收入展开。",
+        "男命财星与日支夫妻宫同时出现，因此伴侣天然务实。",
+        "财星不在日支，夫妻宫并无财星，所以伴侣天然疏离。",
+    ),
+)
+def test_domain_method_keywords_cannot_launder_unadmitted_life_story(
+    conclusion: str,
+) -> None:
+    fixture, packet = _packet()
+    output = _valid_output(packet=packet).model_dump(mode="json")
+    output["domains"]["relationship"]["conclusion"] = conclusion
+    reading = MingliAgentRuntime(
+        provider=_OutputProvider(MingliAgentModelOutput.model_validate(output)),
+        enabled=True,
+    ).run(requester_account_ref=fixture["owner_account_ref"], packet=packet)
+
+    graph = MingliReadingClaimGraphProjector().project(reading, packet=packet)
+    relationship = next(
+        item for item in graph.claims if item.semantic_key == "DOMAIN_RELATIONSHIP"
+    )
+
+    assert relationship.status == "WITHHELD"
+    assert "DOMAIN_METHOD_POSITIVE_RULE_NOT_ADMITTED" in relationship.assessment_codes
+
+
+def test_spouse_palace_axis_rejects_ten_god_from_another_branch() -> None:
+    fixture, packet = _packet()
+    output = _valid_output(packet=packet).model_dump(mode="json")
+    output["domains"]["relationship"].update(
+        {
+            "headline": "现实承诺需要共同校准",
+            "conclusion": "财星与日支夫妻宫共同构成关系判断的两条命盘轴。",
+            "causal_chain": [
+                "日支为丑土，藏干中正财（戊）和偏财（己）均显现，因此更看重现实承诺。"
+            ],
+        }
+    )
+    reading = MingliAgentRuntime(
+        provider=_OutputProvider(MingliAgentModelOutput.model_validate(output)),
+        enabled=True,
+    ).run(requester_account_ref=fixture["owner_account_ref"], packet=packet)
+
+    graph = MingliReadingClaimGraphProjector().project(reading, packet=packet)
+    relationship = next(
+        item for item in graph.claims if item.semantic_key == "DOMAIN_RELATIONSHIP"
+    )
+
+    assert relationship.status == "WITHHELD"
+    assert "NAMED_COORDINATE_CONFLICTS_WITH_PACKET" in relationship.assessment_codes
+
+
+def test_named_coordinate_check_stops_before_the_next_clause() -> None:
+    fixture, packet = _packet()
+    output = _valid_output(packet=packet).model_dump(mode="json")
+    output["domains"]["relationship"].update(
+        {
+            "headline": "先核对夫妻宫里的真实成员",
+            "conclusion": "财星与日支夫妻宫必须分别核对，不能把其他柱的十神移入日支。",
+            "causal_chain": [
+                "日支丑土藏干中偏财（己）与偏印（癸）同在，年干食神（丁）明透。"
+            ],
+        }
+    )
+    reading = MingliAgentRuntime(
+        provider=_OutputProvider(MingliAgentModelOutput.model_validate(output)),
+        enabled=True,
+    ).run(requester_account_ref=fixture["owner_account_ref"], packet=packet)
+
+    graph = MingliReadingClaimGraphProjector().project(reading, packet=packet)
+    relationship = next(
+        item for item in graph.claims if item.semantic_key == "DOMAIN_RELATIONSHIP"
+    )
+
+    assert "NAMED_COORDINATE_CONFLICTS_WITH_PACKET" not in relationship.assessment_codes
+    assert "DOMAIN_METHOD_POSITIVE_RULE_NOT_ADMITTED" in relationship.assessment_codes
+
+
+def test_generic_mechanism_group_name_cannot_replace_exact_ten_god_path() -> None:
+    fixture, packet = _packet()
+    output = _valid_output(packet=packet).model_dump(mode="json")
+    primary = next(item for item in output["hypotheses"] if item["role"] == "PRIMARY")
+    primary.update(
+        {
+            "name": "食伤生财结构",
+            "thesis": "食伤可以生财，因此这条结构暂时作为整盘主解释。",
+        }
+    )
+    for ruling in primary["method_rulings"]:
+        ruling["rationale"] = "食伤与财星成员同时存在，因此先保留这条宽泛机制。"
+        ruling["condition_or_falsifier"] = "若食伤不能生财，再翻转当前解释。"
+    reading = MingliAgentRuntime(
+        provider=_OutputProvider(MingliAgentModelOutput.model_validate(output)),
+        enabled=True,
+    ).run(requester_account_ref=fixture["owner_account_ref"], packet=packet)
+
+    graph = MingliReadingClaimGraphProjector().project(reading, packet=packet)
+    hypothesis = next(
+        item for item in graph.claims if item.semantic_key == f"HYPOTHESIS_{primary['hypothesis_id']}"
+    )
+
+    assert hypothesis.status == "WITHHELD"
+    assert "EXACT_ROLE_PATH_MISSING" in hypothesis.assessment_codes
+
+
+def test_withheld_h1_alternative_does_not_quarantine_valid_h2_primary() -> None:
+    fixture, packet = _packet()
+    output = _valid_output(packet=packet).model_dump(mode="json")
+    first, second = output["hypotheses"]
+    first["role"] = "ALTERNATIVE"
+    second["role"] = "PRIMARY"
+    output["hypothesis_decision"]["winner_id"] = "H2"
+    output["hypothesis_decision"]["loser_id"] = "H1"
+    first.update(
+        {
+            "name": "食伤制官杀宽泛候选",
+            "thesis": "食伤与官杀同时存在，所以先保留为一条宽泛替代解释。",
+        }
+    )
+    for ruling in first["method_rulings"]:
+        ruling["rationale"] = "食伤与官杀成员同时存在，尚未锁定具体十神路径。"
+        ruling["condition_or_falsifier"] = "若宽泛结构不能解释现实，就撤下本候选。"
+    reading = MingliAgentRuntime(
+        provider=_OutputProvider(MingliAgentModelOutput.model_validate(output)),
+        enabled=True,
+    ).run(requester_account_ref=fixture["owner_account_ref"], packet=packet)
+
+    graph = MingliReadingClaimGraphProjector().project(reading, packet=packet)
+    by_key = {item.semantic_key: item for item in graph.claims}
+
+    assert by_key["HYPOTHESIS_H1"].status == "WITHHELD"
+    assert by_key["HYPOTHESIS_H2"].status == "PROVISIONAL"
+    assert by_key["WHOLE_CHART"].status == "PROVISIONAL"
+
+
+def test_peer_presence_cannot_be_rewritten_as_human_cooperation() -> None:
+    fixture, packet = _packet()
+    output = _valid_output(packet=packet).model_dump(mode="json")
+    output["domains"]["wealth"]["conclusion"] = (
+        "财富积累依赖持续专业输出，也依赖人际合作带来的资源承接。"
+    )
+    reading = MingliAgentRuntime(
+        provider=_OutputProvider(MingliAgentModelOutput.model_validate(output)),
+        enabled=True,
+    ).run(requester_account_ref=fixture["owner_account_ref"], packet=packet)
+
+    graph = MingliReadingClaimGraphProjector().project(reading, packet=packet)
+    wealth = next(item for item in graph.claims if item.semantic_key == "DOMAIN_WEALTH")
+
+    assert wealth.status == "WITHHELD"
+    assert "UNSUPPORTED_SOCIAL_RESOURCE_INFERENCE" in wealth.assessment_codes
+
+
 def test_ordinary_conflict_resolution_is_not_misread_as_relation_effect() -> None:
     fixture, packet = _packet()
     output = _valid_output(packet=packet).model_dump(mode="json")
@@ -1447,8 +2031,8 @@ def test_owner_gemma4_reading_has_exact_evidence_and_dependency_admission() -> N
     assert statuses == {
         "WHOLE_CHART": "NEEDS_RECONCILIATION",
         "DAY_MASTER": "PROVISIONAL",
-        "HYPOTHESIS_H1": "PROVISIONAL",
-        "HYPOTHESIS_H2": "NEEDS_RECONCILIATION",
+        "HYPOTHESIS_H1": "WITHHELD",
+        "HYPOTHESIS_H2": "WITHHELD",
         "WORK_PATH": "WITHHELD",
         "LIFE_IMAGE": "PROVISIONAL",
         "DOMAIN_PERSONALITY": "WITHHELD",
@@ -1500,9 +2084,13 @@ def test_local_fact_overreach_quarantines_claim_not_whole_reading() -> None:
         "ROOT_ASSERTION_CONFLICTS_WITH_PACKET",
         "NAMED_COORDINATE_CONFLICTS_WITH_PACKET",
     }
-    assert by_key["DOMAIN_FAMILY"].assessment_codes == ("UNADMITTED_CLASSICAL_ASSERTION",)
+    assert by_key["DOMAIN_FAMILY"].assessment_codes == (
+        "UNADMITTED_CLASSICAL_ASSERTION",
+        "DOMAIN_METHOD_POSITIVE_RULE_NOT_ADMITTED",
+    )
     assert by_key["DOMAIN_RELATIONSHIP"].assessment_codes == (
         "UNLISTED_RELATION_COORDINATE_ASSERTION",
+        "DOMAIN_METHOD_POSITIVE_RULE_NOT_ADMITTED",
     )
 
 

@@ -100,6 +100,18 @@ export function ClaimReviewNotice({
     if (code === "TIMING_LAYER_PROSE_CONFLICT") {
       return "这条混用了大运与流年内容，暂不采用。";
     }
+    if (code === "EXACT_ROLE_PATH_MISSING") {
+      return "这条没有说清具体是哪一种十神路径，暂不采用。";
+    }
+    if (code === "DOMAIN_METHOD_AXES_INCOMPLETE") {
+      return "这条关系或家庭判断没有同时完成专题所需的两条命盘轴，暂不采用。";
+    }
+    if (code === "DOMAIN_METHOD_POSITIVE_RULE_NOT_ADMITTED") {
+      return "关系与家庭的正向判法还没有完成专业准入，这条先不采用。";
+    }
+    if (code === "TEN_GOD_TO_LIFE_STORY_SHORTCUT") {
+      return "这条从单枚十神直接跳到了关系或家庭故事，暂不采用。";
+    }
     if (code === "UNSUPPORTED_SOCIAL_RESOURCE_INFERENCE") {
       return "这条把比劫直接写成人脉或团队支持，暂不采用。";
     }

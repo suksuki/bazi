@@ -8,13 +8,16 @@ from abu_v60.mingli.agent_contracts import (
     MingliAgentModelOutput,
 )
 from abu_v60.mingli.agent_method_cards import MINGLI_AGENT_ADJUDICATION_VERSION
+from abu_v60.mingli.agent_method_distillation import (
+    MINGLI_AGENT_METHOD_DISTILLATION_VERSION,
+)
 from abu_v60.mingli.agent_output_repair import MINGLI_AGENT_OUTPUT_REPAIR_VERSION
 from abu_v60.mingli.agent_reasoning_modes import BLIND_READING_CONTRACT
 from abu_v60.provenance import content_hash
 
-MINGLI_AGENT_RUNTIME_VERSION: Final = "v60.mingli-agent-runtime.014"
-MINGLI_AGENT_PROFILE_REF: Final = "v60.mingli-agent.whole-chart-cognition.014"
-MINGLI_AGENT_PROMPT_REF: Final = "v60.prompt.mingli-agent-whole-chart.014"
+MINGLI_AGENT_RUNTIME_VERSION: Final = "v60.mingli-agent-runtime.016"
+MINGLI_AGENT_PROFILE_REF: Final = "v60.mingli-agent.whole-chart-cognition.016"
+MINGLI_AGENT_PROMPT_REF: Final = "v60.prompt.mingli-agent-whole-chart.015"
 MINGLI_AGENT_PROFESSIONAL_REVIEW_STATUS: Final = "GEMMA4_PRODUCT_CANDIDATE_REQUIRES_OWNER_REVIEW"
 MINGLI_AGENT_PUBLICATION_ALLOWED: Final = False
 MINGLI_AGENT_OWNER_REVIEW_ALLOWED: Final = True
@@ -53,9 +56,22 @@ MINGLI_AGENT_SYSTEM_PROMPT: Final = """
   可使用 fallback_hypothesis。method_rulings 必须按卡片顺序逐项填写，不能漏项、换项或
   只给总评。每项以 SUPPORTS／CONDITIONAL／OPPOSES／UNRESOLVED 明确裁决，并写出命盘
   依据与什么条件会推翻这一项；UNRESOLVED 合法，但不能拿它当拒绝整盘判断的理由。
+- distilled_method 与 bound_method_context 是从老师审查提炼出的逐项判法和本盘事实锁。
+  必须先在 exact_role_paths 中选定精确十神子路径，再裁 required_checks；禁止把食神、伤官
+  或正官、七杀、正财、偏财重新合并成“食伤／官杀／财星”组名代替判断。共享的来源与承载
+  检查不能单独决定两张卡胜负，必须执行 cross_card_discriminator 的专属决胜项。
+- 跨卡主次先比较各自专属决胜项里最弱的一关，再比较专属项整体完成度；某条路径仍有专属
+  决胜项 UNRESOLVED 时，不能靠共享来源、承载或“成员存在”的 SUPPORTS 数量抢占主线。
+- day_master_regime_method 必须显式比较普通身弱、从势和假从竞争；只有无有效根、印比不可用、
+  异类趋势闭合且没有反向力量时才可写 FOLLOWING_TENDENCY。无根但仍有浮比、弱藏印或合化
+  未定时，必须保留身弱／假从竞争，映射为 WEAK 或 UNCERTAIN，不能直接判从或跳到喜忌。
+- 若日主结论为 WEAK／UNCERTAIN 且根候选为空，所有机制卡的 DAY_MASTER_CAPACITY 最多只能
+  写 CONDITIONAL；浮透比劫或弱藏印不能被描述为“持续承载”并写成 SUPPORTS。
 - 每个 ruling 都是“相对于该候选是否成立”来写：SUPPORTS 表示这一关通过，OPPOSES 表示
   这一关构成反证。名称带 RESOLUTION 的阻断检查，只有阻断不存在、很弱或已有救应时才能
   写 SUPPORTS；阻断实际占上风时必须写 OPPOSES，不能把“发现竞争”误写成支持。
+- method_rulings.rationale 只写18至45个汉字的本盘依据，condition_or_falsifier 只写12至30个
+  汉字的翻转条件；不得复制判法卡问题、规则或反例。其余字段同样只保留一次结论所需的信息。
 - method card 的 fact_locks 是显藏事实锁。明干数为 0 的角色只能写“藏干存在”，绝不能写
   “透出、透干、明透”；具体干支位置必须逐字服从 ten_god_occurrences，不能凭结构名称补位置。
 - 若同一十神组只有部分成员明透，必须逐个写清“哪一个明透、哪一个仅藏”，不得把整个
@@ -75,8 +91,8 @@ MINGLI_AGENT_SYSTEM_PROMPT: Final = """
 4. 比较成格、破格、救应、调候、扶抑、制化、通关和做功条件；
 5. 写清主路径的源端、转化、目标、闭合程度、成立条件和失效条件；
 6. 用条件化方式说明不同维度的喜忌或取用，不把一个元素永久标成万能用神；
-7. 从主解释和主路径推演性格、事业、财富、关系和家庭，不写栏目套话；所有人生领域
-   结论最高只能是 MEDIUM，因为卷宗没有现实经历证据；
+7. 从主解释、主路径与 domain_method_assets 的专题判法共同推演性格、事业、财富、关系和
+   家庭，不写栏目套话；所有人生领域结论最高只能是 MEDIUM，因为卷宗没有现实经历证据；
 8. 原局结论与岁运结论分开，先锁定原局，再判断大运与流年改变了哪条路径；
 9. 生命意象必须由本盘结构推出，不得使用任何命盘都成立的励志比喻。
 
@@ -129,7 +145,12 @@ MINGLI_AGENT_SYSTEM_PROMPT: Final = """
   映射若无完整因果链不得写入应事。每个人生领域都必须引用足以覆盖该句的原局依据。
 - timing.dayun 的正文必须点名当前大运坐标；timing.annual 的正文必须点名所选流年坐标。
   流年字段不得复制大运干支、十神或因果链，大运字段也不得借用流年内容。
-- 不因性别制造性格刻板印象；不得用“男命以财为妻／女命以官为夫”直接推出伴侣结论。
+- 不因性别制造性格刻板印象。关系专题可按 domain_method_assets 使用性别限定的配偶星通道，
+  但必须同时检查配偶星与夫妻宫两轴，不能由“男财／女官”直接推出伴侣性格或婚姻结果。
+- relationship 必须同时点明配偶星轴和日支夫妻宫轴；单枚偏印不得推出精神共鸣、精神依恋或
+  情感安全，单枚比劫不得推出关系竞争。family 必须先声明原生家庭、当前家庭或亲子中的一个
+  范围，再结合宫位与另一条星／关系轴；LifeCase 观察只留给未来 reconciliation，盲断中不可
+  假装已经取得。不能把所有家庭对象混成一段套话。
 - 不诊断疾病，不承诺投资收益，不制造确定灾祸；不得预测第三者、离婚、家人健康、
   法律灾祸或必然破财。
 - HIGH 只可用于命盘中可直接复核的结构判断；人生领域与当前岁运最高为 MEDIUM。
@@ -155,6 +176,7 @@ MINGLI_AGENT_PROFILE = {
     "primary_call_count": 1,
     "output_contract_ref": MINGLI_AGENT_READING_VERSION,
     "adjudication_contract_ref": MINGLI_AGENT_ADJUDICATION_VERSION,
+    "method_distillation_ref": MINGLI_AGENT_METHOD_DISTILLATION_VERSION,
     "output_repair_contract_ref": MINGLI_AGENT_OUTPUT_REPAIR_VERSION,
     "output_schema_hash": MINGLI_AGENT_OUTPUT_SCHEMA_HASH,
     "prompt_view_version": MINGLI_AGENT_PROMPT_VIEW_VERSION,

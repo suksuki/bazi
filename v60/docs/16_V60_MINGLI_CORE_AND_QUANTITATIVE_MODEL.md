@@ -725,6 +725,14 @@ weight or probability, and it cannot write back into the dossier. A reviewed
 interpretation may later become research input for an Owner-approved versioned
 method card or Gold Reading, but never by automatic backflow from LLM prose.
 
+The same boundary applies to frontier teacher models. Their version-locked
+outputs can expose missed hypotheses, weak checks, contradictions and useful
+counterexamples. Codex may turn those differences into candidate method cards,
+rules, prompts, schemas and regression tests; only Owner/professional review may
+admit them. The product model must then pass synthetic mutation, hold,
+stability and adversarial cases under the same contract. Teacher prose is never
+the canonical answer and is never inserted into the ordinary user Runtime.
+
 ## Quantitative Mingli model
 
 V60 separates four numerical meanings.
@@ -837,10 +845,13 @@ not overflow. The complete backend suite contains 233 passing tests.
 Lab owns research, not production truth:
 
 ```text
-candidate feature/rule/weight
+version-locked local-candidate / frontier-teacher comparison
+-> Codex extracts candidate method assets and counterexamples
+-> candidate feature/rule/prompt/schema/weight
 -> source and professional review
 -> offline benchmark
--> blind holdout validation
+-> synthetic mutation / hold / stability / adversarial validation
+-> milestone frontier-model blind review
 -> calibration and bias report
 -> Owner admission
 -> new immutable Knowledge / Rule / Quant Profile
@@ -917,24 +928,27 @@ selection.
 
 ## Active delivery
 
-The previous incremental evidence-foundation sequence is complete history.
-The only active Mingli slice is:
+The previous incremental evidence-foundation and single-real-Case sequences are
+complete history. The active Mingli slice is:
 
 ```text
-one authorized real Case
--> complete calendar and chart boundary
--> month command and seasonal capacity
--> root usability and day-master strength
--> one complete relation-effect rule family
--> mechanism competition, blocking and counter-evidence
--> current Dayun / annual effect
--> one direct life-domain answer
--> professional review and replayable observation points
+one version-locked Case Packet / Prompt / Schema
+-> local product candidate and frontier teacher produce independent blind readings
+-> compare primary decision, causal chain, omissions, fact errors and reversal conditions
+-> Codex drafts method cards, rules, prompts, schemas, counterexamples and tests
+-> Owner / professional admission
+-> synthetic single-variable mutation, hold, stability and adversarial suites
+-> local product candidate reruns the same contract
+-> milestone frontier-model blind review
+-> qualified formal Reading shared by Mingli Calculation, Lab and Abu Says
 ```
 
-The result must be one formal Reading shared by Mingli Calculation, Lab and
-Abu Says. Missing professional material remains a legitimate blocker, but
-another UI that only restates the blocker is not a product delivery.
+This is system-method distillation, not necessarily model-weight training.
+Frontier output is research evidence, never an automatic Gold Reading. Missing
+professional material remains a legitimate admission blocker, but the Agent
+must still produce a whole-chart working judgment for private research; another
+UI that only restates a blocker is not a product delivery. Paid teacher calls
+are baseline or milestone checks, never part of the normal one-call user path.
 
 Statistical calibration begins only after the claim model has stable
 professional meaning. Until then, V60 may not display a fortune-reading
