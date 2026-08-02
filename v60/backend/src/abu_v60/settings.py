@@ -45,19 +45,19 @@ class Settings:
     reasoner_keep_alive: str
     mingli_agent_enabled: bool = False
     mingli_agent_provider: str = "ollama-generate"
-    mingli_agent_model: str = "qwen3.6:27b"
+    mingli_agent_model: str = "gemma4:latest"
     mingli_agent_model_digest: str = (
-        "a50eda8ed977ab48a12431878896b27ffd5cef552c17af3317d9623b939a7f1e"
+        "c6eb396dbd5992bbe3f5cdb947e8bbc0ee413d7c17e2beaae69f5d569cf982eb"
     )
     mingli_agent_profile_ref: str = (
-        "v60.model-serving.qwen3.6-27b-mingli-agent.003"
+        "v60.model-serving.gemma4-mingli-agent.001"
     )
     mingli_agent_base_url: str = "http://127.0.0.1:11434"
     mingli_agent_timeout_seconds: float = 420.0
     mingli_agent_think: bool = False
-    mingli_agent_temperature: float = 0.1
-    mingli_agent_top_p: float = 0.9
-    mingli_agent_top_k: int = 40
+    mingli_agent_temperature: float = 0.0
+    mingli_agent_top_p: float = 0.95
+    mingli_agent_top_k: int = 64
     mingli_agent_num_ctx: int = 32768
     mingli_agent_num_predict: int = 4096
     mingli_agent_keep_alive: str = "30m"
@@ -141,10 +141,10 @@ class Settings:
             os.getenv("V60_MINGLI_AGENT_TIMEOUT_SECONDS", "420")
         )
         mingli_agent_temperature = float(
-            os.getenv("V60_MINGLI_AGENT_TEMPERATURE", "0.1")
+            os.getenv("V60_MINGLI_AGENT_TEMPERATURE", "0")
         )
-        mingli_agent_top_p = float(os.getenv("V60_MINGLI_AGENT_TOP_P", "0.9"))
-        mingli_agent_top_k = int(os.getenv("V60_MINGLI_AGENT_TOP_K", "40"))
+        mingli_agent_top_p = float(os.getenv("V60_MINGLI_AGENT_TOP_P", "0.95"))
+        mingli_agent_top_k = int(os.getenv("V60_MINGLI_AGENT_TOP_K", "64"))
         mingli_agent_num_ctx = int(
             os.getenv("V60_MINGLI_AGENT_NUM_CTX", "32768")
         )
@@ -215,15 +215,15 @@ class Settings:
             ).strip(),
             mingli_agent_model=os.getenv(
                 "V60_MINGLI_AGENT_MODEL",
-                "qwen3.6:27b",
+                "gemma4:latest",
             ).strip(),
             mingli_agent_model_digest=os.getenv(
                 "V60_MINGLI_AGENT_MODEL_DIGEST",
-                "a50eda8ed977ab48a12431878896b27ffd5cef552c17af3317d9623b939a7f1e",
+                "c6eb396dbd5992bbe3f5cdb947e8bbc0ee413d7c17e2beaae69f5d569cf982eb",
             ).strip(),
             mingli_agent_profile_ref=os.getenv(
                 "V60_MINGLI_AGENT_PROFILE_REF",
-                "v60.model-serving.qwen3.6-27b-mingli-agent.003",
+                "v60.model-serving.gemma4-mingli-agent.001",
             ).strip(),
             mingli_agent_base_url=os.getenv(
                 "V60_MINGLI_AGENT_BASE_URL",

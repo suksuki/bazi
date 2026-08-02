@@ -79,7 +79,7 @@ export function MingliBranchJourney({
   const timerRef = useRef<number | null>(null);
   const entryTimerRef = useRef<number | null>(null);
   const hasFormalReading = summaryMatchesStage(summary, stage);
-  const hasAgentReading = hasFormalReading && summary?.agent_reading !== null;
+  const hasClaimGraph = hasFormalReading && summary?.claim_graph !== null;
   const guideIsDodo = light === "day";
   const guideCue = guideIsDodo ? media.cues.dodo_idle : media.cues.abu_idle;
   const film = light === "day"
@@ -173,6 +173,7 @@ export function MingliBranchJourney({
       data-growth-state={growthState}
       data-layer={layer}
       data-light={light}
+      data-claim-graph-ref={hasClaimGraph ? summary?.claim_graph?.graph_ref : undefined}
       role="dialog"
       style={style}
     >
@@ -249,7 +250,7 @@ export function MingliBranchJourney({
             <header className="mingli-growth-identity">
               <span>{stage.identity_badge}</span>
               <strong>{stage.display_name}的命理枝</strong>
-              <small>{hasAgentReading ? "阿布已经读完这份命局" : "等待阿布整盘研判"}</small>
+              <small>{hasClaimGraph ? "阿布初断 · 可以继续校准" : "等待阿布整盘初断"}</small>
             </header>
             <MingliReadingLayerContent
               agentError={agentError}

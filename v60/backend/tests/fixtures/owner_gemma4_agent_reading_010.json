@@ -1,0 +1,114 @@
+{
+  "first_look": "命局食伤透出，泄身有力，结构上以才华表达和应对外部压力为核心驱动力。",
+  "whole_chart_thesis": "命主的核心生命主题是利用旺盛的才华表达去应对外部环境带来的规则压力，其能量流向倾向于从自我思辨到专业技能的转化。",
+  "day_master_state": "WEAK",
+  "support_selection": {
+    "root_status": "NONE",
+    "root_coordinates": [],
+    "peer_coordinates": ["month干乙(比肩)", "hour干乙(比肩)"],
+    "resource_coordinates": ["day支藏癸(偏印)"]
+  },
+  "day_master_rationale": "日主乙木生于巳月，不得时令之助。虽然天干透出比肩帮扶（月干、时干），且地支藏干中癸水偏印可提供微弱支持，但整体来看，缺乏强有力的根基支撑，处于相对偏弱的状态。",
+  "day_master_evidence_ids": ["E003", "E005"],
+  "hypotheses": [
+    {
+      "hypothesis_id": "H1",
+      "role": "PRIMARY",
+      "name": "食伤制杀泄秀结构",
+      "judgment": "WORKS_IF",
+      "mechanism_evidence_ids": ["E009"],
+      "thesis": "命局以食伤（丁、丙）的旺盛表达力去引动和应对原局潜在的官杀压力，形成一种通过才华展示来化解外部约束的生命模式。",
+      "failure_condition": "若食伤泄气过重，且无强根或印星化解，则易陷入思虑过度而行动力不足的状态。",
+      "evidence_ids": ["E001", "E002", "E004", "E003"],
+      "confidence": "HIGH"
+    },
+    {
+      "hypothesis_id": "H2",
+      "role": "ALTERNATIVE",
+      "name": "食伤生财流通结构",
+      "judgment": "WORKS_IF",
+      "mechanism_evidence_ids": ["E010"],
+      "thesis": "命局的能量流向倾向于通过才华（食伤）去生助和获取财富（财星），形成一个以价值变现为核心驱动力的循环。",
+      "failure_condition": "若原局财星力量不足以承接食伤生发之气，或日主自身根基过弱无法支撑持续的输出，则此结构难以稳定发挥。",
+      "evidence_ids": ["E001", "E002", "E004", "E003"],
+      "confidence": "MEDIUM"
+    }
+  ],
+  "work_path": {
+    "path_statement": "才华表达（食伤）是主要的能量源头，其作用目标在于应对和转化外部环境设定的规则与约束（官杀）。",
+    "transformation_codes": ["SUPPORTS", "CHANNELS"],
+    "closure": "CONDITIONAL",
+    "condition": "此路径的持续性依赖于日主能否在食伤泄秀和官杀约束之间找到一个可持续的平衡点，即通过稳定的输出（如教育、技术）来化解内在的思虑过剩。",
+    "evidence_ids": ["E009", "E012"]
+  },
+  "life_image": {
+    "title": "自我表达与能量扩散的景象",
+    "image": "广阔的草地上的藤蔓",
+    "explanation": "命主如同处于一片开阔的草地，阳光（食伤）照射强烈，使得自身的枝叶（乙木）不断向上舒展、向外描绘出丰富的形态和色彩，但由于环境过于开阔且缺乏坚实的依靠，其生长过程需要持续吸收外界的光能来维持形态的稳定。",
+    "evidence_ids": ["E001", "E002", "E004"]
+  },
+  "domains": {
+    "personality": {
+      "headline": "思维活跃，但需要培养专注力和收敛性。",
+      "conclusion": "思维活跃，善于思考和表达观点，但在执行层面需要学会聚焦核心目标以避免心力耗散。",
+      "causal_chain": ["日主乙木受比肩帮扶，但月令巳火泄气，且食伤（丁、丙）透出较旺，显示其个性上具有外向的表达欲和思辨性，但也容易因自我想法过多而分散精力。"],
+      "condition": "需通过规律性的实践来约束过旺的思绪流转。",
+      "evidence_ids": ["E001", "E002", "E004"],
+      "confidence": "MEDIUM"
+    },
+    "career": {
+      "headline": "专业技能输出是应对外部环境压力的主要途径。",
+      "conclusion": "倾向于在专业技能或表达领域寻求立足点，工作环境变化性较大。",
+      "causal_chain": ["日主乙木坐于丑土之上，根气受制；月令巳火泄身，且原局官杀（酉、藏庚）透出并被食伤（丁、丙）引动，显示其职业发展需要通过技术或才华的输出去应对外部规则和压力。"],
+      "condition": "需有稳定的学习渠道来沉淀和转化过旺的表达能量。",
+      "evidence_ids": ["E001", "E002", "E004", "E003", "E009"],
+      "confidence": "MEDIUM"
+    },
+    "wealth": {
+      "headline": "财富获取路径与个人才华展示高度挂钩。",
+      "conclusion": "财富积累的方式更偏向于通过知识变现或专业技能服务他人而获得。",
+      "causal_chain": ["财星（戊、己）藏于年支和日支，且被食伤（丁火）生助，显示财富的获取路径与自身的才华展示、口才表达紧密相关。"],
+      "condition": "需将精力集中在能最大化发挥自身表达优势的领域去开拓财源。",
+      "evidence_ids": ["E001", "E003"],
+      "confidence": "MEDIUM"
+    },
+    "relationship": {
+      "headline": "关系维系更依赖于共同的行动和责任分担。",
+      "conclusion": "在亲密关系中，倾向于以共同目标或生活实践来维系连接，对伴侣的实际能力有一定要求。",
+      "causal_chain": ["日支丑土与月令巳火相连（地支关系），且原局官杀力量不显，感情表达更侧重于实际的互动和责任承担，而非纯粹的情感渲染。"],
+      "condition": "需避免将过度的自我想法投射到伴侣身上，给予对方足够的独立空间。",
+      "evidence_ids": ["E003", "E006"],
+      "confidence": "MEDIUM"
+    },
+    "family": {
+      "headline": "家庭互动中需兼顾物质基础与精神滋养。",
+      "conclusion": "与原生家庭的关系模式倾向于在责任感和精神支持之间寻求平衡。",
+      "causal_chain": ["日支丑土为财库，内藏己土偏财和癸水偏印，代表家庭关系中既有对物质的关注（财），也存在情感上的依赖或学习需求（印）。"],
+      "condition": "若能将自我价值实现建立在稳定的内在认知之上，则家庭关系趋于平和。",
+      "evidence_ids": ["E003", "E005"],
+      "confidence": "MEDIUM"
+    }
+  },
+  "timing": {
+    "natal_baseline": "原局结构显示，日主乙木在巳月不得时令，能量主要通过食伤（丁、丙）透出进行消耗和展示。地支三合的潜在组合（巳酉丑）存在，但其作用尚未明确成型或被激活。",
+    "natal_evidence_ids": ["E001", "E002", "E003", "E004", "E005", "E006", "E009", "E010"],
+    "dayun": {
+      "coordinate_evidence_id": "E011",
+      "relation_evidence_ids": [],
+      "conclusion": "进入此大运阶段，命主会感受到来自外部环境或社会规范的明确约束力，促使其将过剩的表达能量（食伤）导向更具结构性和规则性的领域去寻求稳定。",
+      "activation_chain": ["大运庚子正官到位，与原局日支丑土形成子丑相合，增强了对稳定结构和规则的关注。同时，大运天干庚金正官透出，直接作用于命局的格局平衡点。"],
+      "evidence_ids": ["E003", "E006"],
+      "confidence": "MEDIUM"
+    },
+    "annual": {
+      "coordinate_evidence_id": "E012",
+      "relation_evidence_ids": [],
+      "conclusion": "在流年层面，命主会感受到强烈的自我表达冲动和才华展示的需求，容易将过多的精力投入到外显的观点输出上。",
+      "activation_chain": ["流年丙午伤官到位，加强了原局食伤（丁火）的能量输出和表现欲。"],
+      "evidence_ids": ["E001", "E002"],
+      "confidence": "MEDIUM"
+    },
+    "verification_signals": ["H1的成立依赖于食伤（丁、丙）对原局官杀（酉藏庚，巳中庚）的持续引动和制约过程。"]
+  },
+  "discriminating_question": "命主在追求自我表达和才华展现时，是否会因为过度的外显竞争压力而感到心力交瘁？"
+}

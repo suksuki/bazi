@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { RuntimeMediaManifest } from "../api";
 import {
@@ -20,6 +20,7 @@ import type {
 } from "../mingliStageTypes";
 import { resolveHomeWorldLight } from "../homeWorldLight";
 import { MingliBranchJourney } from "./MingliBranchJourney";
+import { summaryMatchesStage } from "./MingliReadingJourney";
 
 export function MingliBranchSceneHost({
   media,
@@ -35,6 +36,9 @@ export function MingliBranchSceneHost({
   const [route, setRoute] = useState(readMingliStageRoute);
   const [entry] = useState(readMingliLeafEntry);
   const [stage, setStage] = useState<MingliStageProjection | null>(null);
+  const stageRef = useRef<MingliStageProjection | null>(null);
+  const generationRequestRef = useRef(0);
+  const generationControllerRef = useRef<AbortController | null>(null);
   const [summary, setSummary] = useState<MingliReadingSummaryProjection | null>(null);
   const [agentGenerating, setAgentGenerating] = useState(false);
   const [agentError, setAgentError] = useState<string | null>(null);
@@ -48,6 +52,10 @@ export function MingliBranchSceneHost({
 
   useEffect(() => {
     const controller = new AbortController();
+    generationRequestRef.current += 1;
+    generationControllerRef.current?.abort();
+    generationControllerRef.current = null;
+    stageRef.current = null;
     const requestedYear = route.mode === "NATAL_DAYUN_YEAR_6" ? route.year : null;
     setStage(null);
     setSummary(null);
@@ -65,6 +73,7 @@ export function MingliBranchSceneHost({
       }))
       .then(({ projection, summary: nextSummary }) => {
         if (controller.signal.aborted) return;
+        stageRef.current = projection;
         setStage(projection);
         setSummary(nextSummary);
         onContextChange({
@@ -81,6 +90,11 @@ export function MingliBranchSceneHost({
     return () => controller.abort();
   }, [onContextChange, retry, route.mode, route.subjectId, route.year]);
 
+  useEffect(() => () => {
+    generationRequestRef.current += 1;
+    generationControllerRef.current?.abort();
+  }, []);
+
   const selectLayer = (layer: MingliReadingLayer) => {
     const next = { ...route, layer };
     setRoute(next);
@@ -95,15 +109,38 @@ export function MingliBranchSceneHost({
   };
   const generateAgentReading = () => {
     if (stage === null || agentGenerating) return;
+    const requestedStage = stage;
+    const requestId = generationRequestRef.current + 1;
+    generationRequestRef.current = requestId;
+    generationControllerRef.current?.abort();
+    const controller = new AbortController();
+    generationControllerRef.current = controller;
     setAgentGenerating(true);
     setAgentError(null);
-    void generateMingliAgentReading(stage)
-      .then(() => loadMingliReadingSummary(stage))
-      .then((nextSummary) => setSummary(nextSummary))
-      .catch((cause) => {
-        setAgentError(cause instanceof Error ? cause.message : String(cause));
+    void generateMingliAgentReading(requestedStage, controller.signal)
+      .then(() => loadMingliReadingSummary(requestedStage, controller.signal))
+      .then((nextSummary) => {
+        const activeStage = stageRef.current;
+        if (
+          !controller.signal.aborted
+          && generationRequestRef.current === requestId
+          && activeStage !== null
+          && summaryMatchesStage(nextSummary, activeStage)
+        ) {
+          setSummary(nextSummary);
+        }
       })
-      .finally(() => setAgentGenerating(false));
+      .catch((cause) => {
+        if (!controller.signal.aborted && generationRequestRef.current === requestId) {
+          setAgentError(cause instanceof Error ? cause.message : String(cause));
+        }
+      })
+      .finally(() => {
+        if (generationRequestRef.current === requestId) {
+          setAgentGenerating(false);
+          generationControllerRef.current = null;
+        }
+      });
   };
 
   if (error) {
@@ -139,7 +176,7 @@ export function MingliBranchSceneHost({
       onGenerateAgent={generateAgentReading}
       onOpenStage={openStage}
       stage={stage}
-      summary={summary}
+      summary={summaryMatchesStage(summary, stage) ? summary : null}
     />
   );
 }

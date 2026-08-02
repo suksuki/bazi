@@ -238,5 +238,8 @@ The Owner-approved specialist Mingli Agent decision, implemented one-call
 Reading path, typed semantic guards and current local-model qualification
 failure are recorded in
 [`docs/18_V60_MINGLI_AGENT_DECISION_AND_BUILD.md`](docs/18_V60_MINGLI_AGENT_DECISION_AND_BUILD.md).
+The Owner-approved cognitive-system constitution, shared Reading Claim Graph,
+blind/reconciliation boundary and functional delivery sequence are recorded in
+[`docs/19_V60_MINGLI_COGNITIVE_SYSTEM_CONSTITUTION_V1.md`](docs/19_V60_MINGLI_COGNITIVE_SYSTEM_CONSTITUTION_V1.md).
 The running implementation history is kept in
 [`docs/CHANGELOG.md`](docs/CHANGELOG.md).

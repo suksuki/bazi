@@ -1,5 +1,68 @@
 # V60 Change Log
 
+## 2026-08-02
+
+### Whole-chart readings now survive local uncertainty instead of disappearing
+
+- Froze the Owner-approved Mingli Cognitive System Constitution: one specialist
+  Mingli Agent produces one immutable whole-chart Reading; a deterministic
+  15-node Claim Graph is the shared cognitive projection for the Mingli branch
+  and Lab. `BLIND_READING` is active and physically excludes profile/reality
+  context; `RECONCILIATION` remains reserved until an Observation Ledger exists.
+- Replaced interpretation-wide pass/fail with Claim-level admission. A private
+  Owner-review Reading must contain a whole-chart thesis even when some
+  mechanisms remain disputed. `PROVISIONAL` and `NEEDS_RECONCILIATION` prose
+  stays visible; only the affected Claim becomes `WITHHELD` for natal/timing
+  backflow, relation-membership-to-effect promotion, unsupported work-path
+  closure, high-risk events or a localized fact/coordinate error. Canonical
+  typed fact drift and structurally unreadable output remain hard failures.
+- Restored `gemma4:latest` as the product qualification candidate and kept
+  Qwen as a research comparison. The same-contract Qwen3.6 run took 250,557 ms
+  (3,282 input / 2,643 output tokens), failed its referenced hypothesis identity
+  and promoted candidate mechanisms to conclusions; it remains unqualified.
+- Generated the real Owner-chart Gemma4 Reading under profile `.010` in
+  47,219 ms (4,346 input / 2,141 output tokens). It gave a clear weak-day-master
+  judgment and competing `食伤制杀泄秀` / `食伤生财` explanations instead of
+  engineering copy. It remains private Owner-review material: its timing-backed
+  natal work path and localized career/family/relationship overreach are
+  quarantined while the whole thesis, day-master judgment and other Claims stay
+  readable. This is a material first-reading improvement, not an assertion that
+  the system has reached advanced professional qualification.
+- Advanced the deterministic Claim Graph to `.005`. It now preserves mechanism
+  evidence separately from chart basis, keeps exact Dayun/Annual coordinate and
+  relation evidence, and retains the Agent's original discriminating question.
+  A condition field can no longer launder an unconditional effect assertion;
+  `TIMING_NATAL` is covered by the same natal/time isolation as Principle,
+  Image and Themes.
+- Made Claim admission dependency-aware. A `WITHHELD` work path cannot continue
+  to support the whole thesis or project into life domains, and the affected
+  whole thesis is explicitly downgraded to `NEEDS_RECONCILIATION` while remaining
+  readable as the current best initial answer. Candidate mechanism confidence
+  above the dossier is capped rather than presented as professionally admitted.
+- Froze the exact Owner Gemma4 output as a regression sample. Its current graph
+  keeps Day Master and Life Image readable, marks both mechanism hypotheses and
+  the whole thesis for adjudication, and locally withholds Work Path, Career,
+  Relationship, Family and Dayun. The persisted Annual coordinate `E012` is no
+  longer lost during projection.
+- Closed a cross-Case asynchronous display leak: a slow Agent response for Case
+  A is aborted and lineage-checked before it can enter Case B; Reading, Lab and
+  both footers consume only the summary matching the active Case/Chart/LifeCase/
+  Reading lineage. Withheld Day Master or natal-baseline values are no longer
+  exposed in headings.
+- Added explicit research checklists for the three-harmony candidate,
+  食伤制官杀 and 食伤生财; isolated natal and timing evidence at field level;
+  and required compact complete headings and chart-basis citations. The current
+  Gemma question is preserved rather than silently rewritten; professional
+  review found it still too leading to distinguish the two hypotheses, so
+  question quality remains part of the next qualification round.
+- Kept the same append-only Case/Chart/Reading lineage and one-generation,
+  multi-consumer cost model. GET, refresh, four-layer navigation, Lab and the
+  four/six-pillar stage never call the model again.
+- Passed all 340 backend tests, Ruff, TypeScript/Vite build, Runtime
+  Architecture `.055`, source maintainability and the shared-scene contract
+  audit. Real signed-in Desktop Chrome covered the Owner branch's four layers,
+  per-Claim quarantine, Lab shared-graph projection and refresh recovery.
+
 ## 2026-08-01
 
 ### Specialist Mingli Agent replaces template copy, without promoting a weak model

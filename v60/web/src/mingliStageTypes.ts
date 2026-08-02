@@ -1,3 +1,5 @@
+import type { MingliReadingClaimGraph } from "./mingliClaimGraphTypes";
+
 export type MingliStageMode = "NATAL_4" | "NATAL_DAYUN_YEAR_6";
 export type MingliStageSubjectId = string;
 
@@ -102,7 +104,7 @@ export interface MingliStageProjection {
 export interface MingliReadingSummaryProjection {
   summary_ref: string;
   summary_hash: string;
-  summary_version: "v60.mingli-reading-summary.002";
+  summary_version: "v60.mingli-reading-summary.003";
   case_ref: string;
   chart_version_ref: string;
   life_case_revision_ref: string;
@@ -110,10 +112,16 @@ export interface MingliReadingSummaryProjection {
   reading_hash: string;
   subject_kind: "HUMAN_OWNER" | "HUMAN_REFERENCE" | "CANONICAL_SYNTHETIC";
   reading_brief: import("./homeReadingTypes").HomeReadingBrief;
-  agent_runtime_status: "READY" | "DISABLED" | "MISCONFIGURED" | "UNQUALIFIED";
+  agent_runtime_status:
+    | "READY"
+    | "READY_FOR_OWNER_REVIEW"
+    | "DISABLED"
+    | "MISCONFIGURED";
   agent_generation_available: boolean;
   agent_status: "READY" | "NOT_GENERATED";
   agent_reading: MingliAgentReading | null;
+  claim_graph: MingliReadingClaimGraph | null;
+  agent_projection_scope: "OWNER_REVIEW" | "PUBLIC" | "NOT_GENERATED";
   image_projection_status: "AGENT_INTERPRETATION" | "NOT_GENERATED";
   professional_verdict_allowed: false;
   canonical_write_allowed: false;

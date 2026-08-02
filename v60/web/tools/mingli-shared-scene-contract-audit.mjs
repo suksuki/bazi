@@ -25,6 +25,7 @@ const [
   readingJourney,
   stageNavigation,
   profileManager,
+  branchSceneHost,
 ] = await Promise.all([
   read("components", "ExperienceStoryCanvas.tsx"),
   read("components", "MingliSceneHost.tsx"),
@@ -43,6 +44,7 @@ const [
   read("components", "MingliReadingJourney.tsx"),
   read("mingliStageNavigation.ts"),
   read("components", "HomeProfileManager.tsx"),
+  read("components", "MingliBranchSceneHost.tsx"),
 ]);
 
 const expect = (condition, message) => {
@@ -107,21 +109,33 @@ expect(
     characterMedia.includes('mode === "poster"'),
   "character-media:reduced-motion-must-use-poster",
 );
-for (const lineageCheck of [
-  "stage.case_ref === home.case.case_ref",
-  "stage.chart_version_ref === home.chart.chart_version_ref",
-  "stage.life_case_revision_ref === home.life_case.life_case_revision_ref",
-  "stage.reading_ref === reading.reading_ref",
-]) {
-  expect(
-    readingJourney.includes(lineageCheck),
-    `reading-journey:missing-home-stage-lineage-guard:${lineageCheck}`,
-  );
-}
 expect(
-  readingJourney.includes("这不是专业复核后的命理 Reading") &&
-    readingJourney.includes("stage.columns"),
-  "reading-journey:synthetic-subject-must-use-stage-only-boundary",
+  readingJourney.includes("summaryMatchesStage") &&
+    readingJourney.includes("summary?.claim_graph") &&
+    !readingJourney.includes("reading.output"),
+  "reading-journey:must-consume-validated-shared-claim-graph",
+);
+expect(
+  readingJourney.includes("dayMasterAdmitted") &&
+    readingJourney.includes('"日主状态待校准"') &&
+    readingJourney.includes("natalAdmitted ? natal.statement") &&
+    readingJourney.includes('context="原局基线"'),
+  "reading-journey:withheld-day-master-or-natal-must-not-leak",
+);
+expect(
+  labInspector.includes("claimGraph: MingliReadingClaimGraph | null") &&
+    labInspector.includes("data-claim-graph-ref={claimGraph.graph_ref}") &&
+    sceneHost.includes("claimGraph={currentClaimGraph}") &&
+    sceneHost.includes("summaryMatchesStage(readingSummary, stage)") &&
+    !sceneHost.includes("claimGraph={readingSummary?.claim_graph ?? null}"),
+  "lab-inspector:must-consume-the-same-summary-claim-graph",
+);
+expect(
+  sceneHost.includes("generationRequestRef.current === requestId") &&
+    sceneHost.includes("summaryMatchesStage(summary, activeStage)") &&
+    branchSceneHost.includes("generationRequestRef.current === requestId") &&
+    branchSceneHost.includes("summaryMatchesStage(nextSummary, activeStage)"),
+  "agent-generation:stale-case-response-must-not-commit",
 );
 expect(
   !readingJourney.includes("讲这一层"),
@@ -177,7 +191,8 @@ console.log(
       audioReleaseOnUnmount: true,
       reducedMotionPoster: true,
       exactReadingLineageGuard: true,
-      syntheticReadingIsolation: true,
+      staleAgentGenerationCommitBlocked: true,
+      sharedClaimGraphConsumers: ["MingliReadingJourney", "MingliLabSceneInspector"],
       readingLayerRecovery: true,
       profileFocusIsolation: true,
       profileMutationRecovery: true,

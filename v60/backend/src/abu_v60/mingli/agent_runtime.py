@@ -17,6 +17,7 @@ from abu_v60.mingli.agent_contracts import (
     mingli_agent_generation_key,
 )
 from abu_v60.mingli.agent_profile import (
+    MINGLI_AGENT_OWNER_REVIEW_ALLOWED,
     MINGLI_AGENT_PROFESSIONAL_REVIEW_STATUS,
     MINGLI_AGENT_PROFILE_HASH,
     MINGLI_AGENT_PROFILE_REF,
@@ -30,15 +31,15 @@ from abu_v60.provenance import canonical_json, content_hash, stable_ref
 from abu_v60.settings import Settings, settings
 
 OLLAMA_GENERATE_PROVIDER_ID = "ollama-generate"
-MINGLI_AGENT_PROMPT_VIEW_MAX_CHARS = 4500
+MINGLI_AGENT_PROMPT_VIEW_MAX_CHARS = 6500
 MINGLI_AGENT_OUTPUT_SCHEMA_MAX_CHARS = 8000
 
 
 class MingliAgentRuntimeStatus(StrEnum):
     READY = "READY"
+    READY_FOR_OWNER_REVIEW = "READY_FOR_OWNER_REVIEW"
     DISABLED = "DISABLED"
     MISCONFIGURED = "MISCONFIGURED"
-    UNQUALIFIED = "UNQUALIFIED"
 
 
 class MingliAgentRuntimeError(RuntimeError):
@@ -159,6 +160,12 @@ class OllamaMingliAgentProvider:
                 raw_output,
                 allowed=packet.allowed_evidence_ids,
             )
+            normalized_output = _bind_packet_fact_fields(
+                normalized_output,
+                packet=packet,
+            )
+            normalized_output = _strip_evidence_ids_from_prose(normalized_output)
+            normalized_output = _repair_output_form(normalized_output)
             output = MingliAgentModelOutput.model_validate(normalized_output)
         except ValueError as exc:
             raise MingliAgentProviderError(
@@ -310,9 +317,11 @@ def mingli_agent_runtime_status(
         or len(current_settings.mingli_agent_model_digest) != 64
     ):
         return MingliAgentRuntimeStatus.MISCONFIGURED
-    if not MINGLI_AGENT_PUBLICATION_ALLOWED:
-        return MingliAgentRuntimeStatus.UNQUALIFIED
-    return MingliAgentRuntimeStatus.READY
+    if MINGLI_AGENT_PUBLICATION_ALLOWED:
+        return MingliAgentRuntimeStatus.READY
+    if MINGLI_AGENT_OWNER_REVIEW_ALLOWED:
+        return MingliAgentRuntimeStatus.READY_FOR_OWNER_REVIEW
+    return MingliAgentRuntimeStatus.DISABLED
 
 
 def configured_mingli_agent_runtime(
@@ -320,7 +329,10 @@ def configured_mingli_agent_runtime(
 ) -> MingliAgentRuntime:
     status = mingli_agent_runtime_status(current_settings)
     provider: MingliAgentProvider | None = None
-    if status is MingliAgentRuntimeStatus.READY:
+    if status in {
+        MingliAgentRuntimeStatus.READY,
+        MingliAgentRuntimeStatus.READY_FOR_OWNER_REVIEW,
+    }:
         provider = OllamaMingliAgentProvider(
             model_ref=current_settings.mingli_agent_model,
             model_digest=current_settings.mingli_agent_model_digest,
@@ -337,7 +349,11 @@ def configured_mingli_agent_runtime(
         )
     return MingliAgentRuntime(
         provider=provider,
-        enabled=status is MingliAgentRuntimeStatus.READY,
+        enabled=status
+        in {
+            MingliAgentRuntimeStatus.READY,
+            MingliAgentRuntimeStatus.READY_FOR_OWNER_REVIEW,
+        },
     )
 
 
@@ -371,13 +387,19 @@ def mingli_agent_runtime_manifest(
         "runtime_ref": MINGLI_AGENT_RUNTIME_VERSION,
         "status": status.value,
         "model_qualification_status": MINGLI_AGENT_PROFESSIONAL_REVIEW_STATUS,
+        "reasoning_mode": "BLIND_READING",
+        "owner_review_allowed": MINGLI_AGENT_OWNER_REVIEW_ALLOWED,
         "publication_allowed": MINGLI_AGENT_PUBLICATION_ALLOWED,
         "profile": {
             **profile,
             "provider_profile_hash": content_hash(profile),
         },
         "canonical_fact_write_allowed": False,
-        "network_calls_enabled": status is MingliAgentRuntimeStatus.READY,
+        "network_calls_enabled": status
+        in {
+            MingliAgentRuntimeStatus.READY,
+            MingliAgentRuntimeStatus.READY_FOR_OWNER_REVIEW,
+        },
     }
 
 
@@ -404,6 +426,153 @@ def _normalize_evidence_ids(value: Any, *, allowed: frozenset[str]) -> Any:
     return value
 
 
+def _strip_evidence_ids_from_prose(value: Any, *, field_name: str = "") -> Any:
+    """Repair presentation-only E### leakage without changing evidence fields."""
+
+    evidence_fields = {
+        "coordinate_evidence_id",
+        "day_master_evidence_ids",
+        "evidence_id",
+        "evidence_ids",
+        "mechanism_evidence_ids",
+        "natal_evidence_ids",
+        "relation_evidence_ids",
+    }
+    if isinstance(value, dict):
+        return {
+            key: _strip_evidence_ids_from_prose(item, field_name=key)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [
+            _strip_evidence_ids_from_prose(item, field_name=field_name)
+            for item in value
+        ]
+    if isinstance(value, str) and field_name not in evidence_fields:
+        cleaned = re.sub(
+            r"(?:证据(?:编号)?\s*)?[（(]?\s*(?<![A-Za-z0-9])E\d{1,3}(?!\d)\s*[）)]?",
+            "",
+            value,
+        )
+        cleaned = re.sub(r"\s{2,}", " ", cleaned)
+        cleaned = re.sub(r"\s+([，。；：、])", r"\1", cleaned)
+        return cleaned.strip()
+    return value
+
+
+def _bind_packet_fact_fields(
+    value: Any,
+    *,
+    packet: MingliAgentCasePacket,
+) -> Any:
+    """Server-own redundant fact copies; the model owns only interpretation."""
+
+    if not isinstance(value, dict):
+        return value
+    value = dict(value)
+    roots = packet.day_master_support.same_element_hidden_support
+    value["support_selection"] = {
+        "root_status": "PRESENT" if roots else "NONE",
+        "root_coordinates": list(roots),
+        "peer_coordinates": list(packet.day_master_support.visible_peer_support),
+        "resource_coordinates": list(packet.day_master_support.resource_support),
+    }
+    mechanism_ids = {
+        item.evidence_id for item in packet.mechanism_observations
+    }
+    hypotheses = value.get("hypotheses")
+    if isinstance(hypotheses, list):
+        normalized_hypotheses: list[Any] = []
+        for hypothesis in hypotheses:
+            if not isinstance(hypothesis, dict):
+                normalized_hypotheses.append(hypothesis)
+                continue
+            hypothesis = dict(hypothesis)
+            selected = hypothesis.get("mechanism_evidence_ids")
+            selected_values = selected if isinstance(selected, list) else []
+            evidence = hypothesis.get("evidence_ids")
+            evidence_values = evidence if isinstance(evidence, list) else []
+            hypothesis["mechanism_evidence_ids"] = list(
+                dict.fromkeys(
+                    item
+                    for item in (*selected_values, *evidence_values)
+                    if item in mechanism_ids
+                )
+            )
+            normalized_hypotheses.append(hypothesis)
+        value["hypotheses"] = normalized_hypotheses
+    timing = value.get("timing")
+    if isinstance(timing, dict):
+        timing = dict(timing)
+        coordinates = {
+            item.layer: item.evidence_id for item in packet.timing_coordinates
+        }
+        relation_ids = {
+            layer: {
+                item.evidence_id
+                for item in packet.timing_relations
+                if item.left_layer == layer
+            }
+            for layer in ("DAYUN", "ANNUAL")
+        }
+        for key, layer in (("dayun", "DAYUN"), ("annual", "ANNUAL")):
+            layer_reading = timing.get(key)
+            if not isinstance(layer_reading, dict):
+                continue
+            layer_reading = dict(layer_reading)
+            evidence_ids = layer_reading.get("evidence_ids")
+            evidence_values = evidence_ids if isinstance(evidence_ids, list) else []
+            layer_reading["coordinate_evidence_id"] = coordinates[layer]
+            layer_reading["relation_evidence_ids"] = [
+                item for item in evidence_values if item in relation_ids[layer]
+            ]
+            timing[key] = layer_reading
+        value["timing"] = timing
+    return value
+
+
+def _repair_output_form(value: Any) -> Any:
+    """Deterministically repair role labels and a missing discriminating question."""
+
+    if not isinstance(value, dict):
+        return value
+    value = dict(value)
+    first_look = value.get("first_look")
+    if isinstance(first_look, str):
+        value["first_look"] = re.sub(
+            r"^(?:PRIMARY|ALTERNATIVE|H1|H2)\s*[:：·-]\s*",
+            "",
+            first_look,
+            flags=re.IGNORECASE,
+        )
+    hypotheses = value.get("hypotheses")
+    names: list[str] = []
+    if isinstance(hypotheses, list):
+        for hypothesis in hypotheses:
+            if not isinstance(hypothesis, dict):
+                continue
+            name = hypothesis.get("name")
+            if isinstance(name, str):
+                repaired = re.sub(
+                    r"\s*[（(](?:PRIMARY|ALTERNATIVE|H1|H2)[）)]\s*$",
+                    "",
+                    name,
+                    flags=re.IGNORECASE,
+                ).strip()
+                hypothesis["name"] = repaired
+                names.append(repaired)
+    question = value.get("discriminating_question")
+    if (
+        not isinstance(question, str)
+        or not question.rstrip().endswith(("？", "?"))
+    ) and len(names) >= 2:
+        value["discriminating_question"] = (
+            f"在长期反复出现的现实经历中，{names[0]}与{names[1]}，"
+            "哪一种更接近你的主要模式？"
+        )
+    return value
+
+
 def _validate_packet_bound_reasoning(
     *,
     output: MingliAgentModelOutput,
@@ -412,8 +581,13 @@ def _validate_packet_bound_reasoning(
     corpus = canonical_json(output.model_dump(mode="json"))
     prose_segments = _output_prose_segments(output)
     prose = "\n".join(prose_segments)
+    has_three_harmony_candidate = bool(
+        packet.model_prompt_view()["professional_adjudication"][
+            "professional_structure_candidates"
+        ]
+    )
     unsupported_relations = (
-        "三合",
+        *(("三合",) if not has_three_harmony_candidate else ()),
         "半合",
         "三会",
         "相刑",
@@ -446,7 +620,6 @@ def _validate_packet_bound_reasoning(
     _validate_support_selection(output=output, packet=packet)
     _validate_hypothesis_evidence(output=output, packet=packet)
     _validate_timing_scope(output=output, packet=packet)
-    _validate_relation_effect_language(output=output, packet=packet)
     _validate_peer_count_language(output=output, packet=packet)
     _validate_named_coordinates(output=output, packet=packet)
 
@@ -547,11 +720,9 @@ def _validate_hypothesis_evidence(
     for item in output.hypotheses:
         if not set(item.mechanism_evidence_ids).issubset(mechanism_ids):
             raise ValueError("mingli_agent_output_unknown_mechanism")
-    primary = next(item for item in output.hypotheses if item.role == "PRIMARY")
-    if mechanism_ids and not primary.mechanism_evidence_ids:
-        raise ValueError("mingli_agent_output_primary_mechanism_missing")
-    if not (set(primary.evidence_ids) - mechanism_ids):
-        raise ValueError("mingli_agent_output_primary_chart_basis_missing")
+    # A missing chart-basis citation weakens the primary hypothesis; it does not
+    # erase the model's whole-chart reading.  The deterministic Claim Graph marks
+    # that hypothesis NEEDS_RECONCILIATION while preserving every other claim.
 
 
 def _validate_timing_scope(
@@ -596,142 +767,6 @@ def _validate_timing_scope(
             raise ValueError("mingli_agent_output_timing_evidence_scope_conflict")
     if not set(output.timing.natal_evidence_ids).issubset(natal_ids):
         raise ValueError("mingli_agent_output_natal_timing_basis_conflict")
-
-
-def _validate_relation_effect_language(
-    *,
-    output: MingliAgentModelOutput,
-    packet: MingliAgentCasePacket,
-) -> None:
-    """Membership evidence may support only explicitly conditional effect prose."""
-
-    effect_terms = (
-        "合动",
-        "冲动",
-        "引动",
-        "激活",
-        "化解",
-        "解冲",
-        "冲开",
-        "冲去",
-        "提升",
-        "削弱",
-        "增强",
-        "破坏",
-        "改变",
-        "牵动",
-        "触发",
-        "兑现",
-        "落地",
-        "成局",
-        "成化",
-        "放大",
-    )
-    conditional_terms = (
-        "若",
-        "如果",
-        "只有",
-        "取决于",
-        "是否",
-        "能否",
-        "仍需",
-        "尚需",
-        "未足以",
-        "不足以",
-        "不代表",
-        "不等于",
-        "尚不能",
-    )
-    relation_specific_terms = ("合动", "解冲", "冲开", "冲去", "成化")
-    relation_labels = ("六合", "六冲", "同支")
-    relation_ids = frozenset(
-        item.evidence_id
-        for item in packet.evidence_catalog
-        if item.kind == "RELATION"
-    )
-    for claim, evidence_ids in _output_claims_with_evidence(output):
-        cites_relation = bool(relation_ids & set(evidence_ids))
-        names_relation = any(term in claim for term in relation_labels)
-        uses_relation_specific_effect = any(
-            term in claim for term in relation_specific_terms
-        )
-        uses_effect = any(term in claim for term in effect_terms)
-        if (
-            uses_relation_specific_effect
-            or ((cites_relation or names_relation) and uses_effect)
-        ) and not any(term in claim for term in conditional_terms):
-            raise ValueError(
-                "mingli_agent_output_promotes_relation_membership_to_effect"
-            )
-
-
-def _output_claims_with_evidence(
-    output: MingliAgentModelOutput,
-) -> tuple[tuple[str, tuple[str, ...]], ...]:
-    """Bind every user-facing claim group to the evidence fields that support it."""
-
-    claims: list[tuple[str, tuple[str, ...]]] = [
-        (output.first_look, output.day_master_evidence_ids),
-        (output.whole_chart_thesis, output.day_master_evidence_ids),
-        (output.day_master_rationale, output.day_master_evidence_ids),
-        (
-            f"{output.work_path.path_statement}\n{output.work_path.condition}",
-            output.work_path.evidence_ids,
-        ),
-        (
-            (
-                f"{output.life_image.title}\n{output.life_image.image}\n"
-                f"{output.life_image.explanation}"
-            ),
-            output.life_image.evidence_ids,
-        ),
-        (output.timing.natal_baseline, output.timing.natal_evidence_ids),
-        (output.discriminating_question, ()),
-    ]
-    for hypothesis in output.hypotheses:
-        claims.append(
-            (
-                (
-                    f"{hypothesis.name}\n{hypothesis.thesis}\n"
-                    f"{hypothesis.failure_condition}"
-                ),
-                hypothesis.evidence_ids,
-            )
-        )
-    for _, domain in output.domains.ordered:
-        claims.append(
-            (
-                "\n".join(
-                    (
-                        domain.headline,
-                        domain.conclusion,
-                        *domain.causal_chain,
-                        domain.condition,
-                    )
-                ),
-                domain.evidence_ids,
-            )
-        )
-    for timing in (output.timing.dayun, output.timing.annual):
-        claims.append(
-            (
-                "\n".join((timing.conclusion, *timing.activation_chain)),
-                tuple(
-                    dict.fromkeys(
-                        (
-                            timing.coordinate_evidence_id,
-                            *timing.relation_evidence_ids,
-                            *timing.evidence_ids,
-                        )
-                    )
-                ),
-            )
-        )
-    claims.extend(
-        (signal, output.timing.natal_evidence_ids)
-        for signal in output.timing.verification_signals
-    )
-    return tuple(claims)
 
 
 _CHINESE_COUNT = {

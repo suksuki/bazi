@@ -6,10 +6,11 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
+from abu_v60.mingli.agent_method_cards import mechanism_method_card
 from abu_v60.provenance import content_hash, stable_ref
 
 MINGLI_AGENT_PACKET_VERSION = "v60.mingli-agent-case-packet.001"
-MINGLI_AGENT_PROMPT_VIEW_VERSION = "v60.mingli-agent-prompt-view.002"
+MINGLI_AGENT_PROMPT_VIEW_VERSION = "v60.mingli-agent-prompt-view.006"
 MINGLI_AGENT_READING_VERSION = "v60.mingli-agent-reading.001"
 
 Confidence = Literal["LOW", "MEDIUM", "HIGH"]
@@ -22,7 +23,7 @@ EvidenceKind = Literal[
     "TIMING",
 ]
 LifeDomain = Literal["personality", "career", "wealth", "relationship", "family"]
-NarrativeStep = Annotated[str, StringConstraints(min_length=4, max_length=100)]
+NarrativeStep = Annotated[str, StringConstraints(min_length=4, max_length=160)]
 
 
 class AgentEvidenceItem(BaseModel):
@@ -205,6 +206,17 @@ class MingliAgentCasePacket(BaseModel):
 
         return {
             "prompt_view_version": MINGLI_AGENT_PROMPT_VIEW_VERSION,
+            "reasoning_contract": {
+                "mode": "BLIND_READING",
+                "profile_context_allowed": False,
+                "life_case_observations_allowed": False,
+                "historical_answers_allowed": False,
+                "previous_reading_prose_allowed": False,
+                "whole_chart_judgment_required": True,
+                "uncertainty_expression": (
+                    "COMPETING_HYPOTHESIS_CONDITION_AND_CONFIDENCE"
+                ),
+            },
             "chart": {
                 "day_master_stem": self.day_master_stem,
                 "day_master_element": self.day_master_element,
@@ -227,6 +239,7 @@ class MingliAgentCasePacket(BaseModel):
                 ],
             },
             "day_master_support": self.day_master_support.model_dump(mode="json"),
+            "professional_adjudication": _professional_adjudication_view(self),
             "natal_relations": [
                 item.model_dump(mode="json") for item in self.natal_relations
             ],
@@ -288,6 +301,215 @@ class MingliAgentCasePacket(BaseModel):
         )
 
 
+_BRANCH_ELEMENT = {
+    "寅": "wood",
+    "卯": "wood",
+    "辰": "earth",
+    "巳": "fire",
+    "午": "fire",
+    "未": "earth",
+    "申": "metal",
+    "酉": "metal",
+    "戌": "earth",
+    "亥": "water",
+    "子": "water",
+    "丑": "earth",
+}
+_GENERATES = {
+    "wood": "fire",
+    "fire": "earth",
+    "earth": "metal",
+    "metal": "water",
+    "water": "wood",
+}
+_CONTROLS = {
+    "wood": "earth",
+    "earth": "water",
+    "water": "fire",
+    "fire": "metal",
+    "metal": "wood",
+}
+_THREE_HARMONY_GROUPS = (
+    ("申子辰", "water"),
+    ("亥卯未", "wood"),
+    ("寅午戌", "fire"),
+    ("巳酉丑", "metal"),
+)
+_ELEMENT_LABEL = {
+    "wood": "木",
+    "fire": "火",
+    "earth": "土",
+    "metal": "金",
+    "water": "水",
+}
+
+
+def _professional_adjudication_view(packet: MingliAgentCasePacket) -> dict[str, Any]:
+    month_element = _BRANCH_ELEMENT[packet.month_command_branch]
+    day_element = packet.day_master_element
+    if month_element == day_element:
+        seasonal_relation = "SAME_ELEMENT_SEASONAL_SUPPORT"
+    elif _GENERATES[month_element] == day_element:
+        seasonal_relation = "RESOURCE_SEASONAL_SUPPORT"
+    elif _GENERATES[day_element] == month_element:
+        seasonal_relation = "OUTPUT_SEASONAL_DRAIN"
+    elif _CONTROLS[month_element] == day_element:
+        seasonal_relation = "OFFICIAL_SEASONAL_PRESSURE"
+    else:
+        seasonal_relation = "WEALTH_SEASONAL_DRAIN"
+
+    branch_coordinates: dict[str, list[dict[str, str]]] = {}
+    for pillar in packet.pillars:
+        branch_coordinates.setdefault(pillar.branch, []).append(
+            {
+                "slot": pillar.slot,
+                "branch": pillar.branch,
+                "evidence_id": pillar.evidence_id,
+            }
+        )
+    structure_candidates = []
+    present_branches = set(branch_coordinates)
+    for members, result_element in _THREE_HARMONY_GROUPS:
+        if not set(members).issubset(present_branches):
+            continue
+        member_coordinates = tuple(
+            coordinate
+            for member in members
+            for coordinate in branch_coordinates[member]
+        )
+        structure_candidates.append(
+            {
+                "relation_type": "three_harmony_membership_candidate",
+                "label": f"{members}三合{_ELEMENT_LABEL[result_element]}成员齐备候选",
+                "members": tuple(members),
+                "result_element": result_element,
+                "member_coordinates": member_coordinates,
+                "evidence_ids": tuple(
+                    dict.fromkeys(
+                        coordinate["evidence_id"]
+                        for coordinate in member_coordinates
+                    )
+                ),
+                "membership_status": "CLASSICAL_MEMBER_SET_PRESENT",
+                "effect_status": "REQUIRES_WHOLE_CHART_ADJUDICATION",
+            }
+        )
+
+    occurrence_map: dict[str, list[str]] = {}
+    for pillar in packet.pillars:
+        occurrence_map.setdefault(pillar.visible_ten_god, []).append(
+            f"{pillar.slot}干{pillar.stem}"
+        )
+        for hidden_stem, ten_god in zip(
+            pillar.hidden_stems,
+            pillar.hidden_ten_gods,
+            strict=True,
+        ):
+            occurrence_map.setdefault(ten_god, []).append(
+                f"{pillar.slot}支藏{hidden_stem}"
+            )
+    natal_evidence_ids = tuple(
+        item.evidence_id
+        for item in packet.evidence_catalog
+        if item.kind != "TIMING"
+    )
+    timing_evidence_ids = tuple(
+        item.evidence_id
+        for item in packet.evidence_catalog
+        if item.kind == "TIMING"
+    )
+    mechanism_evidence_ids = {
+        item.evidence_id for item in packet.mechanism_observations
+    }
+    chart_basis_evidence_ids = tuple(
+        item for item in natal_evidence_ids if item not in mechanism_evidence_ids
+    )
+    return {
+        "natal_evidence_ids": natal_evidence_ids,
+        "timing_evidence_ids": timing_evidence_ids,
+        "field_evidence_scope": {
+            "natal_only_fields": (
+                "first_look",
+                "whole_chart_thesis",
+                "hypotheses",
+                "work_path",
+                "life_image",
+                "domains",
+                "timing.natal_baseline",
+            ),
+            "natal_allowed": natal_evidence_ids,
+            "primary_requires_chart_basis_from": chart_basis_evidence_ids,
+            "natal_prose_forbidden": (
+                "大运",
+                "流年",
+                "岁运",
+                *(item.pillar for item in packet.timing_coordinates),
+            ),
+        },
+        "seasonal_context": {
+            "month_command_branch": packet.month_command_branch,
+            "month_command_element": month_element,
+            "relation_to_day_master": seasonal_relation,
+            "counting_warning": "SEASON_ROOT_POSITION_AND_PATH_MUST_BE_WEIGHED_NOT_COUNTED",
+        },
+        "support_order": {
+            "hidden_root_candidates": packet.day_master_support.same_element_hidden_support,
+            "visible_peer_support": packet.day_master_support.visible_peer_support,
+            "hidden_resource_support": packet.day_master_support.resource_support,
+            "decision_warning": (
+                "VISIBLE_PEERS_OR_HIDDEN_RESOURCE_CANNOT_BY_THEMSELVES_OVERRIDE_"
+                "SEASON_AND_ROOT_STATUS"
+            ),
+        },
+        "ten_god_occurrences": tuple(
+            {
+                "ten_god": ten_god,
+                "coordinates": tuple(coordinates),
+            }
+            for ten_god, coordinates in sorted(occurrence_map.items())
+        ),
+        "professional_structure_candidates": tuple(structure_candidates),
+        "candidate_method_cards": {
+            "authority": "RESEARCH_CHECKLIST_NOT_PROFESSIONAL_CONCLUSION",
+            "three_harmony": tuple(
+                {
+                    "candidate_label": item["label"],
+                    "required_checks": (
+                        "MEMBER_COMPLETION_TYPE",
+                        "MONTH_COMMAND_SUPPORT_OR_RESISTANCE",
+                        "RESULT_ELEMENT_STEM_VISIBILITY",
+                        "DISRUPTION_OR_COMPETING_PATH",
+                        "DAY_MASTER_AND_WHOLE_CHART_CAPACITY",
+                    ),
+                    "shortcut_forbidden": (
+                        "MEMBERS_PRESENT_DOES_NOT_MEAN_EFFECT_OR_TRANSFORMATION"
+                    ),
+                }
+                for item in structure_candidates
+            ),
+            "mechanisms": tuple(
+                mechanism_method_card(item) for item in packet.mechanism_observations
+            ),
+            "work_path_closure": {
+                "closed_allowed": False,
+                "reason": (
+                    "SOURCE_USABILITY_TARGET_REACHABILITY_CAPACITY_AND_BLOCKERS_"
+                    "ARE_NOT_PROFESSIONALLY_ADMITTED"
+                ),
+                "allowed": ("CONDITIONAL", "UNCERTAIN", "BROKEN"),
+            },
+        },
+        "required_decision_order": (
+            "WEIGH_SEASON_ROOT_PEER_RESOURCE_DRAIN_WEALTH_AND_PRESSURE",
+            "LOCK_NATAL_PRIMARY_AND_ALTERNATIVE_EXPLANATIONS",
+            "COMPARE_PATTERN_SUCCESS_FAILURE_RESCUE_AND_TRANSFORMATION",
+            "DERIVE_LIFE_DOMAINS_FROM_THE_NATAL_PRIMARY_ONLY",
+            "APPLY_DAYUN_THEN_ANNUAL_WITHOUT_BACKFLOW_TO_NATAL",
+            "ASK_ONE_REALITY_QUESTION_THAT_CAN_REVERSE_THE_PRIMARY_CHOICE",
+        ),
+    }
+
+
 class AgentSupportSelection(BaseModel):
     """The model must acknowledge typed support facts without reclassifying them."""
 
@@ -304,11 +526,11 @@ class AgentHypothesis(BaseModel):
 
     hypothesis_id: Literal["H1", "H2"]
     role: Literal["PRIMARY", "ALTERNATIVE"]
-    name: str = Field(min_length=2, max_length=30)
+    name: str = Field(min_length=2, max_length=48)
     judgment: Literal["WORKS_IF", "PARTIAL", "BLOCKED", "COMPETING"]
     mechanism_evidence_ids: tuple[str, ...] = Field(max_length=4)
-    thesis: str = Field(min_length=12, max_length=180)
-    failure_condition: str = Field(min_length=6, max_length=80)
+    thesis: str = Field(min_length=12, max_length=300)
+    failure_condition: str = Field(min_length=6, max_length=140)
     evidence_ids: tuple[str, ...] = Field(min_length=2, max_length=10)
     confidence: Confidence
 
@@ -316,7 +538,7 @@ class AgentHypothesis(BaseModel):
 class AgentWorkPath(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    path_statement: str = Field(min_length=12, max_length=180)
+    path_statement: str = Field(min_length=12, max_length=260)
     transformation_codes: tuple[
         Literal[
             "GENERATES",
@@ -329,17 +551,17 @@ class AgentWorkPath(BaseModel):
         ...,
     ] = Field(min_length=1, max_length=4)
     closure: Literal["CLOSED", "CONDITIONAL", "BROKEN", "UNCERTAIN"]
-    condition: str = Field(min_length=6, max_length=100)
+    condition: str = Field(min_length=6, max_length=160)
     evidence_ids: tuple[str, ...] = Field(min_length=2, max_length=10)
 
 
 class AgentDomainReading(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    headline: str = Field(min_length=4, max_length=40)
-    conclusion: str = Field(min_length=16, max_length=180)
+    headline: str = Field(min_length=4, max_length=48)
+    conclusion: str = Field(min_length=16, max_length=260)
     causal_chain: tuple[NarrativeStep, ...] = Field(min_length=1, max_length=1)
-    condition: str = Field(min_length=6, max_length=100)
+    condition: str = Field(min_length=6, max_length=160)
     evidence_ids: tuple[str, ...] = Field(min_length=2, max_length=8)
     confidence: Literal["LOW", "MEDIUM"]
 
@@ -371,7 +593,7 @@ class AgentTimingLayerReading(BaseModel):
 
     coordinate_evidence_id: str = Field(min_length=4, max_length=4)
     relation_evidence_ids: tuple[str, ...] = Field(max_length=6)
-    conclusion: str = Field(min_length=12, max_length=180)
+    conclusion: str = Field(min_length=12, max_length=260)
     activation_chain: tuple[NarrativeStep, ...] = Field(min_length=1, max_length=1)
     evidence_ids: tuple[str, ...] = Field(min_length=2, max_length=8)
     confidence: Literal["LOW", "MEDIUM"]
@@ -391,8 +613,8 @@ class AgentLifeImage(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     title: str = Field(min_length=2, max_length=24)
-    image: str = Field(min_length=8, max_length=100)
-    explanation: str = Field(min_length=16, max_length=180)
+    image: str = Field(min_length=8, max_length=140)
+    explanation: str = Field(min_length=16, max_length=280)
     evidence_ids: tuple[str, ...] = Field(min_length=2, max_length=8)
 
 
@@ -401,8 +623,8 @@ class MingliAgentModelOutput(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    first_look: str = Field(min_length=16, max_length=80)
-    whole_chart_thesis: str = Field(min_length=24, max_length=220)
+    first_look: str = Field(min_length=16, max_length=120)
+    whole_chart_thesis: str = Field(min_length=24, max_length=320)
     day_master_state: Literal[
         "STRONG",
         "WEAK",
@@ -412,14 +634,14 @@ class MingliAgentModelOutput(BaseModel):
         "UNCERTAIN",
     ]
     support_selection: AgentSupportSelection
-    day_master_rationale: str = Field(min_length=16, max_length=160)
+    day_master_rationale: str = Field(min_length=16, max_length=280)
     day_master_evidence_ids: tuple[str, ...] = Field(min_length=2, max_length=8)
     hypotheses: tuple[AgentHypothesis, ...] = Field(min_length=2, max_length=2)
     work_path: AgentWorkPath
     life_image: AgentLifeImage
     domains: AgentDomainReadings
     timing: AgentTimingReading
-    discriminating_question: str = Field(min_length=4, max_length=100)
+    discriminating_question: str = Field(min_length=4, max_length=160)
 
     @model_validator(mode="after")
     def professional_shape_is_valid(self) -> MingliAgentModelOutput:
@@ -431,8 +653,13 @@ class MingliAgentModelOutput(BaseModel):
             raise ValueError("mingli_agent_primary_hypothesis_invalid")
         first, second = self.hypotheses
         if (
-            first.mechanism_evidence_ids == second.mechanism_evidence_ids
-            and first.judgment == second.judgment
+            first.name.strip() == second.name.strip()
+            or first.thesis.strip() == second.thesis.strip()
+            or (
+                first.thesis.strip() in second.thesis.strip()
+                and first.failure_condition.strip()
+                == second.failure_condition.strip()
+            )
         ):
             raise ValueError("mingli_agent_hypotheses_not_competing")
         corpus = json.dumps(self.model_dump(mode="json"), ensure_ascii=False)

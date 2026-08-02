@@ -203,6 +203,56 @@
   line-height: 1.6;
 }
 
+.mingli-lab-claim-graph {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(213, 190, 130, 0.24);
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(181, 149, 77, 0.1), rgba(2, 16, 12, 0.2));
+}
+
+.mingli-lab-claim-graph article {
+  display: grid;
+  gap: 3px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(203, 222, 210, 0.1);
+}
+
+.mingli-lab-claim-graph article:last-of-type {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.mingli-lab-claim-graph small,
+.mingli-lab-claim-graph span {
+  color: #8ca095;
+  font-size: 7px;
+}
+
+.mingli-lab-claim-graph strong {
+  color: #eadba9;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 11px;
+  font-weight: 560;
+}
+
+.mingli-lab-claim-graph p {
+  margin: 0;
+  color: #c5d3ca;
+  font-size: 9px;
+  line-height: 1.6;
+}
+
+.mingli-lab-section-title {
+  margin: 1px 0 -2px;
+  color: #a9b9af;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 10px;
+  font-weight: 560;
+  letter-spacing: 0.08em;
+}
+
 .mingli-lab-relation-list {
   display: grid;
   gap: 7px;
@@ -459,4 +509,22 @@
 
 .mingli-scene-host > .mingli-stage-boundary small {
   color: #9b947c;
+}
+.mingli-claim-review-note {
+  color: rgba(245, 220, 166, 0.82);
+  font-size: 0.82rem;
+  line-height: 1.65;
+}
+
+.mingli-lab-claim-graph article[data-claim-status="WITHHELD"] {
+  border-color: rgba(220, 166, 96, 0.42);
+  opacity: 0.78;
+}
+
+.mingli-lab-claim-graph article em {
+  color: rgba(245, 207, 146, 0.88);
+  display: block;
+  font-size: 0.72rem;
+  font-style: normal;
+  margin-top: 0.45rem;
 }

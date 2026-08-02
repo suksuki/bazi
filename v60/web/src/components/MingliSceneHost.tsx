@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { RuntimeMediaManifest } from "../api";
 import {
@@ -28,7 +28,10 @@ import type {
 } from "../mingliStageTypes";
 import { MingliLabSceneInspector } from "./MingliLabSceneInspector";
 import { MingliNarrationDirector } from "./MingliNarrationDirector";
-import { MingliReadingJourney } from "./MingliReadingJourney";
+import {
+  MingliReadingJourney,
+  summaryMatchesStage,
+} from "./MingliReadingJourney";
 import { MingliScenePlayer } from "./MingliScenePlayer";
 
 export function MingliSceneHost({
@@ -49,6 +52,9 @@ export function MingliSceneHost({
   const [route, setRoute] = useState<MingliStageRoute>(readMingliStageRoute);
   const [subjects, setSubjects] = useState<MingliStageSubject[]>([]);
   const [stage, setStage] = useState<MingliStageProjection | null>(null);
+  const stageRef = useRef<MingliStageProjection | null>(null);
+  const generationRequestRef = useRef(0);
+  const generationControllerRef = useRef<AbortController | null>(null);
   const [readingSummary, setReadingSummary] =
     useState<MingliReadingSummaryProjection | null>(null);
   const [agentGenerating, setAgentGenerating] = useState(false);
@@ -68,6 +74,11 @@ export function MingliSceneHost({
     route.subjectId === "current" ? homeLineageKey : "SYNTHETIC";
   const onClock = useCallback((next: MingliNarrationVisualClock) => {
     setClock(next);
+  }, []);
+
+  useEffect(() => () => {
+    generationRequestRef.current += 1;
+    generationControllerRef.current?.abort();
   }, []);
 
   useEffect(() => {
@@ -99,6 +110,9 @@ export function MingliSceneHost({
         projection: null,
       });
       setStage(null);
+      stageRef.current = null;
+      generationRequestRef.current += 1;
+      generationControllerRef.current?.abort();
       setReadingSummary(null);
       setAgentGenerating(false);
       setAgentError(null);
@@ -113,6 +127,10 @@ export function MingliSceneHost({
     const controller = new AbortController();
     const requestedYear =
       route.mode === "NATAL_DAYUN_YEAR_6" ? route.year : null;
+    generationRequestRef.current += 1;
+    generationControllerRef.current?.abort();
+    generationControllerRef.current = null;
+    stageRef.current = null;
     setStageLoading(true);
     setStageError(null);
     setReadingSummary(null);
@@ -140,6 +158,7 @@ export function MingliSceneHost({
       }))
       .then(({ projection, summary }) => {
         if (controller.signal.aborted) return;
+        stageRef.current = projection;
         setStage(projection);
         setReadingSummary(summary);
         setStageLoading(false);
@@ -169,6 +188,7 @@ export function MingliSceneHost({
       .catch((caught) => {
         if (!controller.signal.aborted) {
           setStage(null);
+          stageRef.current = null;
           setReadingSummary(null);
           setNarrationOpen(false);
           setStageLoading(false);
@@ -191,6 +211,10 @@ export function MingliSceneHost({
   ]);
 
   const navigate = (next: MingliStageRoute) => {
+    generationRequestRef.current += 1;
+    generationControllerRef.current?.abort();
+    generationControllerRef.current = null;
+    stageRef.current = null;
     onContextChange({
       subjectId: next.subjectId,
       status: "LOADING",
@@ -217,16 +241,48 @@ export function MingliSceneHost({
   };
   const generateAgentReading = () => {
     if (stage === null || agentGenerating) return;
+    const requestedStage = stage;
+    const requestId = generationRequestRef.current + 1;
+    generationRequestRef.current = requestId;
+    generationControllerRef.current?.abort();
+    const controller = new AbortController();
+    generationControllerRef.current = controller;
     setAgentGenerating(true);
     setAgentError(null);
-    void generateMingliAgentReading(stage)
-      .then(() => loadMingliReadingSummary(stage))
-      .then((summary) => setReadingSummary(summary))
-      .catch((caught) => {
-        setAgentError(caught instanceof Error ? caught.message : String(caught));
+    void generateMingliAgentReading(requestedStage, controller.signal)
+      .then(() => loadMingliReadingSummary(requestedStage, controller.signal))
+      .then((summary) => {
+        const activeStage = stageRef.current;
+        if (
+          !controller.signal.aborted
+          && generationRequestRef.current === requestId
+          && activeStage !== null
+          && summaryMatchesStage(summary, activeStage)
+        ) {
+          setReadingSummary(summary);
+        }
       })
-      .finally(() => setAgentGenerating(false));
+      .catch((caught) => {
+        if (!controller.signal.aborted && generationRequestRef.current === requestId) {
+          setAgentError(caught instanceof Error ? caught.message : String(caught));
+        }
+      })
+      .finally(() => {
+        if (generationRequestRef.current === requestId) {
+          setAgentGenerating(false);
+          generationControllerRef.current = null;
+        }
+      });
   };
+  const currentSummary = stage !== null && summaryMatchesStage(readingSummary, stage)
+    ? readingSummary
+    : null;
+  const currentClaimGraph = currentSummary?.claim_graph ?? null;
+  const currentWholeClaim = currentClaimGraph?.claims.find(
+    (item) => item.semantic_key === "WHOLE_CHART",
+  );
+  const wholeChartNeedsReconciliation =
+    currentWholeClaim?.status === "NEEDS_RECONCILIATION";
   const frame = useMemo(
     () =>
       stage
@@ -391,6 +447,7 @@ export function MingliSceneHost({
             />
           ) : surface === "LAB" ? (
             <MingliLabSceneInspector
+              claimGraph={currentClaimGraph}
               onAskGuide={() => setNarrationOpen(true)}
               onSelectRelation={setSelectedRelationRef}
               selectedRelationRef={selectedRelationRef}
@@ -408,7 +465,7 @@ export function MingliSceneHost({
               onGenerateAgent={generateAgentReading}
               onLayerChange={navigateLayer}
               stage={stage}
-              summary={readingSummary}
+              summary={currentSummary}
             />
           )}
         </div>
@@ -417,18 +474,22 @@ export function MingliSceneHost({
       {stage && surface === "LAB" && (
         <footer className="mingli-stage-boundary">
           <span>
-            系统目前只证明坐标与六冲／六合成员关系
+            {currentClaimGraph
+              ? "Lab 正在展开命理枝上的同一次整盘初断；这里不会另起一套结论。"
+              : "整盘初断生成后，Lab 会在这里展开主解释、竞争解释和证据引用。"}
             {stage.stage_mode === "NATAL_DAYUN_YEAR_6" &&
               ` · 当前大运区间 ${stage.current_dayun_start_date}—${stage.current_dayun_end_date}，交运当日不声明“当前”`}
           </span>
-          <small>关系作用、来源可用性、旺衰、概率、有效做功与吉凶均保持未决</small>
+          <small>单条判断可以继续校准；局部争议不会让整份命盘停止判断。</small>
         </footer>
       )}
       {stage && surface === "READING" && (
         <footer className="mingli-stage-boundary">
           <span>
-            {readingSummary?.agent_reading
-              ? "这份整盘研判已经保存；刷新或切回档案后仍会回到同一结果。"
+            {currentClaimGraph
+              ? wholeChartNeedsReconciliation
+                ? "这份整盘初断已经保存；主解释仍在专业校准，不是定论。"
+                : "这份整盘初断已经保存；刷新或切回档案后仍会回到同一结果。"
               : "四柱已经排定，等待阿布完成一次整盘研判。"}
           </span>
           <small>阿布会把原局、结构竞争与岁运放在同一条判断链里。</small>

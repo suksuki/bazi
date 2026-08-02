@@ -36,13 +36,15 @@ def test_manifest_has_no_v50_runtime_dependency() -> None:
     assert payload["reasoner_runtime"]["status"] == "NOT_CONFIGURED"
     assert payload["reasoner_runtime"]["network_calls_enabled"] is False
     assert payload["engines"]["context"] == "v60.experience-context.003"
-    assert payload["engines"]["mingli"] == "v60.mingli-cognitive-engine.027"
+    assert payload["engines"]["mingli"] == "v60.mingli-cognitive-engine.028"
     assert payload["mingli_agent_runtime"]["status"] == "DISABLED"
     assert payload["mingli_agent_runtime"]["network_calls_enabled"] is False
     assert payload["mingli_agent_runtime"]["publication_allowed"] is False
     assert payload["mingli_agent_runtime"]["model_qualification_status"] == (
-        "CURRENT_LOCAL_MODELS_NOT_QUALIFIED"
+        "GEMMA4_PRODUCT_CANDIDATE_REQUIRES_OWNER_REVIEW"
     )
+    assert payload["mingli_agent_runtime"]["reasoning_mode"] == "BLIND_READING"
+    assert payload["mingli_agent_runtime"]["owner_review_allowed"] is True
     assert payload["engines"]["story"] == "v60.life-story-engine.011"
     relation_effect_admission = payload["relation_effect_rule_admission"]
     assert relation_effect_admission["professional_rule_count"] == 0

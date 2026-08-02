@@ -1,0 +1,87 @@
+import type { MingliReadingClaim } from "../mingliClaimGraphTypes";
+
+export function claimIsAdmitted(item: MingliReadingClaim): boolean {
+  return item.status !== "WITHHELD";
+}
+
+export function claimStatusLabel(item: MingliReadingClaim): string {
+  if (item.status === "WITHHELD") return "本条未采用";
+  if (item.assessment_codes.includes("MECHANISM_CANDIDATE_REQUIRES_ADJUDICATION")) {
+    return "初断 · 机制待裁决";
+  }
+  if (item.assessment_codes.includes("PRIMARY_HYPOTHESIS_CHART_BASIS_INCOMPLETE")) {
+    return "初断 · 论据待补齐";
+  }
+  if (item.status === "NEEDS_RECONCILIATION") return "初断 · 待经历校准";
+  if (item.status === "OPEN_QUESTION") return "待你回答";
+  return "整盘初断";
+}
+
+export function visibleClaimAssessmentCodes(item: MingliReadingClaim) {
+  if (item.status !== "WITHHELD") return item.assessment_codes;
+  return item.assessment_codes.filter((code) => ![
+    "PRIMARY_HYPOTHESIS_CHART_BASIS_INCOMPLETE",
+    "MECHANISM_CANDIDATE_REQUIRES_ADJUDICATION",
+    "CONFIDENCE_EXCEEDS_PACKET",
+    "DEPENDENCY_WITHHELD",
+  ].includes(code));
+}
+
+export function ClaimReviewNotice({
+  context,
+  item,
+}: {
+  context?: string;
+  item: MingliReadingClaim;
+}) {
+  const visibleCodes = visibleClaimAssessmentCodes(item);
+  const messages = visibleCodes.map((code) => {
+    if (code === "PRIMARY_HYPOTHESIS_CHART_BASIS_INCOMPLETE") {
+      return "这条初断仍然保留，但整盘命据需要继续补齐。";
+    }
+    if (code === "MECHANISM_CANDIDATE_REQUIRES_ADJUDICATION") {
+      return "这条保留为当前最佳解释，但候选机制尚未完成逐项专业裁决。";
+    }
+    if (code === "CONFIDENCE_EXCEEDS_PACKET") {
+      return "原回答的高置信度超出了当前卷宗，系统已降为中等置信。";
+    }
+    if (code === "DEPENDENCY_WITHHELD") {
+      return "局部支撑路径已撤下；总纲仍作为初断保留，但不能视为定论。";
+    }
+    if (code === "NATAL_CLAIM_CITES_TIMING_EVIDENCE"
+      || code === "NATAL_CLAIM_USES_SELECTED_TIMING") {
+      return "这条把大运或流年反写成了原局，暂不采用。";
+    }
+    if (code === "RELATION_MEMBERSHIP_PROMOTED_TO_EFFECT") {
+      return "这条把关系成员直接当成了确定作用，暂不采用。";
+    }
+    if (code === "TIMING_COORDINATE_EVIDENCE_MISSING") {
+      return "这条岁运判断没有绑定对应时间坐标，暂不采用。";
+    }
+    if (code === "TIMING_RELATION_EVIDENCE_MISSING") {
+      return "这条点名了岁运关系，却没有绑定对应关系证据，暂不采用。";
+    }
+    if (code === "WORK_PATH_CLOSURE_EXCEEDS_PACKET") {
+      return "这条把仍有条件的做功路径说成已经闭合，暂不采用。";
+    }
+    if (code === "ROOT_ASSERTION_CONFLICTS_WITH_PACKET") {
+      return "这条把并不存在的地支根位写进了解释，暂不采用。";
+    }
+    if (code === "NAMED_COORDINATE_CONFLICTS_WITH_PACKET") {
+      return "这条写错了干支与藏干位置，暂不采用。";
+    }
+    if (code === "UNLISTED_RELATION_COORDINATE_ASSERTION") {
+      return "这条使用了卷宗中不存在的地支关系，暂不采用。";
+    }
+    if (code === "UNADMITTED_CLASSICAL_ASSERTION") {
+      return "这条使用了尚未完成专业判定的传统标签，暂不采用。";
+    }
+    return "这条包含不应由命盘直接断定的高风险事件，暂不采用。";
+  });
+  return (
+    <p className="mingli-claim-review-note" data-claim-status={item.status}>
+      {context ? `${context}：` : ""}
+      {[...new Set(messages)].join(" ") || "这条初断需要重新落回整盘主线。"}
+    </p>
+  );
+}

@@ -7,6 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from abu_v60.mingli.agent_contracts import MingliAgentReadingEnvelope
+from abu_v60.mingli.agent_packet import MingliAgentCasePacketCompiler
 from abu_v60.mingli.agent_runtime import mingli_agent_runtime_manifest
 from abu_v60.mingli.agent_store import MingliAgentReadingStore
 from abu_v60.mingli.brief import MingliReadingBriefProjector
@@ -14,13 +15,15 @@ from abu_v60.mingli.domain_store import MingliLifeDomainVectorStore
 from abu_v60.mingli.mechanism_decision import MingliMechanismComparisonService
 from abu_v60.mingli.mechanism_store import MingliMechanismVectorStore
 from abu_v60.mingli.quant_store import MingliQuantVectorStore
+from abu_v60.mingli.reading_claim_graph import MingliReadingClaimGraphProjector
+from abu_v60.mingli.reading_claim_graph_contracts import MingliReadingClaimGraph
 from abu_v60.mingli.reading_store import MingliReadingStore
 from abu_v60.mingli.service import CaseNotFoundError, MingliCaseService
 from abu_v60.mingli.showcases import SHOWCASE_ACCOUNT_REF, SHOWCASE_BY_SUBJECT
 from abu_v60.mingli.timing_store import MingliTimingVectorStore
 from abu_v60.provenance import content_hash, stable_ref
 
-MINGLI_READING_SUMMARY_VERSION = "v60.mingli-reading-summary.002"
+MINGLI_READING_SUMMARY_VERSION = "v60.mingli-reading-summary.003"
 SUPPORTED_SUBJECT_KINDS = frozenset(
     {"HUMAN_OWNER", "HUMAN_REFERENCE", "CANONICAL_SYNTHETIC"}
 )
@@ -38,7 +41,7 @@ class MingliReadingSummaryProjection(BaseModel):
 
     summary_ref: str = Field(min_length=1)
     summary_hash: str = Field(min_length=64, max_length=64)
-    summary_version: Literal["v60.mingli-reading-summary.002"]
+    summary_version: Literal["v60.mingli-reading-summary.003"]
     case_ref: str = Field(min_length=1)
     chart_version_ref: str = Field(min_length=1)
     life_case_revision_ref: str = Field(min_length=1)
@@ -54,11 +57,13 @@ class MingliReadingSummaryProjection(BaseModel):
         "READY",
         "DISABLED",
         "MISCONFIGURED",
-        "UNQUALIFIED",
+        "READY_FOR_OWNER_REVIEW",
     ]
     agent_generation_available: bool
     agent_status: Literal["READY", "NOT_GENERATED"]
     agent_reading: MingliAgentReadingEnvelope | None
+    claim_graph: MingliReadingClaimGraph | None
+    agent_projection_scope: Literal["OWNER_REVIEW", "PUBLIC", "NOT_GENERATED"]
     image_projection_status: Literal["AGENT_INTERPRETATION", "NOT_GENERATED"]
     professional_verdict_allowed: Literal[False]
     canonical_write_allowed: Literal[False]
@@ -83,11 +88,15 @@ class MingliReadingSummaryProjection(BaseModel):
         if self.agent_reading is None:
             if (
                 self.agent_status != "NOT_GENERATED"
+                or self.claim_graph is not None
+                or self.agent_projection_scope != "NOT_GENERATED"
                 or self.image_projection_status != "NOT_GENERATED"
             ):
                 raise ValueError("mingli_reading_summary_agent_status_mismatch")
         elif (
             self.agent_status != "READY"
+            or self.claim_graph is None
+            or self.agent_projection_scope not in {"OWNER_REVIEW", "PUBLIC"}
             or self.image_projection_status != "AGENT_INTERPRETATION"
             or self.agent_reading.case_ref != self.case_ref
             or self.agent_reading.chart_version_ref != self.chart_version_ref
@@ -97,17 +106,70 @@ class MingliReadingSummaryProjection(BaseModel):
             or self.agent_reading.reading_hash != self.reading_hash
         ):
             raise ValueError("mingli_reading_summary_agent_lineage_mismatch")
-        if self.agent_generation_available != (self.agent_runtime_status == "READY"):
+        if self.claim_graph is not None and (
+            self.claim_graph.case_ref != self.case_ref
+            or self.claim_graph.chart_version_ref != self.chart_version_ref
+            or self.claim_graph.life_case_revision_ref != self.life_case_revision_ref
+            or self.claim_graph.reading_ref != self.reading_ref
+            or self.claim_graph.reading_hash != self.reading_hash
+            or self.agent_reading is None
+            or self.claim_graph.agent_reading_ref
+            != self.agent_reading.agent_reading_ref
+            or self.claim_graph.agent_reading_hash
+            != self.agent_reading.agent_reading_hash
+        ):
+            raise ValueError("mingli_reading_summary_claim_graph_lineage_mismatch")
+        if (
+            self.claim_graph is not None
+            and not self.claim_graph.public_projection_allowed
+            and self.agent_projection_scope != "OWNER_REVIEW"
+        ):
+            raise ValueError("mingli_reading_summary_claim_graph_scope_mismatch")
+        if self.agent_generation_available != (
+            self.agent_runtime_status in {"READY", "READY_FOR_OWNER_REVIEW"}
+        ):
             raise ValueError("mingli_reading_summary_agent_runtime_status_mismatch")
         return self
 
     @classmethod
     def issue(cls, **values: Any) -> MingliReadingSummaryProjection:
         agent_reading = values.get("agent_reading")
-        identity = {
+        claim_graph = values.get("claim_graph")
+        if (agent_reading is None) != (claim_graph is None):
+            raise ValueError("mingli_reading_summary_claim_graph_copresence_required")
+        publication_allowed = bool(values.pop("publication_allowed", False))
+        if (
+            publication_allowed
+            and isinstance(claim_graph, MingliReadingClaimGraph)
+            and not claim_graph.public_projection_allowed
+        ):
+            raise ValueError(
+                "mingli_reading_summary_unqualified_graph_cannot_be_public"
+            )
+        normalized_values = {
             **values,
+            "agent_reading": (
+                agent_reading.model_dump(mode="json")
+                if isinstance(agent_reading, BaseModel)
+                else agent_reading
+            ),
+            "claim_graph": (
+                claim_graph.model_dump(mode="json")
+                if isinstance(claim_graph, BaseModel)
+                else claim_graph
+            ),
+        }
+        identity = {
+            **normalized_values,
             "summary_version": MINGLI_READING_SUMMARY_VERSION,
             "agent_status": "READY" if agent_reading is not None else "NOT_GENERATED",
+            "agent_projection_scope": (
+                "PUBLIC"
+                if agent_reading is not None and publication_allowed
+                else "OWNER_REVIEW"
+                if agent_reading is not None
+                else "NOT_GENERATED"
+            ),
             "image_projection_status": (
                 "AGENT_INTERPRETATION"
                 if agent_reading is not None
@@ -138,6 +200,8 @@ class MingliReadingSummaryService:
         self._domains = MingliLifeDomainVectorStore(engine)
         self._comparisons = MingliMechanismComparisonService(engine)
         self._brief = MingliReadingBriefProjector()
+        self._claim_graph = MingliReadingClaimGraphProjector()
+        self._agent_packet = MingliAgentCasePacketCompiler()
 
     def project(
         self,
@@ -218,7 +282,10 @@ class MingliReadingSummaryService:
             mechanism_comparison=comparison,
         )
         agent_reading = None
-        if self._agent_runtime_manifest["publication_allowed"] is True:
+        if (
+            self._agent_runtime_manifest["publication_allowed"] is True
+            or self._agent_runtime_manifest["owner_review_allowed"] is True
+        ):
             agent_reading = self._agent_readings.latest(
                 requester_account_ref=account_ref,
                 case_ref=case_ref,
@@ -239,6 +306,19 @@ class MingliReadingSummaryService:
                 prompt_ref=str(self._agent_runtime_profile["prompt_ref"]),
                 prompt_hash=str(self._agent_runtime_profile["prompt_hash"]),
             )
+        claim_graph = None
+        if agent_reading is not None:
+            packet = self._agent_packet.compile(
+                workspace=workspace,
+                reading=reading,
+                quant_vector=quant,
+                mechanism_vector=mechanism,
+                timing_vector=timing,
+            )
+            claim_graph = self._claim_graph.project(
+                agent_reading,
+                packet=packet,
+            )
         return MingliReadingSummaryProjection.issue(
             case_ref=case_ref,
             chart_version_ref=chart_ref,
@@ -249,7 +329,12 @@ class MingliReadingSummaryService:
             reading_brief=brief,
             agent_runtime_status=str(self._agent_runtime_manifest["status"]),
             agent_generation_available=(
-                self._agent_runtime_manifest["status"] == "READY"
+                self._agent_runtime_manifest["status"]
+                in {"READY", "READY_FOR_OWNER_REVIEW"}
             ),
             agent_reading=agent_reading,
+            claim_graph=claim_graph,
+            publication_allowed=bool(
+                self._agent_runtime_manifest["publication_allowed"]
+            ),
         )

@@ -7,6 +7,7 @@ import type {
   MingliStageSubject,
   MingliStageSubjectId,
 } from "./mingliStageTypes";
+import { validateReadingClaimGraph } from "./mingliClaimGraphValidation";
 
 const HASH = /^[0-9a-f]{64}$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -141,7 +142,7 @@ export function validateReadingSummary(
   const lineage = summary.reading_brief.lineage;
   const agentReady = summary.agent_status === "READY";
   if (
-    summary.summary_version !== "v60.mingli-reading-summary.002" ||
+    summary.summary_version !== "v60.mingli-reading-summary.003" ||
     !summary.summary_ref ||
     !HASH.test(summary.summary_hash) ||
     summary.case_ref !== stage.case_ref ||
@@ -150,11 +151,17 @@ export function validateReadingSummary(
     summary.reading_ref !== stage.reading_ref ||
     summary.reading_hash !== stage.reading_hash ||
     summary.subject_kind !== stage.subject_kind ||
-    !["READY", "DISABLED", "MISCONFIGURED", "UNQUALIFIED"].includes(
+    !["READY", "READY_FOR_OWNER_REVIEW", "DISABLED", "MISCONFIGURED"].includes(
       summary.agent_runtime_status,
     ) ||
-    summary.agent_generation_available !== (summary.agent_runtime_status === "READY") ||
+    summary.agent_generation_available !== (
+      summary.agent_runtime_status === "READY"
+      || summary.agent_runtime_status === "READY_FOR_OWNER_REVIEW"
+    ) ||
     !["READY", "NOT_GENERATED"].includes(summary.agent_status) ||
+    summary.agent_projection_scope !== (
+      agentReady ? "OWNER_REVIEW" : "NOT_GENERATED"
+    ) ||
     summary.image_projection_status !== (
       agentReady ? "AGENT_INTERPRETATION" : "NOT_GENERATED"
     ) ||
@@ -168,8 +175,9 @@ export function validateReadingSummary(
     throw new Error("mingli_reading_summary_shape_invalid");
   }
   if (agentReady) {
-    validateAgentReading(summary.agent_reading, stage);
-  } else if (summary.agent_reading !== null) {
+    const reading = validateAgentReading(summary.agent_reading, stage);
+    validateReadingClaimGraph(summary.claim_graph, stage, reading);
+  } else if (summary.agent_reading !== null || summary.claim_graph !== null) {
     throw new Error("mingli_reading_summary_agent_status_invalid");
   }
   return summary;

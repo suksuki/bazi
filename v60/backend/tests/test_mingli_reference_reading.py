@@ -72,6 +72,8 @@ def test_private_reference_is_listed_and_projects_its_own_formal_reading() -> No
     )
     assert summary.agent_status == "NOT_GENERATED"
     assert summary.agent_reading is None
+    assert summary.claim_graph is None
+    assert summary.agent_projection_scope == "NOT_GENERATED"
     assert summary.image_projection_status == "NOT_GENERATED"
     assert summary.professional_verdict_allowed is False
     assert summary.canonical_write_allowed is False

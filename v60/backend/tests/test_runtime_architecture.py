@@ -7,7 +7,7 @@ from abu_v60.system_manifest import runtime_manifest
 def test_runtime_architecture_has_one_owner_per_schema_and_five_units() -> None:
     architecture = runtime_architecture()
     architecture.validate_boundaries()
-    assert architecture.architecture_version == "v60.runtime-architecture.054"
+    assert architecture.architecture_version == "v60.runtime-architecture.055"
     assert architecture.product_units == (
         "unit-mingli",
         "unit-dream",
@@ -58,7 +58,7 @@ def test_manifest_exposes_world_game_and_localization_reservation() -> None:
     assert manifest["engines"]["context"] == "v60.experience-context.003"
     assert manifest["engines"]["game"] == "v60.dream-game-engine.019"
     assert manifest["engines"]["world"] == "v60.world-continuity-engine.004"
-    assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.027"
+    assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.028"
     assert manifest["engines"]["story"] == "v60.life-story-engine.011"
     source_review = manifest["source_review_profiles"]
     assert len(source_review) == 1
@@ -114,18 +114,24 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     architecture = runtime_architecture()
     modules = {module.module_id: module for module in architecture.modules}
 
-    assert modules["mingli"].version == "v60.mingli-cognitive-engine.027"
+    assert modules["mingli"].version == "v60.mingli-cognitive-engine.028"
     assert modules["knowledge"].version == "v60.knowledge-authority.008"
     assert modules["media"].version == "v60.media-library.003"
-    assert modules["unit-mingli"].version == "v60.unit-mingli.021"
+    assert modules["unit-mingli"].version == "v60.unit-mingli.022"
     assert modules["unit-abu"].version == "v60.unit-abu-says.007"
-    assert modules["unit-lab"].version == "v60.unit-lab.016"
+    assert modules["unit-lab"].version == "v60.unit-lab.017"
     assert modules["unit-dream"].version == "v60.unit-dream.020"
     assert modules["media"].reads_from == ("identity", "mingli")
     assert modules["unit-mingli"].reads_from == (
         "experience-context",
         "mingli",
         "media",
+    )
+    assert modules["unit-lab"].reads_from == (
+        "experience-context",
+        "knowledge",
+        "cognition",
+        "mingli",
     )
     assert "structural_candidate_projection" in modules["mingli"].capabilities
     assert "candidate_qualification_receipt" in modules["mingli"].capabilities
@@ -153,6 +159,15 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     assert "append_only_agent_reading_history" in modules["mingli"].capabilities
     assert "four_layer_agent_reading_projection" in (
         modules["unit-mingli"].capabilities
+    )
+    assert "deterministic_reading_claim_graph" in modules["mingli"].capabilities
+    assert "explicit_blind_reading_contract" in modules["mingli"].capabilities
+    assert "reconciliation_contract_reserved" in modules["mingli"].capabilities
+    assert "shared_claim_graph_reading_projection" in (
+        modules["unit-mingli"].capabilities
+    )
+    assert "shared_reading_claim_graph_inspection" in (
+        modules["unit-lab"].capabilities
     )
     assert "versioned_evidence_explanation_projection" in modules["mingli"].capabilities
     assert "support_counter_unknown_separation" in modules["mingli"].capabilities

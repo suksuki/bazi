@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from contextlib import nullcontext
 from dataclasses import replace
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -15,6 +16,10 @@ from abu_v60.mingli.agent_contracts import (
     mingli_agent_generation_key,
 )
 from abu_v60.mingli.agent_packet import MingliAgentCasePacketCompiler
+from abu_v60.mingli.agent_reasoning_modes import (
+    BLIND_READING_CONTRACT,
+    RECONCILIATION_CONTRACT,
+)
 from abu_v60.mingli.agent_runtime import (
     MingliAgentProviderError,
     MingliAgentProviderResult,
@@ -28,6 +33,7 @@ from abu_v60.mingli.agent_service import MingliAgentService, MingliAgentServiceE
 from abu_v60.mingli.agent_store import MingliAgentReadingStore
 from abu_v60.mingli.mechanism_store import MingliMechanismVectorStore
 from abu_v60.mingli.quant_store import MingliQuantVectorStore
+from abu_v60.mingli.reading_claim_graph import MingliReadingClaimGraphProjector
 from abu_v60.mingli.reading_store import MingliReadingStore
 from abu_v60.mingli.reading_summary import MingliReadingSummaryService
 from abu_v60.mingli.service import MingliCaseService
@@ -324,6 +330,25 @@ def test_agent_contract_rejects_unknown_evidence_and_engineering_copy() -> None:
         )
 
 
+def test_blind_and_reconciliation_modes_are_physically_distinct() -> None:
+    _, packet = _packet()
+    prompt_view = packet.model_prompt_view()
+
+    assert BLIND_READING_CONTRACT.admission_status == "ACTIVE"
+    assert BLIND_READING_CONTRACT.generation_allowed is True
+    assert BLIND_READING_CONTRACT.observation_ledger_required is False
+    assert RECONCILIATION_CONTRACT.admission_status == "CONTRACT_RESERVED"
+    assert RECONCILIATION_CONTRACT.generation_allowed is False
+    assert RECONCILIATION_CONTRACT.observation_ledger_required is True
+    assert prompt_view["reasoning_contract"]["mode"] == "BLIND_READING"
+    assert prompt_view["reasoning_contract"]["profile_context_allowed"] is False
+    assert prompt_view["reasoning_contract"]["life_case_observations_allowed"] is False
+    serialized = canonical_json(prompt_view)
+    assert packet.gender not in serialized
+    assert packet.birth_timezone not in serialized
+    assert packet.subject_kind not in serialized
+
+
 def test_ollama_adapter_sends_one_locked_packet_and_validates_output() -> None:
     _, packet = _packet()
     calls: list[dict[str, Any]] = []
@@ -332,6 +357,9 @@ def test_ollama_adapter_sends_one_locked_packet_and_validates_output() -> None:
         calls.append(values)
         output = _valid_output(packet=packet).model_dump(mode="json")
         output["day_master_evidence_ids"][0] = "E1"
+        output["domains"]["career"]["conclusion"] += "（E001）"
+        output["support_selection"]["peer_coordinates"] = ["错误坐标"]
+        output["hypotheses"][0]["mechanism_evidence_ids"] = ["E001"]
         return {
             "response": json.dumps(output, ensure_ascii=False),
             "prompt_eval_count": 120,
@@ -363,6 +391,13 @@ def test_ollama_adapter_sends_one_locked_packet_and_validates_output() -> None:
     assert calls[0]["payload"]["think"] is False
     assert result.total_tokens == 360
     assert result.output.day_master_evidence_ids[0] == "E001"
+    assert "E001" not in result.output.domains.career.conclusion
+    assert result.output.support_selection.peer_coordinates == (
+        packet.day_master_support.visible_peer_support
+    )
+    assert set(result.output.hypotheses[0].mechanism_evidence_ids).issubset(
+        {item.evidence_id for item in packet.mechanism_observations}
+    )
     assert len(result.output.day_master_evidence_ids) == 2
     assert result.output.hypotheses[0].role == "PRIMARY"
 
@@ -382,7 +417,7 @@ def test_packet_separates_roots_visible_peers_resources_and_repeated_branch() ->
         "ANNUAL",
     )
     assert all(item.left_layer != "MONTHLY" for item in packet.timing_relations)
-    assert len(canonical_json(packet.model_prompt_view())) <= 4500
+    assert len(canonical_json(packet.model_prompt_view())) <= 6500
     assert any(
         relation.relation_type == "same_branch_membership"
         and {relation.left_slot, relation.right_slot} == {"year", "month"}
@@ -426,6 +461,35 @@ def test_common_runtime_rejects_support_and_timing_scope_drift() -> None:
             requester_account_ref=fixture["owner_account_ref"],
             packet=packet,
         )
+
+
+def test_missing_primary_chart_basis_keeps_whole_reading_for_claim_review() -> None:
+    fixture, packet = _packet()
+    output = _valid_output(packet=packet).model_dump(mode="json")
+    primary = next(
+        item for item in output["hypotheses"] if item["role"] == "PRIMARY"
+    )
+    primary["evidence_ids"] = [
+        item.evidence_id for item in packet.mechanism_observations[:2]
+    ]
+    reading = MingliAgentRuntime(
+        provider=_OutputProvider(MingliAgentModelOutput.model_validate(output)),
+        enabled=True,
+    ).run(
+        requester_account_ref=fixture["owner_account_ref"],
+        packet=packet,
+    )
+
+    graph = MingliReadingClaimGraphProjector().project(reading, packet=packet)
+    by_key = {item.semantic_key: item for item in graph.claims}
+
+    assert by_key["WHOLE_CHART"].status == "NEEDS_RECONCILIATION"
+    assert by_key["HYPOTHESIS_H1"].status == "NEEDS_RECONCILIATION"
+    assert set(by_key["HYPOTHESIS_H1"].assessment_codes) == {
+        "PRIMARY_HYPOTHESIS_CHART_BASIS_INCOMPLETE",
+        "MECHANISM_CANDIDATE_REQUIRES_ADJUDICATION",
+    }
+    assert by_key["DAY_MASTER"].status == "PROVISIONAL"
 
 
 def test_common_runtime_distinguishes_no_root_from_invented_root_claim() -> None:
@@ -481,7 +545,7 @@ def test_common_runtime_rejects_evidence_ids_in_user_facing_prose() -> None:
         )
 
 
-def test_common_runtime_rejects_relation_membership_promoted_to_effect() -> None:
+def test_claim_graph_quarantines_relation_effect_without_rejecting_reading() -> None:
     fixture, packet = _packet()
     assert any(
         item.left_layer == "DAYUN" for item in packet.timing_relations
@@ -503,17 +567,24 @@ def test_common_runtime_rejects_relation_membership_promoted_to_effect() -> None
         runtime=runtime,
         store=memory,  # type: ignore[arg-type]
     )
-    with pytest.raises(
-        MingliAgentServiceError,
-        match="promotes_relation_membership_to_effect",
-    ):
-        service.generate(
-            requester_account_ref=fixture["owner_account_ref"],
-            case_ref=fixture["case_ref"],
-            expected_reading_ref=fixture["reading_ref"],
-            expected_reading_hash=fixture["reading_hash"],
-        )
-    assert memory.values == {}
+    reading = service.generate(
+        requester_account_ref=fixture["owner_account_ref"],
+        case_ref=fixture["case_ref"],
+        expected_reading_ref=fixture["reading_ref"],
+        expected_reading_hash=fixture["reading_hash"],
+    )
+    graph = MingliReadingClaimGraphProjector().project(reading, packet=packet)
+    dayun_claim = next(
+        item for item in graph.claims if item.semantic_key == "TIMING_DAYUN"
+    )
+    assert len(memory.values) == 1
+    assert dayun_claim.status == "WITHHELD"
+    assert dayun_claim.assessment_codes == (
+        "RELATION_MEMBERSHIP_PROMOTED_TO_EFFECT",
+    )
+    assert next(
+        item for item in graph.claims if item.semantic_key == "WHOLE_CHART"
+    ).status == "NEEDS_RECONCILIATION"
 
     relation_evidence_id = next(
         item.evidence_id
@@ -538,17 +609,25 @@ def test_common_runtime_rejects_relation_membership_promoted_to_effect() -> None
         ),
         store=domain_memory,  # type: ignore[arg-type]
     )
-    with pytest.raises(
-        MingliAgentServiceError,
-        match="promotes_relation_membership_to_effect",
-    ):
-        domain_service.generate(
-            requester_account_ref=fixture["owner_account_ref"],
-            case_ref=fixture["case_ref"],
-            expected_reading_ref=fixture["reading_ref"],
-            expected_reading_hash=fixture["reading_hash"],
-        )
-    assert domain_memory.values == {}
+    domain_reading = domain_service.generate(
+        requester_account_ref=fixture["owner_account_ref"],
+        case_ref=fixture["case_ref"],
+        expected_reading_ref=fixture["reading_ref"],
+        expected_reading_hash=fixture["reading_hash"],
+    )
+    domain_graph = MingliReadingClaimGraphProjector().project(
+        domain_reading,
+        packet=packet,
+    )
+    career_claim = next(
+        item for item in domain_graph.claims if item.semantic_key == "DOMAIN_CAREER"
+    )
+    assert len(domain_memory.values) == 1
+    assert career_claim.status == "WITHHELD"
+    assert set(career_claim.assessment_codes) == {
+        "NATAL_CLAIM_CITES_TIMING_EVIDENCE",
+        "RELATION_MEMBERSHIP_PROMOTED_TO_EFFECT",
+    }
 
     field_bypass = _valid_output(packet=packet).model_dump(mode="json")
     field_bypass["timing"]["dayun"]["relation_evidence_ids"] = []
@@ -576,31 +655,55 @@ def test_common_runtime_rejects_relation_membership_promoted_to_effect() -> None
     assert field_memory.values == {}
 
 
-def test_unqualified_profile_cannot_generate_or_enter_reading_summary() -> None:
+def test_unqualified_candidate_can_generate_private_review_without_publication() -> None:
     enabled_settings = replace(settings, mingli_agent_enabled=True)
-    assert mingli_agent_runtime_status(enabled_settings).value == "UNQUALIFIED"
-    assert configured_mingli_agent_runtime(enabled_settings).ready is False
+    assert (
+        mingli_agent_runtime_status(enabled_settings).value
+        == "READY_FOR_OWNER_REVIEW"
+    )
+    assert configured_mingli_agent_runtime(enabled_settings).ready is True
     manifest = mingli_agent_runtime_manifest(enabled_settings)
     assert manifest["model_qualification_status"] == (
-        "CURRENT_LOCAL_MODELS_NOT_QUALIFIED"
+        "GEMMA4_PRODUCT_CANDIDATE_REQUIRES_OWNER_REVIEW"
     )
+    assert manifest["reasoning_mode"] == "BLIND_READING"
+    assert manifest["owner_review_allowed"] is True
     assert manifest["publication_allowed"] is False
-    assert manifest["network_calls_enabled"] is False
+    assert manifest["network_calls_enabled"] is True
 
     fixture = _base_reading_fixture()
     summary_service = MingliReadingSummaryService(engine)
 
-    class ForbiddenAgentStore:
+    class ReviewAgentStore:
         def latest(self, **_: object):
-            raise AssertionError("unqualified_agent_row_must_not_be_projected")
+            return _envelope(fixture)
 
-    summary_service._agent_readings = ForbiddenAgentStore()  # type: ignore[assignment]
+    summary_service._agent_readings = ReviewAgentStore()  # type: ignore[assignment]
     summary = summary_service.project(
         account_ref=fixture["owner_account_ref"],
         case_ref=fixture["case_ref"],
     )
-    assert summary.agent_status == "NOT_GENERATED"
-    assert summary.agent_reading is None
+    assert summary.agent_status == "READY"
+    assert summary.agent_projection_scope == "OWNER_REVIEW"
+    assert summary.agent_reading is not None
+    assert summary.claim_graph is not None
+    assert summary.claim_graph.public_projection_allowed is False
+    assert summary.professional_verdict_allowed is False
+
+    summary_service._agent_runtime_manifest = {
+        **summary_service._agent_runtime_manifest,
+        "status": "READY",
+        "publication_allowed": True,
+        "owner_review_allowed": False,
+    }
+    with pytest.raises(
+        ValueError,
+        match="unqualified_graph_cannot_be_public",
+    ):
+        summary_service.project(
+            account_ref=fixture["owner_account_ref"],
+            case_ref=fixture["case_ref"],
+        )
 
 
 def test_service_calls_one_agent_once_and_replays_by_generation_key() -> None:
@@ -653,9 +756,11 @@ def test_service_rejects_unrelated_account_before_agent_call() -> None:
     assert provider.calls == 0
 
 
-def _envelope(fixture: dict[str, str], *, suffix: str = ""):
-    packet_ref = "v60-test-agent-packet-001"
-    packet_hash = "c" * 64
+def _envelope(fixture: dict[str, str], *, suffix: str = "", packet: Any | None = None):
+    if packet is None:
+        _, packet = _packet()
+    packet_ref = packet.packet_ref
+    packet_hash = packet.packet_hash
     agent_profile_ref = "v60-test-agent-profile-001"
     agent_profile_hash = "d" * 64
     provider_profile_ref = "v60-test-provider-profile-001"
@@ -695,7 +800,7 @@ def _envelope(fixture: dict[str, str], *, suffix: str = ""):
         prompt_ref=prompt_ref,
         prompt_hash=prompt_hash,
         provider_response_ref=f"test-provider-response{suffix}",
-        output=_valid_output(suffix=suffix),
+        output=_valid_output(suffix=suffix, packet=packet),
         input_tokens=10,
         output_tokens=20,
         total_tokens=30,
@@ -703,6 +808,244 @@ def _envelope(fixture: dict[str, str], *, suffix: str = ""):
     )
 
 
+def test_agent_reading_projects_one_deterministic_shared_claim_graph() -> None:
+    fixture = _base_reading_fixture()
+    _, packet = _packet()
+    reading = _envelope(fixture, packet=packet)
+    projector = MingliReadingClaimGraphProjector()
+
+    first = projector.project(reading, packet=packet)
+    replay = projector.project(reading, packet=packet)
+
+    assert replay == first
+    assert first.reasoning_mode == "BLIND_READING"
+    assert first.reconciliation_status == "NOT_ADMITTED"
+    assert first.qualification_status == "OWNER_REVIEW_REQUIRED"
+    assert first.owner_review_projection_allowed is True
+    assert first.public_projection_allowed is False
+    assert first.canonical_fact_write_allowed is False
+    assert len(first.claims) == 15
+    assert tuple(item.semantic_key for item in first.claims) == (
+        "WHOLE_CHART",
+        "DAY_MASTER",
+        "HYPOTHESIS_H1",
+        "HYPOTHESIS_H2",
+        "WORK_PATH",
+        "LIFE_IMAGE",
+        "DOMAIN_PERSONALITY",
+        "DOMAIN_CAREER",
+        "DOMAIN_WEALTH",
+        "DOMAIN_RELATIONSHIP",
+        "DOMAIN_FAMILY",
+        "TIMING_NATAL",
+        "TIMING_DAYUN",
+        "TIMING_ANNUAL",
+        "DISCRIMINATING_QUESTION",
+    )
+    by_key = {item.semantic_key: item for item in first.claims}
+    assert by_key["WHOLE_CHART"].headline == reading.output.first_look
+    assert by_key["WHOLE_CHART"].statement == reading.output.whole_chart_thesis
+    assert by_key["LIFE_IMAGE"].statement == reading.output.life_image.explanation
+    assert by_key["DOMAIN_CAREER"].statement == reading.output.domains.career.conclusion
+    assert by_key["TIMING_DAYUN"].statement == reading.output.timing.dayun.conclusion
+    assert by_key["TIMING_ANNUAL"].statement == reading.output.timing.annual.conclusion
+    assert (
+        by_key["DISCRIMINATING_QUESTION"].statement
+        == reading.output.discriminating_question
+    )
+    assert by_key["HYPOTHESIS_H1"].status == "NEEDS_RECONCILIATION"
+    assert by_key["HYPOTHESIS_H2"].status == "NEEDS_RECONCILIATION"
+    assert by_key["HYPOTHESIS_H2"].assessment_codes == (
+        "MECHANISM_CANDIDATE_REQUIRES_ADJUDICATION",
+    )
+    assert by_key["HYPOTHESIS_H1"].mechanism_evidence_ids
+    assert (
+        by_key["TIMING_DAYUN"].coordinate_evidence_id
+        in by_key["TIMING_DAYUN"].evidence_ids
+    )
+    assert {item.relation for item in first.edges} == {
+        "SUPPORTS",
+        "COMPETES_WITH",
+        "PROJECTS_TO",
+        "TEMPORALLY_EXTENDS",
+        "DISCRIMINATES",
+    }
+
+
+def test_condition_field_cannot_launder_unconditional_relation_effect() -> None:
+    fixture, packet = _packet()
+    output = _valid_output(packet=packet).model_dump(mode="json")
+    output["domains"]["career"]["conclusion"] = (
+        "六合已经合动全盘，并决定事业路径稳定兑现。"
+    )
+    output["domains"]["career"]["condition"] = (
+        "若外部职责变化，再观察收入节奏。"
+    )
+    reading = MingliAgentRuntime(
+        provider=_OutputProvider(MingliAgentModelOutput.model_validate(output)),
+        enabled=True,
+    ).run(
+        requester_account_ref=fixture["owner_account_ref"],
+        packet=packet,
+    )
+
+    graph = MingliReadingClaimGraphProjector().project(reading, packet=packet)
+    career = next(
+        item for item in graph.claims if item.semantic_key == "DOMAIN_CAREER"
+    )
+
+    assert career.status == "WITHHELD"
+    assert "RELATION_MEMBERSHIP_PROMOTED_TO_EFFECT" in career.assessment_codes
+
+
+def test_timing_natal_cannot_use_current_dayun_to_rewrite_natal_chart() -> None:
+    fixture, packet = _packet()
+    output = _valid_output(packet=packet).model_dump(mode="json")
+    output["timing"]["natal_baseline"] = (
+        "当前大运进入以后直接改变原局结构，所以日主已经明确偏强。"
+    )
+    reading = MingliAgentRuntime(
+        provider=_OutputProvider(MingliAgentModelOutput.model_validate(output)),
+        enabled=True,
+    ).run(
+        requester_account_ref=fixture["owner_account_ref"],
+        packet=packet,
+    )
+
+    graph = MingliReadingClaimGraphProjector().project(reading, packet=packet)
+    natal = next(
+        item for item in graph.claims if item.semantic_key == "TIMING_NATAL"
+    )
+
+    assert natal.status == "WITHHELD"
+    assert natal.assessment_codes == ("NATAL_CLAIM_USES_SELECTED_TIMING",)
+
+
+def test_owner_gemma4_reading_has_exact_evidence_and_dependency_admission() -> None:
+    fixture, packet = _packet()
+    frozen_output = json.loads(
+        (
+            Path(__file__).parent
+            / "fixtures"
+            / "owner_gemma4_agent_reading_010.json"
+        ).read_text(encoding="utf-8")
+    )
+    reading = MingliAgentRuntime(
+        provider=_OutputProvider(
+            MingliAgentModelOutput.model_validate(frozen_output)
+        ),
+        enabled=True,
+    ).run(
+        requester_account_ref=fixture["owner_account_ref"],
+        packet=packet,
+    )
+
+    graph = MingliReadingClaimGraphProjector().project(reading, packet=packet)
+    by_key = {item.semantic_key: item for item in graph.claims}
+    statuses = {key: item.status for key, item in by_key.items()}
+
+    assert statuses == {
+        "WHOLE_CHART": "NEEDS_RECONCILIATION",
+        "DAY_MASTER": "PROVISIONAL",
+        "HYPOTHESIS_H1": "NEEDS_RECONCILIATION",
+        "HYPOTHESIS_H2": "NEEDS_RECONCILIATION",
+        "WORK_PATH": "WITHHELD",
+        "LIFE_IMAGE": "PROVISIONAL",
+        "DOMAIN_PERSONALITY": "NEEDS_RECONCILIATION",
+        "DOMAIN_CAREER": "WITHHELD",
+        "DOMAIN_WEALTH": "NEEDS_RECONCILIATION",
+        "DOMAIN_RELATIONSHIP": "WITHHELD",
+        "DOMAIN_FAMILY": "WITHHELD",
+        "TIMING_NATAL": "NEEDS_RECONCILIATION",
+        "TIMING_DAYUN": "WITHHELD",
+        "TIMING_ANNUAL": "NEEDS_RECONCILIATION",
+        "DISCRIMINATING_QUESTION": "OPEN_QUESTION",
+    }
+    assert by_key["HYPOTHESIS_H1"].mechanism_evidence_ids == ("E009",)
+    assert by_key["HYPOTHESIS_H1"].confidence == "MEDIUM"
+    assert by_key["TIMING_DAYUN"].coordinate_evidence_id == "E011"
+    assert by_key["TIMING_ANNUAL"].coordinate_evidence_id == "E012"
+    assert "E012" in by_key["TIMING_ANNUAL"].evidence_ids
+    assert by_key["DISCRIMINATING_QUESTION"].statement == (
+        frozen_output["discriminating_question"]
+    )
+    assert "DEPENDENCY_WITHHELD" in by_key["WHOLE_CHART"].assessment_codes
+    withheld_refs = {
+        item.claim_ref for item in graph.claims if item.status == "WITHHELD"
+    }
+    assert all(
+        edge.source_claim_ref not in withheld_refs
+        and edge.target_claim_ref not in withheld_refs
+        for edge in graph.edges
+    )
+
+
+def test_local_fact_overreach_quarantines_claim_not_whole_reading() -> None:
+    fixture, packet = _packet()
+    output = _valid_output(packet=packet).model_dump(mode="json")
+    output["domains"]["career"]["causal_chain"] = [
+        "日主坐支根气受制，且酉、藏庚形成持续压力。"
+    ]
+    output["domains"]["family"]["conclusion"] = (
+        "丑土作为财库，使家庭责任天然围绕物质积累展开。"
+    )
+    output["domains"]["relationship"]["causal_chain"] = [
+        "日支丑土与月令巳火相连，因此关系更重实际行动。"
+    ]
+    reading = MingliAgentRuntime(
+        provider=_OutputProvider(MingliAgentModelOutput.model_validate(output)),
+        enabled=True,
+    ).run(
+        requester_account_ref=fixture["owner_account_ref"],
+        packet=packet,
+    )
+
+    graph = MingliReadingClaimGraphProjector().project(reading, packet=packet)
+    by_key = {item.semantic_key: item for item in graph.claims}
+
+    assert by_key["WHOLE_CHART"].status == "NEEDS_RECONCILIATION"
+    assert by_key["DOMAIN_CAREER"].status == "WITHHELD"
+    assert set(by_key["DOMAIN_CAREER"].assessment_codes) == {
+        "ROOT_ASSERTION_CONFLICTS_WITH_PACKET",
+        "NAMED_COORDINATE_CONFLICTS_WITH_PACKET",
+    }
+    assert by_key["DOMAIN_FAMILY"].assessment_codes == (
+        "UNADMITTED_CLASSICAL_ASSERTION",
+    )
+    assert by_key["DOMAIN_RELATIONSHIP"].assessment_codes == (
+        "UNLISTED_RELATION_COORDINATE_ASSERTION",
+    )
+
+
+def test_many_local_overreaches_cannot_break_the_claim_graph() -> None:
+    fixture, packet = _packet()
+    output = _valid_output(packet=packet).model_dump(mode="json")
+    relation_evidence_id = next(
+        item.evidence_id
+        for item in packet.timing_relations
+        if item.left_layer == "DAYUN"
+    )
+    output["domains"]["career"]["conclusion"] = (
+        "大运庚子使根气受制，酉、藏庚与丑土财库、巳火相连，"
+        "六合已经合动并导致车祸。"
+    )
+    output["domains"]["career"]["evidence_ids"].append(
+        relation_evidence_id
+    )
+    reading = MingliAgentRuntime(
+        provider=_OutputProvider(MingliAgentModelOutput.model_validate(output)),
+        enabled=True,
+    ).run(
+        requester_account_ref=fixture["owner_account_ref"],
+        packet=packet,
+    )
+
+    graph = MingliReadingClaimGraphProjector().project(reading, packet=packet)
+    by_key = {item.semantic_key: item for item in graph.claims}
+
+    assert by_key["WHOLE_CHART"].status == "NEEDS_RECONCILIATION"
+    assert by_key["DOMAIN_CAREER"].status == "WITHHELD"
+    assert len(by_key["DOMAIN_CAREER"].assessment_codes) >= 7
 def test_store_is_append_only_private_and_first_generation_wins() -> None:
     fixture = _base_reading_fixture()
     first = _envelope(fixture)

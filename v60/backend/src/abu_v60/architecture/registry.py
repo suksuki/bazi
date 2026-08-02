@@ -15,7 +15,7 @@ from abu_v60.architecture.contracts import (
 @lru_cache(maxsize=1)
 def runtime_architecture() -> RuntimeArchitecture:
     architecture = RuntimeArchitecture(
-        architecture_version="v60.runtime-architecture.054",
+        architecture_version="v60.runtime-architecture.055",
         modules=(
             RuntimeModule(
                 module_id="identity",
@@ -33,7 +33,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="mingli",
                 kind=ModuleKind.ENGINE,
-                version="v60.mingli-cognitive-engine.027",
+                version="v60.mingli-cognitive-engine.028",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("mingli",),
                 reads_from=("identity",),
@@ -104,6 +104,10 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "append_only_agent_reading_history",
                     "profile_pinned_agent_reading_replay",
                     "agent_interpretation_cannot_write_canonical_facts",
+                    "explicit_blind_reading_contract",
+                    "reconciliation_contract_reserved",
+                    "deterministic_reading_claim_graph",
+                    "claim_level_owner_review_projection",
                 ),
                 writes_canonical_state=True,
             ),
@@ -359,7 +363,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-mingli",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-mingli.021",
+                version="v60.unit-mingli.022",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "mingli", "media"),
                 capabilities=(
@@ -390,6 +394,8 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "audio_current_time_narration",
                     "explicit_whole_chart_agent_generation",
                     "four_layer_agent_reading_projection",
+                    "shared_claim_graph_reading_projection",
+                    "owner_review_initial_reading",
                 ),
             ),
             RuntimeModule(
@@ -424,9 +430,9 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-lab",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-lab.016",
+                version="v60.unit-lab.017",
                 status=ModuleStatus.ACTIVE,
-                reads_from=("experience-context", "knowledge", "cognition"),
+                reads_from=("experience-context", "knowledge", "cognition", "mingli"),
                 capabilities=(
                     "evidence_inspection",
                     "candidate_path_projection",
@@ -449,6 +455,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "runtime_basis_professional_evidence_separation",
                     "relation_effect_evidence_request_receipt_inspection",
                     "relation_effect_candidate_material_inspection",
+                    "shared_reading_claim_graph_inspection",
                 ),
             ),
         ),
