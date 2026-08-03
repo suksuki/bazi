@@ -1,0 +1,49 @@
+{
+  "schema_version": "v60.prototype-mingli-research-lab-import.001",
+  "bundle_ref": "V131_MINGLI_RESEARCH_LAB_BASELINE_V1",
+  "revision": "v1",
+  "frozen_design_commit": "ea2db274ba55b8f9d323881c096d3a3a1ceba66c",
+  "source_project": "CHATGPT_SITES_V131_EXPERIENCE_CANONICAL",
+  "source_project_id": "appgprj_6a680dd8a8808191a03a0b72bfbdb5b7",
+  "source_version_id": "appgprj_6a680dd8a8808191a03a0b72bfbdb5b7~appgver_f202143ae6f08191978004c679c4d101",
+  "source_archive_sha256": "2f6d8ae3da91a8d5d78c74158f91936f1b8d2c41367ee2a6cedf08585be15857",
+  "source_archive_bytes": 33413120,
+  "source_archive_verification": "SITES_VERSION_RECEIPT_NOT_RUNTIME_INPUT",
+  "owner_decision": {
+    "status": "OWNER_APPROVED_V131_EXPERIENCE_REFERENCE",
+    "selected_use": "V60_MINGLI_RESEARCH_LAB_WATERCOURT_FIDELITY"
+  },
+  "assets": [
+    {
+      "asset_id": "V131_MINGLI_RESEARCH_LAB_DAY_BACKGROUND_V1",
+      "delivery_path": "web/public/assets/v131/lab/mingli-research-watercourt-day-v1.webp",
+      "sha256": "a9e64413df8b072d35a5073d2976edd4ef6876c56045fdffd68d746d650e3365",
+      "canvas": [1586, 992]
+    },
+    {
+      "asset_id": "V131_MINGLI_RESEARCH_LAB_NIGHT_BACKGROUND_V1",
+      "delivery_path": "web/public/assets/v131/lab/mingli-research-watercourt-night-v1.webp",
+      "sha256": "88a72c7db347b0a88697934abec21f9843e53a6e052b3cec2f3fbf31fa859887",
+      "canvas": [1586, 992]
+    }
+  ],
+  "operations": [
+    {
+      "type": "BYTE_IDENTICAL_FROZEN_BASELINE_IMPORT",
+      "changes_pixels": false,
+      "preserves": [
+        "WATERCOURT_COMPOSITION",
+        "CAMERA",
+        "DAY_NIGHT_PARITY",
+        "RESEARCH_REALM_IDENTITY"
+      ]
+    }
+  ],
+  "boundaries": {
+    "experience_canonical_only": true,
+    "imports_mock_data": false,
+    "imports_prototype_state": false,
+    "runtime_data_authority": "V60_CANONICAL",
+    "dream_scope": "FROZEN_EXCLUDED"
+  }
+}

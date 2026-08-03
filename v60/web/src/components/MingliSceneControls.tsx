@@ -9,6 +9,7 @@ import type {
 } from "../mingliStageTypes";
 
 export function MingliSceneControls({
+  exitLabel = "回到生命树",
   onExit,
   onNavigate,
   onOpenSyntheticLab,
@@ -21,6 +22,7 @@ export function MingliSceneControls({
   subjectsLoading,
   surface,
 }: {
+  exitLabel?: string;
   onExit: () => void;
   onNavigate: (route: MingliStageRoute) => void;
   onOpenSyntheticLab?: () => void;
@@ -38,7 +40,7 @@ export function MingliSceneControls({
       <header className="mingli-scene-host-header">
         <button className="mingli-scene-exit" onClick={onExit} type="button">
           <span aria-hidden="true">←</span>
-          回到生命树
+          {exitLabel}
         </button>
         <div className="mingli-scene-title">
           <p>档案叶 · 同一命理舞台</p>

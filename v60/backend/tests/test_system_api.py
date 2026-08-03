@@ -248,6 +248,8 @@ def test_bootstrap_exposes_only_admitted_runtime_media_bindings() -> None:
         "mingli_growth_night_video",
         "mingli_growth_night_start",
         "mingli_growth_night_poster",
+        "mingli_lab_day_background",
+        "mingli_lab_night_background",
     }
     assert set(media["cues"]) == {"abu_idle", "abu_guide_left", "dodo_idle"}
     assert media["cues"]["abu_guide_left"]["trigger"] == (

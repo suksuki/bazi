@@ -67,6 +67,34 @@ def test_v128_mingli_branch_bundle_is_frozen_to_exact_experience_source() -> Non
     }
 
 
+def test_v131_mingli_lab_bundle_is_frozen_to_exact_experience_source() -> None:
+    path = PROJECT_ROOT / "media/manifests/V131_MINGLI_RESEARCH_LAB_BASELINE_V1.v1.json"
+    bundle = json.loads(path.read_text(encoding="utf-8"))
+
+    assert bundle["frozen_design_commit"] == (
+        "ea2db274ba55b8f9d323881c096d3a3a1ceba66c"
+    )
+    assert bundle["source_version_id"] == (
+        "appgprj_6a680dd8a8808191a03a0b72bfbdb5b7~"
+        "appgver_f202143ae6f08191978004c679c4d101"
+    )
+    assert bundle["source_archive_sha256"] == (
+        "2f6d8ae3da91a8d5d78c74158f91936f1b8d2c41367ee2a6cedf08585be15857"
+    )
+    assert bundle["source_archive_bytes"] == 33_413_120
+    assert {asset["asset_id"] for asset in bundle["assets"]} == {
+        "V131_MINGLI_RESEARCH_LAB_DAY_BACKGROUND_V1",
+        "V131_MINGLI_RESEARCH_LAB_NIGHT_BACKGROUND_V1",
+    }
+    assert bundle["boundaries"] == {
+        "experience_canonical_only": True,
+        "imports_mock_data": False,
+        "imports_prototype_state": False,
+        "runtime_data_authority": "V60_CANONICAL",
+        "dream_scope": "FROZEN_EXCLUDED",
+    }
+
+
 def test_media_library_sources_deliveries_and_cues_are_hash_locked() -> None:
     catalog = load_verified_media_catalog()
     summary = media_library_summary()
@@ -170,7 +198,7 @@ def test_v60_character_identity_is_primary_and_legacy_cartoon_is_retained() -> N
 def test_runtime_media_manifest_resolves_hash_locked_assets_and_cues() -> None:
     manifest = runtime_media_manifest()
 
-    assert manifest["registry_version"] == "v60.runtime-media-registry.005"
+    assert manifest["registry_version"] == "v60.runtime-media-registry.006"
     assert manifest["assets"]["brand_logo"]["asset_ref"] == (
         "brand.abuknows-v60.logo.transparent.v1"
     )
@@ -191,6 +219,12 @@ def test_runtime_media_manifest_resolves_hash_locked_assets_and_cues() -> None:
     )
     assert manifest["assets"]["mingli_growth_night_poster"]["url"] == (
         "/assets/v108/mingli-branch/mingli-branch-growth-night-v3-poster.webp"
+    )
+    assert manifest["assets"]["mingli_lab_day_background"]["sha256"] == (
+        "a9e64413df8b072d35a5073d2976edd4ef6876c56045fdffd68d746d650e3365"
+    )
+    assert manifest["assets"]["mingli_lab_night_background"]["sha256"] == (
+        "88a72c7db347b0a88697934abec21f9843e53a6e052b3cec2f3fbf31fa859887"
     )
     assert manifest["cues"]["abu_idle"]["cue_ref"] == "cue.dream.abu-idle.v1"
     assert manifest["cues"]["abu_idle"]["playback"] == "LOOP"

@@ -1,6 +1,7 @@
 import type { ExperienceUnit } from "../experienceUnits";
 import type { HomeSnapshot } from "../homeApi";
 import { readMingliStageRoute } from "../mingliStageNavigation";
+import { readMingliSyntheticLabRoute } from "../mingliSyntheticLabNavigation";
 import { mingliStageMatchesHome } from "../mingliStageContext";
 import type { MingliStageViewContext } from "../mingliStageTypes";
 import { HomeCompanionRail } from "./HomeCompanionRail";
@@ -25,6 +26,11 @@ export function HomeSceneCompanion({
   onEnterDream: () => void;
   onHomeRefresh: () => Promise<void>;
 }) {
+  if (activeUnit === "lab") {
+    const labRoom = readMingliSyntheticLabRoute().mode;
+    if (labRoom === "overview" || labRoom === "catalog") return null;
+  }
+
   if (mingliSceneActive) {
     const routeMatchesContext = (
       readMingliStageRoute().subjectId === mingliContext.subjectId

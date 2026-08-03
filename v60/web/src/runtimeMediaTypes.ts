@@ -13,4 +13,6 @@ export interface RuntimeHomeSceneAssets {
   mingli_growth_night_video: RuntimeAssetDelivery;
   mingli_growth_night_start: RuntimeAssetDelivery;
   mingli_growth_night_poster: RuntimeAssetDelivery;
+  mingli_lab_day_background: RuntimeAssetDelivery;
+  mingli_lab_night_background: RuntimeAssetDelivery;
 }

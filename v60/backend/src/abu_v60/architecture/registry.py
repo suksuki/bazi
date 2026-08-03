@@ -15,7 +15,7 @@ from abu_v60.architecture.contracts import (
 @lru_cache(maxsize=1)
 def runtime_architecture() -> RuntimeArchitecture:
     architecture = RuntimeArchitecture(
-        architecture_version="v60.runtime-architecture.071",
+        architecture_version="v60.runtime-architecture.072",
         modules=(
             RuntimeModule(
                 module_id="identity",
@@ -307,7 +307,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="media",
                 kind=ModuleKind.PLATFORM,
-                version="v60.media-library.004",
+                version="v60.media-library.005",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("media",),
                 reads_from=("identity", "mingli"),
@@ -321,6 +321,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "same_origin_authenticated_audio_range",
                     "server_locked_projection_bound_narration",
                     "v128_experience_asset_parcel",
+                    "v131_mingli_lab_experience_asset_parcel",
                 ),
                 writes_canonical_state=True,
             ),
@@ -453,7 +454,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-lab",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-lab.028",
+                version="v60.unit-lab.029",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "knowledge", "cognition", "mingli"),
                 capabilities=(
@@ -488,6 +489,10 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "append_only_run_history_discovery",
                     "synthetic_training_suite_summary",
                     "suite_bound_experiment_run_drilldown",
+                    "v131_research_watercourt_overview",
+                    "real_synthetic_catalog_scene",
+                    "recoverable_lab_room_navigation",
+                    "lazy_shared_scene_player_entry",
                 ),
             ),
         ),

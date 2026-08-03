@@ -19,7 +19,7 @@ export function MingliSyntheticSceneHeader({
     <header className="mingli-scene-host-header">
       <button className="mingli-scene-exit" onClick={onExit} type="button">
         <span aria-hidden="true">←</span>
-        回到生命树
+        回到阿布 LAB
       </button>
       <div className="mingli-scene-title">
         <p>阿布 Lab · 合成验证</p>

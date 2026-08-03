@@ -26,6 +26,11 @@ const [
   suiteValidation,
   stageValidation,
   syntheticValidation,
+  overview,
+  catalogScene,
+  researchProjection,
+  homeScene,
+  homeCompanion,
 ] = await Promise.all([
   read("mingliSyntheticLabApi.ts"),
   read("mingliSyntheticLabNavigation.ts"),
@@ -41,6 +46,11 @@ const [
   read("mingliSyntheticSuiteValidation.ts"),
   read("mingliStageValidation.ts"),
   read("mingliSyntheticLabValidation.ts"),
+  read("components", "MingliResearchOverview.tsx"),
+  read("components", "MingliSyntheticCatalogScene.tsx"),
+  read("mingliResearchProjection.ts"),
+  read("components", "HomeLifeTreeScene.tsx"),
+  read("components", "HomeSceneCompanion.tsx"),
 ]);
 const ordinarySubjectValidator =
   stageValidation.match(/function isStageSubjectId[\s\S]*?\n}/)?.[0] ?? "";
@@ -62,7 +72,11 @@ expect(
   "synthetic-suite-api:catalog-and-exact-run-must-remain-read-only",
 );
 expect(
-  navigation.includes('parameters.get("lab_mode") === "synthetic"') &&
+  navigation.includes('modeValue === "synthetic"') &&
+    navigation.includes('modeValue === "catalog"') &&
+    navigation.includes('modeValue === "current"') &&
+    navigation.includes('modeValue === "narration"') &&
+    navigation.includes(': "overview"') &&
     navigation.includes('parameters.get("lab_suite")') &&
     navigation.includes('url.searchParams.set("lab_variant"') &&
     navigation.includes('setOptional(url, "lab_suite"') &&
@@ -77,10 +91,59 @@ expect(
   "experience-navigation:must-clear-synthetic-route-outside-lab",
 );
 expect(
-  workspace.includes('route.mode === "synthetic"') &&
+  workspace.includes('route.mode === "overview"') &&
+    workspace.includes('route.mode === "catalog"') &&
+    workspace.includes('route.mode === "synthetic"') &&
+    workspace.includes('mode: "NATAL_DAYUN_YEAR_6"') &&
+    workspace.includes('autoOpenNarration={route.mode === "narration"}') &&
     occurrences(workspace, /<MingliSyntheticExperimentScene/g) === 1 &&
-    occurrences(workspace, /<MingliSceneHost/g) === 1,
-  "synthetic-workspace:current-and-paired-modes-must-be-exclusive",
+    occurrences(workspace, /<MingliSceneHost/g) === 1 &&
+    occurrences(workspace, /<MingliResearchOverview/g) === 1 &&
+    occurrences(workspace, /<MingliSyntheticCatalogScene/g) === 1,
+  "synthetic-workspace:overview-catalog-current-and-replay-modes-must-be-exclusive",
+);
+expect(
+  overview.includes("把命理变成可以观察、比较和验证的东西") &&
+    overview.includes("这里研究方法，不存放案例") &&
+    overview.includes("八字合成验证") &&
+    overview.includes("四柱／六柱共享舞台") &&
+    overview.includes("当前接入六冲／六合成员事实") &&
+    overview.includes("同一个 Scene Player") &&
+    overview.includes("media.assets.mingli_lab_day_background") &&
+    overview.includes("media.cues.dodo_idle") &&
+    !/MingliScenePlayer|Canvas/.test(overview),
+  "v131-lab-overview:must-preserve-three-instruments-with-real-boundaries-and-no-webgl",
+);
+expect(
+  catalogScene.includes("命局流正在经过这里") &&
+    catalogScene.includes("已揭晓封存复盘") &&
+    catalogScene.includes("不借用其他命盘冒充复盘") &&
+    catalogScene.includes("routeToSyntheticExperiment") &&
+    catalogScene.includes("catalog.suites.modes.map") &&
+    catalogScene.includes("页面只读 GET") &&
+    catalogScene.includes("上次刷新失败，保留当前现场") &&
+    !catalogScene.includes("catalog.error || !catalog.experiments") &&
+    !/MingliScenePlayer|Canvas/.test(catalogScene),
+  "v131-synthetic-catalog:must-project-real-topics-before-the-shared-player",
+);
+expect(
+  researchProjection.includes("experiment.runs.length") &&
+    researchProjection.includes('experiment.run_status === "SEALED"') &&
+    researchProjection.includes("review.counts.review_required") &&
+    researchProjection.includes("review.error_clusters.length") &&
+    researchProjection.includes("experiment.latest_run_ref"),
+  "v131-lab-projection:all-visible-counts-and-routes-must-come-from-real-catalogs",
+);
+expect(
+  homeScene.includes("循着水光，进入阿布 LAB") &&
+    !homeScene.includes('passage === "dream" ? "穿过树洞，进入阿布梦境" : "沿着生命光，进入命理枝"'),
+  "v131-lab-entry:home-flower-must-enter-the-research-realm-not-a-mingli-branch",
+);
+expect(
+  homeCompanion.includes('activeUnit === "lab"') &&
+    homeCompanion.includes('labRoom === "overview" || labRoom === "catalog"') &&
+    homeCompanion.includes("return null"),
+  "v131-lab-shell:overview-and-catalog-must-not-be-covered-by-the-old-stage-boundary",
 );
 expect(
   occurrences(scene, /<MingliScenePlayer/g) === 1 &&
@@ -278,6 +341,8 @@ console.log(JSON.stringify({
   normalizationTrace: "FIELD_LEVEL_OR_HONEST_LEGACY",
   experimentDiscovery: "MULTI_EXPERIMENT_AND_RUN_HISTORY",
   routeRecovery: ["suite", "experiment", "run", "variant"],
+  labRooms: ["overview", "catalog", "current", "narration", "synthetic"],
+  v131ExperienceCommit: "ea2db274ba55b8f9d323881c096d3a3a1ceba66c",
   ordinarySubjectLeakage: false,
   failures,
 }, null, 2));

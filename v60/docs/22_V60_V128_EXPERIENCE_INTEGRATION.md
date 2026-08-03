@@ -1,4 +1,4 @@
-# V60 × V128 Experience Integration
+# V60 × V128/V131 Experience Integration
 
 ## Frozen source
 
@@ -8,21 +8,27 @@ V128 version      appgver_7cbd22a30adc8191af368840daecc716
 Git commit        9a073a46438c29d1aa048241611249a761b08648
 Archive SHA-256   6b38ae4c9c76106ee45ee7cf4a5f2fde182fe9a025ebe4f5c4c787d6ceaa6a42
 Archive bytes     33,208,320
+
+V131 version      appgver_f202143ae6f08191978004c679c4d101
+Git commit        ea2db274ba55b8f9d323881c096d3a3a1ceba66c
+Archive SHA-256   2f6d8ae3da91a8d5d78c74158f91936f1b8d2c41367ee2a6cedf08585be15857
+Archive bytes     33,413,120
 ```
 
 The archive identity is the immutable Sites version receipt, not a V60
 runtime input. V60 independently re-hashes each imported asset byte-for-byte.
 
-V128 is the current Experience Canonical: composition, interaction, motion,
-character performance and user flow. V60 remains the Domain Canonical for
-Profile, Case, Chart, Reading, evidence, timing and recovery. The integration
-may reuse V128 pixels and behavior, but never imports its mock reading text,
-static Golden Bundles, local state or temporary data authority.
+V128 remains the frozen Mingli-branch Experience Canonical. V131 supersedes it
+only for the Lab realm and synthetic-validation entry flow. V60 remains the
+Domain Canonical for Profile, Case, Chart, Reading, evidence, experiments,
+Suite Runs, timing and recovery. The integration may reuse approved pixels and
+behavior, but never imports prototype mock reading text, static Golden Bundles,
+local state or temporary data authority.
 
 ## Current scope
 
-The first two implemented parcels are the daytime Mingli branch and its
-current-layer scene rehearsal:
+The implemented parcels are the daytime Mingli branch, its current-layer scene
+rehearsal and the V131 Lab research realm:
 
 ```text
 profile leaf
@@ -35,6 +41,13 @@ profile leaf
 → companion opens the same four/six-pillar Scene Player
 → current-layer admitted ClaimGraph chapters
 → silent LISTENING rehearsal before formal narration
+
+Lab flower
+→ V131 research watercourt overview
+→ real six-pillar relation-coordinate room
+→ real four-topic synthetic research shelf
+→ exact sealed experiment replay
+→ Abu Says on the same six-pillar Scene Player
 ```
 
 For the timing layer, “current-layer chapters” currently means the natal
@@ -67,6 +80,18 @@ on its existing V108 baseline until a matching V128 night parcel is reviewed.
 - A rehearsal route is admitted only when the selected layer has at least one
   projectable Claim; empty or fully withheld layers keep normal Reading
   controls visible.
+- Lab overview and topic shelf read their `4 topics / 16 sealed runs / latest
+  2 of 2 sealed / 2 review-required / 2 error clusters` from real catalog and
+  Suite APIs. They create no Canvas and never call a model from the browser.
+- Prototype `localStorage` adjudication, fake Profile/Prompt/Gold identities and
+  manual “blind review” are not copied. The current product correctly calls the
+  deep view an already-revealed sealed replay.
+- V131's broad relation-family copy is narrowed to V60's admitted six-clash and
+  six-combination membership facts. Relation effect and source usability stay
+  unresolved until whole-chart professional adjudication exists.
+- Dodo is the Lab research guide. Opening six pillars or Abu Says lazily mounts
+  the same canonical Scene Player; it does not replace the Case-bound narrator,
+  script, Projection, Cue or audio clock.
 
 ## Explicit freeze
 
@@ -78,7 +103,8 @@ engine code may be copied or modified under this parcel.
 
 Continue in visible user order: make Home profile identity and current-tree
 switching match the prototype, then refine the shared stage's daytime contrast
-and freeze the real Abu Says audio/Cue performance. Lab remains a separate
-research path and Dream stays frozen. Each parcel must preserve V128 experience
-fidelity while proving that the displayed content comes from the same real V60
-Case/Reading lineage and survives refresh, back/forward and profile changes.
+and freeze the real Abu Says audio/Cue performance. Lab now has its V131 realm,
+real research shelf and shared-stage entry; the next Lab work is method depth,
+not another shell. Dream stays frozen. Each parcel must preserve the applicable
+prototype fidelity while proving that displayed content comes from real V60
+lineage and survives refresh, back/forward and profile changes.

@@ -321,12 +321,31 @@ Hash，避免 Ref 未变但实际内容已变。
 后续实验拆为 `DEV / QUALIFICATION / HOLDOUT`。DEV 用于发现与修正方法；只有冻结
 方法后运行的陌生 QUALIFICATION／HOLDOUT 结果，才有资格参与模型能力声明。
 
+## V131 Lab 体验接线
+
+V131 commit `ea2db274ba55b8f9d323881c096d3a3a1ceba66c` 的水庭总览和合成验证目录
+已经进入真实 V60。进入 Lab 先看到三个研究入口，而不是个人命盘或常驻 WebGL：
+
+```text
+六柱关系观察     -> canonical 四／六柱 Scene Player
+八字合成验证     -> 4 个真实课题、16 次封存运行、真实 Suite 状态
+阿布说           -> 同一个六柱 Scene Player 与服务端锁定声画链
+```
+
+总览和目录均为只读 GET、零 Canvas；只有进入六柱、阿布说或具体封存现场后才懒加载
+唯一 Scene Player。最新 DEV Suite 如实显示 `2/2` 封存、`2` 项待复核和 `2` 个错误簇；
+`QUALIFICATION / HOLDOUT` 继续显示 `Owner Gate 后开放`。当前页面是“已揭晓封存
+复盘”，不是盲审；原型的 `localStorage` 裁决、假 Run 身份和写死统计均未进入系统。
+
+六柱入口只说明当前已准入的六冲／六合成员事实。关系作用、来源可用性、旺衰、有效
+做功或吉凶仍必须由整盘方法和专业裁决支持，不能从原型演示文案反推。
+
 ## 当前版本
 
 ```text
 Foundation                 v60.foundation.032
 Mingli Engine              v60.mingli-cognitive-engine.043
-Runtime Architecture       v60.runtime-architecture.071
+Runtime Architecture       v60.runtime-architecture.072
 Agent Runtime              v60.mingli-agent-runtime.028
 Agent Profile              v60.mingli-agent.whole-chart-cognition.026
 Agent Prompt               v60.prompt.mingli-agent-whole-chart.023
@@ -348,7 +367,7 @@ Suite Definition           v60.mingli-synthetic-suite-definition.001
 Suite Runner               v60.mingli-synthetic-suite-runner.002
 Suite Run                  v60.mingli-synthetic-suite-run.002
 Unit Mingli                v60.unit-mingli.033
-Unit Lab                   v60.unit-lab.028
+Unit Lab                   v60.unit-lab.029
 Migration                  0040_mingli_model_field_contract
 ```
 
@@ -360,7 +379,7 @@ Profile/Prompt `.026/.023` 与 Reading `.005`；历史 Reading、Evaluator、Gol
 ## 验证
 
 ```text
-Backend tests              429 PASS
+Backend tests              432 PASS
 Ruff                       PASS
 TypeScript / Vite build    PASS
 Runtime Architecture       PASS
@@ -373,6 +392,6 @@ Real Desktop Chrome        PASS
 Vite 仍报告两个大于 500 kB 的既有异步图形 chunk；这是已记录性能债，不改变本轮方法
 Lab 的功能结论。
 
-真实 Desktop Chrome 已验证最新 Suite、紧邻上轮跳转、浏览器返回与刷新恢复；1512px
-视口无横向溢出、无控制台错误。可视证据保存在
-`.artifacts/synthetic-suite-training-compare/latest-suite-desktop.png`。
+真实 Desktop Chrome 已验证 V131 总庭、四课题目录、最新 Suite、封存现场、完整六柱、
+阿布说 PREPARING、深链接刷新以及浏览器前进／后退；1440×900 和 1280×800 均无横向
+溢出或控制台错误。总览／目录无 Canvas，深场始终只有一个 Scene Player。

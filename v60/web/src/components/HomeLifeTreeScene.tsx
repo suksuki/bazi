@@ -198,7 +198,7 @@ export function HomeLifeTreeScene({
           <i aria-hidden="true" /><b aria-hidden="true" />
           <p>
             <small>{passage === "dream" ? "阿布梦境 · 账号旅程" : passage === "lab" ? "命理 Lab" : "命理测算"}</small>
-            <strong>{passage === "dream" ? "穿过树洞，进入阿布梦境" : "沿着生命光，进入命理枝"}</strong>
+            <strong>{passage === "dream" ? "穿过树洞，进入阿布梦境" : "循着水光，进入阿布 LAB"}</strong>
           </p>
         </div>
       )}

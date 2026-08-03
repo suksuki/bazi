@@ -3,12 +3,13 @@ from __future__ import annotations
 import json
 
 from abu_v60.media import PROJECT_ROOT, load_verified_assets
+from abu_v60.system_manifest import ASSET_REGISTRY_VERSION
 
 
 def test_registry_assets_exist_and_match_hashes() -> None:
     assets = load_verified_assets()
 
-    assert len(assets) == 45
+    assert len(assets) == 47
     assert {asset["asset_ref"] for asset in assets} == {
         "dream.grove.clean.v1",
         "dream.v60.life-world.clean.v1",
@@ -41,6 +42,8 @@ def test_registry_assets_exist_and_match_hashes() -> None:
         "experience.v128.mingli-branch.day-video.v1",
         "experience.v128.mingli-branch.day-start.v1",
         "experience.v128.mingli-branch.day-poster.v1",
+        "experience.v131.mingli-lab.day-background.v1",
+        "experience.v131.mingli-lab.night-background.v1",
         "abu.follow.walk.v1",
         "abu.follow.walk.webp.v1",
         "abu.follow.walk.poster.v1",
@@ -56,6 +59,13 @@ def test_registry_assets_exist_and_match_hashes() -> None:
         "dream.semantic-tree.fruit.v1",
         "dream.semantic-tree.foreground.v1",
     }
+
+
+def test_registry_schema_matches_runtime_manifest() -> None:
+    registry_path = PROJECT_ROOT / "assets" / "registry.json"
+    registry = json.loads(registry_path.read_text(encoding="utf-8"))
+
+    assert registry["schema_version"] == ASSET_REGISTRY_VERSION
 
 
 def test_registry_never_reads_v50_at_runtime() -> None:

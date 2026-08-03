@@ -22,6 +22,8 @@ RUNTIME_ASSET_BINDINGS = {
     "mingli_growth_night_video": "experience.v108.mingli-branch.night-video.v1",
     "mingli_growth_night_start": "experience.v108.mingli-branch.night-start.v1",
     "mingli_growth_night_poster": "experience.v108.mingli-branch.night-poster.v1",
+    "mingli_lab_day_background": "experience.v131.mingli-lab.day-background.v1",
+    "mingli_lab_night_background": "experience.v131.mingli-lab.night-background.v1",
 }
 RUNTIME_CUE_BINDINGS = {
     "abu_idle": "cue.dream.abu-idle.v1",
@@ -90,7 +92,7 @@ def runtime_media_manifest() -> dict[str, Any]:
         }
 
     return {
-        "registry_version": "v60.runtime-media-registry.005",
+        "registry_version": "v60.runtime-media-registry.006",
         "catalog_version": str(catalog["schema_version"]),
         "assets": runtime_assets,
         "cues": runtime_cues,

@@ -1,7 +1,7 @@
 import type { MingliSyntheticVariant } from "./mingliSyntheticLabTypes";
 
 export interface MingliSyntheticLabRoute {
-  mode: "current" | "synthetic";
+  mode: "overview" | "catalog" | "current" | "narration" | "synthetic";
   suiteRunRef: string | null;
   experimentRef: string | null;
   runRef: string | null;
@@ -18,9 +18,15 @@ const LAB_ROUTE_KEYS = [
 
 export function readMingliSyntheticLabRoute(): MingliSyntheticLabRoute {
   const parameters = new URL(window.location.href).searchParams;
-  const synthetic = parameters.get("lab_mode") === "synthetic";
+  const modeValue = parameters.get("lab_mode");
+  const mode = modeValue === "synthetic"
+    || modeValue === "catalog"
+    || modeValue === "current"
+    || modeValue === "narration"
+    ? modeValue
+    : "overview";
   return {
-    mode: synthetic ? "synthetic" : "current",
+    mode,
     suiteRunRef: nonempty(parameters.get("lab_suite")),
     experimentRef: nonempty(parameters.get("lab_experiment")),
     runRef: nonempty(parameters.get("lab_run")),
@@ -35,13 +41,18 @@ export function writeMingliSyntheticLabRoute(
   const url = new URL(window.location.href);
   url.searchParams.set("view", "lab");
   if (route.mode === "synthetic") {
-    url.searchParams.set("lab_mode", "synthetic");
+    url.searchParams.set("lab_mode", route.mode);
     url.searchParams.set("lab_variant", route.variant);
     setOptional(url, "lab_suite", route.suiteRunRef);
     setOptional(url, "lab_experiment", route.experimentRef);
     setOptional(url, "lab_run", route.runRef);
-  } else {
+  } else if (route.mode === "overview") {
     LAB_ROUTE_KEYS.forEach((key) => url.searchParams.delete(key));
+  } else {
+    url.searchParams.set("lab_mode", route.mode);
+    ["lab_suite", "lab_experiment", "lab_run", "lab_variant"].forEach(
+      (key) => url.searchParams.delete(key),
+    );
   }
   window.history[mode === "push" ? "pushState" : "replaceState"](null, "", url);
 }

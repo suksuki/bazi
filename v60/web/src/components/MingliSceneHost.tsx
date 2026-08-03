@@ -49,18 +49,24 @@ import { MingliSceneControls } from "./MingliSceneControls";
 import { MingliScenePlayer } from "./MingliScenePlayer";
 
 export function MingliSceneHost({
+  autoOpenNarration = false,
+  exitLabel,
   homeLineageKey,
   media,
   onContextChange,
   onExit,
+  onNarrationStateChange,
   onOpenSyntheticLab,
   onSurfaceChange,
   surface,
 }: {
+  autoOpenNarration?: boolean;
+  exitLabel?: string;
   homeLineageKey: string;
   media: RuntimeMediaManifest;
   onContextChange: (context: MingliStageViewContext) => void;
   onExit: () => void;
+  onNarrationStateChange?: (open: boolean) => void;
   onOpenSyntheticLab?: () => void;
   onSurfaceChange: (surface: MingliSceneSurface) => void;
   surface: MingliSceneSurface;
@@ -101,6 +107,10 @@ export function MingliSceneHost({
   }, []);
 
   useEffect(() => {
+    if (autoOpenNarration) setNarrationOpen(true);
+  }, [autoOpenNarration]);
+
+  useEffect(() => {
     const controller = new AbortController();
     setSubjects([]);
     setSubjectsLoading(true);
@@ -135,13 +145,13 @@ export function MingliSceneHost({
       setReadingSummary(null);
       setAgentGenerating(false);
       setAgentError(null);
-      setNarrationOpen(false);
+      setNarrationOpen(autoOpenNarration);
       setRehearsalOpen(readMingliStageEntryMode() === "rehearsal");
       setRoute(restored);
     };
     window.addEventListener("popstate", restore);
     return () => window.removeEventListener("popstate", restore);
-  }, [onContextChange]);
+  }, [autoOpenNarration, onContextChange]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -156,7 +166,7 @@ export function MingliSceneHost({
     setReadingSummary(null);
     setAgentGenerating(false);
     setAgentError(null);
-    setNarrationOpen(false);
+    setNarrationOpen(autoOpenNarration);
     setRehearsalOpen(readMingliStageEntryMode() === "rehearsal");
     setClock(INITIAL_MINGLI_CLOCK);
     onContextChange({
@@ -253,7 +263,7 @@ export function MingliSceneHost({
     });
     setStage(null);
     setReadingSummary(null);
-    setNarrationOpen(false);
+    setNarrationOpen(autoOpenNarration);
     setRehearsalOpen(false);
     setRoute(next);
     writeMingliStageRoute(
@@ -368,6 +378,7 @@ export function MingliSceneHost({
     setRehearsalOpen(false);
     writeMingliStageExperience("stage", "observe", "replace");
     setNarrationOpen(true);
+    onNarrationStateChange?.(true);
   };
   const closeRehearsal = () => {
     setRehearsalOpen(false);
@@ -386,6 +397,7 @@ export function MingliSceneHost({
       style={hostStyle}
     >
       <MingliSceneControls
+        exitLabel={exitLabel}
         onExit={onExit}
         onNavigate={navigate}
         onOpenSyntheticLab={onOpenSyntheticLab}
@@ -442,6 +454,7 @@ export function MingliSceneHost({
               onClock={onClock}
               onClose={() => {
                 setNarrationOpen(false);
+                onNarrationStateChange?.(false);
                 setClock(INITIAL_MINGLI_CLOCK);
               }}
               returnLabel={surface === "LAB" ? "回到 Lab 观察" : "回到命理阅读"}

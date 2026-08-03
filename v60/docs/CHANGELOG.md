@@ -2,6 +2,40 @@
 
 ## 2026-08-03
 
+### V131 Lab becomes a real research realm
+
+- Froze exact V131 source commit
+  `ea2db274ba55b8f9d323881c096d3a3a1ceba66c` and its Sites archive receipt,
+  then imported the byte-identical daytime and nighttime research-watercourt
+  assets through the V60 asset registry. Prototype code, mock Runs and local
+  adjudication state were not imported.
+- Replaced the old direct-to-stage Lab entry with the V131 research overview:
+  six-pillar relation observation, synthetic Bazi validation and Abu Says now
+  appear as three coherent instruments with Dodo as the research guide. The
+  overview and research shelf create no Canvas; deep rooms lazily reuse the
+  single canonical Scene Player.
+- Added a real four-topic shelf backed by the existing catalog and Suite APIs.
+  It currently presents 16 sealed experiment Runs and the latest real Suite as
+  2/2 sealed, 2 review-required and 2 error clusters. DEV is available;
+  QUALIFICATION and HOLDOUT remain visibly locked behind Owner Gate. The view
+  says “revealed sealed replay” and does not impersonate blind review.
+- Kept the professional boundary visible: six pillars show only admitted
+  six-clash/six-combination membership facts; relation effect and source
+  usability remain unresolved. Abu Says opens the same six-pillar stage and
+  service-locked PREPARING/READY audio-clock flow instead of a second player.
+- Added recoverable Lab rooms for overview, catalog, current stage, narration
+  and exact synthetic replay. Refresh and browser Back/Forward preserve exact
+  experiment/run/variant identity; returning from a deep room lands at the Lab
+  overview. Removed the old independent-case overlay that covered the V131
+  overview and catalog at smaller desktop widths.
+- Advanced Runtime Architecture to `.072`, Media to `.005`, Unit Lab to `.029`,
+  Asset Registry to `.003` and Runtime Media to `.006`. All 432 backend tests,
+  Ruff, TypeScript/Vite build, Runtime Architecture, source maintainability,
+  media technical contracts, shared Scene, synthetic Lab and V128 branch
+  fidelity pass. Signed-in Desktop Chrome verified the full flow at 1440×900
+  and 1280×800 with no horizontal overflow or console errors. Dream and V50
+  remain untouched.
+
 ### Real four-layer judgments enter the V128-style scene preview
 
 - The companion action on the grown Mingli branch no longer collapses into

@@ -290,10 +290,10 @@ Current executable identities are:
 
 ```text
 Foundation       v60.foundation.032
-Architecture     v60.runtime-architecture.071
+Architecture     v60.runtime-architecture.072
 Mingli Engine    v60.mingli-cognitive-engine.043
-Media            v60.media-library.004
-Runtime Media    v60.runtime-media-registry.005
+Media            v60.media-library.005
+Runtime Media    v60.runtime-media-registry.006
 Unit Mingli      v60.unit-mingli.033
 Unit Abu Says    v60.unit-abu-says.008
 Stage            v60.mingli-stage-projection.004
