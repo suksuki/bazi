@@ -2,6 +2,40 @@
 
 ## 2026-08-03
 
+### Real four-layer judgments enter the V128-style scene preview
+
+- The companion action on the grown Mingli branch no longer collapses into
+  Lab or invokes the older coordinate-bound TTS script. It now opens the same
+  Reading-owned four/six-pillar Scene Player and rehearses the selected
+  `命局原理 / 生命意象 / 人生主题 / 时间趋势` layer from the exact shared
+  ClaimGraph Ref/Hash.
+- Only non-`WITHHELD` claims become chapters. Internal Day Master codes are
+  translated into product Chinese, Work Path closure codes receive explicit
+  Chinese judgment titles, and professional adjudication/evidence-gap statuses
+  retain their distinct meaning. Every chapter keeps its Claim Ref, status,
+  condition and graph lineage. The preview stays visibly silent and in
+  `LISTENING / PAUSED`; it creates no audio, script, TTS request or second
+  Canvas before the judgment and semantic Cue design are approved.
+- Split the branch's three user intents: companion rehearsal, ordinary Reading
+  stage and explicit Lab entry. Timing rehearsal expands directly to the
+  complete natal four pillars + current Dayun + selected annual six-pillar
+  state; other layers remain natal four pillars. Until frozen Readings carry a
+  typed binding to the independently selected stage year, timing rehearsal
+  attaches only natal baseline and discriminating-question chapters. It does
+  not visually assign old Dayun/annual prose to the current six-pillar columns.
+- Added recoverable `mingli_stage` and `mingli_rehearsal` route state. Refresh
+  restores the exact preview, browser Back returns to the same branch/layer,
+  Forward restores the preview, closing returns to Reading observation, and
+  neither ordinary stage entry nor the explicit Lab entry is redirected. A
+  layer containing no admitted/projectable Claim cannot open a hidden-control
+  rehearsal, and orphan rehearsal URL parameters are ignored.
+- Advanced Runtime Architecture to `.071`, Unit Mingli to `.033` and Abu Says
+  to `.008`. All 430 backend tests, Ruff, TypeScript/Vite build, Runtime
+  Architecture, source maintainability and both frontend contracts pass. Real
+  signed-in Desktop Chrome verified Chinese Day Master copy, four- and
+  six-pillar rehearsal, refresh/back/forward recovery and separate Reading/Lab
+  routes without audio playback.
+
 ### V128 day Mingli branch enters the real V60 experience
 
 - Froze ChatGPT Sites V128 version

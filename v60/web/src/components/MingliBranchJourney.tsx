@@ -8,6 +8,7 @@ import {
 
 import type { RuntimeMediaManifest } from "../api";
 import type { HomeWorldLight } from "../homeWorldLight";
+import { hasMingliLayerNarration } from "../mingliLayerNarrationProjection";
 import type {
   MingliLeafEntry,
   MingliReadingLayer,
@@ -50,6 +51,8 @@ export function MingliBranchJourney({
   onEntryConsumed,
   onLayerChange,
   onGenerateAgent,
+  onOpenLab,
+  onOpenRehearsal,
   onOpenStage,
   stage,
   summary,
@@ -64,6 +67,8 @@ export function MingliBranchJourney({
   onEntryConsumed: () => void;
   onLayerChange: (layer: MingliReadingLayer) => void;
   onGenerateAgent: () => void;
+  onOpenLab: () => void;
+  onOpenRehearsal: () => void;
   onOpenStage: (expandTime: boolean) => void;
   stage: MingliStageProjection;
   summary: MingliReadingSummaryProjection | null;
@@ -85,6 +90,9 @@ export function MingliBranchJourney({
   const entryTimerRef = useRef<number | null>(null);
   const hasFormalReading = summaryMatchesStage(summary, stage);
   const hasClaimGraph = hasFormalReading && summary?.claim_graph !== null;
+  const hasLayerRehearsal = hasFormalReading
+    && summary?.claim_graph != null
+    && hasMingliLayerNarration(summary.claim_graph, layer);
   const guideIsDodo = light === "day";
   const guideCue = guideIsDodo ? media.cues.dodo_idle : media.cues.abu_idle;
   const film = light === "day"
@@ -263,6 +271,9 @@ export function MingliBranchJourney({
         {ready && !reducedMotion && (
           <button onClick={replay} type="button"><span aria-hidden="true">↺</span> 重看生长</button>
         )}
+        {ready && (
+          <button onClick={onOpenLab} type="button"><span aria-hidden="true">◇</span> 进入命理 Lab</button>
+        )}
       </div>
 
       {ready && (
@@ -270,7 +281,8 @@ export function MingliBranchJourney({
           <button
             aria-label={`进入${guideIsDodo ? "多多" : "阿布"}陪伴的命理舞台`}
             className={`mingli-growth-guide ${guideIsDodo ? "is-dodo" : "is-abu"}`}
-            onClick={() => onOpenStage(false)}
+            disabled={!hasLayerRehearsal}
+            onClick={onOpenRehearsal}
             type="button"
           >
             <TransparentCharacterMedia
@@ -282,7 +294,11 @@ export function MingliBranchJourney({
               video={guideCue.deliveries.VP9_ALPHA_WEBM}
               webp={guideCue.deliveries.ANIMATED_WEBP}
             />
-            <span>{guideIsDodo ? "多多" : "阿布"} · 进入命理舞台</span>
+            <span>{hasLayerRehearsal
+              ? `${guideIsDodo ? "多多" : "阿布"} · 带你看这一层`
+              : hasClaimGraph
+                ? "这一层暂无可讲的判断"
+                : "完成整盘初断后，可以一起看"}</span>
           </button>
           <article aria-live="polite" className="mingli-growth-whisper">
             <header className="mingli-growth-identity">

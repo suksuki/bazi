@@ -1,0 +1,221 @@
+.mingli-layer-rehearsal {
+  position: absolute;
+  z-index: 9;
+  inset: 0;
+  color: #183e2e;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(247, 241, 218, 0.22), transparent 22%),
+    linear-gradient(0deg, rgba(247, 240, 214, 0.28), transparent 38%);
+}
+
+.mingli-rehearsal-brand {
+  position: absolute;
+  z-index: 4;
+  top: 24px;
+  left: 30px;
+  display: grid;
+  gap: 2px;
+  text-shadow: 0 1px 12px rgba(249, 244, 220, 0.9);
+}
+
+.mingli-rehearsal-brand small,
+.mingli-rehearsal-brand span {
+  color: rgba(30, 72, 50, 0.66);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+}
+
+.mingli-rehearsal-brand strong {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: clamp(17px, 1.6vw, 24px);
+  font-weight: 580;
+}
+
+.mingli-rehearsal-close {
+  position: absolute;
+  z-index: 5;
+  top: 25px;
+  right: 30px;
+  min-height: 34px;
+  padding: 0;
+  color: rgba(24, 62, 46, 0.72);
+  border: 0;
+  border-bottom: 1px solid rgba(91, 74, 39, 0.26);
+  border-radius: 0;
+  background: transparent;
+  pointer-events: auto;
+  font-size: 9px;
+}
+
+.mingli-rehearsal-close:is(:hover, :focus-visible) {
+  color: #6d4b1d;
+  border-color: rgba(109, 75, 29, 0.7);
+  outline: 0;
+}
+
+.mingli-layer-rehearsal .mingli-character-performance {
+  right: clamp(24px, 3.6vw, 58px);
+  bottom: 20px;
+  left: auto;
+  width: clamp(166px, 15vw, 230px);
+  height: min(62%, 390px);
+}
+
+.mingli-layer-rehearsal .mingli-character-performance > div {
+  color: #1f4b36;
+  border-color: rgba(49, 91, 65, 0.13);
+  background: rgba(246, 239, 213, 0.68);
+  box-shadow: 0 8px 28px rgba(34, 45, 31, 0.08);
+}
+
+.mingli-layer-rehearsal .mingli-character-performance strong {
+  color: #365f43;
+}
+
+.mingli-layer-rehearsal .mingli-character-performance span,
+.mingli-layer-rehearsal .mingli-character-performance small {
+  color: rgba(43, 79, 55, 0.62);
+}
+
+.mingli-rehearsal-caption {
+  position: absolute;
+  z-index: 4;
+  right: clamp(248px, 20vw, 330px);
+  bottom: 112px;
+  left: clamp(110px, 13vw, 218px);
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  padding: 20px 64px 24px;
+  text-align: center;
+  text-shadow: 0 1px 12px rgba(252, 248, 228, 0.94);
+  background: radial-gradient(ellipse, rgba(249, 244, 221, 0.76), transparent 72%);
+}
+
+.mingli-rehearsal-caption :is(small, h2, p, span, em) {
+  margin: 0;
+}
+
+.mingli-rehearsal-caption > small {
+  color: rgba(83, 80, 51, 0.7);
+  font-size: 8px;
+  letter-spacing: 0.09em;
+}
+
+.mingli-rehearsal-caption h2 {
+  color: #1b4934;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: clamp(18px, 1.8vw, 27px);
+  font-weight: 560;
+  line-height: 1.32;
+}
+
+.mingli-rehearsal-caption p {
+  max-width: 900px;
+  color: rgba(19, 57, 40, 0.9);
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: clamp(12px, 1.08vw, 15px);
+  line-height: 1.75;
+}
+
+.mingli-rehearsal-caption span,
+.mingli-rehearsal-caption em {
+  max-width: 820px;
+  color: rgba(40, 72, 51, 0.62);
+  font-size: 8px;
+  font-style: normal;
+  line-height: 1.5;
+}
+
+.mingli-rehearsal-rail {
+  position: absolute;
+  z-index: 6;
+  bottom: 24px;
+  left: 50%;
+  display: grid;
+  grid-template-columns: 76px minmax(190px, 330px) 76px;
+  align-items: center;
+  gap: 12px;
+  width: min(560px, 46vw);
+  padding: 7px 12px;
+  border: 1px solid rgba(63, 93, 67, 0.12);
+  border-radius: 999px;
+  background: rgba(244, 238, 211, 0.64);
+  box-shadow: 0 10px 34px rgba(28, 39, 27, 0.09);
+  pointer-events: auto;
+  transform: translateX(-50%);
+  backdrop-filter: blur(12px);
+}
+
+.mingli-rehearsal-rail > button {
+  min-height: 28px;
+  padding: 0;
+  color: rgba(34, 72, 50, 0.72);
+  border: 0;
+  background: transparent;
+  font-size: 8px;
+}
+
+.mingli-rehearsal-rail > button:disabled {
+  cursor: default;
+  opacity: 0.28;
+}
+
+.mingli-rehearsal-rail > div {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+}
+
+.mingli-rehearsal-rail > div > small {
+  color: rgba(50, 82, 59, 0.64);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+}
+
+.mingli-rehearsal-rail > div > span {
+  display: flex;
+  gap: 7px;
+}
+
+.mingli-rehearsal-rail > div > span button {
+  width: 26px;
+  height: 3px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(49, 81, 58, 0.2);
+}
+
+.mingli-rehearsal-rail > div > span button[aria-pressed="true"] {
+  background: rgba(151, 105, 37, 0.78);
+}
+
+.mingli-scene-host[data-world-light="night"] .mingli-layer-rehearsal {
+  color: #f6e9bd;
+  background:
+    linear-gradient(180deg, rgba(1, 17, 25, 0.32), transparent 24%),
+    linear-gradient(0deg, rgba(1, 17, 24, 0.38), transparent 42%);
+}
+
+.mingli-scene-host[data-world-light="night"] :is(
+  .mingli-rehearsal-brand,
+  .mingli-rehearsal-caption
+) {
+  text-shadow: 0 2px 14px rgba(0, 10, 16, 0.94);
+}
+
+.mingli-scene-host[data-world-light="night"] .mingli-rehearsal-caption {
+  background: radial-gradient(ellipse, rgba(2, 24, 29, 0.76), transparent 72%);
+}
+
+.mingli-scene-host[data-world-light="night"] .mingli-rehearsal-caption :is(h2, p) {
+  color: #fff0c2;
+}
+
+.mingli-scene-host[data-world-light="night"] .mingli-rehearsal-caption :is(small, span, em),
+.mingli-scene-host[data-world-light="night"] .mingli-rehearsal-brand :is(small, span),
+.mingli-scene-host[data-world-light="night"] .mingli-rehearsal-close {
+  color: rgba(247, 232, 192, 0.7);
+}

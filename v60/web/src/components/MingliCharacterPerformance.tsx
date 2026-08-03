@@ -15,30 +15,39 @@ const ATTENTION_LABELS: Record<MingliNarrationCue["cue_id"], string> = {
 
 export function MingliCharacterPerformance({
   activeCue,
+  attentionLabel,
+  actorRef,
   cue,
   phase,
+  performanceMode = "AUDIO",
   stage,
 }: {
   activeCue: MingliNarrationCue | null;
+  attentionLabel?: string;
+  actorRef?: MingliStageProjection["narrator_actor_id"];
   cue: RuntimeMediaCue;
   phase: MingliNarrationPhase | null;
+  performanceMode?: "AUDIO" | "REHEARSAL";
   stage: MingliStageProjection;
 }) {
-  const isDodo = stage.narrator_actor_id === "DUODUO_NARRATOR_V1";
+  const performanceActorRef = actorRef ?? stage.narrator_actor_id;
+  const isDodo = performanceActorRef === "DUODUO_NARRATOR_V1";
   const name = isDodo ? "多多" : "阿布";
-  const state = performanceState(phase);
+  const state = performanceMode === "REHEARSAL"
+    ? "LISTENING"
+    : performanceState(phase);
   const poster = cue.deliveries.REDUCED_MOTION_POSTER;
   const video = cue.deliveries.VP9_ALPHA_WEBM;
   const webp = cue.deliveries.ANIMATED_WEBP;
   return (
     <div
       className="mingli-character-performance"
-      data-actor-ref={stage.narrator_actor_id}
+      data-actor-ref={performanceActorRef}
       data-character-state={state}
       data-performance-fidelity="IDLE_MEDIA_WITH_AUDIO_BOUND_STATE"
     >
       <TransparentCharacterMedia
-        active={phase === "PLAYING"}
+        active={performanceMode === "AUDIO" && phase === "PLAYING"}
         alt={`${name}${state === "SPEAKING" ? "正在讲述" : "正在陪你看命理舞台"}`}
         className="mingli-character-media"
         cueRef={cue.cue_ref}
@@ -48,8 +57,12 @@ export function MingliCharacterPerformance({
       />
       <div>
         <strong>{name}</strong>
-        <span>{stateLabel(state)}</span>
-        <small>{activeCue ? ATTENTION_LABELS[activeCue.cue_id] : "等待舞台与声音就绪"}</small>
+        <span>{performanceMode === "REHEARSAL" ? "陪你校对这一段" : stateLabel(state)}</span>
+        <small>{attentionLabel ?? (activeCue
+          ? ATTENTION_LABELS[activeCue.cue_id]
+          : performanceMode === "REHEARSAL"
+            ? "判断与命盘仍绑定在一起"
+            : "等待舞台与声音就绪")}</small>
       </div>
     </div>
   );

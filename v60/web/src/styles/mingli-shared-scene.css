@@ -21,6 +21,22 @@
     linear-gradient(148deg, #0e2d24 0%, #0b211b 54%, #071813 100%);
 }
 
+.mingli-scene-host[data-rehearsal-open="true"] {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.mingli-scene-host[data-rehearsal-open="true"] > :is(
+  .mingli-scene-host-header,
+  .mingli-scene-toolbar,
+  .mingli-stage-boundary
+) {
+  display: none;
+}
+
+.mingli-scene-host[data-rehearsal-open="true"] .mingli-scene-composition {
+  grid-row: 1;
+}
+
 .mingli-scene-host::before {
   position: absolute;
   z-index: 0;
@@ -200,6 +216,26 @@
 .mingli-scene-composition[data-overlay="READING"] .mingli-scene-player,
 .mingli-scene-composition[data-overlay="LAB"] .mingli-scene-player {
   right: clamp(338px, 27vw, 372px);
+}
+
+.mingli-scene-composition[data-overlay="REHEARSAL"] .mingli-scene-player {
+  inset: 0;
+}
+
+.mingli-scene-composition[data-overlay="REHEARSAL"] :is(
+  .mingli-scene-truth-line
+) {
+  display: none;
+}
+
+.mingli-scene-composition[data-overlay="REHEARSAL"] .mingli-scene-column-labels {
+  bottom: 116px;
+}
+
+.mingli-scene-composition[data-overlay="REHEARSAL"] .mingli-scene-vignette {
+  background:
+    radial-gradient(circle at 50% 43%, transparent 22%, rgba(21, 46, 35, 0.12) 76%),
+    linear-gradient(180deg, rgba(244, 239, 216, 0.04), rgba(33, 48, 36, 0.18));
 }
 
 .mingli-scene-player {

@@ -326,7 +326,7 @@ Hash，避免 Ref 未变但实际内容已变。
 ```text
 Foundation                 v60.foundation.032
 Mingli Engine              v60.mingli-cognitive-engine.043
-Runtime Architecture       v60.runtime-architecture.070
+Runtime Architecture       v60.runtime-architecture.071
 Agent Runtime              v60.mingli-agent-runtime.028
 Agent Profile              v60.mingli-agent.whole-chart-cognition.026
 Agent Prompt               v60.prompt.mingli-agent-whole-chart.023
@@ -347,7 +347,7 @@ Suite Catalog              v60.mingli-synthetic-suite-catalog.001
 Suite Definition           v60.mingli-synthetic-suite-definition.001
 Suite Runner               v60.mingli-synthetic-suite-runner.002
 Suite Run                  v60.mingli-synthetic-suite-run.002
-Unit Mingli                v60.unit-mingli.032
+Unit Mingli                v60.unit-mingli.033
 Unit Lab                   v60.unit-lab.028
 Migration                  0040_mingli_model_field_contract
 ```

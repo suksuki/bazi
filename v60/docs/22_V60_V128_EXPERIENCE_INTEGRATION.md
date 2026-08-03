@@ -21,7 +21,8 @@ static Golden Bundles, local state or temporary data authority.
 
 ## Current scope
 
-The first implemented parcel is the daytime Mingli branch:
+The first two implemented parcels are the daytime Mingli branch and its
+current-layer scene rehearsal:
 
 ```text
 profile leaf
@@ -31,7 +32,16 @@ profile leaf
 → life-theme flower at 4.58s
 → timing fruit at 5.32s
 → real V60 layer content and Reading actions
+→ companion opens the same four/six-pillar Scene Player
+→ current-layer admitted ClaimGraph chapters
+→ silent LISTENING rehearsal before formal narration
 ```
+
+For the timing layer, “current-layer chapters” currently means the natal
+baseline plus discriminating question on the six-pillar coordinate stage.
+Frozen Dayun/annual prose stays out until its ClaimGraph carries the same typed
+year/timing-vector identity as the Stage; visual proximity is not treated as a
+domain binding.
 
 All three source assets are byte-identical and Hash-locked in
 `V128_MINGLI_BRANCH_GROWTH_BASELINE_V1`. The night film deliberately remains
@@ -47,6 +57,16 @@ on its existing V108 baseline until a matching V128 night parcel is reviewed.
   client TTS text, URL-hash-only persistence or the monolithic prototype page.
 - Known prototype bug not copied: “进入明理 Lab” must enter Lab rather than
   opening Abu Says exploration.
+- The inverse route collapse is also forbidden: the companion rehearsal and
+  ordinary stage must remain Reading experiences, while only the explicit Lab
+  action enters `view=lab`.
+- Current rehearsal is intentionally silent. V128 composition and character
+  presence are reused, but the old coordinate-bound narration text is not
+  dressed up as four-layer destiny analysis and no unapproved semantic Cue is
+  faked.
+- A rehearsal route is admitted only when the selected layer has at least one
+  projectable Claim; empty or fully withheld layers keep normal Reading
+  controls visible.
 
 ## Explicit freeze
 
@@ -56,8 +76,9 @@ engine code may be copied or modified under this parcel.
 
 ## Next UI parcels
 
-Continue in visible user order: home shell deltas, complete branch surface,
-shared four/six-pillar Scene Player, Abu Says performance, then Lab. Each parcel
-must preserve V128 experience fidelity while proving that the displayed
-content comes from the same real V60 Case/Reading lineage and survives refresh,
-back/forward and profile changes.
+Continue in visible user order: make Home profile identity and current-tree
+switching match the prototype, then refine the shared stage's daytime contrast
+and freeze the real Abu Says audio/Cue performance. Lab remains a separate
+research path and Dream stays frozen. Each parcel must preserve V128 experience
+fidelity while proving that the displayed content comes from the same real V60
+Case/Reading lineage and survives refresh, back/forward and profile changes.

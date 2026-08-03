@@ -7,7 +7,7 @@ from abu_v60.system_manifest import runtime_manifest
 def test_runtime_architecture_has_one_owner_per_schema_and_five_units() -> None:
     architecture = runtime_architecture()
     architecture.validate_boundaries()
-    assert architecture.architecture_version == "v60.runtime-architecture.070"
+    assert architecture.architecture_version == "v60.runtime-architecture.071"
     assert architecture.product_units == (
         "unit-mingli",
         "unit-dream",
@@ -118,8 +118,8 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     assert modules["mingli"].version == "v60.mingli-cognitive-engine.043"
     assert modules["knowledge"].version == "v60.knowledge-authority.008"
     assert modules["media"].version == "v60.media-library.004"
-    assert modules["unit-mingli"].version == "v60.unit-mingli.032"
-    assert modules["unit-abu"].version == "v60.unit-abu-says.007"
+    assert modules["unit-mingli"].version == "v60.unit-mingli.033"
+    assert modules["unit-abu"].version == "v60.unit-abu-says.008"
     assert modules["unit-lab"].version == "v60.unit-lab.028"
     assert modules["unit-dream"].version == "v60.unit-dream.020"
     assert modules["media"].reads_from == ("identity", "mingli")
@@ -353,6 +353,7 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     assert "profile_leaf_stage_entry" in modules["unit-mingli"].capabilities
     assert "four_six_pillar_stage" in modules["unit-mingli"].capabilities
     assert "audio_current_time_narration" in modules["unit-mingli"].capabilities
+    assert "claim_graph_layer_rehearsal" in modules["unit-mingli"].capabilities
     assert "return_to_grove_after_reconciliation" in modules["unit-dream"].capabilities
     assert "pre_outcome_question_basis" in modules["unit-dream"].capabilities
     assert "read_only_reading_observation_lens" in modules["unit-dream"].capabilities
@@ -455,6 +456,7 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     assert "mingli_reading_expression" in modules["unit-abu"].capabilities
     assert "shared_mingli_explanation_identity" in modules["unit-abu"].capabilities
     assert "shared_mechanism_qualification_identity" in modules["unit-abu"].capabilities
+    assert "silent_claim_graph_rehearsal" in modules["unit-abu"].capabilities
     assert "mechanism_requirement_matrix" in modules["unit-lab"].capabilities
     assert "role_source_timing_competition_inspection" in modules["unit-lab"].capabilities
     assert (

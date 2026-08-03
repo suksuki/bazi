@@ -15,7 +15,7 @@ from abu_v60.architecture.contracts import (
 @lru_cache(maxsize=1)
 def runtime_architecture() -> RuntimeArchitecture:
     architecture = RuntimeArchitecture(
-        architecture_version="v60.runtime-architecture.070",
+        architecture_version="v60.runtime-architecture.071",
         modules=(
             RuntimeModule(
                 module_id="identity",
@@ -381,7 +381,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-mingli",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-mingli.032",
+                version="v60.unit-mingli.033",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "mingli", "media"),
                 capabilities=(
@@ -417,12 +417,13 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "hypothesis_decision_and_reversal_projection",
                     "same_element_root_candidate_withheld",
                     "hidden_stem_rank_minimum_gate_projection",
+                    "claim_graph_layer_rehearsal",
                 ),
             ),
             RuntimeModule(
                 module_id="unit-abu",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-abu-says.007",
+                version="v60.unit-abu-says.008",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "mingli", "media"),
                 capabilities=(
@@ -433,6 +434,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "shared_mechanism_qualification_identity",
                     "same_reading_decision_trace_handoff",
                     "same_source_discussion_abstention_handoff",
+                    "silent_claim_graph_rehearsal",
                 ),
             ),
             RuntimeModule(

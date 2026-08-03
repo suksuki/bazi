@@ -4,7 +4,7 @@ import type {
   RuntimeMediaManifest,
   TreeOrgan,
 } from "../api";
-import type { CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { DreamGroveScene } from "../DreamGroveScene";
 import type { DreamLifeDomain } from "../dreamPersonalJourneyTypes";
 import type { ExperienceScope } from "../experienceNavigation";
@@ -12,12 +12,18 @@ import type { ExperienceUnit } from "../experienceUnits";
 import type { HomeSnapshot } from "../homeApi";
 import { buildDreamReadingObservationLens } from "../homeDreamObservationLens";
 import type { MingliStageViewContext } from "../mingliStageTypes";
-import { readMingliLeafEntry } from "../mingliStageNavigation";
+import {
+  readMingliLeafEntry,
+  readMingliStageExperience,
+  type MingliStageEntryMode,
+  writeMingliStageExperience,
+} from "../mingliStageNavigation";
 import { LifeTreeScene } from "../LifeTreeScene";
 import { DreamReadingObservationLens } from "./DreamReadingObservationLens";
 import { HomeLifeTreeScene as HomeTree } from "./HomeLifeTreeScene";
 import { MingliBranchSceneHost } from "./MingliBranchSceneHost";
 import { MingliLabWorkspaceHost } from "./MingliLabWorkspaceHost";
+import { MingliSceneHost } from "./MingliSceneHost";
 
 interface ExperienceStoryCanvasProps {
   scope: ExperienceScope;
@@ -72,11 +78,26 @@ export function ExperienceStoryCanvas({
   onContinue,
   onReturnToGrove,
 }: ExperienceStoryCanvasProps) {
+  const [mingliExperience, setMingliExperience] = useState(
+    readMingliStageExperience,
+  );
+  useEffect(() => {
+    const restore = () => setMingliExperience(readMingliStageExperience());
+    window.addEventListener("popstate", restore);
+    return () => window.removeEventListener("popstate", restore);
+  }, []);
+  useEffect(() => {
+    if (activeUnit === "mingli") {
+      setMingliExperience(readMingliStageExperience());
+    }
+  }, [activeUnit]);
   const observationLens = buildDreamReadingObservationLens({
     reading_brief: home.mingli.reading_brief,
     mechanism_comparison: home.lab.mechanism_comparison,
   });
-  const growthEntry = scope === "home" && activeUnit === "mingli"
+  const growthEntry = scope === "home"
+    && activeUnit === "mingli"
+    && mingliExperience === "branch"
     ? readMingliLeafEntry()
     : null;
   const growthStyle = growthEntry
@@ -87,10 +108,32 @@ export function ExperienceStoryCanvas({
         "--mingli-scene-entry-y": `${growthEntry.sceneY}%`,
       } as CSSProperties)
     : undefined;
+  const homeLineageKey = [
+    home.case.case_ref,
+    home.chart.chart_version_ref,
+    home.life_case.life_case_revision_ref,
+    home.mingli.reading.reading_ref,
+  ].join("|");
+  const openMingliStage = (_entryMode: MingliStageEntryMode) => {
+    setMingliExperience("stage");
+  };
 
   return (
     <section className="story-canvas" aria-label="生命树故事现场">
-      {scope === "home" && activeUnit === "mingli" ? (
+      {scope === "home"
+      && activeUnit === "mingli"
+      && mingliExperience === "stage" ? (
+        <MingliSceneHost
+          homeLineageKey={homeLineageKey}
+          media={media}
+          onContextChange={onMingliContext}
+          onExit={() => onSelectUnit("dream", "replace")}
+          onSurfaceChange={(surface) => {
+            if (surface === "LAB") onSelectUnit("lab");
+          }}
+          surface="READING"
+        />
+      ) : scope === "home" && activeUnit === "mingli" ? (
         <div className="mingli-growth-composition" style={growthStyle}>
           <div aria-hidden="true" className="mingli-growth-home-underlay" inert>
             <HomeTree
@@ -107,23 +150,26 @@ export function ExperienceStoryCanvas({
             media={media}
             onContextChange={onMingliContext}
             onExit={() => onSelectUnit("dream", "replace")}
-            onOpenStage={() => onSelectUnit("lab")}
+            onOpenLab={() => {
+              writeMingliStageExperience("branch", "observe", "replace");
+              setMingliExperience("branch");
+              onSelectUnit("lab");
+            }}
+            onOpenStage={openMingliStage}
           />
         </div>
       ) : scope === "home" && activeUnit === "lab" ? (
         <MingliLabWorkspaceHost
-          homeLineageKey={[
-            home.case.case_ref,
-            home.chart.chart_version_ref,
-            home.life_case.life_case_revision_ref,
-            home.mingli.reading.reading_ref,
-          ].join("|")}
+          homeLineageKey={homeLineageKey}
           media={media}
           onContextChange={onMingliContext}
           onExit={() => onSelectUnit("dream", "replace")}
-          onSurfaceChange={(surface) =>
-            onSelectUnit(surface === "LAB" ? "lab" : "mingli")
-          }
+          onSurfaceChange={(surface) => {
+            if (surface === "READING") {
+              setMingliExperience(readMingliStageExperience());
+              onSelectUnit("mingli");
+            }
+          }}
         />
       ) : scope === "home" ? (
         <HomeTree

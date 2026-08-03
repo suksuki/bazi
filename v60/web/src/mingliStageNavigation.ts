@@ -11,6 +11,9 @@ export interface MingliStageRoute {
   layer: MingliReadingLayer;
 }
 
+export type MingliStageExperience = "branch" | "stage";
+export type MingliStageEntryMode = "observe" | "rehearsal";
+
 export type MingliReadingLayer = "principle" | "image" | "themes" | "timing";
 
 export interface MingliLeafEntry {
@@ -43,6 +46,40 @@ export function readMingliStageRoute(): MingliStageRoute {
       ? (layerValue as MingliReadingLayer)
       : "principle",
   };
+}
+
+export function readMingliStageExperience(): MingliStageExperience {
+  return new URL(window.location.href).searchParams.get("mingli_stage") === "1"
+    ? "stage"
+    : "branch";
+}
+
+export function readMingliStageEntryMode(): MingliStageEntryMode {
+  const params = new URL(window.location.href).searchParams;
+  return params.get("mingli_stage") === "1"
+    && params.get("mingli_rehearsal") === "1"
+    ? "rehearsal"
+    : "observe";
+}
+
+export function writeMingliStageExperience(
+  experience: MingliStageExperience,
+  entryMode: MingliStageEntryMode = "observe",
+  mode: "push" | "replace" = "replace",
+) {
+  const url = new URL(window.location.href);
+  if (experience === "stage") {
+    url.searchParams.set("mingli_stage", "1");
+    if (entryMode === "rehearsal") {
+      url.searchParams.set("mingli_rehearsal", "1");
+    } else {
+      url.searchParams.delete("mingli_rehearsal");
+    }
+  } else {
+    url.searchParams.delete("mingli_stage");
+    url.searchParams.delete("mingli_rehearsal");
+  }
+  window.history[mode === "push" ? "pushState" : "replaceState"](null, "", url);
 }
 
 export function readMingliLeafEntry(): MingliLeafEntry | null {
@@ -89,6 +126,8 @@ export function writeMingliLeafRoute(
   url.searchParams.set("mingli_mode", "NATAL_4");
   url.searchParams.delete("mingli_year");
   url.searchParams.delete("mingli_layer");
+  url.searchParams.delete("mingli_stage");
+  url.searchParams.delete("mingli_rehearsal");
   url.searchParams.set("mingli_entry", "leaf");
   url.searchParams.set("mingli_entry_x", entry.viewportX.toFixed(3));
   url.searchParams.set("mingli_entry_y", entry.viewportY.toFixed(3));

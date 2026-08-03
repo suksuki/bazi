@@ -9,11 +9,8 @@ import type {
   MingliReadingSummaryProjection,
   MingliStageProjection,
 } from "../mingliStageTypes";
-import {
-  ClaimReviewNotice,
-  claimIsAdmitted,
-  claimStatusLabel,
-} from "./MingliClaimPresentation";
+import { claimIsAdmitted, claimStatusLabel } from "../mingliClaimPresentation";
+import { ClaimReviewNotice } from "./MingliClaimPresentation";
 
 const LAYERS: Array<{
   id: MingliReadingLayer;

@@ -344,6 +344,16 @@
   transform: translateX(0);
 }
 
+.mingli-growth-guide:disabled {
+  cursor: default;
+  filter: saturate(0.72);
+}
+
+.mingli-growth-guide:disabled > span {
+  opacity: 0.82;
+  transform: translateX(0);
+}
+
 .mingli-growth-whisper {
   position: absolute;
   bottom: max(38px, 5.2vh);

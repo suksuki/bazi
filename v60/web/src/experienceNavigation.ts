@@ -43,6 +43,8 @@ export function writeNavigation(
     url.searchParams.delete("mingli_entry_scene_x");
     url.searchParams.delete("mingli_entry_scene_y");
     url.searchParams.delete("mingli_light");
+    url.searchParams.delete("mingli_stage");
+    url.searchParams.delete("mingli_rehearsal");
   }
   if (scope !== "home" || unit !== "lab") {
     url.searchParams.delete("lab_mode");

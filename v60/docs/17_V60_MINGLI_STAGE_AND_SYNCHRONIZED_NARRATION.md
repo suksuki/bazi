@@ -162,6 +162,51 @@ stage-emphasis clock. PAUSED freezes the same clock. Refresh preserves the selec
 four/six-pillar mode and year through the URL, while narration returns to
 `IDLE`; it never pretends to recover an in-flight audio position.
 
+### Current-layer silent rehearsal
+
+The grown LifeTree branch now has a separate companion action before formal
+audio delivery. It projects the selected four-layer Reading surface from the
+same validated ClaimGraph used by Reading and Lab:
+
+```text
+current layer
+-> admitted ClaimGraph claims only
+-> ordered rehearsal chapters
+-> same four/six-pillar Scene Player
+-> LISTENING / PAUSED character state
+```
+
+This is deliberately not a cosmetic wrapper around the earlier coordinate
+narration. It does not call `/api/v60/mingli/narrations`, mount an audio element
+or claim that semantic Cue choreography has been approved. `WITHHELD` claims
+are excluded, internal codes such as `WEAK` are translated into user-facing
+Chinese, Work Path closure and assessment states preserve their distinct
+professional meanings, and each visible chapter carries the exact Claim Ref
+plus Graph Ref/Hash. A layer with no admitted/projectable Claim cannot enter
+rehearsal. The time-trend layer opens the full six-pillar coordinate state; the
+other three layers open the natal four-pillar state.
+
+The six-pillar coordinate state is not itself permission to attach frozen
+Reading prose to the selected year. Until ClaimGraph carries a typed binding
+between its Dayun/annual claims and the independently selected Stage timing
+vector, time rehearsal contains only `TIMING_NATAL` and
+`DISCRIMINATING_QUESTION`. It visibly says that Dayun/annual paragraphs are
+still being aligned, and never paints an old annual judgment onto a new year.
+
+The route distinguishes three product intents:
+
+```text
+mingli_stage=1&mingli_rehearsal=1  companion rehearsal
+mingli_stage=1                     ordinary Reading observation
+view=lab                           explicit Lab research surface
+```
+
+Refresh restores rehearsal. Back returns to the same branch and selected
+layer, Forward restores it, and closing rehearsal returns to Reading
+observation without opening Lab. Formal server-locked TTS remains available
+from the ordinary Reading/Lab stage, but its current coordinate script is not
+silently reused as four-layer destiny narration.
+
 ## One shared Scene Player
 
 The first frozen-V108 integration slice no longer treats Abu Says as a panel
@@ -245,11 +290,12 @@ Current executable identities are:
 
 ```text
 Foundation       v60.foundation.032
-Architecture     v60.runtime-architecture.070
+Architecture     v60.runtime-architecture.071
 Mingli Engine    v60.mingli-cognitive-engine.043
 Media            v60.media-library.004
 Runtime Media    v60.runtime-media-registry.005
-Unit Mingli      v60.unit-mingli.032
+Unit Mingli      v60.unit-mingli.033
+Unit Abu Says    v60.unit-abu-says.008
 Stage            v60.mingli-stage-projection.004
 Timing           v60.mingli-timing-evidence-vector.002
 Narration        v60.mingli-narration.002
@@ -387,3 +433,15 @@ anti-follow root rule are recorded in
 Desktop Chrome is the active first-round target; the older responsive iPad
 checks above remain historical evidence, not a current iPad portrait product
 commitment.
+
+The current-layer rehearsal browser audit additionally verified:
+
+- principle rehearsal showed three admitted chapters and translated the Day
+  Master title to `日主偏弱` rather than exposing `WEAK`;
+- timing rehearsal restored a six-column/twelve-body stage with current Dayun
+  and 2026 annual coordinates, while no unbound Dayun/annual prose was attached
+  to those columns;
+- there was no audio element, playback state or narration generation request;
+- refresh, Back and Forward retained the exact Case, layer and rehearsal mode;
+- close returned to Reading observation, ordinary stage entry stayed on
+  Reading, and the explicit Lab action alone entered `view=lab`.

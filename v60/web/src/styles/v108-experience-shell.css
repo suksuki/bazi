@@ -10,6 +10,12 @@
   display: none;
 }
 
+.v60-shell[data-scene-id="mingli-shared-scene"]:has(
+  .mingli-scene-host[data-rehearsal-open="true"]
+) :is(.mingli-canonical-drawer, .mingli-case-evidence-boundary) {
+  display: none;
+}
+
 .v60-shell[data-scene-id="mingli-shared-scene"] .experience-layout {
   position: absolute;
   inset: 0;
@@ -35,9 +41,30 @@
     linear-gradient(148deg, #0e2d24 0%, #0b211b 54%, #071813 100%);
 }
 
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-rehearsal-open="true"] {
+  background:
+    linear-gradient(rgba(246, 241, 217, 0.05), rgba(246, 241, 217, 0.05)),
+    var(--mingli-rehearsal-art) center / cover no-repeat,
+    #d7d7bf;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-world-light="night"][data-rehearsal-open="true"] {
+  background:
+    linear-gradient(rgba(0, 13, 22, 0.16), rgba(0, 13, 22, 0.2)),
+    var(--mingli-rehearsal-art) center / cover no-repeat,
+    #061923;
+}
+
 .v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-player-field,
 .v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-player canvas {
   background: #071812;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-rehearsal-open="true"] :is(
+  .mingli-scene-player-field,
+  .mingli-scene-player canvas
+) {
+  background: transparent;
 }
 
 .v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host-header {

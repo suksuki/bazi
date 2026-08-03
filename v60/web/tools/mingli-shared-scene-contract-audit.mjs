@@ -23,12 +23,16 @@ const [
   canonicalDrawer,
   homeSceneCompanion,
   readingJourney,
+  branchJourney,
   stageNavigation,
   profileManager,
   branchSceneHost,
   labWorkspaceHost,
   syntheticScene,
   syntheticInspector,
+  layerNarrationProjection,
+  layerRehearsal,
+  claimPresentation,
 ] = await Promise.all([
   read("components", "ExperienceStoryCanvas.tsx"),
   read("components", "MingliSceneHost.tsx"),
@@ -45,18 +49,25 @@ const [
   read("components", "MingliCanonicalDrawer.tsx"),
   read("components", "HomeSceneCompanion.tsx"),
   read("components", "MingliReadingJourney.tsx"),
+  read("components", "MingliBranchJourney.tsx"),
   read("mingliStageNavigation.ts"),
   read("components", "HomeProfileManager.tsx"),
   read("components", "MingliBranchSceneHost.tsx"),
   read("components", "MingliLabWorkspaceHost.tsx"),
   read("components", "MingliSyntheticExperimentScene.tsx"),
   read("components", "MingliSyntheticExperimentInspector.tsx"),
+  read("mingliLayerNarrationProjection.ts"),
+  read("components", "MingliLayerRehearsal.tsx"),
+  read("mingliClaimPresentation.ts"),
 ]);
 
 const expect = (condition, message) => {
   if (!condition) failures.push(message);
 };
 const occurrences = (value, pattern) => value.match(pattern)?.length ?? 0;
+const timeStageBoundKeys = layerNarrationProjection.match(
+  /export const TIME_LAYER_STAGE_BOUND_KEYS = \[([\s\S]*?)\] as const/,
+)?.[1] ?? "";
 
 expect(
   storyCanvas.includes('activeUnit === "mingli" || activeUnit === "lab"'),
@@ -166,6 +177,64 @@ expect(
   "stage-navigation:reading-layer-must-be-refresh-recoverable",
 );
 expect(
+  stageNavigation.includes('url.searchParams.set("mingli_stage", "1")') &&
+    stageNavigation.includes('params.get("mingli_stage") === "1"') &&
+    stageNavigation.includes('params.get("mingli_rehearsal") === "1"') &&
+    storyCanvas.includes('mingliExperience === "stage"') &&
+    storyCanvas.includes('surface="READING"'),
+  "stage-navigation:branch-reading-stage-and-rehearsal-must-be-recoverable",
+);
+expect(
+  branchSceneHost.includes('"rehearsal"') &&
+    branchSceneHost.includes('"observe"') &&
+    branchSceneHost.includes('onOpenLab={onOpenLab}') &&
+    branchSceneHost.includes(
+      'writeMingliStageExperience("stage", entryMode, "push")',
+    ) &&
+    branchSceneHost.includes('route.layer === "timing"') &&
+    storyCanvas.includes("onOpenLab={() =>"),
+  "branch-actions:reading-rehearsal-and-lab-intents-must-not-collapse",
+);
+expect(
+  layerNarrationProjection.includes('item.status !== "WITHHELD"') &&
+    layerNarrationProjection.includes("graphRef: graph.graph_ref") &&
+    layerNarrationProjection.includes("graphHash: graph.graph_hash") &&
+    layerNarrationProjection.includes("DAY_MASTER_LABELS") &&
+    layerNarrationProjection.includes("WORK_PATH_LABELS") &&
+    layerNarrationProjection.includes("做功路径有条件成立") &&
+    layerNarrationProjection.includes("claimStatusLabel(item)") &&
+    claimPresentation.includes("MECHANISM_CANDIDATE_REQUIRES_ADJUDICATION") &&
+    layerNarrationProjection.includes("title: claimTitle(item)") &&
+    layerRehearsal.includes("data-claim-ref={chapter.claimRef}") &&
+    layerRehearsal.includes("data-graph-ref={projection.graphRef}"),
+  "layer-rehearsal:must-project-only-admitted-claims-with-exact-graph-lineage",
+);
+expect(
+  branchJourney.includes("hasMingliLayerNarration(summary.claim_graph, layer)") &&
+    branchJourney.includes("disabled={!hasLayerRehearsal}") &&
+    sceneHost.includes("hasMingliLayerNarration(summary.claim_graph, route.layer)") &&
+    sceneHost.includes("data-rehearsal-open={rehearsalVisible}") &&
+    sceneHost.includes("const hostStyle = rehearsalVisible"),
+  "layer-rehearsal:empty-layer-must-not-open-or-hide-scene-controls",
+);
+expect(
+  timeStageBoundKeys.includes('"TIMING_NATAL"') &&
+    timeStageBoundKeys.includes('"DISCRIMINATING_QUESTION"') &&
+    !timeStageBoundKeys.includes('"TIMING_DAYUN"') &&
+    !timeStageBoundKeys.includes('"TIMING_ANNUAL"') &&
+    !layerNarrationProjection.includes('semanticAction: "TIME_COORDINATES_PRESENT"'),
+  "layer-rehearsal:unbound-dayun-or-annual-prose-must-not-attach-to-selected-stage",
+);
+expect(
+  !/MingliAudioPlayer|prepareMingliNarration|useMingliNarrationDirector/.test(
+    layerRehearsal,
+  ) &&
+    layerRehearsal.includes('performanceMode="REHEARSAL"') &&
+    sceneHost.includes("<MingliLayerRehearsal") &&
+    sceneHost.includes('data-overlay={rehearsalVisible ? "REHEARSAL"'),
+  "layer-rehearsal:must-not-generate-audio-or-own-another-scene-player",
+);
+expect(
   profileManager.includes("<dialog") && profileManager.includes("showModal()"),
   "profile-manager:must-remain-a-focus-isolating-modal",
 );
@@ -214,6 +283,15 @@ console.log(
       staleAgentGenerationCommitBlocked: true,
       sharedClaimGraphConsumers: ["MingliReadingJourney", "MingliLabSceneInspector"],
       readingLayerRecovery: true,
+      branchReadingStageRecovery: true,
+      branchStageHistoryNode: true,
+      timingRehearsalUsesSixPillars: true,
+      layerRehearsalUsesAudio: false,
+      layerRehearsalClaimAuthority: "SHARED_CLAIM_GRAPH",
+      internalDayMasterCodeVisible: false,
+      internalWorkPathCodeVisible: false,
+      emptyLayerRehearsalBlocked: true,
+      unboundTimingProseAttachedToStage: false,
       profileFocusIsolation: true,
       profileMutationRecovery: true,
       semanticBoundary: "COORDINATES_AND_MEMBERSHIP_ONLY",

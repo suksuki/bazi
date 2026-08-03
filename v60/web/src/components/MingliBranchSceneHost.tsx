@@ -11,6 +11,8 @@ import {
   readMingliLeafEntry,
   readMingliStageRoute,
   type MingliReadingLayer,
+  type MingliStageEntryMode,
+  writeMingliStageExperience,
   writeMingliStageRoute,
 } from "../mingliStageNavigation";
 import type {
@@ -26,12 +28,14 @@ export function MingliBranchSceneHost({
   media,
   onContextChange,
   onExit,
+  onOpenLab,
   onOpenStage,
 }: {
   media: RuntimeMediaManifest;
   onContextChange: (context: MingliStageViewContext) => void;
   onExit: () => void;
-  onOpenStage: () => void;
+  onOpenLab: () => void;
+  onOpenStage: (entryMode: MingliStageEntryMode) => void;
 }) {
   const [route, setRoute] = useState(readMingliStageRoute);
   const [entry] = useState(readMingliLeafEntry);
@@ -100,12 +104,16 @@ export function MingliBranchSceneHost({
     setRoute(next);
     writeMingliStageRoute(next, "replace", "mingli");
   };
-  const openStage = (expandTime: boolean) => {
+  const openStage = (
+    expandTime: boolean,
+    entryMode: MingliStageEntryMode = "observe",
+  ) => {
     const next = expandTime
       ? { ...route, mode: "NATAL_DAYUN_YEAR_6" as const, year: null }
       : route;
-    writeMingliStageRoute(next, "replace", "lab");
-    onOpenStage();
+    writeMingliStageRoute(next, "replace", "mingli");
+    writeMingliStageExperience("stage", entryMode, "push");
+    onOpenStage(entryMode);
   };
   const generateAgentReading = () => {
     if (stage === null || agentGenerating) return;
@@ -174,7 +182,9 @@ export function MingliBranchSceneHost({
       onEntryConsumed={clearMingliLeafEntry}
       onLayerChange={selectLayer}
       onGenerateAgent={generateAgentReading}
-      onOpenStage={openStage}
+      onOpenLab={onOpenLab}
+      onOpenRehearsal={() => openStage(route.layer === "timing", "rehearsal")}
+      onOpenStage={(expandTime) => openStage(expandTime, "observe")}
       stage={stage}
       summary={summaryMatchesStage(summary, stage) ? summary : null}
     />
