@@ -9,11 +9,15 @@ from abu_v60.mingli.agent_contracts import (
     MingliAgentReadingEnvelope,
 )
 from abu_v60.mingli.agent_root_gate import packet_root_candidate_assessments
+from abu_v60.mingli.synthetic_decision_integrity import (
+    add_raw_decision_integrity_checks,
+)
 from abu_v60.mingli.synthetic_experiment_catalog import (
     FIRST_SYNTHETIC_EXPERIMENT_REF,
     HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF,
     HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
     HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF,
+    REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT_REF,
     ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF,
     SYNTHETIC_EXPERIMENT_EVALUATOR_VERSION,
     SyntheticExperimentDefinition,
@@ -97,8 +101,21 @@ def evaluate_synthetic_experiment(
                 for variant in ("A", "B")
             },
         )
+    elif experiment.experiment_ref == REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT_REF:
+        _add_regime_work_path_checks(
+            add=add,
+            gold=gold,
+            packets=packets,
+            a_output=a_output,
+            b_output=b_output,
+        )
     else:
         raise ValueError("mingli_synthetic_experiment_evaluator_not_found")
+    add_raw_decision_integrity_checks(
+        add=add,
+        readings=readings,
+        packets=packets,
+    )
     return _finalize(
         checks=checks,
         readings=readings,
@@ -361,6 +378,136 @@ def _add_root_identity_checks(
         a_regime.classification,
         b_regime.classification,
     )
+
+
+def _add_regime_work_path_checks(
+    *,
+    add: Any,
+    gold: Mapping[str, object],
+    packets: Mapping[str, MingliAgentCasePacket],
+    a_output: Any,
+    b_output: Any,
+) -> None:
+    regimes = {"A": a_output.regime_decision, "B": b_output.regime_decision}
+    assessments = {
+        variant: packet_root_candidate_assessments(packets[variant])
+        for variant in ("A", "B")
+    }
+    add(
+        "REGIME_PATH_HOUR_FACTS",
+        "EXPERIMENT_VALIDITY",
+        _hour_fact(packets["A"]) == gold["A_hour_fact"]
+        and _hour_fact(packets["B"]) == gold["B_hour_fact"],
+        "A／B 的合法时柱与十神、藏干必须精确等于冻结 Gold。",
+        _hour_fact(packets["A"]),
+        _hour_fact(packets["B"]),
+    )
+    add(
+        "REGIME_PATH_SUPPORT_DELTA",
+        "EXPECTED_CHANGE",
+        not packets["A"].day_master_support.same_element_hidden_support
+        and not packets["A"].day_master_support.visible_peer_support
+        and not packets["A"].day_master_support.resource_support
+        and packets["B"].day_master_support.same_element_hidden_support
+        == (gold["B_candidate_coordinate"],)
+        and not packets["B"].day_master_support.visible_peer_support,
+        "A 必须保持无根、无比、无印；B 只按事实增加戌中戊根，印星不能冒充根。",
+        packets["A"].day_master_support.model_dump(mode="json"),
+        packets["B"].day_master_support.model_dump(mode="json"),
+    )
+    b_assessment = assessments["B"][0] if len(assessments["B"]) == 1 else {}
+    add(
+        "REGIME_PATH_MINIMUM_ROOT_GATE",
+        "EXPECTED_CHANGE",
+        not assessments["A"]
+        and b_assessment.get("coordinate") == gold["B_candidate_coordinate"]
+        and b_assessment.get("identity_match") == gold["B_candidate_identity"]
+        and b_assessment.get("hidden_rank") == gold["B_hidden_rank"]
+        and b_assessment.get("minimum_anti_follow_gate")
+        == gold["B_minimum_anti_follow_gate"],
+        "A 没有根候选；B 的戌中戊必须以同字、第一藏干执行最低阻从门。",
+        assessments["A"],
+        assessments["B"],
+    )
+    pattern_sets = {
+        variant: tuple(
+            item.pattern_ref for item in packets[variant].mechanism_observations
+        )
+        for variant in ("A", "B")
+    }
+    add(
+        "REGIME_PATH_CANDIDATE_SETS",
+        "EXPECTED_CHANGE",
+        set(pattern_sets["A"]) == set(gold["A_expected_pattern_refs"])
+        and set(pattern_sets["B"]) == set(gold["B_expected_pattern_refs"]),
+        "结构候选必须随完整时柱重编译，但候选成员不等于机制已有效做功。",
+        pattern_sets["A"],
+        pattern_sets["B"],
+    )
+    add(
+        "REGIME_PATH_TYPED_OUTCOMES",
+        "EXPECTED_CHANGE",
+        regimes["A"].effective_root_status
+        == gold["A_required_effective_root_status"]
+        and not regimes["A"].effective_root_coordinates
+        and regimes["A"].classification in gold["A_allowed_regime_classifications"]
+        and regimes["B"].effective_root_status
+        == gold["B_required_effective_root_status"]
+        and regimes["B"].effective_root_coordinates
+        == (gold["B_candidate_coordinate"],)
+        and regimes["B"].classification in gold["B_allowed_regime_classifications"],
+        "A／B 必须执行各自有效根结果；Gold 不指定哪张机制卡胜出。",
+        _regime_value(regimes["A"]),
+        _regime_value(regimes["B"]),
+    )
+    final_work = {
+        "A": _final_work_path_value(a_output, packet=packets["A"]),
+        "B": _final_work_path_value(b_output, packet=packets["B"]),
+    }
+    add(
+        "REGIME_PATH_FINAL_WORK_PATH_BINDING",
+        "EXPECTED_CHANGE",
+        bool(final_work["A"]["valid"] and final_work["B"]["valid"]),
+        "最终主路径必须绑定唯一 PRIMARY、只引用原局证据，且受限首选不得伪装 CLOSED。",
+        final_work["A"],
+        final_work["B"],
+    )
+
+
+def _final_work_path_value(output: Any, *, packet: MingliAgentCasePacket) -> dict[str, object]:
+    primaries = [item for item in output.hypotheses if item.role == "PRIMARY"]
+    primary = primaries[0] if len(primaries) == 1 else None
+    path = output.work_path
+    natal_ids = {
+        item.evidence_id for item in packet.evidence_catalog if item.kind != "TIMING"
+    }
+    valid = bool(
+        primary is not None
+        and path.selected_hypothesis_id == primary.hypothesis_id
+        and path.method_card_ref == primary.method_card_ref
+        and set(path.evidence_ids).issubset(natal_ids)
+        and len(path.transformation_codes) == len(set(path.transformation_codes))
+        and (primary.adjudication == "SUPPORTED" or path.closure != "CLOSED")
+    )
+    return {
+        "valid": valid,
+        "primary": (
+            None
+            if primary is None
+            else {
+                "hypothesis_id": primary.hypothesis_id,
+                "method_card_ref": primary.method_card_ref,
+                "adjudication": primary.adjudication,
+            }
+        ),
+        "work_path": {
+            "selected_hypothesis_id": path.selected_hypothesis_id,
+            "method_card_ref": path.method_card_ref,
+            "closure": path.closure,
+            "transformation_codes": path.transformation_codes,
+            "evidence_ids": path.evidence_ids,
+        },
+    }
 
 
 def _add_hidden_rank_checks(

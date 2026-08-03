@@ -5,9 +5,10 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 REGIME_WEAK_VS_FOLLOW_METHOD_REF = "REGIME_WEAK_VS_FOLLOW_TREND_001"
-MINGLI_AGENT_REGIME_DECISION_VERSION = "v60.mingli-agent-regime-decision.001"
+MINGLI_AGENT_REGIME_DECISION_VERSION = "v60.mingli-agent-regime-decision.002"
 
 RegimeClassification = Literal[
+    "NON_WEAK_OUTSIDE_SCOPE",
     "ORDINARY_WEAK",
     "FALSE_FOLLOW_COMPETITION",
     "FOLLOW_TREND",
@@ -23,7 +24,7 @@ RegimeCompetitionKind = Literal[
 
 
 class AgentRegimeDecision(BaseModel):
-    """Typed weak-vs-follow audit; root candidates are not effective roots."""
+    """Typed weak-vs-follow audit; it does not force every rooted chart to be weak."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 

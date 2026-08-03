@@ -18,16 +18,14 @@ from abu_v60.mingli.agent_method_distillation import (
     OUTPUT_TO_WEALTH,
     cross_card_discriminator,
 )
+from abu_v60.mingli.agent_output_copy import MINGLI_AGENT_NORMALIZATION_ISSUE_FIELD
 from abu_v60.mingli.agent_regime import (
     normalize_regime_decision,
     reconcile_day_master_state,
 )
 
 if TYPE_CHECKING:
-    from abu_v60.mingli.agent_contracts import (
-        MingliAgentCasePacket,
-        MingliAgentModelOutput,
-    )
+    from abu_v60.mingli.agent_contracts import MingliAgentCasePacket
 
 AgentMethodRulingValue = Literal[
     "SUPPORTS",
@@ -42,7 +40,17 @@ AgentMechanismAdjudication = Literal[
     "UNRESOLVED",
 ]
 
-MINGLI_AGENT_NORMALIZATION_ISSUE_FIELD = "_server_normalization_issue_keys"
+_DAY_MASTER_STATE_ALIASES = {
+    "身强": "STRONG",
+    "强": "STRONG",
+    "身弱": "WEAK",
+    "弱": "WEAK",
+    "中和": "BALANCED",
+    "平衡": "BALANCED",
+    "从势": "FOLLOWING_TENDENCY",
+    "专旺": "SPECIALIZED_TENDENCY",
+    "不确定": "UNCERTAIN",
+}
 
 
 class AgentMethodRuling(BaseModel):
@@ -159,14 +167,23 @@ def normalize_adjudication_output(
     hypotheses = value.get("hypotheses")
     if not isinstance(hypotheses, list):
         return value
-    raw_primary_method_ref = next(
-        (
-            item.get("method_card_ref")
-            for item in hypotheses[:2]
-            if isinstance(item, dict) and item.get("role") == "PRIMARY"
-        ),
-        None,
+    raw_primary_slots = [
+        index
+        for index, item in enumerate(hypotheses[:2])
+        if isinstance(item, dict) and item.get("role") == "PRIMARY"
+    ]
+    raw_primary_slot = raw_primary_slots[0] if len(raw_primary_slots) == 1 else None
+    raw_primary_method_ref = (
+        hypotheses[raw_primary_slot].get("method_card_ref")
+        if raw_primary_slot is not None
+        and isinstance(hypotheses[raw_primary_slot], dict)
+        else None
     )
+    # Every newly generated Reading uses the current contract. Historical
+    # envelopes are replayed without entering this normalizer, so a missing
+    # binding here is a current-model defect to repair and receipt, not a
+    # reason to fall back to the legacy count-based selector.
+    binding_mode = True
     cards = method_card_catalog(packet.mechanism_observations)
     candidate_refs = [item.evidence_id for item in packet.mechanism_observations]
     assigned_refs, identity_repaired = _assign_method_card_refs(
@@ -177,10 +194,24 @@ def normalize_adjudication_output(
     normalized: list[Any] = []
     normalization_issues: set[str] = set()
     value.pop(MINGLI_AGENT_NORMALIZATION_ISSUE_FIELD, None)
+    raw_day_master_state = value.get("day_master_state")
+    if raw_day_master_state not in {
+        "STRONG",
+        "WEAK",
+        "BALANCED",
+        "FOLLOWING_TENDENCY",
+        "SPECIALIZED_TENDENCY",
+        "UNCERTAIN",
+    }:
+        value["day_master_state"] = _DAY_MASTER_STATE_ALIASES.get(
+            str(raw_day_master_state).strip(),
+            "UNCERTAIN",
+        )
+        normalization_issues.add("DAY_MASTER")
     regime_decision = normalize_regime_decision(
         value.get("regime_decision"),
         packet=packet,
-        day_master_state=value.get("day_master_state"),
+        day_master_state=value["day_master_state"],
         normalization_issues=normalization_issues,
     )
     value["regime_decision"] = regime_decision
@@ -196,6 +227,8 @@ def normalize_adjudication_output(
             continue
         hypothesis = dict(hypothesis)
         card_ref = assigned_refs[index]
+        if hypothesis.get("hypothesis_id") != f"H{index + 1}":
+            normalization_issues.add(f"HYPOTHESIS_H{index + 1}")
         hypothesis["hypothesis_id"] = f"H{index + 1}"
         hypothesis["method_card_ref"] = card_ref
         hypothesis["mechanism_evidence_ids"] = (
@@ -215,6 +248,16 @@ def normalize_adjudication_output(
             raw_rulings = []
             normalization_issues.add(f"HYPOTHESIS_H{index + 1}")
         raw_rulings = raw_rulings if isinstance(raw_rulings, list) else []
+        expected_ruling_identity = [
+            (card_ref, check_code) for check_code in card["required_checks"]
+        ]
+        raw_ruling_identity = [
+            (item.get("method_card_ref"), item.get("check_code"))
+            for item in raw_rulings
+            if isinstance(item, dict)
+        ]
+        if raw_ruling_identity != expected_ruling_identity:
+            normalization_issues.add(f"HYPOTHESIS_H{index + 1}")
         existing = {
             item.get("check_code"): item
             for item in raw_rulings
@@ -277,6 +320,8 @@ def normalize_adjudication_output(
                 }
             )
         hypothesis["method_rulings"] = ordered
+        if ordered != raw_rulings:
+            normalization_issues.add(f"HYPOTHESIS_H{index + 1}")
         parsed = tuple(AgentMethodRuling.model_validate(item) for item in ordered)
         hypothesis["adjudication"] = aggregate_method_rulings(
             rulings=parsed,
@@ -286,25 +331,39 @@ def normalize_adjudication_output(
     if len(normalized) != 2 or not all(isinstance(item, dict) for item in normalized):
         value["hypotheses"] = normalized
         return value
-    _normalize_hypothesis_roles(
+    selection_repaired = _normalize_hypothesis_roles(
         normalized=normalized,
         cards=cards,
         packet=packet,
         identity_repaired=identity_repaired,
+        raw_primary_slot=raw_primary_slot,
+        normalization_issues=normalization_issues,
     )
+    if binding_mode and selection_repaired:
+        normalization_issues.update({"PRIMARY_SELECTION", "WORK_PATH"})
     value["hypotheses"] = normalized
+    raw_excluded = value.get("excluded_candidates")
     value["excluded_candidates"] = _normalize_excluded_candidates(
-        value.get("excluded_candidates"),
+        raw_excluded,
         normalized=normalized,
         packet=packet,
         cards=cards,
         natal_ids=natal_ids,
     )
-    value["hypothesis_decision"] = _normalize_decision(
+    if binding_mode and value["excluded_candidates"] != raw_excluded:
+        normalization_issues.add("CANDIDATE_COVERAGE")
+    decision_identity_repaired = set(identity_repaired)
+    if selection_repaired:
+        decision_identity_repaired.update(range(2))
+    decision, decision_repaired = _normalize_decision(
         value.get("hypothesis_decision"),
         normalized=normalized,
-        identity_repaired=identity_repaired,
+        identity_repaired=decision_identity_repaired,
+        preserve_valid=binding_mode,
     )
+    value["hypothesis_decision"] = decision
+    if decision_repaired:
+        normalization_issues.add("HYPOTHESIS_DECISION")
     primary = next(item for item in normalized if item["role"] == "PRIMARY")
     if (
         raw_primary_method_ref is not None
@@ -312,6 +371,27 @@ def normalize_adjudication_output(
     ):
         normalization_issues.add("WORK_PATH")
     work_path = value.get("work_path")
+    if binding_mode and isinstance(work_path, dict):
+        expected_binding = (
+            primary["hypothesis_id"],
+            primary["method_card_ref"],
+        )
+        actual_binding = (
+            work_path.get("selected_hypothesis_id"),
+            work_path.get("method_card_ref"),
+        )
+        if selection_repaired or actual_binding != expected_binding:
+            work_path = {
+                "selected_hypothesis_id": expected_binding[0],
+                "method_card_ref": expected_binding[1],
+                "path_statement": "主解释与工作路径绑定不一致，本次暂不展示专业转化路径。",
+                "transformation_codes": ["CHANNELS"],
+                "closure": "UNCERTAIN",
+                "condition": "模型重新提交与主解释一致的路径后再判断",
+                "evidence_ids": [],
+            }
+            value["work_path"] = work_path
+            normalization_issues.add("WORK_PATH")
     if isinstance(work_path, dict) and work_path.get("closure") == "CLOSED":
         repaired_closure = {
             "CONDITIONAL": "CONDITIONAL",
@@ -460,7 +540,9 @@ def _normalize_hypothesis_roles(
     cards: dict[str, dict[str, object]],
     packet: MingliAgentCasePacket,
     identity_repaired: set[int],
-) -> None:
+    raw_primary_slot: int | None,
+    normalization_issues: set[str],
+) -> bool:
     rank = {"BROKEN": 0, "UNRESOLVED": 1, "CONDITIONAL": 2, "SUPPORTED": 3}
     ruling_score = {"OPPOSES": 0, "UNRESOLVED": 1, "CONDITIONAL": 2, "SUPPORTS": 3}
     pattern_by_card = {
@@ -503,9 +585,21 @@ def _normalize_hypothesis_roles(
             float(-index),
         )
 
-    selected = max(range(2), key=selection_key)
+    raw_primary_index = (
+        raw_primary_slot
+        if raw_primary_slot is not None and raw_primary_slot not in identity_repaired
+        else None
+    )
+    selected = (
+        raw_primary_index
+        if raw_primary_index is not None
+        and normalized[raw_primary_index]["adjudication"] != "BROKEN"
+        else max(range(2), key=selection_key)
+    )
     if all(item["adjudication"] == "BROKEN" for item in normalized):
         selected = 0
+        fallback_repaired = True
+        normalization_issues.add(f"HYPOTHESIS_H{selected + 1}")
         fallback = cards[FALLBACK_METHOD_CARD_REF]
         normalized[selected]["method_card_ref"] = FALLBACK_METHOD_CARD_REF
         normalized[selected]["mechanism_evidence_ids"] = []
@@ -522,6 +616,8 @@ def _normalize_hypothesis_roles(
             for check in fallback["required_checks"]
         ]
         normalized[selected]["adjudication"] = "UNRESOLVED"
+    else:
+        fallback_repaired = False
     for index, item in enumerate(normalized):
         item["role"] = "PRIMARY" if index == selected else "ALTERNATIVE"
         aggregate = item["adjudication"]
@@ -535,8 +631,14 @@ def _normalize_hypothesis_roles(
             item["confidence"] = "LOW"
         elif item.get("confidence") not in {"LOW", "MEDIUM"}:
             item["confidence"] = "MEDIUM"
+    alternative_index = 1 - selected
+    if rank[normalized[selected]["adjudication"]] < rank[
+        normalized[alternative_index]["adjudication"]
+    ]:
+        normalized[selected]["confidence"] = "LOW"
     if normalized[0].get("name") == normalized[1].get("name"):
         normalized[1]["name"] = f"{normalized[1]['name']}的替代解释"
+    return fallback_repaired or raw_primary_index is None or selected != raw_primary_index
 
 
 def _normalize_decision(
@@ -544,10 +646,18 @@ def _normalize_decision(
     *,
     normalized: list[dict[str, Any]],
     identity_repaired: set[int],
-) -> dict[str, Any]:
+    preserve_valid: bool,
+) -> tuple[dict[str, Any], bool]:
     raw = value if isinstance(value, dict) else {}
     primary = next(item for item in normalized if item["role"] == "PRIMARY")
     alternative = next(item for item in normalized if item["role"] == "ALTERNATIVE")
+
+    if preserve_valid and not identity_repaired and _decision_matches_hypotheses(
+        raw,
+        primary=primary,
+        alternative=alternative,
+    ):
+        return dict(raw), False
 
     def side(item: dict[str, Any], label: str) -> dict[str, Any]:
         preferred = (
@@ -627,223 +737,29 @@ def _normalize_decision(
             "winner_signal": winner_signal[:160],
             "loser_signal": loser_signal[:160],
         },
-    }
+    }, preserve_valid
 
 
-def repair_output_form(value: Any) -> Any:
-    """Remove schema labels from copy while retaining typed enum fields."""
-
-    if not isinstance(value, dict):
-        return value
-    value = dict(value)
-    first_look = value.get("first_look")
-    if isinstance(first_look, str):
-        value["first_look"] = re.sub(
-            r"^(?:PRIMARY|ALTERNATIVE|H1|H2)\s*[:：·-]\s*",
-            "",
-            first_look,
-            flags=re.IGNORECASE,
-        )
-    hypotheses = value.get("hypotheses")
-    names: dict[str, str] = {}
-    if isinstance(hypotheses, list):
-        for hypothesis in hypotheses:
-            if not isinstance(hypothesis, dict):
-                continue
-            name = hypothesis.get("name")
-            if isinstance(name, str):
-                repaired = re.sub(
-                    r"\s*[（(](?:PRIMARY|ALTERNATIVE|H1|H2)[）)]\s*$",
-                    "",
-                    name,
-                    flags=re.IGNORECASE,
-                ).strip()
-                hypothesis["name"] = repaired
-                hypothesis_id = hypothesis.get("hypothesis_id")
-                if isinstance(hypothesis_id, str):
-                    names[hypothesis_id] = repaired
-    decision = value.get("hypothesis_decision")
-    if isinstance(decision, dict):
-        for key in ("winner", "loser"):
-            side = decision.get(key)
-            if isinstance(side, dict) and isinstance(side.get("rationale"), str):
-                side["rationale"] = _repair_decision_copy(side["rationale"], names)
-        reversal = decision.get("reversal")
-        if isinstance(reversal, dict):
-            for key in ("question", "winner_signal", "loser_signal"):
-                if isinstance(reversal.get(key), str):
-                    reversal[key] = _repair_decision_copy(reversal[key], names)
-    return _repair_nested_copy(value, names=names)
-
-
-def _repair_decision_copy(value: str, names: dict[str, str]) -> str:
-    for hypothesis_id, name in names.items():
-        value = re.sub(
-            rf"(?<![A-Za-z0-9]){hypothesis_id}(?![A-Za-z0-9])",
-            name,
-            value,
-        )
-    value = re.sub(
-        r"(?:SUPPORTS|CONDITIONAL|OPPOSES|UNRESOLVED)\s*[:：]\s*",
-        "",
-        value,
-    )
-    return (
-        value.replace("UNRESOLVED", "尚需校准")
-        .replace("BLOCKED", "路径受阻")
-        .replace("PRIMARY", "主解释")
-        .replace("ALTERNATIVE", "替代解释")
-    )
-
-
-_NON_PROSE_FIELDS = {
-    MINGLI_AGENT_NORMALIZATION_ISSUE_FIELD,
-    "adjudication",
-    "check_code",
-    "classification",
-    "closure",
-    "competition_kinds",
-    "confidence",
-    "coordinate_evidence_id",
-    "day_master_state",
-    "dominant_chain_status",
-    "effective_root_coordinates",
-    "effective_root_status",
-    "evidence_ids",
-    "hypothesis_id",
-    "judgment",
-    "loser_id",
-    "mechanism_evidence_ids",
-    "method_card_ref",
-    "method_asset_ref",
-    "natal_evidence_ids",
-    "relation_evidence_ids",
-    "role",
-    "root_status",
-    "rooted_visible_support_status",
-    "ruling",
-    "status",
-    "transformation_codes",
-    "winner_id",
-}
-
-
-def _repair_nested_copy(value: Any, *, names: dict[str, str], field: str = "") -> Any:
-    if isinstance(value, dict):
-        return {
-            key: _repair_nested_copy(item, names=names, field=key) for key, item in value.items()
-        }
-    if isinstance(value, list):
-        return [_repair_nested_copy(item, names=names, field=field) for item in value]
-    if isinstance(value, str) and field not in _NON_PROSE_FIELDS:
-        return _repair_decision_copy(value, names)
-    return value
-
-
-def validate_adjudication_output(
+def _decision_matches_hypotheses(
+    raw: dict[str, Any],
     *,
-    output: MingliAgentModelOutput,
-    packet: MingliAgentCasePacket,
-) -> None:
-    cards = method_card_catalog(packet.mechanism_observations)
-    natal_ids = {item.evidence_id for item in packet.evidence_catalog if item.kind != "TIMING"}
-    by_id = {item.hypothesis_id: item for item in output.hypotheses}
+    primary: dict[str, Any],
+    alternative: dict[str, Any],
+) -> bool:
+    try:
+        decision = AgentHypothesisDecision.model_validate(raw)
+    except ValueError:
+        return False
     if (
-        len(packet.mechanism_observations) >= 2
-        and len({item.method_card_ref for item in output.hypotheses}) != 2
+        decision.winner_id != primary["hypothesis_id"]
+        or decision.loser_id != alternative["hypothesis_id"]
     ):
-        raise ValueError("mingli_agent_hypothesis_cards_not_competing")
-    for hypothesis in output.hypotheses:
-        card = cards.get(hypothesis.method_card_ref)
-        if card is None:
-            raise ValueError("mingli_agent_unknown_method_card")
-        expected = tuple(card["required_checks"])
-        actual = tuple(item.check_code for item in hypothesis.method_rulings)
-        if actual != expected:
-            raise ValueError("mingli_agent_method_checks_not_exact_order")
-        if any(
-            item.method_card_ref != hypothesis.method_card_ref for item in hypothesis.method_rulings
-        ):
-            raise ValueError("mingli_agent_method_ruling_card_mismatch")
-        if any(
-            not set(item.evidence_ids).issubset(natal_ids) for item in hypothesis.method_rulings
-        ):
-            raise ValueError("mingli_agent_method_ruling_uses_non_natal_evidence")
-        if hypothesis.method_card_ref == FALLBACK_METHOD_CARD_REF:
-            if hypothesis.mechanism_evidence_ids:
-                raise ValueError("mingli_agent_fallback_card_has_mechanism_evidence")
-        elif hypothesis.mechanism_evidence_ids != (hypothesis.method_card_ref,):
-            raise ValueError("mingli_agent_method_card_mechanism_mismatch")
-        expected_aggregate = aggregate_method_rulings(
-            rulings=hypothesis.method_rulings,
-            blocking_checks=tuple(card["blocking_checks"]),
-        )
-        if hypothesis.adjudication != expected_aggregate:
-            raise ValueError("mingli_agent_method_aggregate_mismatch")
-        if expected_aggregate == "BROKEN" and hypothesis.judgment != "BLOCKED":
-            raise ValueError("mingli_agent_broken_method_not_blocked")
-        if expected_aggregate == "SUPPORTED" and hypothesis.judgment != "SUPPORTED":
-            raise ValueError("mingli_agent_supported_method_not_supported")
-        if expected_aggregate == "CONDITIONAL" and hypothesis.judgment not in {
-            "WORKS_IF",
-            "PARTIAL",
-        }:
-            raise ValueError("mingli_agent_conditional_method_judgment_conflict")
-        if expected_aggregate == "UNRESOLVED" and hypothesis.judgment != "COMPETING":
-            raise ValueError("mingli_agent_unresolved_method_not_competing")
-        if hypothesis.confidence == "HIGH":
-            raise ValueError("mingli_agent_hypothesis_confidence_exceeds_adjudication")
-        if expected_aggregate in {"BROKEN", "UNRESOLVED"} and hypothesis.confidence != "LOW":
-            raise ValueError("mingli_agent_unresolved_method_confidence_too_high")
-
-    selected_cards = {
-        item.method_card_ref
-        for item in output.hypotheses
-        if item.method_card_ref != FALLBACK_METHOD_CARD_REF
-    }
-    expected_excluded = tuple(
-        item.evidence_id
-        for item in packet.mechanism_observations
-        if item.evidence_id not in selected_cards
-    )
-    if tuple(item.method_card_ref for item in output.excluded_candidates) != expected_excluded:
-        raise ValueError("mingli_agent_candidate_coverage_incomplete")
-    for item in output.excluded_candidates:
-        card = cards[item.method_card_ref]
-        if item.decisive_check not in set(card["required_checks"]):
-            raise ValueError("mingli_agent_excluded_candidate_check_invalid")
-        if not set(item.evidence_ids).issubset(natal_ids):
-            raise ValueError("mingli_agent_excluded_candidate_uses_non_natal_evidence")
-    candidate_count = len(packet.mechanism_observations)
-    expected_selected = min(candidate_count, 2)
-    if len(selected_cards) != expected_selected and not (
-        candidate_count >= 1
-        and any(item.adjudication == "BROKEN" for item in output.hypotheses)
-        and FALLBACK_METHOD_CARD_REF in {item.method_card_ref for item in output.hypotheses}
-    ):
-        raise ValueError("mingli_agent_candidate_selection_count_invalid")
-
-    decision = output.hypothesis_decision
-    primary = next(item for item in output.hypotheses if item.role == "PRIMARY")
-    alternative = next(item for item in output.hypotheses if item.role == "ALTERNATIVE")
-    if (decision.winner_id, decision.loser_id) != (
-        primary.hypothesis_id,
-        alternative.hypothesis_id,
-    ):
-        raise ValueError("mingli_agent_decision_role_conflict")
+        return False
     for side, hypothesis in (
-        (decision.winner, by_id[decision.winner_id]),
-        (decision.loser, by_id[decision.loser_id]),
+        (decision.winner, primary),
+        (decision.loser, alternative),
     ):
-        allowed_checks = {item.check_code for item in hypothesis.method_rulings}
-        if not set(side.decisive_checks).issubset(allowed_checks):
-            raise ValueError("mingli_agent_decisive_check_not_in_method_card")
-    rank = {"BROKEN": 0, "UNRESOLVED": 1, "CONDITIONAL": 2, "SUPPORTED": 3}
-    if rank[primary.adjudication] < rank[alternative.adjudication]:
-        raise ValueError("mingli_agent_winner_weaker_than_loser")
-    if primary.adjudication == "BROKEN":
-        raise ValueError("mingli_agent_broken_primary")
-    if primary.adjudication != "SUPPORTED" and output.work_path.closure == "CLOSED":
-        raise ValueError("mingli_agent_work_path_closed_without_supported_method")
-    if primary.adjudication == "UNRESOLVED" and primary.confidence != "LOW":
-        raise ValueError("mingli_agent_working_primary_must_be_low_confidence")
+        allowed = {item["check_code"] for item in hypothesis["method_rulings"]}
+        if not set(side.decisive_checks).issubset(allowed):
+            return False
+    return True

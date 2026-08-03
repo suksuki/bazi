@@ -32,7 +32,7 @@ export function validateSyntheticExperimentCatalog(
   }
   const catalog = value as unknown as MingliSyntheticExperimentCatalog;
   if (
-    catalog.catalog_version !== "v60.mingli-synthetic-experiment-catalog.004" ||
+    catalog.catalog_version !== "v60.mingli-synthetic-experiment-catalog.005" ||
     catalog.browser_generation_allowed !== false ||
     catalog.read_only !== true ||
     catalog.experiments.length < 1
@@ -265,12 +265,14 @@ function validateCatalogEntry(value: unknown): void {
           "v60.mingli-synthetic-experiment-evaluator.004",
           "v60.mingli-synthetic-experiment-evaluator.005",
           "v60.mingli-synthetic-experiment-evaluator.006",
+          "v60.mingli-synthetic-experiment-evaluator.007",
         ].includes(item.evaluator_version) ||
         ![
           "v60.mingli-synthetic-experiment-dev-gold.001",
           "v60.mingli-synthetic-experiment-dev-gold.002",
           "v60.mingli-synthetic-experiment-dev-gold.003",
           "v60.mingli-synthetic-experiment-dev-gold.004",
+          "v60.mingli-synthetic-experiment-dev-gold.005",
         ].includes(item.dev_gold_version) ||
         !["CURRENT", "SUPERSEDED"].includes(item.review_contract_status) ||
         !Number.isInteger(item.changed_pass_count) ||
@@ -309,6 +311,7 @@ function validateDefinition(value: MingliSyntheticExperimentDefinition): void {
       "CONTROLLED_HIDDEN_RANK_PRIMARY_SECONDARY_PAIR",
       "CONTROLLED_HIDDEN_RANK_SECONDARY_TERTIARY_PAIR",
       "CONTROLLED_HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_PAIR",
+      "CONTROLLED_REGIME_WORK_PATH_GENERALIZATION_PAIR",
     ].includes(value.family) ||
     !value.title ||
     !value.question ||
@@ -361,12 +364,14 @@ function validateEvaluation(
       "v60.mingli-synthetic-experiment-evaluator.004",
       "v60.mingli-synthetic-experiment-evaluator.005",
       "v60.mingli-synthetic-experiment-evaluator.006",
+      "v60.mingli-synthetic-experiment-evaluator.007",
     ].includes(value.evaluator_version) ||
     ![
       "v60.mingli-synthetic-experiment-dev-gold.001",
       "v60.mingli-synthetic-experiment-dev-gold.002",
       "v60.mingli-synthetic-experiment-dev-gold.003",
       "v60.mingli-synthetic-experiment-dev-gold.004",
+      "v60.mingli-synthetic-experiment-dev-gold.005",
     ].includes(value.dev_gold_version) ||
     !HASH.test(value.dev_gold_hash) ||
     !OUTCOMES.includes(value.outcome) ||

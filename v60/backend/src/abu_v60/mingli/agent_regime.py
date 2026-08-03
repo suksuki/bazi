@@ -18,6 +18,7 @@ _COMPETITION_ORDER = (
     "COMBINATION_UNRESOLVED",
 )
 _WEAK_FOLLOW_STATES = {"WEAK", "FOLLOWING_TENDENCY", "UNCERTAIN"}
+_NON_WEAK_STATES = {"STRONG", "BALANCED", "SPECIALIZED_TENDENCY"}
 _PILLAR_SLOT_LABELS = {"year": "年", "month": "月", "day": "日", "hour": "时"}
 
 
@@ -238,6 +239,8 @@ def _derive_classification(
     chain_status: str,
     competition_kinds: tuple[str, ...],
 ) -> str:
+    if day_master_state in _NON_WEAK_STATES:
+        return "NON_WEAK_OUTSIDE_SCOPE"
     if day_master_state not in _WEAK_FOLLOW_STATES:
         return "UNRESOLVED"
     if (

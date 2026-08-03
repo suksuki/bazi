@@ -6,7 +6,7 @@ from typing import Literal
 from abu_v60.mingli.agent_root_gate import MINGLI_EFFECTIVE_ROOT_METHOD_VERSION
 
 MINGLI_AGENT_METHOD_DISTILLATION_VERSION = (
-    "v60.mingli-agent-method-distillation.004"
+    "v60.mingli-agent-method-distillation.005"
 )
 
 OUTPUT_TO_PRESSURE = "bazi.mechanism.output-to-pressure@1"
@@ -252,6 +252,13 @@ def day_master_regime_method_asset(
         },
         "candidate_states": (
             {
+                "state": "NON_WEAK_OUTSIDE_SCOPE",
+                "requires": (
+                    "整盘已裁为 STRONG、BALANCED 或 SPECIALIZED_TENDENCY；"
+                    "本子审计只记录其退出身弱／从势二分"
+                ),
+            },
+            {
                 "state": "ORDINARY_WEAK",
                 "requires": "受泄克，但仍有经比较后有效的自立或支持点",
             },
@@ -287,7 +294,8 @@ def day_master_regime_method_asset(
                 "effective_root_status 不是 PRESENT 时 effective_root_coordinates 必须为空"
             ),
             "classification_follows_status": (
-                "WEAK 且 effective_root_status=PRESENT 时 classification=ORDINARY_WEAK"
+                "WEAK 且 effective_root_status=PRESENT 时 classification=ORDINARY_WEAK；"
+                "STRONG、BALANCED 或 SPECIALIZED_TENDENCY 时固定为 NON_WEAK_OUTSIDE_SCOPE"
             ),
             "competition_is_exhaustive": (
                 "hidden_resources 非空必须列 HIDDEN_RESOURCE；visible_peers 非空且未形成"
@@ -378,6 +386,7 @@ def cross_card_discriminator() -> dict[str, object]:
 
 def research_regime_outcome(
     *,
+    day_master_state: str = "WEAK",
     effective_root: bool,
     rooted_visible_support: bool,
     visible_peer_competition: bool,
@@ -386,6 +395,8 @@ def research_regime_outcome(
 ) -> str:
     """Synthetic-only invariant evaluator; never writes a professional verdict."""
 
+    if day_master_state in {"STRONG", "BALANCED", "SPECIALIZED_TENDENCY"}:
+        return "NON_WEAK_OUTSIDE_SCOPE"
     if effective_root or rooted_visible_support:
         return "ORDINARY_WEAK"
     if not dominant_chain_closed:

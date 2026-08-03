@@ -10,7 +10,6 @@ from typing import Any
 import pytest
 from abu_v60.api import mingli_stage
 from abu_v60.db import engine
-from abu_v60.mingli.agent_adjudication import repair_output_form
 from abu_v60.mingli.agent_contracts import (
     MingliAgentModelOutput,
     MingliAgentReadingEnvelope,
@@ -27,6 +26,7 @@ from abu_v60.mingli.agent_method_distillation import exact_role_paths
 from abu_v60.mingli.agent_normalization_receipt import (
     MingliAgentNormalizationReceipt,
 )
+from abu_v60.mingli.agent_output_copy import repair_output_form
 from abu_v60.mingli.agent_packet import MingliAgentCasePacketCompiler
 from abu_v60.mingli.agent_profile import (
     MINGLI_AGENT_PROFILE_HASH,
@@ -238,7 +238,7 @@ def _valid_output(*, suffix: str = "", packet: Any | None = None) -> MingliAgent
             ),
             "regime_decision": {
                 "method_asset_ref": "REGIME_WEAK_VS_FOLLOW_TREND_001",
-                "classification": "UNRESOLVED",
+                "classification": "NON_WEAK_OUTSIDE_SCOPE",
                 "effective_root_status": "UNRESOLVED" if roots else "ABSENT",
                 "effective_root_coordinates": [],
                 "rooted_visible_support_status": "ABSENT",
@@ -326,6 +326,8 @@ def _valid_output(*, suffix: str = "", packet: Any | None = None) -> MingliAgent
                 },
             },
             "work_path": {
+                "selected_hypothesis_id": "H1",
+                "method_card_ref": card_refs[0],
                 "path_statement": "力量从月令起步，经由透干组织和现实任务转化，最后落到可重复的成果。",
                 "transformation_codes": ["CHANNELS", "GENERATES"],
                 "closure": "CONDITIONAL",
@@ -614,10 +616,15 @@ def test_blind_and_reconciliation_modes_are_physically_distinct() -> None:
 def test_generation_schema_requires_non_null_regime_without_breaking_legacy_model() -> None:
     schema = mingli_agent_generation_output_schema()
     regime = schema["properties"]["regime_decision"]
+    work_path = schema["$defs"]["AgentWorkPath"]
 
     assert "regime_decision" in schema["required"]
     assert regime.get("$ref", "").endswith("/$defs/AgentRegimeDecision")
     assert "anyOf" not in regime
+    assert {"selected_hypothesis_id", "method_card_ref"}.issubset(
+        work_path["required"]
+    )
+    assert work_path["properties"]["transformation_codes"]["uniqueItems"] is True
     assert MingliAgentModelOutput.model_json_schema()["properties"]["regime_decision"][
         "default"
     ] is None
@@ -696,7 +703,7 @@ def test_ollama_adapter_sends_one_locked_packet_and_validates_output() -> None:
     )
     assert result.output.hypotheses[0].role == "PRIMARY"
     assert result.output.regime_decision is not None
-    assert result.output.regime_decision.classification == "UNRESOLVED"
+    assert result.output.regime_decision.classification == "NON_WEAK_OUTSIDE_SCOPE"
     receipt = result.normalization_receipt
     assert receipt.raw_output["support_selection"]["peer_coordinates"] == [
         "错误坐标"
@@ -809,11 +816,17 @@ def test_ollama_adapter_repairs_partial_rulings_and_timing_scope() -> None:
         "required_checks"
     ]
 
-    assert primary.hypothesis_id == "H2"
+    assert primary.hypothesis_id == "H1"
+    assert primary.confidence == "LOW"
     assert tuple(item.check_code for item in repaired.method_rulings) == expected_checks
     assert repaired.method_rulings[0].ruling == "UNRESOLVED"
     assert repaired.method_rulings[0].evidence_ids == ()
-    assert result.output.work_path.closure == "CONDITIONAL"
+    assert result.output.work_path.selected_hypothesis_id == "H1"
+    assert result.output.work_path.method_card_ref == repaired.method_card_ref
+    assert result.output.work_path.closure == "UNCERTAIN"
+    assert {"HYPOTHESIS_H1", "HYPOTHESIS_DECISION"}.issubset(
+        result.output.server_issue_keys
+    )
     assert result.output.timing.dayun.coordinate_evidence_id == (
         packet.timing_coordinates[0].evidence_id
     )
@@ -955,7 +968,7 @@ def test_no_root_weak_regime_caps_mechanism_capacity_at_conditional() -> None:
     )
 
 
-def test_cross_card_decisive_checks_prefer_complete_wealth_path_over_pressure_presence() -> None:
+def test_server_preserves_valid_model_primary_instead_of_counting_card_checks() -> None:
     _, packet = _packet()
     raw = _valid_output(packet=packet).model_dump(mode="json")
     pressure, wealth = raw["hypotheses"]
@@ -982,8 +995,9 @@ def test_cross_card_decisive_checks_prefer_complete_wealth_path_over_pressure_pr
     output = _normalize_raw(packet=packet, raw=raw)
     primary = next(item for item in output.hypotheses if item.role == "PRIMARY")
 
-    assert primary.method_card_ref == wealth["method_card_ref"]
-    assert "食神到正财" in primary.name
+    assert primary.method_card_ref == pressure["method_card_ref"]
+    assert "食神到七杀" in primary.name
+    assert output.work_path.method_card_ref == primary.method_card_ref
 
 
 def test_following_tendency_retreats_when_peer_or_resource_competition_exists() -> None:
@@ -1140,7 +1154,7 @@ def test_adapter_preserves_reversed_single_candidate_and_fallback() -> None:
     assert output.hypotheses[0].name == "月令整盘替代解释"
     assert output.hypotheses[1].method_card_ref == candidate_ref
     assert output.hypotheses[1].name == "唯一机制条件解释"
-    assert output.server_issue_keys == ("WORK_PATH",)
+    assert output.server_issue_keys == ("HYPOTHESIS_DECISION", "WORK_PATH")
 
 
 def test_work_path_mixed_timing_evidence_is_not_silently_washed_clean() -> None:
@@ -1166,6 +1180,76 @@ def test_work_path_timing_prose_is_withheld_even_with_natal_evidence() -> None:
     output = _normalize_raw(packet=packet, raw=raw)
 
     assert "WORK_PATH" in output.server_issue_keys
+    assert output.work_path.closure == "UNCERTAIN"
+    assert not any(
+        term in f"{output.work_path.path_statement}\n{output.work_path.condition}"
+        for term in ("大运", "流年", "岁运")
+    )
+
+
+@pytest.mark.parametrize(
+    "codes",
+    ([], ["NOT_A_CODE"], ["CHANNELS", "CHANNELS"]),
+)
+def test_work_path_transformation_form_repairs_are_receipted(codes: list[str]) -> None:
+    _, packet = _packet()
+    raw = _valid_output(packet=packet).model_dump(mode="json")
+    raw["work_path"]["transformation_codes"] = codes
+
+    output = _normalize_raw(packet=packet, raw=raw)
+
+    assert output.work_path.transformation_codes == ("CHANNELS",)
+    assert "WORK_PATH_FORM" in output.server_issue_keys
+
+
+def test_all_broken_candidates_emit_primary_selection_when_fallback_is_installed() -> None:
+    _, packet = _packet()
+    raw = _valid_output(packet=packet).model_dump(mode="json")
+    for hypothesis in raw["hypotheses"]:
+        for ruling in hypothesis["method_rulings"]:
+            ruling["ruling"] = "OPPOSES"
+
+    output = _normalize_raw(packet=packet, raw=raw)
+    primary = next(item for item in output.hypotheses if item.role == "PRIMARY")
+
+    assert primary.method_card_ref == FALLBACK_METHOD_CARD_REF
+    assert {"PRIMARY_SELECTION", "HYPOTHESIS_DECISION", "WORK_PATH"}.issubset(
+        output.server_issue_keys
+    )
+
+
+def test_all_broken_fallback_slots_emit_semantic_repair_receipts() -> None:
+    _, packet = _packet()
+    packet_values = packet.model_dump(
+        mode="python",
+        exclude={"packet_version", "packet_ref", "packet_hash", "read_only"},
+    )
+    packet_values["mechanism_observations"] = ()
+    zero_packet = type(packet).issue(**packet_values)
+    raw = _valid_output(packet=zero_packet).model_dump(mode="json")
+    for hypothesis in raw["hypotheses"]:
+        for ruling in hypothesis["method_rulings"]:
+            ruling["ruling"] = "OPPOSES"
+
+    output = _normalize_raw(packet=zero_packet, raw=raw)
+
+    assert output.hypotheses[0].adjudication == "UNRESOLVED"
+    assert {"HYPOTHESIS_H1", "PRIMARY_SELECTION", "WORK_PATH"}.issubset(
+        output.server_issue_keys
+    )
+
+
+def test_localized_day_master_state_is_normalized_before_regime_projection() -> None:
+    _, packet = _packet()
+    raw = _valid_output(packet=packet).model_dump(mode="json")
+    raw["day_master_state"] = "身强"
+
+    output = _normalize_raw(packet=packet, raw=raw)
+
+    assert output.day_master_state == "STRONG"
+    assert output.regime_decision is not None
+    assert output.regime_decision.classification == "NON_WEAK_OUTSIDE_SCOPE"
+    assert "DAY_MASTER" in output.server_issue_keys
 
 
 def test_duplicate_candidate_refs_are_neutralized_instead_of_silently_rebound() -> None:
@@ -1183,7 +1267,13 @@ def test_duplicate_candidate_refs_are_neutralized_instead_of_silently_rebound() 
         pressure_ref,
         wealth_ref,
     )
-    assert set(output.server_issue_keys) == {"HYPOTHESIS_H1", "HYPOTHESIS_H2"}
+    assert set(output.server_issue_keys) == {
+        "HYPOTHESIS_H1",
+        "HYPOTHESIS_H2",
+        "HYPOTHESIS_DECISION",
+        "PRIMARY_SELECTION",
+        "WORK_PATH",
+    }
     assert all(item.adjudication == "UNRESOLVED" for item in output.hypotheses)
     assert all(
         ruling.ruling == "UNRESOLVED"
@@ -1209,6 +1299,29 @@ def test_adapter_allows_two_fallback_hypotheses_when_packet_has_no_candidates() 
         FALLBACK_METHOD_CARD_REF,
     )
     assert output.server_issue_keys == ()
+
+
+def test_two_fallback_hypotheses_preserve_primary_by_slot_not_method_ref() -> None:
+    _, packet = _packet()
+    packet_values = packet.model_dump(
+        mode="python",
+        exclude={"packet_version", "packet_ref", "packet_hash", "read_only"},
+    )
+    packet_values["mechanism_observations"] = ()
+    zero_packet = type(packet).issue(**packet_values)
+    raw = _valid_output(packet=zero_packet).model_dump(mode="json")
+    raw["hypotheses"][0]["role"] = "ALTERNATIVE"
+    raw["hypotheses"][1]["role"] = "PRIMARY"
+    raw["hypothesis_decision"]["winner_id"] = "H2"
+    raw["hypothesis_decision"]["loser_id"] = "H1"
+    raw["work_path"]["selected_hypothesis_id"] = "H2"
+
+    output = _normalize_raw(packet=zero_packet, raw=raw)
+    primary = next(item for item in output.hypotheses if item.role == "PRIMARY")
+
+    assert primary.hypothesis_id == "H2"
+    assert output.work_path.selected_hypothesis_id == "H2"
+    assert "PRIMARY_SELECTION" not in output.server_issue_keys
 
 
 def test_one_malformed_projection_never_erases_the_whole_reading() -> None:
@@ -1449,7 +1562,7 @@ def test_unresolved_method_still_produces_low_confidence_working_primary() -> No
     assert reading.output.hypotheses[0].adjudication == "UNRESOLVED"
 
 
-def test_equal_aggregate_uses_blocker_coverage_instead_of_original_order() -> None:
+def test_valid_model_primary_and_reversal_copy_survive_server_repairs() -> None:
     _, packet = _packet()
     raw = _valid_output(packet=packet).model_dump(mode="json")
     for ruling in raw["hypotheses"][0]["method_rulings"][:3]:
@@ -1498,19 +1611,25 @@ def test_equal_aggregate_uses_blocker_coverage_instead_of_original_order() -> No
     )
     output = provider.generate(packet=packet).output
     primary = next(item for item in output.hypotheses if item.role == "PRIMARY")
+    alternative = next(item for item in output.hypotheses if item.role == "ALTERNATIVE")
     repaired_peer = next(
-        item for item in primary.method_rulings if item.check_code == "PEER_COMPETITION_RESOLUTION"
+        item
+        for item in alternative.method_rulings
+        if item.check_code == "PEER_COMPETITION_RESOLUTION"
     )
-    assert primary.hypothesis_id == "H2"
+    assert primary.hypothesis_id == "H1"
     assert repaired_peer.ruling == "UNRESOLVED"
-    assert output.hypothesis_decision.winner_id == "H2"
-    assert "项未决" in output.hypothesis_decision.winner.rationale
-    assert "原来属于食神到正财路径的分散路径信号" in (
-        output.hypothesis_decision.reversal.winner_signal
+    assert output.hypothesis_decision.winner_id == "H1"
+    assert "主解释对月令、透藏和整盘承接的覆盖更完整" in (
+        output.hypothesis_decision.winner.rationale
     )
     assert "原来属于食神到七杀路径的收束路径信号" in (
+        output.hypothesis_decision.reversal.winner_signal
+    )
+    assert "原来属于食神到正财路径的分散路径信号" in (
         output.hypothesis_decision.reversal.loser_signal
     )
+    assert output.server_issue_keys == ("HYPOTHESIS_H2",)
 
 
 def test_common_runtime_rejects_support_and_timing_scope_drift() -> None:
@@ -1922,6 +2041,8 @@ def test_legacy_reading_003_replays_without_injecting_null_regime() -> None:
     )
     payload.pop("normalization_receipt")
     payload["output"].pop("regime_decision")
+    payload["output"]["work_path"].pop("selected_hypothesis_id")
+    payload["output"]["work_path"].pop("method_card_ref")
     identity = {
         key: value
         for key, value in payload.items()
@@ -1935,6 +2056,8 @@ def test_legacy_reading_003_replays_without_injecting_null_regime() -> None:
     assert restored.agent_reading_version == "v60.mingli-agent-reading.003"
     assert restored.output.regime_decision is None
     assert "regime_decision" not in restored.output.model_dump(mode="json")
+    assert "selected_hypothesis_id" not in restored.output.work_path.model_dump(mode="json")
+    assert "method_card_ref" not in restored.output.work_path.model_dump(mode="json")
 
 
 def test_reading_004_keeps_typed_regime_and_historical_generation_key() -> None:
@@ -1942,6 +2065,8 @@ def test_reading_004_keeps_typed_regime_and_historical_generation_key() -> None:
     payload = _envelope(fixture).model_dump(mode="json")
     payload["agent_reading_version"] = "v60.mingli-agent-reading.004"
     payload.pop("normalization_receipt")
+    payload["output"]["work_path"].pop("selected_hypothesis_id")
+    payload["output"]["work_path"].pop("method_card_ref")
     payload["generation_key"] = mingli_agent_generation_key(
         requester_account_ref=payload["requester_account_ref"],
         reading_ref=payload["reading_ref"],
@@ -1967,6 +2092,8 @@ def test_reading_004_keeps_typed_regime_and_historical_generation_key() -> None:
     restored = MingliAgentReadingEnvelope.model_validate(payload)
 
     assert restored.output.regime_decision is not None
+    assert "selected_hypothesis_id" not in restored.output.work_path.model_dump(mode="json")
+    assert "method_card_ref" not in restored.output.work_path.model_dump(mode="json")
     assert restored.generation_key == mingli_agent_generation_key(
         requester_account_ref=payload["requester_account_ref"],
         reading_ref=payload["reading_ref"],
@@ -1993,6 +2120,65 @@ def test_reading_005_requires_typed_regime_decision() -> None:
 
     with pytest.raises(ValueError, match="regime_decision_required"):
         MingliAgentReadingEnvelope.model_validate(payload)
+
+
+def test_legacy_reading_005_replays_without_injecting_work_path_binding() -> None:
+    fixture = _base_reading_fixture()
+    payload = _envelope(fixture).model_dump(mode="json")
+    payload["agent_reading_version"] = "v60.mingli-agent-reading.005"
+    payload["output"]["work_path"].pop("selected_hypothesis_id")
+    payload["output"]["work_path"].pop("method_card_ref")
+    payload["generation_key"] = mingli_agent_generation_key(
+        requester_account_ref=payload["requester_account_ref"],
+        reading_ref=payload["reading_ref"],
+        reading_hash=payload["reading_hash"],
+        packet_ref=payload["packet_ref"],
+        packet_hash=payload["packet_hash"],
+        agent_profile_ref=payload["agent_profile_ref"],
+        agent_profile_hash=payload["agent_profile_hash"],
+        provider_profile_ref=payload["provider_profile_ref"],
+        provider_profile_hash=payload["provider_profile_hash"],
+        prompt_ref=payload["prompt_ref"],
+        prompt_hash=payload["prompt_hash"],
+        agent_reading_version="v60.mingli-agent-reading.005",
+    )
+    prior_receipt = MingliAgentNormalizationReceipt.model_validate(
+        payload["normalization_receipt"]
+    )
+    legacy_output = payload["output"]
+    legacy_receipt = MingliAgentNormalizationReceipt.issue(
+        provider_response_ref=prior_receipt.provider_response_ref,
+        packet_ref=prior_receipt.packet_ref,
+        packet_hash=prior_receipt.packet_hash,
+        agent_profile_ref=prior_receipt.agent_profile_ref,
+        agent_profile_hash=prior_receipt.agent_profile_hash,
+        provider_id=prior_receipt.provider_id,
+        model_ref=prior_receipt.model_ref,
+        model_digest=prior_receipt.model_digest,
+        provider_profile_ref=prior_receipt.provider_profile_ref,
+        provider_profile_hash=prior_receipt.provider_profile_hash,
+        prompt_ref=prior_receipt.prompt_ref,
+        prompt_hash=prior_receipt.prompt_hash,
+        raw_output=legacy_output,
+        normalized_output=legacy_output,
+        changes=(),
+        server_issue_keys=tuple(legacy_output["server_issue_keys"]),
+    )
+    payload["normalization_receipt"] = legacy_receipt.model_dump(mode="json")
+    identity = {
+        key: value
+        for key, value in payload.items()
+        if key not in {"agent_reading_ref", "agent_reading_hash"}
+    }
+    payload["agent_reading_ref"] = stable_ref("v60-mingli-agent-reading", identity)
+    payload["agent_reading_hash"] = content_hash(identity)
+
+    restored = MingliAgentReadingEnvelope.model_validate(payload)
+
+    dumped = restored.output.work_path.model_dump(mode="json")
+    assert restored.agent_reading_version == "v60.mingli-agent-reading.005"
+    assert "selected_hypothesis_id" not in dumped
+    assert "method_card_ref" not in dumped
 
 
 def test_normalization_receipt_rejects_unproved_raw_to_normalized_change() -> None:
@@ -2299,6 +2485,8 @@ def test_withheld_h1_alternative_does_not_quarantine_valid_h2_primary() -> None:
     second["role"] = "PRIMARY"
     output["hypothesis_decision"]["winner_id"] = "H2"
     output["hypothesis_decision"]["loser_id"] = "H1"
+    output["work_path"]["selected_hypothesis_id"] = "H2"
+    output["work_path"]["method_card_ref"] = second["method_card_ref"]
     first.update(
         {
             "name": "食伤制官杀宽泛候选",
@@ -2420,7 +2608,7 @@ def test_owner_gemma4_reading_has_exact_evidence_and_dependency_admission() -> N
     )
     upgraded_output = _valid_output(packet=packet).model_dump(mode="json")
     for key, value in frozen_output.items():
-        if key not in {"hypotheses", "discriminating_question"}:
+        if key not in {"hypotheses", "discriminating_question", "day_master_state"}:
             upgraded_output[key] = value
     for upgraded, frozen in zip(
         upgraded_output["hypotheses"], frozen_output["hypotheses"], strict=True
@@ -2431,6 +2619,11 @@ def test_owner_gemma4_reading_has_exact_evidence_and_dependency_admission() -> N
     upgraded_output["hypothesis_decision"]["reversal"]["question"] = frozen_output[
         "discriminating_question"
     ]
+    selected = next(
+        item for item in upgraded_output["hypotheses"] if item["role"] == "PRIMARY"
+    )
+    upgraded_output["work_path"]["selected_hypothesis_id"] = selected["hypothesis_id"]
+    upgraded_output["work_path"]["method_card_ref"] = selected["method_card_ref"]
     reading = MingliAgentRuntime(
         provider=_OutputProvider(MingliAgentModelOutput.model_validate(upgraded_output)),
         enabled=True,

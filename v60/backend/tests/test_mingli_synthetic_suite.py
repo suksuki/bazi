@@ -156,7 +156,7 @@ def test_error_clusters_count_each_variant_without_inventing_scores() -> None:
         experiment_ref=HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
         reason_keys=("SERVER_REPAIR:HYPOTHESIS_H1",),
     )
-    assert derive_error_clusters((hypothesis,))[0].label == "假设结构归槽"
+    assert derive_error_clusters((hypothesis,))[0].label == "方法卡原始完成度"
     counts, outcomes = derive_suite_counts((hypothesis,))
     legacy_label = SyntheticSuiteErrorCluster(
         **{

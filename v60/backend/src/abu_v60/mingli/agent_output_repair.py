@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from abu_v60.mingli.agent_adjudication import MINGLI_AGENT_NORMALIZATION_ISSUE_FIELD
+from abu_v60.mingli.agent_output_copy import MINGLI_AGENT_NORMALIZATION_ISSUE_FIELD
 
-MINGLI_AGENT_OUTPUT_REPAIR_VERSION = "v60.mingli-agent-output-repair.003"
+MINGLI_AGENT_OUTPUT_REPAIR_VERSION = "v60.mingli-agent-output-repair.004"
 
 if TYPE_CHECKING:
     from abu_v60.mingli.agent_contracts import MingliAgentCasePacket
@@ -70,10 +70,17 @@ def repair_local_output_fields(
     allowed_normalization_issues = {
         "HYPOTHESIS_H1",
         "HYPOTHESIS_H2",
+        "PRIMARY_SELECTION",
+        "HYPOTHESIS_DECISION",
+        "CANDIDATE_COVERAGE",
+        "DAY_MASTER",
         "DAY_MASTER_CAPACITY_H1",
         "DAY_MASTER_CAPACITY_H2",
         "DAY_MASTER_REGIME",
+        "EFFECTIVE_ROOT_GATE",
+        "ROOT_RANK",
         "WORK_PATH",
+        "WORK_PATH_FORM",
     }
     issues = {
         item
@@ -191,7 +198,10 @@ def _repair_work_path(
     )
     transformations = item.get("transformation_codes")
     transformations = transformations if isinstance(transformations, list) else []
-    transformations = list(
+    admitted_transformations = [
+        code for code in transformations if code in _TRANSFORMATIONS
+    ]
+    unique_transformations = list(
         dict.fromkeys(code for code in transformations if code in _TRANSFORMATIONS)
     )[:4]
     evidence = _evidence(
@@ -203,9 +213,28 @@ def _repair_work_path(
     closure = item.get("closure")
     if closure not in {"CLOSED", "CONDITIONAL", "BROKEN", "UNCERTAIN"}:
         closure = "UNCERTAIN"
+    timing_prose_mixed = any(
+        term in f"{path}\n{condition}" for term in _WORK_PATH_TIMING_TERMS
+    )
+    if timing_prose_mixed:
+        path = "当前文本混入未绑定的时间层，本次仅保留原局路径待重新推演。"
+        condition = "时间层完成独立绑定后重新生成"
+        closure = "UNCERTAIN"
+    primary = next(
+        (
+            hypothesis
+            for hypothesis in result.get("hypotheses", [])
+            if isinstance(hypothesis, dict) and hypothesis.get("role") == "PRIMARY"
+        ),
+        None,
+    )
     normalized = {
+        **({
+            "selected_hypothesis_id": primary.get("hypothesis_id"),
+            "method_card_ref": primary.get("method_card_ref"),
+        } if isinstance(primary, dict) else {}),
         "path_statement": path,
-        "transformation_codes": transformations or ["CHANNELS"],
+        "transformation_codes": unique_transformations or ["CHANNELS"],
         "closure": closure,
         "condition": condition,
         "evidence_ids": evidence,
@@ -220,13 +249,38 @@ def _repair_work_path(
         or item.get("condition") != normalized["condition"]
         or item.get("evidence_ids") != normalized["evidence_ids"]
         or not evidence
-        or any(
-            term in f"{normalized['path_statement']}\n{normalized['condition']}"
-            for term in _WORK_PATH_TIMING_TERMS
-        )
+        or timing_prose_mixed
     )
-    if repaired:
+    transformation_form_repaired = (
+        not isinstance(item.get("transformation_codes"), list)
+        or not unique_transformations
+        or transformations != admitted_transformations
+        or admitted_transformations != unique_transformations
+        or len(unique_transformations) > 4
+    )
+    if transformation_form_repaired:
+        issues.add("WORK_PATH_FORM")
+    if isinstance(primary, dict) and (
+        item.get("selected_hypothesis_id") != primary.get("hypothesis_id")
+        or item.get("method_card_ref") != primary.get("method_card_ref")
+    ):
         issues.add("WORK_PATH")
+    if repaired:
+        non_form_repair = any(
+            (
+                not isinstance(raw, dict),
+                path_bad,
+                condition_bad,
+                item.get("path_statement") != normalized["path_statement"],
+                item.get("closure") != normalized["closure"],
+                item.get("condition") != normalized["condition"],
+                item.get("evidence_ids") != normalized["evidence_ids"],
+                not evidence,
+                timing_prose_mixed,
+            )
+        )
+        if non_form_repair:
+            issues.add("WORK_PATH")
     result["work_path"] = normalized
 
 

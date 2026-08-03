@@ -282,8 +282,20 @@ def _cluster_kind(reason: str) -> str:
 def _cluster_label(reason: str) -> str:
     if reason == "SERVER_REPAIR:DAY_MASTER_REGIME":
         return "日主与根气裁决"
+    if reason == "SERVER_REPAIR:DAY_MASTER":
+        return "日主状态格式"
     if reason in {"SERVER_REPAIR:HYPOTHESIS_H1", "SERVER_REPAIR:HYPOTHESIS_H2"}:
-        return "假设结构归槽"
+        return "方法卡原始完成度"
+    if reason == "SERVER_REPAIR:PRIMARY_SELECTION":
+        return "主解释选择"
+    if reason == "SERVER_REPAIR:HYPOTHESIS_DECISION":
+        return "主次决胜回执"
+    if reason == "SERVER_REPAIR:CANDIDATE_COVERAGE":
+        return "候选覆盖"
+    if reason == "SERVER_REPAIR:WORK_PATH":
+        return "主路径绑定"
+    if reason == "SERVER_REPAIR:WORK_PATH_FORM":
+        return "主路径动作格式"
     if reason.startswith("SERVER_REPAIR:"):
         return "模型判断归槽"
     if reason.startswith("CHECK_FAIL:EXPECTED_CHANGE:"):

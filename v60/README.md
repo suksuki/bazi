@@ -220,7 +220,7 @@ The active local Mingli serving profile is
 temperature `0`, context `32768`, output budget `5200`. The larger output
 budget covers two fully adjudicated method cards; it does not add another
 model call. The current distilled method set is
-`v60.mingli-agent-method-distillation.004`, including the narrow
+`v60.mingli-agent-method-distillation.005`, including the narrow
 `v60.mingli-effective-root-method.001`; its readings remain private
 Owner-review candidates with publication disabled.
 
@@ -233,14 +233,14 @@ conditional Day-Master capacity. This is a reproducible structured first
 reading, not an advanced-master qualification; relationship/family positive
 methods and real timing adjudication remain missing.
 
-Four legal synthetic A/B experiments are now sealed and visible in Mingli Lab.
-The first repeatable DEV Suite covers the two hidden-stem-rank experiments:
-first versus second, then second versus third hidden stem. Run it from `v60/`
-with `./.venv/bin/python tools/run_mingli_synthetic_suite.py`; it uses the
-version-locked local candidate, reuses already sealed child Runs, and never
-needs a chat turn or a browser model call.
+Six legal synthetic A/B experiments and three DEV Suites are now visible in
+Mingli Lab. The first repeatable Suite covers the two hidden-stem-rank
+experiments; the second changes to an unseen 丙火 Day Master; the third asks an
+unseen 戊土 pair to recompute whole-chart regime, candidate coverage, primary
+selection and the primary-bound work path. Runs use the version-locked local
+candidate and never need a chat turn or a browser model call.
 
-The current Suite Run is
+The previous hidden-rank Suite Run is
 `v60-mingli-synthetic-suite-run-63da38288080c7fa5c3a`: 2/2 experiments sealed,
 0 runner errors and 2 results requiring review. Each experiment passes 3/3
 hold checks and 4/4 method-response checks. Under the same Evaluator `.006`
@@ -248,8 +248,18 @@ and Gold `.004`, the preceding candidate's hidden-rank prose, H1-capacity and
 two regime errors were removed; two regime corrections and two work-path
 corrections remain. The Lab now shows this adjacent-run comparison and the
 complete model/Profile/Provider/Prompt identity instead of presenting a
-server-corrected result as model ability. The current Agent Profile/Prompt are
-`.026/.023`; this is measurable method training, not advanced-master
+server-corrected result as model ability.
+
+The current 戊土 Suite Run is
+`v60-mingli-synthetic-suite-run-eeb96631646c98137cd9`, binding Experiment Run
+`v60-mingli-synthetic-run-3d96c4be35affd574214`, Evaluator `.007`, Gold `.005`,
+Profile `.027`, Prompt `.024` and Reading `.006`. The 3/3 hold checks pass and
+16 response checks pass, but the honest result remains
+`PRODUCT_SAFE_MODEL_FAIL`: A misclassifies a rootless/supportless chart as
+ordinary weak, A/B both duplicate selected cards in the excluded ledger, B's
+decision receipt needs repair, and all four raw method cards submit assertions
+where a falsifiable condition is required. Primary/work-path binding itself
+passes for both charts. This is measurable method training, not advanced-master
 qualification. Owner charts stay regressions while method discovery runs in
 DEV; QUALIFICATION and HOLDOUT remain locked until the method is frozen.
 
@@ -295,7 +305,8 @@ failure are recorded in
 The Owner-approved cognitive-system constitution, shared Reading Claim Graph,
 blind/reconciliation boundary and functional delivery sequence are recorded in
 [`docs/19_V60_MINGLI_COGNITIVE_SYSTEM_CONSTITUTION_V1.md`](docs/19_V60_MINGLI_COGNITIVE_SYSTEM_CONSTITUTION_V1.md).
-The legal paired-chart method Lab, minimum anti-follow root rule, append-only
+The legal paired-chart method Lab, minimum anti-follow root rule, whole-chart
+regime, raw decision integrity, PRIMARY-bound work path, append-only
 experiment/Suite history and next synthetic qualification matrix are recorded in
 [`docs/20_V60_SYNTHETIC_MINGLI_METHOD_LAB.md`](docs/20_V60_SYNTHETIC_MINGLI_METHOD_LAB.md).
 The consolidated prototype request for blind review, three-track adjudication,

@@ -194,6 +194,8 @@ def _professional_adjudication_view(packet: MingliAgentCasePacket) -> dict[str, 
             },
             "work_path": {
                 "scope": "NATAL_PRIMARY_HYPOTHESIS_ONLY",
+                "selected_hypothesis_id": "EXACT_COPY_FINAL_PRIMARY_HYPOTHESIS_ID",
+                "method_card_ref": "EXACT_COPY_FINAL_PRIMARY_METHOD_CARD_REF",
                 "evidence_ids_allowed": natal_evidence_ids,
                 "evidence_ids_forbidden": timing_evidence_ids,
                 "timing_prose_forbidden": True,
@@ -274,8 +276,10 @@ def _professional_adjudication_view(packet: MingliAgentCasePacket) -> dict[str, 
         ),
         "required_decision_order": (
             "WEIGH_SEASON_ROOT_PEER_RESOURCE_DRAIN_WEALTH_AND_PRESSURE",
-            "LOCK_NATAL_PRIMARY_AND_ALTERNATIVE_EXPLANATIONS",
             "COMPARE_PATTERN_SUCCESS_FAILURE_RESCUE_AND_TRANSFORMATION",
+            "COVER_ALL_CANDIDATES_BEFORE_PRIMARY_SELECTION",
+            "LOCK_NATAL_PRIMARY_AND_ALTERNATIVE_EXPLANATIONS",
+            "BUILD_WORK_PATH_FROM_FINAL_PRIMARY_ONLY",
             "DERIVE_LIFE_DOMAINS_FROM_THE_NATAL_PRIMARY_ONLY",
             "APPLY_DAYUN_THEN_ANNUAL_WITHOUT_BACKFLOW_TO_NATAL",
             "ASK_ONE_REALITY_QUESTION_THAT_CAN_REVERSE_THE_PRIMARY_CHOICE",
@@ -315,6 +319,9 @@ def _regime_output_scaffold(
                 "effective_root_status": "PRESENT",
                 "effective_root_coordinates": minimum_roots,
                 "classification_when_day_master_state_is_WEAK": "ORDINARY_WEAK",
+                "classification_when_day_master_state_is_NON_WEAK": (
+                    "NON_WEAK_OUTSIDE_SCOPE"
+                ),
                 **common,
             },
         )
@@ -327,12 +334,18 @@ def _regime_output_scaffold(
                     "allowed": candidates,
                 },
                 "classification_when_day_master_state_is_WEAK": "ORDINARY_WEAK",
+                "classification_when_day_master_state_is_NON_WEAK": (
+                    "NON_WEAK_OUTSIDE_SCOPE"
+                ),
                 **common,
             },
             {
                 "effective_root_status": "UNRESOLVED",
                 "effective_root_coordinates": (),
                 "classification": "UNRESOLVED",
+                "classification_when_day_master_state_is_NON_WEAK": (
+                    "NON_WEAK_OUTSIDE_SCOPE"
+                ),
                 **common,
             },
         )
@@ -342,6 +355,9 @@ def _regime_output_scaffold(
                 "effective_root_status": "ABSENT",
                 "effective_root_coordinates": (),
                 "classification": "DERIVE_FROM_DOMINANT_CHAIN_AND_COMPETITION",
+                "classification_when_day_master_state_is_NON_WEAK": (
+                    "NON_WEAK_OUTSIDE_SCOPE"
+                ),
                 **common,
             },
         )

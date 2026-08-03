@@ -8,7 +8,7 @@ from abu_v60.mingli.calendar import BirthInput
 from abu_v60.provenance import content_hash, stable_ref
 
 SYNTHETIC_EXPERIMENT_CATALOG_VERSION: Final = (
-    "v60.mingli-synthetic-experiment-catalog.004"
+    "v60.mingli-synthetic-experiment-catalog.005"
 )
 SYNTHETIC_EXPERIMENT_DEFINITION_VERSION: Final = (
     "v60.mingli-synthetic-experiment-catalog.001"
@@ -19,7 +19,7 @@ SYNTHETIC_EXPERIMENT_DEFINITION_VERSION_V2: Final = (
 SYNTHETIC_RESEARCH_ACCOUNT_REF: Final = "v60-system-account-mingli-synthetic-lab-v1"
 SYNTHETIC_RESEARCH_BATCH_REF: Final = "v60-seed-batch-mingli-synthetic-lab-v1"
 SYNTHETIC_EXPERIMENT_EVALUATOR_VERSION: Final = (
-    "v60.mingli-synthetic-experiment-evaluator.006"
+    "v60.mingli-synthetic-experiment-evaluator.007"
 )
 
 
@@ -329,12 +329,45 @@ HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT: Final = _experiment(
     legal_hour_pillar_change="癸巳 → 庚寅",
 )
 
+REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT: Final = _experiment(
+    definition_version=SYNTHETIC_EXPERIMENT_DEFINITION_VERSION_V2,
+    seed_id="v60.mingli-synthetic-lab.regime-work-path-generalization.001",
+    seed_batch_ref="v60-seed-batch-mingli-regime-work-path-generalization-v1",
+    analysis_date=date(2026, 8, 3),
+    family="CONTROLLED_REGIME_WORK_PATH_GENERALIZATION_PAIR",
+    title="换成戊土日主后，判型与主路径能否一起重算？",
+    question=(
+        "只改变合法出生时刻，让无根、无比、无印的辛酉时变为戌中戊土第一藏干"
+        "取得最低有效根且同时出现丁印的壬戌时；检查模型是否重做整盘裁决、候选"
+        "比较与主路径绑定，而不是只修正一个根位字段。"
+    ),
+    inference_scope="WHOLE_HOUR_PILLAR_RESPONSE_NOT_ROOT_CAUSAL_ESTIMATE",
+    inference_limit=(
+        "完整时柱同时改变时干、全部藏干、结构成员与起运边界；本实验只能检验整盘"
+        "响应和决策自洽，不能把强弱、机制或应事变化单独归因于根位。"
+    ),
+    known_collateral_deltas=(
+        "前三柱固定为癸酉、甲子、戊子，且没有其他戊土根、明干比劫或印星",
+        "时干由辛伤官变为壬偏财",
+        "时支由酉变为戌，藏干由辛变为戊辛丁",
+        "B 新增戊土第一藏干最低有效根、伤官与正印成员",
+        "机制候选集合与起运边界同时变化；Timing 保存但不参与本组评分",
+    ),
+    birth_date=date(1994, 1, 2),
+    member_a_time=time(18, 0),
+    member_b_time=time(20, 0),
+    member_a_pillars=("癸酉", "甲子", "戊子", "辛酉"),
+    member_b_pillars=("癸酉", "甲子", "戊子", "壬戌"),
+    legal_hour_pillar_change="辛酉 → 壬戌",
+)
+
 SYNTHETIC_EXPERIMENTS: Final = (
     FIRST_SYNTHETIC_EXPERIMENT,
     ROOT_IDENTITY_SYNTHETIC_EXPERIMENT,
     HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT,
     HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT,
     HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT,
+    REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT,
 )
 SYNTHETIC_EXPERIMENT_BY_REF: Final = {
     item.experiment_ref: item for item in SYNTHETIC_EXPERIMENTS
@@ -355,6 +388,9 @@ HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF: Final = (
 )
 HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF: Final = (
     HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT.experiment_ref
+)
+REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT_REF: Final = (
+    REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT.experiment_ref
 )
 SYNTHETIC_MEMBER_BY_SUBJECT: Final = {
     item.subject_id: item

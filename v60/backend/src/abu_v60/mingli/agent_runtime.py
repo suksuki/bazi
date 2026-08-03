@@ -10,11 +10,8 @@ from typing import Any, Protocol
 from pydantic import BaseModel, ConfigDict, Field
 
 from abu_v60.llm_transport import JsonTransport, LlmTransportError, default_json_transport
-from abu_v60.mingli.agent_adjudication import (
-    normalize_adjudication_output,
-    repair_output_form,
-    validate_adjudication_output,
-)
+from abu_v60.mingli.agent_adjudication import normalize_adjudication_output
+from abu_v60.mingli.agent_adjudication_validation import validate_adjudication_output
 from abu_v60.mingli.agent_contracts import (
     MINGLI_AGENT_PACKET_VERSION,
     MINGLI_AGENT_PROMPT_VIEW_VERSION,
@@ -37,6 +34,7 @@ from abu_v60.mingli.agent_normalization_receipt import (
     NormalizationStage,
     normalization_deltas,
 )
+from abu_v60.mingli.agent_output_copy import repair_output_form
 from abu_v60.mingli.agent_output_repair import (
     MINGLI_AGENT_OUTPUT_REPAIR_VERSION,
     repair_local_output_fields,

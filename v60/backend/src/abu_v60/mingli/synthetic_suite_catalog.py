@@ -7,11 +7,12 @@ from abu_v60.mingli.synthetic_experiment_catalog import (
     HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF,
     HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
     HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF,
+    REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT_REF,
     resolve_synthetic_experiment,
 )
 from abu_v60.provenance import content_hash, stable_ref
 
-SYNTHETIC_SUITE_CATALOG_VERSION: Final = "v60.mingli-synthetic-suite-catalog.002"
+SYNTHETIC_SUITE_CATALOG_VERSION: Final = "v60.mingli-synthetic-suite-catalog.003"
 SYNTHETIC_SUITE_DEFINITION_VERSION: Final = (
     "v60.mingli-synthetic-suite-definition.001"
 )
@@ -137,14 +138,34 @@ HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_SUITE: Final = _suite(
     ),
 )
 
+REGIME_WORK_PATH_GENERALIZATION_DEV_SUITE: Final = _suite(
+    mode="DEV",
+    availability="ACTIVE",
+    title="整盘判型与主路径泛化 · 戊土陌生命盘",
+    question=(
+        "从无根无比无印的辛酉时切换到戌中戊土最低有效根与丁印同时出现的壬戌时，"
+        "模型能否重做判型、候选覆盖、主次裁决与主路径绑定？"
+    ),
+    experiment_refs=(REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT_REF,),
+    execution_policy="SEQUENTIAL_CONTINUE_ON_BOUNDED_ERROR_THEN_SEAL",
+    inference_limit=(
+        "本 Suite 只做 DEV 盲测；完整时柱有伴随变化，Gold 不指定哪张机制卡必须胜出，"
+        "一次通过不解锁 Qualification、HOLDOUT 或正式能力声明。"
+    ),
+)
+
 SYNTHETIC_SUITES: Final = (
     HIDDEN_RANK_DEV_SUITE,
     HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_SUITE,
+    REGIME_WORK_PATH_GENERALIZATION_DEV_SUITE,
 )
 SYNTHETIC_SUITE_BY_REF: Final = {item.suite_ref: item for item in SYNTHETIC_SUITES}
 HIDDEN_RANK_DEV_SUITE_REF: Final = HIDDEN_RANK_DEV_SUITE.suite_ref
 HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_SUITE_REF: Final = (
     HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_SUITE.suite_ref
+)
+REGIME_WORK_PATH_GENERALIZATION_DEV_SUITE_REF: Final = (
+    REGIME_WORK_PATH_GENERALIZATION_DEV_SUITE.suite_ref
 )
 
 SYNTHETIC_SUITE_MODE_CATALOG: Final = (

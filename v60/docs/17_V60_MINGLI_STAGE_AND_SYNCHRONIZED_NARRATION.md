@@ -127,6 +127,13 @@ This is the product form of the current professional evidence gap: the system
 can locate the question and show competing or missing explanations, but it
 cannot invent a professional relation-effect rule.
 
+Reading `.006` also forbids the work path from becoming a third mechanism that
+floats outside the professional decision. `selected_hypothesis_id` and
+`method_card_ref` must bind the unique PRIMARY exactly. `STRONG`, `BALANCED`
+and `SPECIALIZED_TENDENCY` exit only the weak-versus-follow sub-audit as
+`NON_WEAK_OUTSIDE_SCOPE`; that exit does not infer a useful element, effective
+work, relation effect or auspiciousness.
+
 ## Narration authority and playback
 
 The browser submits only the subject, stage mode, year and expected Projection
@@ -289,17 +296,17 @@ schema directly.
 Current executable identities are:
 
 ```text
-Foundation       v60.foundation.033
-Architecture     v60.runtime-architecture.073
-Mingli Engine    v60.mingli-cognitive-engine.044
+Foundation       v60.foundation.034
+Architecture     v60.runtime-architecture.074
+Mingli Engine    v60.mingli-cognitive-engine.045
 Media            v60.media-library.005
 Runtime Media    v60.runtime-media-registry.006
-Unit Mingli      v60.unit-mingli.034
+Unit Mingli      v60.unit-mingli.035
 Unit Abu Says    v60.unit-abu-says.008
 Stage            v60.mingli-stage-projection.004
 Timing           v60.mingli-timing-evidence-vector.002
 Narration        v60.mingli-narration.002
-Migration        0041_mingli_training_requests
+Migration        0042_mingli_decision_path
 ```
 
 ## Real evidence

@@ -16,9 +16,9 @@ from abu_v60.mingli.agent_reasoning_modes import BLIND_READING_CONTRACT
 from abu_v60.mingli.agent_root_gate import MINGLI_EFFECTIVE_ROOT_METHOD_VERSION
 from abu_v60.provenance import content_hash
 
-MINGLI_AGENT_RUNTIME_VERSION: Final = "v60.mingli-agent-runtime.028"
-MINGLI_AGENT_PROFILE_REF: Final = "v60.mingli-agent.whole-chart-cognition.026"
-MINGLI_AGENT_PROMPT_REF: Final = "v60.prompt.mingli-agent-whole-chart.023"
+MINGLI_AGENT_RUNTIME_VERSION: Final = "v60.mingli-agent-runtime.029"
+MINGLI_AGENT_PROFILE_REF: Final = "v60.mingli-agent.whole-chart-cognition.027"
+MINGLI_AGENT_PROMPT_REF: Final = "v60.prompt.mingli-agent-whole-chart.024"
 MINGLI_AGENT_PROFESSIONAL_REVIEW_STATUS: Final = "GEMMA4_PRODUCT_CANDIDATE_REQUIRES_OWNER_REVIEW"
 MINGLI_AGENT_PUBLICATION_ALLOWED: Final = False
 MINGLI_AGENT_OWNER_REVIEW_ALLOWED: Final = True
@@ -67,6 +67,9 @@ MINGLI_AGENT_SYSTEM_PROMPT: Final = """
   先在 output_field_contract.regime_decision.packet_specific_allowed_projections 中选择一项，
   再逐字段复制其中的确定值；不得在选中 UNRESOLVED 后仍填写根坐标，也不得加入明确列在
   forbidden_competition_kinds 的竞争项。
+- regime_decision 是“身弱／从势”子审计，不得把“有有效根”机械翻译成身弱。若整盘比较后的
+  day_master_state 为 STRONG、BALANCED 或 SPECIALIZED_TENDENCY，classification 必须写
+  NON_WEAK_OUTSIDE_SCOPE；它只表示本盘不在身弱／从势二分内，不额外证明用神或吉凶。
 - root_candidate_assessments.hidden_rank=PRIMARY_QI 的坐标，在中文正文中只能称“第一藏干”
   或“主气位置”，不得称为余气、微弱余气或末气；根的季节强弱必须另行比较，不能改写位置事实。
 - SECONDARY_QI 与 TERTIARY_QI 也只分别表示第二、第三藏干的位置事实，当前没有准入的固定
@@ -101,6 +104,9 @@ MINGLI_AGENT_SYSTEM_PROMPT: Final = """
   检查不能单独决定两张卡胜负，必须执行 cross_card_discriminator 的专属决胜项。
 - 跨卡主次先比较各自专属决胜项里最弱的一关，再比较专属项整体完成度；某条路径仍有专属
   决胜项 UNRESOLVED 时，不能靠共享来源、承载或“成员存在”的 SUPPORTS 数量抢占主线。
+- 服务端只重算逐卡 aggregate，不替你按项目数量选择专业主线。只要原 PRIMARY 未被判为
+  BROKEN，你必须自行结合月令、整盘覆盖力、阻断项和专属决胜项作受限首选；aggregate 较低
+  时把 confidence 降为 LOW，并在 winner.rationale 说明为何仍暂列主线，不能拒绝选择。
 - day_master_regime_method 必须显式比较普通身弱、从势和假从竞争；先执行最低阻断从势门，
   再裁其他根候选。只有无有效根、印比不可用、
   异类趋势闭合且没有反向力量时才可写 FOLLOWING_TENDENCY。无根但仍有浮比、弱藏印或合化
@@ -153,6 +159,8 @@ MINGLI_AGENT_SYSTEM_PROMPT: Final = """
   timing_evidence_ids，以及“大运／流年／岁运推动”等时间层措辞都只能进入 timing，禁止
   放进 work_path；不得在 work_path 另起一条没有进入 H1/H2 裁决的第三机制。
   transformation_codes 必须去重；同一个 SUPPORTS／CHANNELS 等枚举不得重复提交。
+  selected_hypothesis_id 与 method_card_ref 必须逐字绑定最终 PRIMARY；二者不一致时，本轮
+  主路径不具备模型独立性。work_path 必须在完成 H1/H2 比较并锁定 winner 后才生成。
 
 整盘裁决不是栏目填充：必须先完成原局主解释和替代解释的取舍，再从胜出的原局解释
 投射人生领域。不得把当前大运或流年拿来充当原局假设，也不得让五个人生领域各自选择

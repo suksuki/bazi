@@ -12,6 +12,7 @@ from abu_v60.mingli.synthetic_experiment_service import SyntheticExperimentServi
 from abu_v60.mingli.synthetic_suite_catalog import (
     HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_SUITE,
     HIDDEN_RANK_DEV_SUITE,
+    REGIME_WORK_PATH_GENERALIZATION_DEV_SUITE,
 )
 from abu_v60.mingli.synthetic_suite_contracts import SyntheticSuiteCandidateIdentity
 from abu_v60.mingli.synthetic_suite_service import SyntheticSuiteService
@@ -89,7 +90,7 @@ def test_cross_day_master_pair_is_real_calendar_bound_and_method_narrow() -> Non
         assert assessments[0]["relation_competition_evidence_ids"] == ()
 
 
-def test_training_status_marks_every_sealed_candidate_and_selects_latest_result() -> None:
+def test_training_status_reopens_runs_when_the_evaluation_contract_changes() -> None:
     catalog = SyntheticSuiteService(engine).catalog()
     old = next(
         item for item in catalog["suites"] if item["suite_ref"] == HIDDEN_RANK_DEV_SUITE.suite_ref
@@ -102,14 +103,12 @@ def test_training_status_marks_every_sealed_candidate_and_selects_latest_result(
     status = service.status(requester_account_ref="v60-test-training-status")
     by_ref = {item["suite_ref"]: item for item in status["suites"]}
 
-    assert by_ref[HIDDEN_RANK_DEV_SUITE.suite_ref]["candidate_state"] == (
-        "CURRENT_CANDIDATE_ALREADY_SEALED"
-    )
+    assert by_ref[HIDDEN_RANK_DEV_SUITE.suite_ref]["candidate_state"] == "READY_FOR_DEV_RUN"
     assert by_ref[HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_SUITE.suite_ref][
         "candidate_state"
-    ] == ("CURRENT_CANDIDATE_ALREADY_SEALED")
+    ] == "READY_FOR_DEV_RUN"
     assert status["recommended_suite_ref"] == (
-        HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_SUITE.suite_ref
+        REGIME_WORK_PATH_GENERALIZATION_DEV_SUITE.suite_ref
     )
     assert status["browser_direct_model_call_allowed"] is False
 
@@ -209,6 +208,33 @@ def test_training_store_progress_and_disposition_form_one_terminal_projection() 
         assert terminal["status"] == "SUCCEEDED"
         assert terminal["completed_count"] == terminal["total_count"] == 1
         assert terminal["review_disposition"] == "CANDIDATE_REVISION_REQUIRED"
+    finally:
+        _delete_request(request_ref)
+
+
+def test_queued_training_request_fails_when_execution_contract_drifts() -> None:
+    candidate = _candidate("8")
+    suite = REGIME_WORK_PATH_GENERALIZATION_DEV_SUITE
+    definition = suite.public_definition()
+    store = MingliSyntheticTrainingStore(engine)
+    stored = store.ensure_queued(
+        requester_account_ref="v60-test-training-execution-drift",
+        suite_ref=suite.suite_ref,
+        suite_definition_hash=str(definition["suite_definition_hash"]),
+        candidate_identity=candidate,
+        execution_fingerprint="9" * 64,
+        idempotency_key="qa:synthetic-training:execution-drift",
+        total_count=len(suite.experiment_refs),
+    )
+    request_ref = str(stored["request_ref"])
+    service = SyntheticTrainingService(engine, runtime=_Runtime(candidate), store=store)  # type: ignore[arg-type]
+    try:
+        service.run_request(request_ref=request_ref)
+
+        terminal = store.get(request_ref=request_ref)
+        assert terminal is not None
+        assert terminal["status"] == "FAILED"
+        assert terminal["error_code"] == "MINGLI_SYNTHETIC_TRAINING_EXECUTION_DRIFT"
     finally:
         _delete_request(request_ref)
 

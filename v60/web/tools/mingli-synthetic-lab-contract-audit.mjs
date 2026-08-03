@@ -248,8 +248,8 @@ expect(
 
 const definitionHash = "d".repeat(64);
 const goldHash = "a".repeat(64);
-const evaluator = "v60.mingli-synthetic-experiment-evaluator.006";
-const goldVersion = "v60.mingli-synthetic-experiment-dev-gold.004";
+const evaluator = "v60.mingli-synthetic-experiment-evaluator.007";
+const goldVersion = "v60.mingli-synthetic-experiment-dev-gold.005";
 const cluster = (key, label, occurrence_count) => ({ key, label, occurrence_count });
 const reviewItem = (experiment_ref, itemDefinitionHash = definitionHash) => ({
   experiment_ref,

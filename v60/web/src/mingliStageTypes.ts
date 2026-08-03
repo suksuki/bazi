@@ -192,6 +192,7 @@ export interface MingliAgentTimingLayerReading {
 export interface MingliAgentRegimeDecision {
   method_asset_ref: "REGIME_WEAK_VS_FOLLOW_TREND_001";
   classification:
+    | "NON_WEAK_OUTSIDE_SCOPE"
     | "ORDINARY_WEAK"
     | "FALSE_FOLLOW_COMPETITION"
     | "FOLLOW_TREND"
@@ -239,6 +240,8 @@ export interface MingliAgentOutput {
     };
   };
   work_path: {
+    selected_hypothesis_id?: "H1" | "H2";
+    method_card_ref?: string;
     path_statement: string;
     transformation_codes: Array<
       "GENERATES" | "CONTROLS" | "SUPPORTS" | "CONSTRAINS" | "CHANNELS" | "COMPETES"
@@ -272,7 +275,8 @@ export interface MingliAgentReading {
   agent_reading_version:
     | "v60.mingli-agent-reading.003"
     | "v60.mingli-agent-reading.004"
-    | "v60.mingli-agent-reading.005";
+    | "v60.mingli-agent-reading.005"
+    | "v60.mingli-agent-reading.006";
   generation_key: string;
   requester_account_ref: string;
   case_ref: string;

@@ -18,17 +18,20 @@ from abu_v60.mingli.agent_regime_contracts import AgentRegimeDecision
 from abu_v60.provenance import content_hash, stable_ref
 
 MINGLI_AGENT_PACKET_VERSION = "v60.mingli-agent-case-packet.003"
-MINGLI_AGENT_PROMPT_VIEW_VERSION = "v60.mingli-agent-prompt-view.014"
-MINGLI_AGENT_READING_VERSION = "v60.mingli-agent-reading.005"
+MINGLI_AGENT_PROMPT_VIEW_VERSION = "v60.mingli-agent-prompt-view.015"
+MINGLI_AGENT_READING_VERSION = "v60.mingli-agent-reading.006"
 MINGLI_AGENT_READING_REGIME_VERSIONS = frozenset(
     {
         "v60.mingli-agent-reading.004",
         "v60.mingli-agent-reading.005",
+        "v60.mingli-agent-reading.006",
     }
 )
-MINGLI_AGENT_READING_RECEIPT_VERSIONS = frozenset({"v60.mingli-agent-reading.005"})
+MINGLI_AGENT_READING_RECEIPT_VERSIONS = frozenset(
+    {"v60.mingli-agent-reading.005", "v60.mingli-agent-reading.006"}
+)
 MINGLI_AGENT_READING_VERSIONED_KEY_VERSIONS = frozenset(
-    {"v60.mingli-agent-reading.005"}
+    {"v60.mingli-agent-reading.005", "v60.mingli-agent-reading.006"}
 )
 
 Confidence = Literal["LOW", "MEDIUM", "HIGH"]
@@ -333,6 +336,16 @@ class AgentSupportSelection(BaseModel):
 class AgentWorkPath(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
+    selected_hypothesis_id: Literal["H1", "H2"] | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
+    method_card_ref: str | None = Field(
+        default=None,
+        min_length=4,
+        max_length=48,
+        exclude_if=lambda value: value is None,
+    )
     path_statement: str = Field(min_length=12, max_length=260)
     transformation_codes: tuple[
         Literal[
@@ -348,6 +361,12 @@ class AgentWorkPath(BaseModel):
     closure: Literal["CLOSED", "CONDITIONAL", "BROKEN", "UNCERTAIN"]
     condition: str = Field(min_length=6, max_length=160)
     evidence_ids: tuple[str, ...] = Field(max_length=10)
+
+    @model_validator(mode="after")
+    def current_binding_and_codes_are_consistent(self) -> AgentWorkPath:
+        if (self.selected_hypothesis_id is None) != (self.method_card_ref is None):
+            raise ValueError("mingli_agent_work_path_partial_binding")
+        return self
 
 
 class AgentDomainReading(BaseModel):
@@ -442,7 +461,7 @@ class MingliAgentModelOutput(BaseModel):
     life_image: AgentLifeImage
     domains: AgentDomainReadings
     timing: AgentTimingReading
-    server_issue_keys: tuple[str, ...] = Field(default=(), max_length=12)
+    server_issue_keys: tuple[str, ...] = Field(default=(), max_length=24)
 
     @model_validator(mode="after")
     def professional_shape_is_valid(self) -> MingliAgentModelOutput:
@@ -454,6 +473,11 @@ class MingliAgentModelOutput(BaseModel):
             raise ValueError("mingli_agent_primary_hypothesis_invalid")
         if self.hypothesis_decision.winner_id != primary[0].hypothesis_id:
             raise ValueError("mingli_agent_decision_primary_mismatch")
+        if self.work_path.selected_hypothesis_id is not None and (
+            self.work_path.selected_hypothesis_id != primary[0].hypothesis_id
+            or self.work_path.method_card_ref != primary[0].method_card_ref
+        ):
+            raise ValueError("mingli_agent_work_path_primary_binding_mismatch")
         return self
 
     def validate_evidence(self, allowed: frozenset[str]) -> None:
@@ -504,6 +528,17 @@ def mingli_agent_generation_output_schema() -> dict[str, Any]:
             ),
             "title": regime.get("title", "Regime Decision"),
         }
+    work_path = schema["$defs"]["AgentWorkPath"]
+    for field_name in ("selected_hypothesis_id", "method_card_ref"):
+        field = dict(work_path["properties"][field_name])
+        non_null = tuple(
+            item for item in field.get("anyOf", ()) if item.get("type") != "null"
+        )
+        if len(non_null) == 1:
+            work_path["properties"][field_name] = non_null[0]
+        if field_name not in work_path["required"]:
+            work_path["required"].append(field_name)
+    work_path["properties"]["transformation_codes"]["uniqueItems"] = True
     return schema
 
 
@@ -549,6 +584,7 @@ class MingliAgentReadingEnvelope(BaseModel):
         "v60.mingli-agent-reading.003",
         "v60.mingli-agent-reading.004",
         "v60.mingli-agent-reading.005",
+        "v60.mingli-agent-reading.006",
     ]
     generation_key: str = Field(min_length=64, max_length=64)
     requester_account_ref: str = Field(min_length=1)
@@ -600,6 +636,20 @@ class MingliAgentReadingEnvelope(BaseModel):
                 raise ValueError("mingli_agent_normalization_receipt_binding_mismatch")
         elif self.normalization_receipt is not None:
             raise ValueError("mingli_agent_legacy_normalization_receipt_forbidden")
+        if self.agent_reading_version == "v60.mingli-agent-reading.006" and (
+            self.output.work_path.selected_hypothesis_id is None
+            or self.output.work_path.method_card_ref is None
+        ):
+            raise ValueError("mingli_agent_work_path_binding_required")
+        if self.agent_reading_version == "v60.mingli-agent-reading.006" and len(
+            self.output.work_path.transformation_codes
+        ) != len(set(self.output.work_path.transformation_codes)):
+            raise ValueError("mingli_agent_work_path_transformations_not_unique")
+        if (
+            self.agent_reading_version == "v60.mingli-agent-reading.006"
+            and not _current_regime_state_is_coherent(self.output)
+        ):
+            raise ValueError("mingli_agent_regime_state_incoherent")
         expected_key = mingli_agent_generation_key(
             requester_account_ref=self.requester_account_ref,
             reading_ref=self.reading_ref,
@@ -647,3 +697,20 @@ class MingliAgentReadingEnvelope(BaseModel):
             agent_reading_hash=content_hash(identity),
             **identity,
         )
+
+
+def _current_regime_state_is_coherent(output: MingliAgentModelOutput) -> bool:
+    regime = output.regime_decision
+    if regime is None:
+        return False
+    state = output.day_master_state
+    classification = regime.classification
+    if state in {"STRONG", "BALANCED", "SPECIALIZED_TENDENCY"}:
+        return classification == "NON_WEAK_OUTSIDE_SCOPE"
+    if classification == "ORDINARY_WEAK":
+        return state == "WEAK"
+    if classification == "FOLLOW_TREND":
+        return state == "FOLLOWING_TENDENCY"
+    if classification == "FALSE_FOLLOW_COMPETITION":
+        return state in {"WEAK", "UNCERTAIN"}
+    return classification == "UNRESOLVED" and state in {"WEAK", "UNCERTAIN"}

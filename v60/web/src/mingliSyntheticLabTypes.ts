@@ -25,7 +25,8 @@ export interface MingliSyntheticExperimentDefinition {
     | "CONTROLLED_ROOT_IDENTITY_PAIR"
     | "CONTROLLED_HIDDEN_RANK_PRIMARY_SECONDARY_PAIR"
     | "CONTROLLED_HIDDEN_RANK_SECONDARY_TERTIARY_PAIR"
-    | "CONTROLLED_HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_PAIR";
+    | "CONTROLLED_HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_PAIR"
+    | "CONTROLLED_REGIME_WORK_PATH_GENERALIZATION_PAIR";
   title: string;
   question: string;
   analysis_date: string;
@@ -73,7 +74,7 @@ export interface MingliSyntheticExperimentRunSummary {
 }
 
 export interface MingliSyntheticExperimentCatalog {
-  catalog_version: "v60.mingli-synthetic-experiment-catalog.004";
+  catalog_version: "v60.mingli-synthetic-experiment-catalog.005";
   experiments: MingliSyntheticExperimentCatalogEntry[];
   browser_generation_allowed: false;
   read_only: true;
@@ -95,12 +96,14 @@ export interface MingliSyntheticExperimentEvaluation {
     | "v60.mingli-synthetic-experiment-evaluator.003"
     | "v60.mingli-synthetic-experiment-evaluator.004"
     | "v60.mingli-synthetic-experiment-evaluator.005"
-    | "v60.mingli-synthetic-experiment-evaluator.006";
+    | "v60.mingli-synthetic-experiment-evaluator.006"
+    | "v60.mingli-synthetic-experiment-evaluator.007";
   dev_gold_version:
     | "v60.mingli-synthetic-experiment-dev-gold.001"
     | "v60.mingli-synthetic-experiment-dev-gold.002"
     | "v60.mingli-synthetic-experiment-dev-gold.003"
-    | "v60.mingli-synthetic-experiment-dev-gold.004";
+    | "v60.mingli-synthetic-experiment-dev-gold.004"
+    | "v60.mingli-synthetic-experiment-dev-gold.005";
   dev_gold_hash: string;
   outcome: MingliSyntheticOutcome;
   checks: MingliSyntheticExperimentCheck[];

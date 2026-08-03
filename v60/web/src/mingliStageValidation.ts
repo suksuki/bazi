@@ -1,4 +1,5 @@
 import type {
+  MingliAgentOutput,
   MingliAgentReading,
   MingliNarrationReadyResponse,
   MingliReadingSummaryProjection,
@@ -244,10 +245,15 @@ export function validateAgentReading(
       "v60.mingli-agent-reading.003",
       "v60.mingli-agent-reading.004",
       "v60.mingli-agent-reading.005",
+      "v60.mingli-agent-reading.006",
     ].includes(reading.agent_reading_version) ||
     (reading.agent_reading_version === "v60.mingli-agent-reading.003"
       && output.regime_decision !== undefined) ||
-    (["v60.mingli-agent-reading.004", "v60.mingli-agent-reading.005"].includes(
+    ([
+      "v60.mingli-agent-reading.004",
+      "v60.mingli-agent-reading.005",
+      "v60.mingli-agent-reading.006",
+    ].includes(
       reading.agent_reading_version,
     )
       && !regimeDecisionIsValid(output.regime_decision)) ||
@@ -314,6 +320,14 @@ export function validateAgentReading(
     typeof output.hypothesis_decision.reversal.winner_signal !== "string" ||
     typeof output.hypothesis_decision.reversal.loser_signal !== "string" ||
     !isRecord(output.work_path) ||
+    (reading.agent_reading_version === "v60.mingli-agent-reading.006" && (
+      output.work_path.selected_hypothesis_id !== selected[0]?.hypothesis_id
+      || output.work_path.method_card_ref !== selected[0]?.method_card_ref
+      || !currentRegimeStateIsCoherent(output)
+    )) ||
+    !Array.isArray(output.work_path.transformation_codes) ||
+    new Set(output.work_path.transformation_codes).size
+      !== output.work_path.transformation_codes.length ||
     !isRecord(output.life_image) ||
     !isRecord(output.domains) ||
     domainOrder.some((domain) => !isRecord(output.domains[domain])) ||
@@ -327,12 +341,32 @@ export function validateAgentReading(
   return reading;
 }
 
+function currentRegimeStateIsCoherent(output: MingliAgentOutput): boolean {
+  const regime = output.regime_decision;
+  if (regime === undefined) return false;
+  if (["STRONG", "BALANCED", "SPECIALIZED_TENDENCY"].includes(output.day_master_state)) {
+    return regime.classification === "NON_WEAK_OUTSIDE_SCOPE";
+  }
+  if (regime.classification === "ORDINARY_WEAK") {
+    return output.day_master_state === "WEAK";
+  }
+  if (regime.classification === "FOLLOW_TREND") {
+    return output.day_master_state === "FOLLOWING_TENDENCY";
+  }
+  if (regime.classification === "FALSE_FOLLOW_COMPETITION") {
+    return ["WEAK", "UNCERTAIN"].includes(output.day_master_state);
+  }
+  return regime.classification === "UNRESOLVED"
+    && ["WEAK", "UNCERTAIN"].includes(output.day_master_state);
+}
+
 function regimeDecisionIsValid(value: unknown): boolean {
   if (!isRecord(value)) return false;
   const statuses = ["PRESENT", "ABSENT", "UNRESOLVED"];
   return (
     value.method_asset_ref === "REGIME_WEAK_VS_FOLLOW_TREND_001"
     && [
+      "NON_WEAK_OUTSIDE_SCOPE",
       "ORDINARY_WEAK",
       "FALSE_FOLLOW_COMPETITION",
       "FOLLOW_TREND",

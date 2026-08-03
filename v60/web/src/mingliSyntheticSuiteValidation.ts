@@ -25,12 +25,14 @@ const EVALUATOR_VERSIONS = [
   "v60.mingli-synthetic-experiment-evaluator.004",
   "v60.mingli-synthetic-experiment-evaluator.005",
   "v60.mingli-synthetic-experiment-evaluator.006",
+  "v60.mingli-synthetic-experiment-evaluator.007",
 ] as const;
 const GOLD_VERSIONS = [
   "v60.mingli-synthetic-experiment-dev-gold.001",
   "v60.mingli-synthetic-experiment-dev-gold.002",
   "v60.mingli-synthetic-experiment-dev-gold.003",
   "v60.mingli-synthetic-experiment-dev-gold.004",
+  "v60.mingli-synthetic-experiment-dev-gold.005",
 ] as const;
 
 export function validateSyntheticSuiteCatalog(
@@ -41,7 +43,7 @@ export function validateSyntheticSuiteCatalog(
   }
   const catalog = value as unknown as MingliSyntheticSuiteCatalog;
   if (
-    catalog.catalog_version !== "v60.mingli-synthetic-suite-catalog.002"
+    catalog.catalog_version !== "v60.mingli-synthetic-suite-catalog.003"
     || catalog.browser_generation_allowed !== false
     || catalog.read_only !== true
     || catalog.suites.length < 1

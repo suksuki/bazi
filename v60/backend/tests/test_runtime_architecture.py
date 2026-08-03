@@ -7,7 +7,7 @@ from abu_v60.system_manifest import runtime_manifest
 def test_runtime_architecture_has_one_owner_per_schema_and_five_units() -> None:
     architecture = runtime_architecture()
     architecture.validate_boundaries()
-    assert architecture.architecture_version == "v60.runtime-architecture.073"
+    assert architecture.architecture_version == "v60.runtime-architecture.074"
     assert architecture.product_units == (
         "unit-mingli",
         "unit-dream",
@@ -58,7 +58,7 @@ def test_manifest_exposes_world_game_and_localization_reservation() -> None:
     assert manifest["engines"]["context"] == "v60.experience-context.003"
     assert manifest["engines"]["game"] == "v60.dream-game-engine.019"
     assert manifest["engines"]["world"] == "v60.world-continuity-engine.004"
-    assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.044"
+    assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.045"
     assert manifest["engines"]["story"] == "v60.life-story-engine.011"
     assert manifest["media_runtime_version"] == "v60.runtime-media-registry.006"
     source_review = manifest["source_review_profiles"]
@@ -115,12 +115,12 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     architecture = runtime_architecture()
     modules = {module.module_id: module for module in architecture.modules}
 
-    assert modules["mingli"].version == "v60.mingli-cognitive-engine.044"
+    assert modules["mingli"].version == "v60.mingli-cognitive-engine.045"
     assert modules["knowledge"].version == "v60.knowledge-authority.008"
     assert modules["media"].version == "v60.media-library.005"
-    assert modules["unit-mingli"].version == "v60.unit-mingli.034"
+    assert modules["unit-mingli"].version == "v60.unit-mingli.035"
     assert modules["unit-abu"].version == "v60.unit-abu-says.008"
-    assert modules["unit-lab"].version == "v60.unit-lab.030"
+    assert modules["unit-lab"].version == "v60.unit-lab.031"
     assert modules["unit-dream"].version == "v60.unit-dream.020"
     assert modules["media"].reads_from == ("identity", "mingli")
     assert "v128_experience_asset_parcel" in modules["media"].capabilities

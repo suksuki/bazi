@@ -6,6 +6,8 @@ from typing import Any
 import pytest
 from abu_v60.db import engine
 from abu_v60.db.schema import mingli_synthetic_experiment_runs
+from abu_v60.mingli.agent_contracts import MINGLI_AGENT_READING_VERSION
+from abu_v60.mingli.agent_method_cards import method_card_catalog
 from abu_v60.mingli.agent_normalization_receipt import (
     MingliAgentNormalizationDelta,
 )
@@ -21,6 +23,9 @@ from abu_v60.mingli.agent_service import (
 )
 from abu_v60.mingli.stage import MingliStageError, MingliStageService
 from abu_v60.mingli.stage_contracts import MingliStageMode
+from abu_v60.mingli.synthetic_decision_integrity import (
+    add_raw_decision_integrity_checks,
+)
 from abu_v60.mingli.synthetic_experiment_catalog import (
     FIRST_SYNTHETIC_EXPERIMENT,
     FIRST_SYNTHETIC_EXPERIMENT_MEMBERS,
@@ -30,6 +35,8 @@ from abu_v60.mingli.synthetic_experiment_catalog import (
     HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
     HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT,
     HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF,
+    REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT,
+    REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT_REF,
     ROOT_IDENTITY_SYNTHETIC_EXPERIMENT,
     ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF,
     SYNTHETIC_EXPERIMENT_ANALYSIS_DATE,
@@ -216,6 +223,103 @@ def _hidden_rank_readings(
     }
 
 
+def _regime_work_path_readings(
+    packets: dict[str, Any],
+    *,
+    broken_binding_variant: str | None = None,
+) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for variant in ("A", "B"):
+        primary_ref = packets[variant].mechanism_observations[0].evidence_id
+        result[variant] = SimpleNamespace(
+            output=SimpleNamespace(
+                regime_decision=SimpleNamespace(
+                    classification=("UNRESOLVED" if variant == "A" else "ORDINARY_WEAK"),
+                    effective_root_status=("ABSENT" if variant == "A" else "PRESENT"),
+                    effective_root_coordinates=(
+                        () if variant == "A" else ("hour支藏戊",)
+                    ),
+                ),
+                day_master_state=("UNCERTAIN" if variant == "A" else "WEAK"),
+                hypotheses=(
+                    SimpleNamespace(
+                        hypothesis_id="H1",
+                        role="PRIMARY",
+                        method_card_ref=primary_ref,
+                        adjudication="CONDITIONAL",
+                    ),
+                ),
+                work_path=SimpleNamespace(
+                    selected_hypothesis_id=(
+                        "H2" if broken_binding_variant == variant else "H1"
+                    ),
+                    method_card_ref=primary_ref,
+                    transformation_codes=("CHANNELS",),
+                    closure="CONDITIONAL",
+                    evidence_ids=(packets[variant].pillars[0].evidence_id,),
+                ),
+                server_issue_keys=(),
+            )
+        )
+    return result
+
+
+def _raw_decision_integrity_readings(
+    packets: dict[str, Any],
+    *,
+    a_selected_indices: tuple[int, int] = (0, 1),
+) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for variant in ("A", "B"):
+        packet = packets[variant]
+        candidate_refs = [item.evidence_id for item in packet.mechanism_observations]
+        selected_indices = a_selected_indices if variant == "A" else (0, 1)
+        selected_refs = [candidate_refs[index] for index in selected_indices]
+        cards = method_card_catalog(packet.mechanism_observations)
+        hypotheses = []
+        for index, method_card_ref in enumerate(selected_refs):
+            hypotheses.append(
+                {
+                    "hypothesis_id": f"H{index + 1}",
+                    "role": "PRIMARY" if index == 0 else "ALTERNATIVE",
+                    "method_card_ref": method_card_ref,
+                    "method_rulings": [
+                        {
+                            "method_card_ref": method_card_ref,
+                            "check_code": check_code,
+                        }
+                        for check_code in cards[method_card_ref]["required_checks"]
+                    ],
+                }
+            )
+        raw = {
+            "day_master_state": "UNCERTAIN" if variant == "A" else "WEAK",
+            "regime_decision": {
+                "classification": "UNRESOLVED" if variant == "A" else "ORDINARY_WEAK",
+                "effective_root_status": "ABSENT" if variant == "A" else "PRESENT",
+                "rooted_visible_support_status": "ABSENT",
+            },
+            "hypotheses": hypotheses,
+            "hypothesis_decision": {"winner_id": "H1", "loser_id": "H2"},
+            "excluded_candidates": [
+                {"method_card_ref": method_card_ref}
+                for method_card_ref in candidate_refs
+                if method_card_ref not in selected_refs
+            ],
+            "work_path": {
+                "selected_hypothesis_id": "H1",
+                "method_card_ref": selected_refs[0],
+                "transformation_codes": ["CHANNELS"],
+            },
+        }
+        result[variant] = SimpleNamespace(
+            agent_reading_version=MINGLI_AGENT_READING_VERSION,
+            normalization_receipt=SimpleNamespace(raw_output=raw),
+            output=SimpleNamespace(server_issue_keys=()),
+        )
+    return result
+
+
 def test_public_definition_seals_full_inputs_and_inference_limit() -> None:
     definition = synthetic_experiment_public_definition()
     identity = {key: value for key, value in definition.items() if key != "definition_hash"}
@@ -234,10 +338,10 @@ def test_public_definition_seals_full_inputs_and_inference_limit() -> None:
     assert content_hash(mutated) != definition["definition_hash"]
 
 
-def test_catalog_has_five_unique_real_calendar_experiments() -> None:
+def test_catalog_has_six_unique_real_calendar_experiments() -> None:
     definitions = synthetic_experiment_public_definitions()
-    assert len(definitions) == 5
-    assert len({item["experiment_ref"] for item in definitions}) == 5
+    assert len(definitions) == 6
+    assert len({item["experiment_ref"] for item in definitions}) == 6
     assert definitions[0]["experiment_ref"] == FIRST_SYNTHETIC_EXPERIMENT_REF
     assert definitions[1]["experiment_ref"] == ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF
     assert definitions[1]["family"] == "CONTROLLED_ROOT_IDENTITY_PAIR"
@@ -251,6 +355,14 @@ def test_catalog_has_five_unique_real_calendar_experiments() -> None:
         "B": ["己巳", "己巳", "甲午", "丙寅"],
         "changed_slots": ["hour"],
         "legal_hour_pillar_change": "丁卯 → 丙寅",
+    }
+    assert definitions[-1]["experiment_ref"] == REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT_REF
+    assert definitions[-1]["family"] == "CONTROLLED_REGIME_WORK_PATH_GENERALIZATION_PAIR"
+    assert definitions[-1]["full_pillar_delta"] == {
+        "A": ["癸酉", "甲子", "戊子", "辛酉"],
+        "B": ["癸酉", "甲子", "戊子", "壬戌"],
+        "changed_slots": ["hour"],
+        "legal_hour_pillar_change": "辛酉 → 壬戌",
     }
     assert "不证明卯中乙无根" in definitions[1]["inference_limit"]
     assert definitions[2]["experiment_ref"] == (HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF)
@@ -305,14 +417,15 @@ def test_schema_metadata_matches_synthetic_run_table() -> None:
 def test_catalog_routes_multiple_experiments_and_isolates_run_history() -> None:
     service = SyntheticExperimentService(engine)
     catalog = service.catalog()
-    assert catalog["catalog_version"] == ("v60.mingli-synthetic-experiment-catalog.004")
+    assert catalog["catalog_version"] == ("v60.mingli-synthetic-experiment-catalog.005")
     entries = {item["experiment_ref"]: item for item in catalog["experiments"]}
     assert set(entries) == {
         FIRST_SYNTHETIC_EXPERIMENT_REF,
         ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF,
         HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
-        HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF,
-        HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF,
+            HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF,
+            HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF,
+            REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT_REF,
     }
     for experiment_ref, entry in entries.items():
         assert all(run["experiment_ref"] == experiment_ref for run in entry["runs"])
@@ -863,7 +976,7 @@ def test_root_identity_evaluator_scores_only_the_natal_minimum_gate() -> None:
     assert invalid["drift_checks"] == ["MONTH_COMMAND_HOLD"]
     assert all(item["check_ref"] != "TIMING_COORDINATES_HOLD" for item in passing["checks"])
     assert SyntheticExperimentEvaluation.model_validate(passing).dev_gold_version == (
-        "v60.mingli-synthetic-experiment-dev-gold.003"
+        "v60.mingli-synthetic-experiment-dev-gold.005"
     )
 
 
@@ -966,8 +1079,102 @@ def test_hidden_rank_pairs_lock_rank_facts_without_inventing_rank_weights() -> N
     assert scoped_prose["outcome"] == "PASS"
     assert (
         SyntheticExperimentEvaluation.model_validate(secondary_tertiary).dev_gold_version
-        == "v60.mingli-synthetic-experiment-dev-gold.004"
+        == "v60.mingli-synthetic-experiment-dev-gold.005"
     )
+
+
+def test_regime_work_path_generalization_pair_locks_facts_without_fixing_winner() -> None:
+    packets = _seed_experiment_and_packets(REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT)
+    passing = evaluate_synthetic_experiment(
+        experiment=REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT,
+        readings=_regime_work_path_readings(packets),
+        packets=packets,
+    )
+    broken_binding = evaluate_synthetic_experiment(
+        experiment=REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT,
+        readings=_regime_work_path_readings(packets, broken_binding_variant="B"),
+        packets=packets,
+    )
+
+    assert tuple(item.pillar for item in packets["A"].pillars) == (
+        "癸酉",
+        "甲子",
+        "戊子",
+        "辛酉",
+    )
+    assert tuple(item.pillar for item in packets["B"].pillars) == (
+        "癸酉",
+        "甲子",
+        "戊子",
+        "壬戌",
+    )
+    assert packets["A"].day_master_support.same_element_hidden_support == ()
+    assert packets["B"].day_master_support.same_element_hidden_support == (
+        "hour支藏戊",
+    )
+    assert passing["outcome"] == "PASS"
+    assert passing["changed_pass_count"] == 5
+    assert passing["hold_pass_count"] == 3
+    assert broken_binding["outcome"] == "MODEL_FAIL"
+    assert next(
+        item
+        for item in broken_binding["checks"]
+        if item["check_ref"] == "REGIME_PATH_FINAL_WORK_PATH_BINDING"
+    )["status"] == "FAIL"
+    assert SyntheticExperimentEvaluation.model_validate(passing).dev_gold_version == (
+        "v60.mingli-synthetic-experiment-dev-gold.005"
+    )
+
+
+def test_raw_integrity_accepts_two_distinct_cards_from_three_candidate_pool() -> None:
+    packets = _seed_experiment_and_packets(REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT)
+    readings = _raw_decision_integrity_readings(
+        packets,
+        a_selected_indices=(1, 2),
+    )
+    checks: dict[str, bool] = {}
+
+    def capture(check_ref: str, _track: str, passed: bool, *_: Any) -> None:
+        checks[check_ref] = passed
+
+    add_raw_decision_integrity_checks(
+        add=capture,
+        readings=readings,
+        packets=packets,
+    )
+
+    assert checks["A_RAW_METHOD_CARD_H1_COMPLETE"] is True
+    assert checks["A_RAW_METHOD_CARD_H2_COMPLETE"] is True
+    assert checks["A_RAW_CANDIDATE_COVERAGE_COMPLETE"] is True
+    assert checks["A_RAW_REPAIRS_RECEIPTED"] is True
+
+
+def test_raw_integrity_turns_malformed_values_into_checks_not_runner_errors() -> None:
+    packets = _seed_experiment_and_packets(REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT)
+    readings = _raw_decision_integrity_readings(packets)
+    raw = readings["A"].normalization_receipt.raw_output
+    raw["hypotheses"][0]["method_card_ref"] = []
+    raw["hypotheses"][0]["method_rulings"][0]["method_card_ref"] = {}
+    raw["excluded_candidates"] = [{"method_card_ref": []}]
+    raw["work_path"]["transformation_codes"] = [[]]
+    raw["day_master_state"] = []
+    raw["regime_decision"]["effective_root_status"] = []
+    checks: dict[str, bool] = {}
+
+    def capture(check_ref: str, _track: str, passed: bool, *_: Any) -> None:
+        checks[check_ref] = passed
+
+    add_raw_decision_integrity_checks(
+        add=capture,
+        readings=readings,
+        packets=packets,
+    )
+
+    assert checks["A_RAW_METHOD_CARD_H1_COMPLETE"] is False
+    assert checks["A_RAW_CANDIDATE_COVERAGE_COMPLETE"] is False
+    assert checks["A_RAW_WORK_PATH_PRIMARY_BINDING"] is False
+    assert checks["A_RAW_REGIME_STATE_COHERENT"] is False
+    assert checks["A_RAW_REPAIRS_RECEIPTED"] is False
 
 
 @pytest.mark.parametrize(

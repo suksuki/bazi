@@ -2,6 +2,52 @@
 
 ## 2026-08-03
 
+### Whole-chart judgment now owns its primary work path
+
+- Added a sixth, previously unseen 戊土 A/B experiment and a third DEV Suite.
+  Both charts keep 癸酉／甲子／戊子 fixed; A's 辛酉 hour has no 戊 root,
+  visible peer or resource, while B's 壬戌 hour adds 戌中戊 as an exact,
+  primary-Qi minimum anti-follow root and also adds 丁印. Gold fixes facts,
+  allowed regime ranges and candidate sets, but not the winning mechanism,
+  useful element, life event, probability or fortune.
+- Reading `.006` makes the model-owned PRIMARY authoritative unless it is
+  `BROKEN` or structurally invalid. The work path now binds both
+  `selected_hypothesis_id` and `method_card_ref`; invalid or duplicate action
+  codes, candidate-ledger omissions, role changes and decision repairs receive
+  distinct issue receipts. A server-selected fallback can no longer retain a
+  different mechanism's prose path.
+- Historical Reading `.003`–`.005` keeps the old work-path JSON shape: absent
+  binding fields stay absent during serialization, and the current runtime
+  replays all 42 stored historical envelopes without changing their receipt,
+  hash or ref. Queued Lab work also rechecks its full execution fingerprint
+  before running, so evaluator or Gold drift ends as a bounded failed request.
+- Added Regime Decision `.002` with `NON_WEAK_OUTSIDE_SCOPE` for strong,
+  balanced and specialized states. This exits only the weak-versus-follow
+  sub-audit and does not infer usefulness, effective work or auspiciousness.
+  Evaluator `.007` now scores the receipt's raw model output for method-card
+  execution, PRIMARY/decision coherence, candidate coverage, work-path binding
+  and regime coherence; server-completed output no longer counts as model
+  competence.
+- Sealed real Suite Run
+  `v60-mingli-synthetic-suite-run-eeb96631646c98137cd9` and Experiment Run
+  `v60-mingli-synthetic-run-3d96c4be35affd574214`. All 3 hold checks pass and
+  16 response checks pass, but the honest result is
+  `PRODUCT_SAFE_MODEL_FAIL`: A misclassifies the unsupported chart as ordinary
+  weak; A/B duplicate selected candidates in the excluded ledger; B's decision
+  receipt and all four cards' falsifier fields need repair. Both raw work paths
+  do bind their model-selected PRIMARY with legal, unique actions, so that
+  improvement is preserved rather than hidden by the remaining failures.
+- The Lab now recommends the newest unsealed DEV Suite before reopened historical
+  regression work. Signed-in Desktop Chrome verified six real topics, the
+  server-bound run, sealed failure clusters, A/B stage switching and exact B
+  deep-link refresh. There were no page console errors; the existing Three.js
+  deprecation warning remains a separate graphics dependency debt.
+- Added migration `0042_mingli_decision_path`; advanced Foundation to `.034`,
+  Mingli Engine to `.045`, Runtime Architecture to `.074`, Agent
+  Profile/Prompt to `.027/.024`, and Unit Mingli/Lab to `.035/.031`. All 449
+  backend tests, Ruff, TypeScript/Vite build, source maintainability and
+  Synthetic Lab contracts pass. Dream and V50 remain untouched.
+
 ### Recoverable synthetic training enters the V131 Lab
 
 - Added a fifth, previously unseen cross-Day-Master experiment: two real

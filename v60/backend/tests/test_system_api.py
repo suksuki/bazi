@@ -36,7 +36,7 @@ def test_manifest_has_no_v50_runtime_dependency() -> None:
     assert payload["reasoner_runtime"]["status"] == "NOT_CONFIGURED"
     assert payload["reasoner_runtime"]["network_calls_enabled"] is False
     assert payload["engines"]["context"] == "v60.experience-context.003"
-    assert payload["engines"]["mingli"] == "v60.mingli-cognitive-engine.044"
+    assert payload["engines"]["mingli"] == "v60.mingli-cognitive-engine.045"
     assert payload["mingli_agent_runtime"]["status"] == "DISABLED"
     assert payload["mingli_agent_runtime"]["network_calls_enabled"] is False
     assert payload["mingli_agent_runtime"]["publication_allowed"] is False
@@ -45,37 +45,37 @@ def test_manifest_has_no_v50_runtime_dependency() -> None:
     )
     assert payload["mingli_agent_runtime"]["reasoning_mode"] == "BLIND_READING"
     assert payload["mingli_agent_runtime"]["owner_review_allowed"] is True
-    assert payload["mingli_agent_runtime"]["runtime_ref"] == ("v60.mingli-agent-runtime.028")
+    assert payload["mingli_agent_runtime"]["runtime_ref"] == ("v60.mingli-agent-runtime.029")
     assert payload["mingli_agent_runtime"]["packet_contract_ref"] == (
         "v60.mingli-agent-case-packet.003"
     )
     assert payload["mingli_agent_runtime"]["output_contract_ref"] == (
-        "v60.mingli-agent-reading.005"
+        "v60.mingli-agent-reading.006"
     )
     assert payload["mingli_agent_runtime"]["normalization_receipt_contract_ref"] == (
         "v60.mingli-agent-normalization-receipt.001"
     )
     assert payload["mingli_agent_runtime"]["adjudication_contract_ref"] == (
-        "v60.mingli-agent-adjudication.009"
+        "v60.mingli-agent-adjudication.010"
     )
     assert payload["mingli_agent_runtime"]["output_repair_contract_ref"] == (
-        "v60.mingli-agent-output-repair.003"
+        "v60.mingli-agent-output-repair.004"
     )
     assert payload["mingli_agent_runtime"]["method_adjudication"] == (
         "TYPED_CHECK_RULINGS_AND_SERVER_DERIVED_AGGREGATE"
     )
     profile = payload["mingli_agent_runtime"]["profile"]
-    assert profile["agent_profile_ref"] == "v60.mingli-agent.whole-chart-cognition.026"
-    assert profile["prompt_ref"] == "v60.prompt.mingli-agent-whole-chart.023"
-    assert profile["prompt_view_version"] == "v60.mingli-agent-prompt-view.014"
+    assert profile["agent_profile_ref"] == "v60.mingli-agent.whole-chart-cognition.027"
+    assert profile["prompt_ref"] == "v60.prompt.mingli-agent-whole-chart.024"
+    assert profile["prompt_view_version"] == "v60.mingli-agent-prompt-view.015"
     assert payload["mingli_agent_runtime"]["method_distillation_ref"] == (
-        "v60.mingli-agent-method-distillation.004"
+        "v60.mingli-agent-method-distillation.005"
     )
     assert payload["mingli_agent_runtime"]["effective_root_method_ref"] == (
         "v60.mingli-effective-root-method.001"
     )
     assert payload["mingli_agent_runtime"]["regime_decision_contract_ref"] == (
-        "v60.mingli-agent-regime-decision.001"
+        "v60.mingli-agent-regime-decision.002"
     )
     assert payload["mingli_agent_runtime"]["whole_chart_judgment_required"] is True
     assert payload["engines"]["story"] == "v60.life-story-engine.011"
@@ -112,8 +112,8 @@ def test_health_binds_database_to_runtime_foundation() -> None:
     assert payload["status"] == "ready"
     assert payload["database"] == {
         "status": "ready",
-        "foundation_version": "v60.foundation.033",
-        "expected_foundation_version": "v60.foundation.033",
+        "foundation_version": "v60.foundation.034",
+        "expected_foundation_version": "v60.foundation.034",
     }
 
 
@@ -122,25 +122,25 @@ def test_database_manifest_binds_current_mingli_agent_contracts() -> None:
         manifest = connection.execute(
             text("SELECT manifest_json FROM platform.schema_manifest WHERE singleton_id = 1")
         ).scalar_one()
-    assert manifest["schema_revision"] == "0041_mingli_training_requests"
+    assert manifest["schema_revision"] == "0042_mingli_decision_path"
     assert manifest["mingli_agent_packet_version"] == ("v60.mingli-agent-case-packet.003")
     assert manifest["mingli_agent_packet_compiler_version"] == (
         "v60.mingli-agent-packet-compiler.003"
     )
-    assert manifest["mingli_agent_prompt_view_version"] == ("v60.mingli-agent-prompt-view.014")
-    assert manifest["mingli_agent_reading_version"] == ("v60.mingli-agent-reading.005")
+    assert manifest["mingli_agent_prompt_view_version"] == ("v60.mingli-agent-prompt-view.015")
+    assert manifest["mingli_agent_reading_version"] == ("v60.mingli-agent-reading.006")
     assert manifest["mingli_agent_normalization_receipt_version"] == (
         "v60.mingli-agent-normalization-receipt.001"
     )
-    assert manifest["mingli_agent_adjudication_version"] == ("v60.mingli-agent-adjudication.009")
-    assert manifest["mingli_agent_output_repair_version"] == ("v60.mingli-agent-output-repair.003")
+    assert manifest["mingli_agent_adjudication_version"] == ("v60.mingli-agent-adjudication.010")
+    assert manifest["mingli_agent_output_repair_version"] == ("v60.mingli-agent-output-repair.004")
     assert manifest["mingli_agent_method_distillation_version"] == (
-        "v60.mingli-agent-method-distillation.004"
+        "v60.mingli-agent-method-distillation.005"
     )
     assert manifest["mingli_agent_regime_contract_version"] == (
-        "v60.mingli-agent-regime-decision.001"
+        "v60.mingli-agent-regime-decision.002"
     )
-    assert manifest["mingli_agent_runtime_version"] == "v60.mingli-agent-runtime.028"
+    assert manifest["mingli_agent_runtime_version"] == "v60.mingli-agent-runtime.029"
     assert manifest["mingli_effective_root_method_version"] == (
         "v60.mingli-effective-root-method.001"
     )
@@ -160,16 +160,16 @@ def test_database_manifest_binds_current_mingli_agent_contracts() -> None:
         "v60.mingli-synthetic-experiment-snapshot.004"
     )
     assert manifest["mingli_synthetic_experiment_catalog_version"] == (
-        "v60.mingli-synthetic-experiment-catalog.004"
+        "v60.mingli-synthetic-experiment-catalog.005"
     )
     assert manifest["mingli_synthetic_experiment_evaluator_version"] == (
-        "v60.mingli-synthetic-experiment-evaluator.006"
+        "v60.mingli-synthetic-experiment-evaluator.007"
     )
     assert manifest["mingli_synthetic_experiment_dev_gold_version"] == (
-        "v60.mingli-synthetic-experiment-dev-gold.004"
+        "v60.mingli-synthetic-experiment-dev-gold.005"
     )
     assert manifest["mingli_synthetic_suite_catalog_version"] == (
-        "v60.mingli-synthetic-suite-catalog.002"
+        "v60.mingli-synthetic-suite-catalog.003"
     )
     assert manifest["mingli_synthetic_suite_run_request_version"] == (
         "v60.mingli-synthetic-suite-run-request.001"
