@@ -2,6 +2,41 @@
 
 ## 2026-08-03
 
+### Recoverable synthetic training enters the V131 Lab
+
+- Added a fifth, previously unseen cross-Day-Master experiment: two real
+  calendar-resolved 丙火 charts keep 庚辰／己卯／丙子 fixed while moving the
+  exact-day-master root from 巳中第一藏干 to 寅中第二藏干. Gold remains
+  limited to admitted identity, hidden-rank and minimum anti-follow semantics;
+  it does not assign strength, usefulness, mechanism, life event or fortune.
+- Added a candidate-bound server task instead of browser model generation. The
+  browser submits only Suite Ref, Definition Hash, execution fingerprint and
+  idempotency key; the server locks chart, Gemma4, Profile `.026`, Prompt `.023`,
+  Gold and runner identity, persists exact progress, and returns a derived DEV
+  disposition. Refresh and re-entry recover the same task; already-sealed
+  candidate/fingerprint pairs cannot impersonate new training.
+- Sealed real Request `v60-mingli-synthetic-suite-run-request-684b2d6203b0eaa4ff71`,
+  Suite Run `v60-mingli-synthetic-suite-run-c84fd3d22f1406423361` and Experiment
+  Run `v60-mingli-synthetic-run-41f70f6dfdeb3a83ee0d`. All 3 holds and 4
+  method responses pass, but the honest result is
+  `CANDIDATE_REVISION_REQUIRED / PRODUCT_SAFE_MODEL_FAIL`: A needed one
+  `DAY_MASTER_REGIME` repair and A/B each needed `WORK_PATH` repair. The model
+  reads the local root fact but still does not independently join it to stable
+  whole-chart classification and primary-path ordering.
+- Integrated the task into V131's existing right-hand training rail without a
+  second Canvas or a dashboard redesign. Signed-in Desktop Chrome verified
+  start, persisted `0/1` progress, refresh recovery, terminal error clusters,
+  shared-Scene handoff, A/B switching and exact B deep-link recovery with no
+  console errors. Transient read failures keep polling; completed results stay
+  bound to their exact Suite/fingerprint even when the next Suite becomes
+  recommended, and review handoff selects a genuinely review-required run.
+- Added migration `0041_mingli_training_requests`; advanced Foundation to
+  `.033`, Mingli Engine to `.044`, Runtime Architecture to `.073`, synthetic
+  Experiment/Suite catalogs to `.004/.002`, Unit Mingli/Lab to `.034/.030`.
+  All 437 backend tests, Ruff, TypeScript/Vite build, source maintainability,
+  shared Scene, synthetic Lab and V128 fidelity contracts pass. Dream and V50
+  remain untouched.
+
 ### V131 Lab becomes a real research realm
 
 - Froze exact V131 source commit

@@ -12,6 +12,7 @@ import {
 import { latestSyntheticSuiteRunSelection } from "../mingliSyntheticSuiteSelection";
 import { useMingliResearchCatalog } from "../useMingliResearchCatalog";
 import { MingliLabRealmHeader } from "./MingliLabRealmHeader";
+import { MingliSyntheticTrainingConsole } from "./MingliSyntheticTrainingConsole";
 import { TransparentCharacterMedia } from "./TransparentCharacterMedia";
 
 function ExperimentThread({
@@ -176,6 +177,11 @@ export function MingliSyntheticCatalogScene({
                 <span><b>{status?.reviewRequiredCount ?? 0}</b><small>待复核</small></span>
                 <span><b>{status?.errorClusterCount ?? 0}</b><small>错误簇</small></span>
               </div>
+              <MingliSyntheticTrainingConsole
+                catalog={catalog.suites}
+                onCatalogRefresh={catalog.retry}
+                onOpenExperiment={onOpenExperiment}
+              />
               <section>
                 {catalog.suites.modes.map((mode) => (
                   <p data-availability={mode.availability} key={mode.mode}>
@@ -185,7 +191,7 @@ export function MingliSyntheticCatalogScene({
                 ))}
               </section>
               <footer>
-                页面只读 GET，不在浏览器调用模型；这里是已揭晓复盘，不冒充盲审。
+                浏览器只创建受控任务，不直接调用模型；这里展示已揭晓复盘，不冒充盲审。
                 {catalog.error && (
                   <button onClick={catalog.retry} type="button">
                     上次刷新失败，保留当前现场；重新读取

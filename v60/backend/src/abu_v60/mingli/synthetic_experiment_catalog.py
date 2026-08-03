@@ -8,7 +8,7 @@ from abu_v60.mingli.calendar import BirthInput
 from abu_v60.provenance import content_hash, stable_ref
 
 SYNTHETIC_EXPERIMENT_CATALOG_VERSION: Final = (
-    "v60.mingli-synthetic-experiment-catalog.003"
+    "v60.mingli-synthetic-experiment-catalog.004"
 )
 SYNTHETIC_EXPERIMENT_DEFINITION_VERSION: Final = (
     "v60.mingli-synthetic-experiment-catalog.001"
@@ -299,11 +299,42 @@ HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT: Final = _experiment(
     legal_hour_pillar_change="庚辰 → 癸未",
 )
 
+HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT: Final = _experiment(
+    definition_version=SYNTHETIC_EXPERIMENT_DEFINITION_VERSION_V2,
+    seed_id="v60.mingli-synthetic-lab.hidden-rank-cross-day-master.001",
+    seed_batch_ref="v60-seed-batch-mingli-hidden-rank-cross-day-master-v1",
+    analysis_date=date(2026, 8, 3),
+    family="CONTROLLED_HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_PAIR",
+    title="换成丙火日主，第一与第二藏干还能得到同一套裁决吗？",
+    question=(
+        "只改变合法出生时刻，让丙火从巳中第一藏干移到寅中第二藏干；检查模型"
+        "是否真正掌握跨日主的位阶方法，而不是记住乙木、卯辰未这组旧盘答案。"
+    ),
+    inference_scope="NATAL_HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION",
+    inference_limit=(
+        "本实验只复核已经准入的最低阻从门能否跨日主泛化；完整时柱同时改变时干"
+        "十神与全部藏干，不能把整盘强弱、机制或应事变化单独归因于位阶。"
+    ),
+    known_collateral_deltas=(
+        "前三柱固定为庚辰、己卯、丙子，且没有其他丙火根候选或明干火同类",
+        "时干由癸正官变为庚偏财",
+        "时支藏干由巳中丙戊庚变为寅中甲丙戊",
+        "偏印、食神、偏财载体与岁运边界同时变化，不作单一位阶因果",
+    ),
+    birth_date=date(2000, 3, 19),
+    member_a_time=time(10, 0),
+    member_b_time=time(4, 0),
+    member_a_pillars=("庚辰", "己卯", "丙子", "癸巳"),
+    member_b_pillars=("庚辰", "己卯", "丙子", "庚寅"),
+    legal_hour_pillar_change="癸巳 → 庚寅",
+)
+
 SYNTHETIC_EXPERIMENTS: Final = (
     FIRST_SYNTHETIC_EXPERIMENT,
     ROOT_IDENTITY_SYNTHETIC_EXPERIMENT,
     HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT,
     HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT,
+    HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT,
 )
 SYNTHETIC_EXPERIMENT_BY_REF: Final = {
     item.experiment_ref: item for item in SYNTHETIC_EXPERIMENTS
@@ -321,6 +352,9 @@ HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF: Final = (
 )
 HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF: Final = (
     HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT.experiment_ref
+)
+HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF: Final = (
+    HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT.experiment_ref
 )
 SYNTHETIC_MEMBER_BY_SUBJECT: Final = {
     item.subject_id: item

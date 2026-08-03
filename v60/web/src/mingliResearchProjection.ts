@@ -75,6 +75,8 @@ export function syntheticFamilyLabel(
       return "第一至第二藏干";
     case "CONTROLLED_HIDDEN_RANK_SECONDARY_TERTIARY_PAIR":
       return "第二至第三藏干";
+    case "CONTROLLED_HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_PAIR":
+      return "跨日主泛化";
   }
 }
 

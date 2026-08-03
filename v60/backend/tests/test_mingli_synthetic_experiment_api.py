@@ -159,7 +159,7 @@ def test_synthetic_lab_rejects_non_reviewer_session(monkeypatch: Any) -> None:
 
 
 def test_synthetic_lab_api_requires_session() -> None:
-    async def request() -> tuple[int, int, int, int]:
+    async def request() -> tuple[int, int, int, int, int, int, int]:
         async with AsyncClient(
             transport=ASGITransport(app=app),
             base_url="http://v60.test",
@@ -170,11 +170,28 @@ def test_synthetic_lab_api_requires_session() -> None:
             )
             suites = await client.get("/api/v60/mingli/lab/synthetic-suite-runs")
             exact_suite = await client.get("/api/v60/mingli/lab/synthetic-suite-runs/unknown")
+            training = await client.get("/api/v60/mingli/lab/synthetic-training")
+            exact_request = await client.get(
+                "/api/v60/mingli/lab/synthetic-suite-run-requests/unknown"
+            )
+            create_request = await client.post(
+                "/api/v60/mingli/lab/synthetic-suite-run-requests",
+                json={
+                    "request_version": "v60.mingli-synthetic-suite-run-request.001",
+                    "suite_ref": "suite:test",
+                    "expected_suite_definition_hash": "1" * 64,
+                    "expected_execution_fingerprint": "2" * 64,
+                    "idempotency_key": "unauthenticated",
+                },
+            )
             return (
                 catalog.status_code,
                 snapshot.status_code,
                 suites.status_code,
                 exact_suite.status_code,
+                training.status_code,
+                exact_request.status_code,
+                create_request.status_code,
             )
 
-    assert asyncio.run(request()) == (401, 401, 401, 401)
+    assert asyncio.run(request()) == (401, 401, 401, 401, 401, 401, 401)

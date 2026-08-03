@@ -11,6 +11,7 @@ from abu_v60.mingli.agent_contracts import (
 from abu_v60.mingli.agent_root_gate import packet_root_candidate_assessments
 from abu_v60.mingli.synthetic_experiment_catalog import (
     FIRST_SYNTHETIC_EXPERIMENT_REF,
+    HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF,
     HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
     HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF,
     ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF,
@@ -83,6 +84,7 @@ def evaluate_synthetic_experiment(
     elif experiment.experiment_ref in {
         HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
         HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF,
+        HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF,
     }:
         _add_hidden_rank_checks(
             add=add,

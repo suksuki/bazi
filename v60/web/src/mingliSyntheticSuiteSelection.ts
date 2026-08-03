@@ -213,6 +213,24 @@ export function firstSyntheticSuiteRoute(
   };
 }
 
+export function firstReviewRequiredSyntheticSuiteRoute(
+  selection: MingliSyntheticSuiteRunSelection,
+): MingliSyntheticLabRoute | null {
+  const first = selection.review.items.find(
+    (item) => item.execution_status === "SEALED"
+      && item.review_required
+      && item.experiment_run_ref,
+  );
+  if (!first?.experiment_run_ref) return null;
+  return {
+    mode: "synthetic",
+    suiteRunRef: selection.run.suite_run_ref,
+    experimentRef: first.experiment_ref,
+    runRef: first.experiment_run_ref,
+    variant: "A",
+  };
+}
+
 export type SyntheticSuiteRouteResolution =
   | { status: "BOUND" }
   | { status: "PATCH"; experimentRef: string; runRef: string }

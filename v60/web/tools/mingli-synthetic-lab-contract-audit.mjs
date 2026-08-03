@@ -31,6 +31,10 @@ const [
   researchProjection,
   homeScene,
   homeCompanion,
+  trainingApi,
+  trainingConsole,
+  trainingHook,
+  trainingValidation,
 ] = await Promise.all([
   read("mingliSyntheticLabApi.ts"),
   read("mingliSyntheticLabNavigation.ts"),
@@ -51,11 +55,18 @@ const [
   read("mingliResearchProjection.ts"),
   read("components", "HomeLifeTreeScene.tsx"),
   read("components", "HomeSceneCompanion.tsx"),
+  read("mingliSyntheticTrainingApi.ts"),
+  read("components", "MingliSyntheticTrainingConsole.tsx"),
+  read("useMingliSyntheticTraining.ts"),
+  read("mingliSyntheticTrainingValidation.ts"),
 ]);
 const ordinarySubjectValidator =
   stageValidation.match(/function isStageSubjectId[\s\S]*?\n}/)?.[0] ?? "";
 const sceneSurface = `${scene}\n${sceneFeedback}`;
-const { compareWithPreviousSyntheticSuiteRun } = await import(
+const {
+  compareWithPreviousSyntheticSuiteRun,
+  firstReviewRequiredSyntheticSuiteRoute,
+} = await import(
   source("mingliSyntheticSuiteSelection.ts")
 );
 
@@ -120,11 +131,54 @@ expect(
     catalogScene.includes("不借用其他命盘冒充复盘") &&
     catalogScene.includes("routeToSyntheticExperiment") &&
     catalogScene.includes("catalog.suites.modes.map") &&
-    catalogScene.includes("页面只读 GET") &&
+    catalogScene.includes("浏览器只创建受控任务") &&
+    catalogScene.includes("<MingliSyntheticTrainingConsole") &&
     catalogScene.includes("上次刷新失败，保留当前现场") &&
     !catalogScene.includes("catalog.error || !catalog.experiments") &&
     !/MingliScenePlayer|Canvas/.test(catalogScene),
   "v131-synthetic-catalog:must-project-real-topics-before-the-shared-player",
+);
+expect(
+  occurrences(trainingApi, /request<unknown>/g) === 3 &&
+    occurrences(trainingApi, /method:\s*["']POST/g) === 1 &&
+    trainingApi.includes("synthetic-suite-run-requests") &&
+    trainingApi.includes("expected_suite_definition_hash") &&
+    trainingApi.includes("expected_execution_fingerprint") &&
+    trainingApi.includes("idempotency_key") &&
+    !/birth|gold|agent_profile_ref|model_ref|prompt_ref/i.test(trainingApi),
+  "synthetic-training-api:browser-may-only-create-one-server-bound-run-request",
+);
+expect(
+  trainingConsole.includes("开始验证当前方法") &&
+    trainingConsole.includes("离开或刷新不会取消任务") &&
+    trainingConsole.includes("命盘、模型、Prompt、Gold 与运行身份全部由服务端锁定") &&
+    trainingConsole.includes("当前方法已经测过，不重复冒充新训练") &&
+    trainingConsole.includes("进入首个待复核现场") &&
+    trainingConsole.includes("firstReviewRequiredSyntheticSuiteRoute") &&
+    trainingConsole.includes("修复后重新验证") &&
+    trainingConsole.includes("继续下一组验证") &&
+    trainingConsole.includes("exactRequestSuite ?? recommended") &&
+    trainingConsole.includes("本轮 Suite 结果已经封存") &&
+    trainingConsole.indexOf(') : relevantRequest?.status === "SUCCEEDED"') <
+      trainingConsole.indexOf(') : suite.candidate_state === "READY_FOR_DEV_RUN"') &&
+    !/MingliScenePlayer|Canvas/.test(trainingConsole),
+  "synthetic-training-console:must-show-real-progress-disposition-and-shared-player-handoff",
+);
+expect(
+  trainingHook.includes("loadSyntheticTrainingRequest") &&
+    trainingHook.includes("loadSyntheticTrainingStatus") &&
+    trainingHook.includes("ACTIVE_STATUSES") &&
+    trainingHook.includes("setTimeout") &&
+    trainingHook.includes("schedulePoll") &&
+    occurrences(trainingHook, /schedulePoll\(\)/g) >= 3 &&
+    trainingHook.includes("setRunRequest(next.latest_request)") &&
+    trainingHook.includes("onSettled") &&
+    trainingValidation.includes('server_run_request_allowed !== true') &&
+    trainingValidation.includes('browser_direct_model_call_allowed !== false') &&
+    trainingValidation.includes("DEV_REVIEW_ONLY_NOT_MODEL_QUALIFICATION") &&
+    trainingValidation.includes("succeeded !== Boolean") &&
+    trainingValidation.includes("failed !== Boolean"),
+  "synthetic-training-recovery:must-poll-persistent-jobs-and-close-terminal-contracts",
 );
 expect(
   researchProjection.includes("experiment.runs.length") &&
@@ -174,6 +228,8 @@ expect(
 );
 expect(
   suiteSelection.includes("exactSyntheticSuiteItem") &&
+    suiteSelection.includes("firstReviewRequiredSyntheticSuiteRoute") &&
+    suiteSelection.includes("item.review_required") &&
     suiteSelection.includes("compareWithPreviousSyntheticSuiteRun") &&
     suiteSelection.includes("Evaluator 或 Gold 已变化") &&
     suiteSelection.includes("mingli_synthetic_suite_item_binding_mismatch") &&
@@ -199,6 +255,8 @@ const reviewItem = (experiment_ref, itemDefinitionHash = definitionHash) => ({
   experiment_ref,
   definition_hash: itemDefinitionHash,
   execution_status: "SEALED",
+  experiment_run_ref: `run:${experiment_ref}`,
+  review_required: true,
   evaluator_version: evaluator,
   dev_gold_version: goldVersion,
   dev_gold_hash: goldHash,
@@ -235,6 +293,12 @@ const currentSelection = {
   run: currentRun,
   review: currentRun.current_review_projection,
 };
+const routeSelection = structuredClone(currentSelection);
+routeSelection.review.items[0].review_required = false;
+expect(
+  firstReviewRequiredSyntheticSuiteRoute(routeSelection)?.experimentRef === "second",
+  "synthetic-suite-review-route:must-skip-sealed-items-that-do-not-require-review",
+);
 const comparison = compareWithPreviousSyntheticSuiteRun(
   historyCatalog,
   currentSelection,
@@ -336,6 +400,7 @@ if (failures.length) throw new Error(failures.join("\n"));
 console.log(JSON.stringify({
   syntheticLabContract: "PASS",
   browserModelCalls: 0,
+  browserServerRunRequests: 1,
   runtimeScenePlayers: 1,
   resultTracks: 3,
   normalizationTrace: "FIELD_LEVEL_OR_HONEST_LEGACY",

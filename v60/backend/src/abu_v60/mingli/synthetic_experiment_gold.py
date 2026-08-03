@@ -4,6 +4,7 @@ from typing import Final
 
 from abu_v60.mingli.synthetic_experiment_catalog import (
     FIRST_SYNTHETIC_EXPERIMENT_REF,
+    HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF,
     HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
     HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF,
     ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF,
@@ -122,6 +123,43 @@ HIDDEN_RANK_SECONDARY_TERTIARY_DEV_GOLD_HASH: Final = content_hash(
     HIDDEN_RANK_SECONDARY_TERTIARY_DEV_GOLD
 )
 
+HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_GOLD: Final = {
+    "gold_version": "v60.mingli-synthetic-experiment-dev-gold.004",
+    "experiment_ref": HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF,
+    "A_candidate_coordinate": "hour支藏丙",
+    "A_branch": "巳",
+    "A_hidden_order": 1,
+    "A_hidden_rank": "PRIMARY_QI",
+    "A_minimum_anti_follow_gate": "PRESENT",
+    "A_hour_fact": ("癸巳", "正官", ("丙", "戊", "庚"), ("比肩", "食神", "偏财")),
+    "A_required_effective_root_status": "PRESENT",
+    "A_allowed_regime_classifications": (
+        "ORDINARY_WEAK",
+        "UNRESOLVED",
+    ),
+    "B_candidate_coordinate": "hour支藏丙",
+    "B_branch": "寅",
+    "B_hidden_order": 2,
+    "B_hidden_rank": "SECONDARY_QI",
+    "B_minimum_anti_follow_gate": "NOT_DETERMINED",
+    "B_hour_fact": ("庚寅", "偏财", ("甲", "丙", "戊"), ("偏印", "比肩", "食神")),
+    "B_allowed_effective_root_statuses": ("PRESENT", "UNRESOLVED"),
+    "B_allowed_regime_classifications": (
+        "ORDINARY_WEAK",
+        "UNRESOLVED",
+    ),
+    "must_hold": (
+        "FIRST_THREE_PILLARS",
+        "DAY_MASTER",
+        "MONTH_COMMAND",
+        "VISIBLE_PEERS",
+    ),
+    "qualification_effect": "DEV_EVIDENCE_ONLY_NOT_METHOD_QUALIFICATION",
+}
+HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_GOLD_HASH: Final = content_hash(
+    HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_GOLD
+)
+
 SYNTHETIC_EXPERIMENT_DEV_GOLD_BY_REF: Final = {
     FIRST_SYNTHETIC_EXPERIMENT_REF: (
         FIRST_SYNTHETIC_EXPERIMENT_DEV_GOLD,
@@ -138,6 +176,10 @@ SYNTHETIC_EXPERIMENT_DEV_GOLD_BY_REF: Final = {
     HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF: (
         HIDDEN_RANK_SECONDARY_TERTIARY_DEV_GOLD,
         HIDDEN_RANK_SECONDARY_TERTIARY_DEV_GOLD_HASH,
+    ),
+    HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF: (
+        HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_GOLD,
+        HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_GOLD_HASH,
     ),
 }
 

@@ -23,8 +23,9 @@ Owner 真实命盘只保留为回归样本，不能继续承担方法发现、�
 → 方法、Prompt、Schema 与反例继续升级
 ```
 
-Gold 不进入 Agent Packet。浏览器不能创建实验、提交 Prompt 或调用模型，只读取
-离线封存的结果。
+Gold 不进入 Agent Packet。浏览器不能创建实验、提交命盘／模型／Prompt／Gold 或直接
+调用模型；它现在只允许创建绑定 Suite Definition Hash、当前候选与执行指纹的服务端
+任务，并读取持久化进度与封存结果。
 
 ## 第一组合成实验
 
@@ -257,7 +258,8 @@ B：effective_root = PRESENT [hour支藏甲]
 - `research:*` Case 不进入普通档案选择器；
 - 切换失败时继续显示已提交的旧变体，并明确说明目标变体读取失败；
 - 失效的 pinned run 可以改读 catalog 中最新封存运行；
-- 浏览器只有两个 GET 读取入口，没有模型 POST；
+- 浏览器只有一个受控任务 POST；请求体只含 Suite、Definition Hash、Execution
+  Fingerprint 与 Idempotency Key。命盘、模型、Prompt、Gold 和运行身份仍由服务端锁定；
 - 首屏明确分开“实验有效性／模型独立能力／产品结果”三条轨道；
 - 两个实验及各自封存历史都可发现；目录明确区分当前／旧审阅口径；
 - 跨实验或 Run 的 URL 先关闭旧 Snapshot，绝不在新标题下短暂显示旧命盘；
@@ -321,6 +323,62 @@ Hash，避免 Ref 未变但实际内容已变。
 后续实验拆为 `DEV / QUALIFICATION / HOLDOUT`。DEV 用于发现与修正方法；只有冻结
 方法后运行的陌生 QUALIFICATION／HOLDOUT 结果，才有资格参与模型能力声明。
 
+## 第五组合成实验：跨日主泛化与产品内训练任务
+
+为避免继续围绕乙木、卯辰未旧盘调 Prompt，本轮增加一组从未进入既有目录的丙火命盘：
+
+```text
+A：2000-03-19 10:00 Asia/Shanghai
+   庚辰 / 己卯 / 丙子 / 癸巳
+   hour支藏丙 = PRIMARY_QI / minimum gate PRESENT
+
+B：2000-03-19 04:00 Asia/Shanghai
+   庚辰 / 己卯 / 丙子 / 庚寅
+   hour支藏丙 = SECONDARY_QI / minimum gate NOT_DETERMINED
+```
+
+前三柱没有其他丙火根候选或明干火同类；当前准入关系库也没有给两个时支返回六冲／
+六合竞争。完整时柱仍同时改变时干十神与所有藏干，所以 Gold 只检查已经准入的同字、
+藏干位阶和最低阻从门，不把整盘强弱、用神、机制、应事或吉凶写成固定答案。
+
+产品内的真实运行链已经闭合：
+
+```text
+V131 合成验证目录
+→ 浏览器读取服务端锁定的候选与可运行 Suite
+→ POST Hash／Fingerprint／Idempotency 绑定请求
+→ 服务端顺序运行 A／B，持久化 START／SEALED／SEALING／终态
+→ 刷新或重进继续读取同一个 Request
+→ append-only Experiment Run + Suite Run
+→ 服务端派生 DEV Review Disposition 与错误簇
+→ 回到同一个四柱 Scene Player 复盘 A／B
+```
+
+真实运行身份：
+
+```text
+request     v60-mingli-synthetic-suite-run-request-684b2d6203b0eaa4ff71
+suite run   v60-mingli-synthetic-suite-run-c84fd3d22f1406423361
+experiment  v60-mingli-synthetic-run-41f70f6dfdeb3a83ee0d
+candidate   Gemma4 / Profile .026 / Prompt .023
+result      PRODUCT_SAFE_MODEL_FAIL
+disposition CANDIDATE_REVISION_REQUIRED
+checks      3/3 holds + 4/4 method responses
+clusters    DAY_MASTER_REGIME ×1 / WORK_PATH ×2
+```
+
+两次真实模型调用分别耗时约 `118.1s / 109.5s`，总 Token 为 `17,158 / 16,424`。A 能识别
+第一藏干同字根为 `PRESENT`，却把整盘直接写成 `ORDINARY_WEAK`，系统只能退回
+`UNRESOLVED`；A／B 的主路径还各有一次服务端归槽。因此这次验证回答了一个比“页面能
+不能运行”更重要的问题：当前模型已能读取局部位阶事实，但尚不能稳定地把局部事实、
+整盘判型和主路径排序连成同一套独立裁决。
+
+任务表是可恢复的研发运行状态，不伪装成 append-only 专业证据；最终 Experiment／Suite
+Run 仍是 append-only。当前恢复合同覆盖浏览器刷新与重进，不宣称进程崩溃后自动续跑。
+短暂读取失败后轮询会继续；任务完成后，界面先展示与 Suite／执行指纹精确绑定的本轮
+结果，再允许进入下一组验证。待复核入口只选择真正标记 `review_required` 的封存课题；
+相同候选与同一执行指纹不会重复冒充新训练。
+
 ## V131 Lab 体验接线
 
 V131 commit `ea2db274ba55b8f9d323881c096d3a3a1ceba66c` 的水庭总览和合成验证目录
@@ -328,12 +386,13 @@ V131 commit `ea2db274ba55b8f9d323881c096d3a3a1ceba66c` 的水庭总览和合成�
 
 ```text
 六柱关系观察     -> canonical 四／六柱 Scene Player
-八字合成验证     -> 4 个真实课题、16 次封存运行、真实 Suite 状态
+八字合成验证     -> 5 个真实课题、17 次封存运行、真实 Suite／训练任务状态
 阿布说           -> 同一个六柱 Scene Player 与服务端锁定声画链
 ```
 
-总览和目录均为只读 GET、零 Canvas；只有进入六柱、阿布说或具体封存现场后才懒加载
-唯一 Scene Player。最新 DEV Suite 如实显示 `2/2` 封存、`2` 项待复核和 `2` 个错误簇；
+总览为只读 GET；目录只增加一个服务端绑定任务入口，仍为零 Canvas。只有进入六柱、
+阿布说或具体封存现场后才懒加载唯一 Scene Player。最新跨日主 DEV Suite 如实显示
+`1/1` 封存、`1` 项待复核和 `2` 个错误簇；上一组位阶 Suite 的 `2/2` 历史继续保留；
 `QUALIFICATION / HOLDOUT` 继续显示 `Owner Gate 后开放`。当前页面是“已揭晓封存
 复盘”，不是盲审；原型的 `localStorage` 裁决、假 Run 身份和写死统计均未进入系统。
 
@@ -343,9 +402,9 @@ V131 commit `ea2db274ba55b8f9d323881c096d3a3a1ceba66c` 的水庭总览和合成�
 ## 当前版本
 
 ```text
-Foundation                 v60.foundation.032
-Mingli Engine              v60.mingli-cognitive-engine.043
-Runtime Architecture       v60.runtime-architecture.072
+Foundation                 v60.foundation.033
+Mingli Engine              v60.mingli-cognitive-engine.044
+Runtime Architecture       v60.runtime-architecture.073
 Agent Runtime              v60.mingli-agent-runtime.028
 Agent Profile              v60.mingli-agent.whole-chart-cognition.026
 Agent Prompt               v60.prompt.mingli-agent-whole-chart.023
@@ -358,28 +417,31 @@ Method Distillation        v60.mingli-agent-method-distillation.004
 Effective-root Method      v60.mingli-effective-root-method.001
 Regime Decision            v60.mingli-agent-regime-decision.001
 Stage Projection           v60.mingli-stage-projection.004
-Synthetic Catalog          v60.mingli-synthetic-experiment-catalog.003
+Synthetic Catalog          v60.mingli-synthetic-experiment-catalog.004
 Synthetic Evaluator        v60.mingli-synthetic-experiment-evaluator.006
 Synthetic Run              v60.mingli-synthetic-experiment-run.001
 Synthetic Snapshot         v60.mingli-synthetic-experiment-snapshot.004
-Suite Catalog              v60.mingli-synthetic-suite-catalog.001
+Suite Catalog              v60.mingli-synthetic-suite-catalog.002
 Suite Definition           v60.mingli-synthetic-suite-definition.001
 Suite Runner               v60.mingli-synthetic-suite-runner.002
 Suite Run                  v60.mingli-synthetic-suite-run.002
-Unit Mingli                v60.unit-mingli.033
-Unit Lab                   v60.unit-lab.029
-Migration                  0040_mingli_model_field_contract
+Training Request           v60.mingli-synthetic-suite-run-request.001
+Training Status            v60.mingli-synthetic-training-status.001
+Unit Mingli                v60.unit-mingli.034
+Unit Lab                   v60.unit-lab.030
+Migration                  0041_mingli_training_requests
 ```
 
-Migration 0040 绑定非空 typed regime、Prompt View `.014`、Method Distillation `.004`
-与 Evaluator `.006`，不改写任何 sealed run。最新 Suite `63da382...` 绑定本地 Gemma4、
+Migration 0041 增加候选绑定、幂等且可恢复的训练任务表；0040 继续绑定非空 typed
+regime、Prompt View `.014`、Method Distillation `.004` 与 Evaluator `.006`。两次迁移
+都不改写任何 sealed run。最新 Suite `c84fd3...` 绑定本地 Gemma4、
 Profile/Prompt `.026/.023` 与 Reading `.005`；历史 Reading、Evaluator、Gold 与 Suite
 仍按各自明确版本语义重放，不能被“当前版本”常量静默改义。
 
 ## 验证
 
 ```text
-Backend tests              432 PASS
+Backend tests              437 PASS
 Ruff                       PASS
 TypeScript / Vite build    PASS
 Runtime Architecture       PASS
@@ -392,6 +454,7 @@ Real Desktop Chrome        PASS
 Vite 仍报告两个大于 500 kB 的既有异步图形 chunk；这是已记录性能债，不改变本轮方法
 Lab 的功能结论。
 
-真实 Desktop Chrome 已验证 V131 总庭、四课题目录、最新 Suite、封存现场、完整六柱、
-阿布说 PREPARING、深链接刷新以及浏览器前进／后退；1440×900 和 1280×800 均无横向
-溢出或控制台错误。总览／目录无 Canvas，深场始终只有一个 Scene Player。
+真实 Desktop Chrome 已验证 V131 总庭、五课题目录、服务端任务启动、运行中刷新恢复、
+真实封存、A／B 切换与精确深链接刷新；页面无控制台错误。既有完整六柱、阿布说
+PREPARING、浏览器前进／后退与两种桌面宽度证据继续成立。总览／目录无 Canvas，深场
+始终只有一个 Scene Player。

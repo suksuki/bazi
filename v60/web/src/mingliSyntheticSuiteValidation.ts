@@ -41,7 +41,7 @@ export function validateSyntheticSuiteCatalog(
   }
   const catalog = value as unknown as MingliSyntheticSuiteCatalog;
   if (
-    catalog.catalog_version !== "v60.mingli-synthetic-suite-catalog.001"
+    catalog.catalog_version !== "v60.mingli-synthetic-suite-catalog.002"
     || catalog.browser_generation_allowed !== false
     || catalog.read_only !== true
     || catalog.suites.length < 1

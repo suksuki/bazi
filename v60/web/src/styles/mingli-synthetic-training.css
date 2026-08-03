@@ -1,0 +1,218 @@
+.mingli-training-console {
+  display: grid;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid rgba(239, 199, 111, 0.2);
+  border-radius: 16px 5px 16px 5px;
+  background: linear-gradient(145deg, rgba(8, 33, 34, 0.74), rgba(4, 21, 25, 0.54));
+}
+
+[data-world-light="day"] .mingli-training-console {
+  border-color: rgba(151, 105, 31, 0.2);
+  background: linear-gradient(145deg, rgba(255, 250, 236, 0.82), rgba(238, 233, 212, 0.62));
+}
+
+.mingli-training-console > header {
+  display: grid;
+  gap: 4px;
+}
+
+.mingli-training-console > header span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--lab-gold);
+  font-size: 6px;
+  font-weight: 720;
+  letter-spacing: 0.12em;
+}
+
+.mingli-training-console > header i {
+  width: 6px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--lab-jade);
+  box-shadow: 0 0 9px rgba(130, 197, 160, 0.55);
+}
+
+.mingli-training-console > header strong {
+  color: var(--lab-cream);
+  font-family: "Noto Serif SC", serif;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.mingli-training-candidate {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.mingli-training-candidate span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  padding: 6px 5px;
+  border: 1px solid rgba(209, 223, 208, 0.09);
+  border-radius: 7px;
+  background: rgba(1, 15, 18, 0.22);
+}
+
+[data-world-light="day"] .mingli-training-candidate span {
+  border-color: rgba(74, 94, 70, 0.1);
+  background: rgba(255, 255, 249, 0.38);
+}
+
+.mingli-training-candidate small {
+  overflow: hidden;
+  color: var(--lab-soft);
+  font-size: 5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mingli-training-candidate b {
+  overflow: hidden;
+  color: var(--lab-cream);
+  font-size: 6px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mingli-training-ready,
+.mingli-training-result,
+.mingli-training-progress,
+.mingli-training-state {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  color: var(--lab-soft);
+  font-size: 7px;
+  line-height: 1.55;
+}
+
+.mingli-training-ready > p,
+.mingli-training-result > p,
+.mingli-training-progress > p {
+  margin: 0;
+}
+
+.mingli-training-ready > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.mingli-training-ready > div span {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 7px 4px;
+  border: 1px solid rgba(130, 197, 160, 0.16);
+  border-radius: 8px;
+}
+
+.mingli-training-ready > div b {
+  color: var(--lab-jade);
+  font-size: 10px;
+}
+
+.mingli-training-ready > div small {
+  color: var(--lab-soft);
+  font-size: 5px;
+}
+
+.mingli-training-console button {
+  min-height: 31px;
+  padding: 0 10px;
+  color: #fff0cc;
+  border: 1px solid rgba(239, 199, 111, 0.32);
+  border-radius: 999px;
+  background: rgba(91, 101, 70, 0.58);
+  cursor: pointer;
+  font-size: 7px;
+  font-weight: 700;
+}
+
+[data-world-light="day"] .mingli-training-console button {
+  color: #644619;
+  background: rgba(232, 213, 164, 0.68);
+}
+
+.mingli-training-console button:is(:hover, :focus-visible) {
+  outline: 2px solid rgba(239, 199, 111, 0.24);
+  outline-offset: 2px;
+}
+
+.mingli-training-console button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.mingli-training-progress > span,
+.mingli-training-result > small {
+  color: var(--lab-gold);
+  font-size: 6px;
+}
+
+.mingli-training-progress > strong,
+.mingli-training-result > strong,
+.mingli-training-state > strong {
+  color: var(--lab-cream);
+  font-size: 9px;
+  font-weight: 620;
+}
+
+.mingli-training-progress > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(24px, 1fr));
+  gap: 4px;
+}
+
+.mingli-training-progress > div i {
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(209, 223, 208, 0.13);
+}
+
+.mingli-training-progress > div i[data-done="true"] {
+  background: var(--lab-jade);
+  box-shadow: 0 0 7px rgba(130, 197, 160, 0.4);
+}
+
+.mingli-training-result > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.mingli-training-result > div span {
+  padding: 4px 6px;
+  color: #e7c988;
+  border: 1px solid rgba(239, 199, 111, 0.18);
+  border-radius: 999px;
+  font-size: 6px;
+}
+
+.mingli-training-state.is-error {
+  color: #ddb987;
+}
+
+.mingli-training-inline-error {
+  min-height: 0 !important;
+  padding: 4px 6px !important;
+  color: #ddb987 !important;
+  border-color: rgba(221, 185, 135, 0.2) !important;
+  background: transparent !important;
+  font-size: 6px !important;
+}
+
+.mingli-training-console > footer {
+  padding-top: 7px;
+  color: var(--lab-soft);
+  border-top: 1px solid rgba(222, 218, 184, 0.1);
+  font-size: 5.5px;
+  line-height: 1.5;
+}

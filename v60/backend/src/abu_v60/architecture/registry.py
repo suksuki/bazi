@@ -15,7 +15,7 @@ from abu_v60.architecture.contracts import (
 @lru_cache(maxsize=1)
 def runtime_architecture() -> RuntimeArchitecture:
     architecture = RuntimeArchitecture(
-        architecture_version="v60.runtime-architecture.072",
+        architecture_version="v60.runtime-architecture.073",
         modules=(
             RuntimeModule(
                 module_id="identity",
@@ -33,7 +33,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="mingli",
                 kind=ModuleKind.ENGINE,
-                version="v60.mingli-cognitive-engine.043",
+                version="v60.mingli-cognitive-engine.044",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("mingli",),
                 reads_from=("identity",),
@@ -125,6 +125,10 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "sequential_dev_synthetic_suite_runner",
                     "append_only_synthetic_suite_history",
                     "deterministic_synthetic_error_clustering",
+                    "cross_day_master_hidden_rank_generalization",
+                    "candidate_bound_synthetic_training_request",
+                    "recoverable_synthetic_training_progress",
+                    "server_derived_dev_review_disposition",
                 ),
                 writes_canonical_state=True,
             ),
@@ -382,7 +386,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-mingli",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-mingli.033",
+                version="v60.unit-mingli.034",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "mingli", "media"),
                 capabilities=(
@@ -419,6 +423,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "same_element_root_candidate_withheld",
                     "hidden_stem_rank_minimum_gate_projection",
                     "claim_graph_layer_rehearsal",
+                    "cross_day_master_hidden_rank_generalization",
                 ),
             ),
             RuntimeModule(
@@ -454,7 +459,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-lab",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-lab.029",
+                version="v60.unit-lab.030",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "knowledge", "cognition", "mingli"),
                 capabilities=(
@@ -493,6 +498,9 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "real_synthetic_catalog_scene",
                     "recoverable_lab_room_navigation",
                     "lazy_shared_scene_player_entry",
+                    "server_side_synthetic_training_request",
+                    "recoverable_training_progress",
+                    "dev_review_disposition_handoff",
                 ),
             ),
         ),

@@ -4,13 +4,14 @@ from dataclasses import dataclass
 from typing import Final, Literal
 
 from abu_v60.mingli.synthetic_experiment_catalog import (
+    HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF,
     HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
     HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF,
     resolve_synthetic_experiment,
 )
 from abu_v60.provenance import content_hash, stable_ref
 
-SYNTHETIC_SUITE_CATALOG_VERSION: Final = "v60.mingli-synthetic-suite-catalog.001"
+SYNTHETIC_SUITE_CATALOG_VERSION: Final = "v60.mingli-synthetic-suite-catalog.002"
 SYNTHETIC_SUITE_DEFINITION_VERSION: Final = (
     "v60.mingli-synthetic-suite-definition.001"
 )
@@ -120,9 +121,31 @@ HIDDEN_RANK_DEV_SUITE: Final = _suite(
     ),
 )
 
-SYNTHETIC_SUITES: Final = (HIDDEN_RANK_DEV_SUITE,)
+HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_SUITE: Final = _suite(
+    mode="DEV",
+    availability="ACTIVE",
+    title="藏干位阶泛化 · 丙火陌生命盘",
+    question=(
+        "换成从未进入训练目录的丙火命盘后，模型能否把同一套第一／第二藏干方法"
+        "正确迁移，而不是复述乙木旧样本？"
+    ),
+    experiment_refs=(HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF,),
+    execution_policy="SEQUENTIAL_CONTINUE_ON_BOUNDED_ERROR_THEN_SEAL",
+    inference_limit=(
+        "本 Suite 是 DEV 泛化检查，只能发现当前候选是否套用旧盘捷径；"
+        "一次通过不解锁 Qualification、HOLDOUT 或正式模型能力声明。"
+    ),
+)
+
+SYNTHETIC_SUITES: Final = (
+    HIDDEN_RANK_DEV_SUITE,
+    HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_SUITE,
+)
 SYNTHETIC_SUITE_BY_REF: Final = {item.suite_ref: item for item in SYNTHETIC_SUITES}
 HIDDEN_RANK_DEV_SUITE_REF: Final = HIDDEN_RANK_DEV_SUITE.suite_ref
+HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_SUITE_REF: Final = (
+    HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_SUITE.suite_ref
+)
 
 SYNTHETIC_SUITE_MODE_CATALOG: Final = (
     {

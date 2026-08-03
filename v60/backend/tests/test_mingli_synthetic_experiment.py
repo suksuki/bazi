@@ -25,6 +25,7 @@ from abu_v60.mingli.synthetic_experiment_catalog import (
     FIRST_SYNTHETIC_EXPERIMENT,
     FIRST_SYNTHETIC_EXPERIMENT_MEMBERS,
     FIRST_SYNTHETIC_EXPERIMENT_REF,
+    HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF,
     HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT,
     HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
     HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT,
@@ -233,10 +234,10 @@ def test_public_definition_seals_full_inputs_and_inference_limit() -> None:
     assert content_hash(mutated) != definition["definition_hash"]
 
 
-def test_catalog_has_four_unique_real_calendar_experiments() -> None:
+def test_catalog_has_five_unique_real_calendar_experiments() -> None:
     definitions = synthetic_experiment_public_definitions()
-    assert len(definitions) == 4
-    assert len({item["experiment_ref"] for item in definitions}) == 4
+    assert len(definitions) == 5
+    assert len({item["experiment_ref"] for item in definitions}) == 5
     assert definitions[0]["experiment_ref"] == FIRST_SYNTHETIC_EXPERIMENT_REF
     assert definitions[1]["experiment_ref"] == ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF
     assert definitions[1]["family"] == "CONTROLLED_ROOT_IDENTITY_PAIR"
@@ -264,6 +265,23 @@ def test_catalog_has_four_unique_real_calendar_experiments() -> None:
         "A": "08:00:00",
         "B": "14:00:00",
     }
+    assert definitions[4]["experiment_ref"] == (
+        HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF
+    )
+    assert definitions[4]["family"] == (
+        "CONTROLLED_HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_PAIR"
+    )
+    assert definitions[4]["changed_input"] == {
+        "field": "birth_time",
+        "A": "10:00:00",
+        "B": "04:00:00",
+    }
+    assert definitions[4]["full_pillar_delta"] == {
+        "A": ["庚辰", "己卯", "丙子", "癸巳"],
+        "B": ["庚辰", "己卯", "丙子", "庚寅"],
+        "changed_slots": ["hour"],
+        "legal_hour_pillar_change": "癸巳 → 庚寅",
+    }
     assert all(
         item["catalog_version"] == "v60.mingli-synthetic-experiment-catalog.002"
         for item in definitions[2:]
@@ -287,13 +305,14 @@ def test_schema_metadata_matches_synthetic_run_table() -> None:
 def test_catalog_routes_multiple_experiments_and_isolates_run_history() -> None:
     service = SyntheticExperimentService(engine)
     catalog = service.catalog()
-    assert catalog["catalog_version"] == ("v60.mingli-synthetic-experiment-catalog.003")
+    assert catalog["catalog_version"] == ("v60.mingli-synthetic-experiment-catalog.004")
     entries = {item["experiment_ref"]: item for item in catalog["experiments"]}
     assert set(entries) == {
         FIRST_SYNTHETIC_EXPERIMENT_REF,
         ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF,
         HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
         HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF,
+        HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF,
     }
     for experiment_ref, entry in entries.items():
         assert all(run["experiment_ref"] == experiment_ref for run in entry["runs"])

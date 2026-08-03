@@ -13,6 +13,7 @@ from sqlalchemy import (
     Table,
     Text,
     Time,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -366,6 +367,39 @@ mingli_synthetic_suite_runs = Table(
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
+    ),
+    schema="mingli",
+)
+
+mingli_synthetic_suite_run_requests = Table(
+    "synthetic_suite_run_requests",
+    metadata,
+    Column("request_ref", String(180), primary_key=True),
+    Column("request_version", String(100), nullable=False),
+    Column("requester_account_ref", String(160), nullable=False),
+    Column("suite_ref", String(180), nullable=False),
+    Column("suite_definition_hash", String(64), nullable=False),
+    Column("candidate_identity_json", JSONB, nullable=False),
+    Column("candidate_identity_hash", String(64), nullable=False),
+    Column("execution_fingerprint", String(64), nullable=False),
+    Column("idempotency_key", String(180), nullable=False),
+    Column("request_hash", String(64), nullable=False, unique=True),
+    Column("status", String(40), nullable=False),
+    Column("progress_event", String(40), nullable=False),
+    Column("current_position", Integer, nullable=False),
+    Column("completed_count", Integer, nullable=False),
+    Column("total_count", Integer, nullable=False),
+    Column("current_experiment_ref", String(180), nullable=True),
+    Column("suite_run_ref", String(180), nullable=True),
+    Column("suite_run_hash", String(64), nullable=True),
+    Column("review_disposition", String(80), nullable=True),
+    Column("error_code", String(160), nullable=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    UniqueConstraint(
+        "requester_account_ref",
+        "idempotency_key",
+        name="uq_mingli_synthetic_suite_request_idempotency",
     ),
     schema="mingli",
 )

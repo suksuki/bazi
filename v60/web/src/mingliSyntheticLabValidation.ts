@@ -32,7 +32,7 @@ export function validateSyntheticExperimentCatalog(
   }
   const catalog = value as unknown as MingliSyntheticExperimentCatalog;
   if (
-    catalog.catalog_version !== "v60.mingli-synthetic-experiment-catalog.003" ||
+    catalog.catalog_version !== "v60.mingli-synthetic-experiment-catalog.004" ||
     catalog.browser_generation_allowed !== false ||
     catalog.read_only !== true ||
     catalog.experiments.length < 1
@@ -308,6 +308,7 @@ function validateDefinition(value: MingliSyntheticExperimentDefinition): void {
       "CONTROLLED_ROOT_IDENTITY_PAIR",
       "CONTROLLED_HIDDEN_RANK_PRIMARY_SECONDARY_PAIR",
       "CONTROLLED_HIDDEN_RANK_SECONDARY_TERTIARY_PAIR",
+      "CONTROLLED_HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_PAIR",
     ].includes(value.family) ||
     !value.title ||
     !value.question ||
@@ -316,6 +317,7 @@ function validateDefinition(value: MingliSyntheticExperimentDefinition): void {
       "WHOLE_HOUR_PILLAR_RESPONSE_NOT_ROOT_CAUSAL_ESTIMATE",
       "NATAL_ROOT_GATE_ONLY_WITH_FULL_HOUR_COLLATERAL",
       "NATAL_HIDDEN_RANK_GATE_ONLY_WITH_FULL_HOUR_COLLATERAL",
+      "NATAL_HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION",
     ].includes(value.inference_scope) ||
     !value.inference_limit ||
     !Array.isArray(value.known_collateral_deltas) ||
