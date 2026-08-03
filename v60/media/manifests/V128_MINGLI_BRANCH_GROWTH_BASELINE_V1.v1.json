@@ -1,0 +1,60 @@
+{
+  "schema_version": "v60.prototype-mingli-branch-import.002",
+  "bundle_ref": "V128_MINGLI_BRANCH_GROWTH_BASELINE_V1",
+  "revision": "v1",
+  "frozen_design_commit": "9a073a46438c29d1aa048241611249a761b08648",
+  "source_project": "CHATGPT_SITES_V128_EXPERIENCE_CANONICAL",
+  "source_project_id": "appgprj_6a680dd8a8808191a03a0b72bfbdb5b7",
+  "source_version_id": "appgprj_6a680dd8a8808191a03a0b72bfbdb5b7~appgver_7cbd22a30adc8191af368840daecc716",
+  "source_archive_sha256": "6b38ae4c9c76106ee45ee7cf4a5f2fde182fe9a025ebe4f5c4c787d6ceaa6a42",
+  "source_archive_bytes": 33208320,
+  "source_archive_verification": "SITES_VERSION_RECEIPT_NOT_RUNTIME_INPUT",
+  "owner_decision": {
+    "status": "OWNER_APPROVED_V128_EXPERIENCE_BASELINE",
+    "selected_use": "V60_MINGLI_BRANCH_DAY_GROWTH_FIDELITY"
+  },
+  "assets": [
+    {
+      "asset_id": "V128_MINGLI_BRANCH_GROWTH_DAY_VIDEO_V1",
+      "delivery_path": "web/public/assets/v128/mingli-branch/mingli-branch-growth-day-v7.mp4",
+      "sha256": "0862c45a4b8409dafef897c36961bd1cb07c641b371ab3fcc4a4736b5bb9a160",
+      "canvas": [1612, 974],
+      "fps": 24,
+      "duration_seconds": 7.208333
+    },
+    {
+      "asset_id": "V128_MINGLI_BRANCH_GROWTH_DAY_START_V1",
+      "delivery_path": "web/public/assets/v128/mingli-branch/mingli-branch-growth-day-v7-start.webp",
+      "sha256": "8c87f3793bb132be0a342e5a3aff27509cb2a5c5c6ba0d67e721e3d85fc76312"
+    },
+    {
+      "asset_id": "V128_MINGLI_BRANCH_GROWTH_DAY_POSTER_V1",
+      "delivery_path": "web/public/assets/v128/mingli-branch/mingli-branch-growth-day-v7-poster.webp",
+      "sha256": "e7e6a0c120b1ba0ecbdaa76a7bc52493005e5c9da7f9390d2fee8462a2f7c7b4"
+    }
+  ],
+  "experience_contract": {
+    "layer_reveal_seconds": [0.45, 3.32, 4.58, 5.32],
+    "layer_order": ["principle", "image", "themes", "timing"],
+    "layer_organs": ["branch", "leaf", "flower", "fruit"]
+  },
+  "operations": [
+    {
+      "type": "BYTE_IDENTICAL_FROZEN_BASELINE_IMPORT",
+      "changes_pixels": false,
+      "preserves": [
+        "ORGANIC_GROWTH_TIMING",
+        "FINAL_ORGAN_GEOMETRY",
+        "HOTSPOT_COORDINATE_FRAME",
+        "SEQUENTIAL_LAYER_REVEAL"
+      ]
+    }
+  ],
+  "boundaries": {
+    "experience_canonical_only": true,
+    "imports_mock_data": false,
+    "imports_prototype_state": false,
+    "runtime_data_authority": "V60_CANONICAL",
+    "dream_scope": "FROZEN_EXCLUDED"
+  }
+}

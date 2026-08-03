@@ -326,7 +326,7 @@ Hash，避免 Ref 未变但实际内容已变。
 ```text
 Foundation                 v60.foundation.032
 Mingli Engine              v60.mingli-cognitive-engine.043
-Runtime Architecture       v60.runtime-architecture.069
+Runtime Architecture       v60.runtime-architecture.070
 Agent Runtime              v60.mingli-agent-runtime.028
 Agent Profile              v60.mingli-agent.whole-chart-cognition.026
 Agent Prompt               v60.prompt.mingli-agent-whole-chart.023

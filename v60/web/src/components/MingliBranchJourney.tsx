@@ -37,6 +37,8 @@ const LAYERS: Array<{
   { id: "timing", professional: "应期", product: "时间趋势", organ: "果" },
 ];
 
+const LAYER_REVEAL_AT = [0.45, 3.32, 4.58, 5.32] as const;
+
 export function MingliBranchJourney({
   agentError,
   agentGenerating,
@@ -74,6 +76,9 @@ export function MingliBranchJourney({
   const [growthState, setGrowthState] = useState<GrowthState>(
     shouldGrow ? "growing" : "static",
   );
+  const [revealedCount, setRevealedCount] = useState(
+    shouldGrow ? 0 : LAYERS.length,
+  );
   const [replayNonce, setReplayNonce] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const timerRef = useRef<number | null>(null);
@@ -110,11 +115,15 @@ export function MingliBranchJourney({
   useEffect(() => {
     if (!shouldGrow) return;
     entryTimerRef.current = window.setTimeout(() => {
+      entryTimerRef.current = null;
       setEntryState("entered");
       onEntryConsumed();
     }, 1080);
     return () => {
-      if (entryTimerRef.current !== null) window.clearTimeout(entryTimerRef.current);
+      if (entryTimerRef.current !== null) {
+        window.clearTimeout(entryTimerRef.current);
+        entryTimerRef.current = null;
+      }
     };
   }, [onEntryConsumed, shouldGrow]);
 
@@ -125,7 +134,10 @@ export function MingliBranchJourney({
 
   useEffect(() => {
     if (entryState !== "entered" || growthState !== "growing") return;
-    void videoRef.current?.play().catch(() => setGrowthState("static"));
+    void videoRef.current?.play().catch(() => {
+      setGrowthState("static");
+      setRevealedCount(LAYERS.length);
+    });
   }, [entryState, growthState, replayNonce]);
 
   useEffect(
@@ -137,6 +149,10 @@ export function MingliBranchJourney({
 
   const close = useCallback(() => {
     if (entryState === "closing") return;
+    if (entryTimerRef.current !== null) {
+      window.clearTimeout(entryTimerRef.current);
+      entryTimerRef.current = null;
+    }
     videoRef.current?.pause();
     if (reducedMotion) {
       onClose();
@@ -155,11 +171,29 @@ export function MingliBranchJourney({
   }, [close]);
 
   const replay = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.currentTime = 0;
+    videoRef.current?.pause();
+    onLayerChange("principle");
     setGrowthState("growing");
+    setRevealedCount(0);
     setReplayNonce((current) => current + 1);
+  };
+
+  const updateGrowthTimeline = () => {
+    const currentTime = videoRef.current?.currentTime ?? 0;
+    const nextCount = LAYER_REVEAL_AT.filter(
+      (threshold) => currentTime >= threshold,
+    ).length;
+    setRevealedCount((current) => Math.max(current, nextCount));
+  };
+
+  const completeGrowth = () => {
+    setGrowthState("ready");
+    setRevealedCount(LAYERS.length);
+  };
+
+  const showStaticGrowth = () => {
+    setGrowthState("static");
+    setRevealedCount(LAYERS.length);
   };
 
   const ready = growthState !== "growing";
@@ -192,8 +226,9 @@ export function MingliBranchJourney({
             data-asset-ref={film.video.asset_ref}
             key={`${film.video.asset_ref}:${replayNonce}`}
             muted
-            onEnded={() => setGrowthState("ready")}
-            onError={() => setGrowthState("static")}
+            onEnded={completeGrowth}
+            onError={showStaticGrowth}
+            onTimeUpdate={updateGrowthTimeline}
             playsInline
             poster={film.start.url}
             preload="auto"
@@ -204,20 +239,23 @@ export function MingliBranchJourney({
       </div>
 
       <nav aria-label="命理四层" className="mingli-growth-nodes">
-        {LAYERS.map((item) => (
-          <button
-            aria-label={`${item.professional}：${item.product}`}
-            aria-pressed={layer === item.id}
-            className={`mingli-growth-node is-${item.id}`}
-            disabled={!ready}
-            key={item.id}
-            onClick={() => onLayerChange(item.id)}
-            type="button"
-          >
-            <span>{item.organ}</span>
-            <b><small>{item.professional}</small>{item.product}</b>
-          </button>
-        ))}
+        {LAYERS.map((item, index) => {
+          const revealed = growthState !== "growing" || index < revealedCount;
+          return (
+            <button
+              aria-label={`${item.professional}：${item.product}`}
+              aria-pressed={layer === item.id}
+              className={`mingli-growth-node is-${item.id} ${revealed ? "is-revealed" : ""}`}
+              disabled={!ready || !revealed}
+              key={item.id}
+              onClick={() => onLayerChange(item.id)}
+              type="button"
+            >
+              <span>{item.organ}</span>
+              <b><small>{item.professional}</small>{item.product}</b>
+            </button>
+          );
+        })}
       </nav>
 
       <div className="mingli-growth-controls">

@@ -2,6 +2,23 @@
 
 ## 2026-08-03
 
+### V128 day Mingli branch enters the real V60 experience
+
+- Froze ChatGPT Sites V128 version
+  `appgver_7cbd22a30adc8191af368840daecc716` at exact commit
+  `9a073a46438c29d1aa048241611249a761b08648` as an Experience-only source;
+  V60 remains the authority for profiles, charts, Readings and recoverable
+  state. Prototype mock readings were not imported.
+- Replaced the daytime V108 v2 growth film with V128 v7 and preserved its
+  byte-identical start/poster assets. Branch, leaf, flower and fruit now appear
+  in sequence at `0.45 / 3.32 / 4.58 / 5.32s` instead of all appearing only
+  after the film ends.
+- Added explicit source/project/version/archive and asset Hash provenance plus
+  a frontend fidelity audit. Runtime Media is now `.005`, Media `.004` and
+  Runtime Architecture `.070`.
+- Kept the V108 night film unchanged and excluded Abu Dream World completely;
+  the new Heroes-like Dream direction remains frozen pending product baseline.
+
 ### Synthetic training now measures field judgment instead of hiding repair
 
 - Split hidden-stem candidates, effective roots and rooted visible support into

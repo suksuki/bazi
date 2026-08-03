@@ -244,16 +244,16 @@ schema directly.
 Current executable identities are:
 
 ```text
-Foundation       v60.foundation.031
-Architecture     v60.runtime-architecture.069
-Mingli Engine    v60.mingli-cognitive-engine.042
-Media            v60.media-library.003
-Runtime Media    v60.runtime-media-registry.004
+Foundation       v60.foundation.032
+Architecture     v60.runtime-architecture.070
+Mingli Engine    v60.mingli-cognitive-engine.043
+Media            v60.media-library.004
+Runtime Media    v60.runtime-media-registry.005
 Unit Mingli      v60.unit-mingli.032
 Stage            v60.mingli-stage-projection.004
 Timing           v60.mingli-timing-evidence-vector.002
 Narration        v60.mingli-narration.002
-Migration        0039_mingli_suite_contract
+Migration        0040_mingli_model_field_contract
 ```
 
 ## Real evidence

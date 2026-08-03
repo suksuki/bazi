@@ -7,7 +7,7 @@ from abu_v60.system_manifest import runtime_manifest
 def test_runtime_architecture_has_one_owner_per_schema_and_five_units() -> None:
     architecture = runtime_architecture()
     architecture.validate_boundaries()
-    assert architecture.architecture_version == "v60.runtime-architecture.069"
+    assert architecture.architecture_version == "v60.runtime-architecture.070"
     assert architecture.product_units == (
         "unit-mingli",
         "unit-dream",
@@ -60,6 +60,7 @@ def test_manifest_exposes_world_game_and_localization_reservation() -> None:
     assert manifest["engines"]["world"] == "v60.world-continuity-engine.004"
     assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.043"
     assert manifest["engines"]["story"] == "v60.life-story-engine.011"
+    assert manifest["media_runtime_version"] == "v60.runtime-media-registry.005"
     source_review = manifest["source_review_profiles"]
     assert len(source_review) == 1
     assert source_review[0]["active"] is True
@@ -116,12 +117,13 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
 
     assert modules["mingli"].version == "v60.mingli-cognitive-engine.043"
     assert modules["knowledge"].version == "v60.knowledge-authority.008"
-    assert modules["media"].version == "v60.media-library.003"
+    assert modules["media"].version == "v60.media-library.004"
     assert modules["unit-mingli"].version == "v60.unit-mingli.032"
     assert modules["unit-abu"].version == "v60.unit-abu-says.007"
     assert modules["unit-lab"].version == "v60.unit-lab.028"
     assert modules["unit-dream"].version == "v60.unit-dream.020"
     assert modules["media"].reads_from == ("identity", "mingli")
+    assert "v128_experience_asset_parcel" in modules["media"].capabilities
     assert modules["unit-mingli"].reads_from == (
         "experience-context",
         "mingli",

@@ -139,6 +139,11 @@ tests reject direct cross-schema writes from coordinators.
 
 - `v60/` is a new system with its own runtime, database and migrations.
 - `v50/` is a read-only migration source. V60 runtime code must not import it.
+- V128 commit `9a073a46438c29d1aa048241611249a761b08648` is the frozen
+  Experience Canonical for the current UI integration. V60 remains the Domain
+  Canonical; prototype mock readings and local state never cross that boundary.
+- Abu Dream World is excluded from the V128 integration until the Owner and
+  product analysis freeze its new game direction.
 - Only assets and domain behavior admitted by an explicit migration manifest
   may cross the boundary.
 - Old Dream visits, synthetic Forest Factory populations, preview routes and

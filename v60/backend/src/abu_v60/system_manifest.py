@@ -21,7 +21,7 @@ WORLD_ENGINE_VERSION: Final = "v60.world-continuity-engine.004"
 MINGLI_ENGINE_VERSION: Final = "v60.mingli-cognitive-engine.043"
 STORY_ENGINE_VERSION: Final = "v60.life-story-engine.011"
 ASSET_REGISTRY_VERSION: Final = "v60.asset-registry.002"
-MEDIA_RUNTIME_VERSION: Final = "v60.runtime-media-registry.003"
+MEDIA_RUNTIME_VERSION: Final = "v60.runtime-media-registry.005"
 PRIMARY_WORLD_ID: Final = "abu-dream-world-v1"
 ENTRY_EXPERIENCE: Final = "PRIVATE_LIFE_TREE_HOME"
 

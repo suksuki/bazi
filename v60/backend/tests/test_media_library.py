@@ -29,6 +29,44 @@ def test_v108_home_shell_bundle_is_frozen_to_design_canonical() -> None:
     assert bundle["boundaries"]["runtime_data_authority"] == "V60_CANONICAL"
 
 
+def test_v128_mingli_branch_bundle_is_frozen_to_exact_experience_source() -> None:
+    path = PROJECT_ROOT / "media/manifests/V128_MINGLI_BRANCH_GROWTH_BASELINE_V1.v1.json"
+    bundle = json.loads(path.read_text(encoding="utf-8"))
+
+    assert bundle["frozen_design_commit"] == (
+        "9a073a46438c29d1aa048241611249a761b08648"
+    )
+    assert bundle["source_version_id"] == (
+        "appgprj_6a680dd8a8808191a03a0b72bfbdb5b7~"
+        "appgver_7cbd22a30adc8191af368840daecc716"
+    )
+    assert bundle["source_archive_sha256"] == (
+        "6b38ae4c9c76106ee45ee7cf4a5f2fde182fe9a025ebe4f5c4c787d6ceaa6a42"
+    )
+    assert bundle["source_archive_bytes"] == 33_208_320
+    assert bundle["source_archive_verification"] == (
+        "SITES_VERSION_RECEIPT_NOT_RUNTIME_INPUT"
+    )
+    assert {asset["asset_id"] for asset in bundle["assets"]} == {
+        "V128_MINGLI_BRANCH_GROWTH_DAY_VIDEO_V1",
+        "V128_MINGLI_BRANCH_GROWTH_DAY_START_V1",
+        "V128_MINGLI_BRANCH_GROWTH_DAY_POSTER_V1",
+    }
+    assert bundle["experience_contract"]["layer_reveal_seconds"] == [
+        0.45,
+        3.32,
+        4.58,
+        5.32,
+    ]
+    assert bundle["boundaries"] == {
+        "experience_canonical_only": True,
+        "imports_mock_data": False,
+        "imports_prototype_state": False,
+        "runtime_data_authority": "V60_CANONICAL",
+        "dream_scope": "FROZEN_EXCLUDED",
+    }
+
+
 def test_media_library_sources_deliveries_and_cues_are_hash_locked() -> None:
     catalog = load_verified_media_catalog()
     summary = media_library_summary()
@@ -132,7 +170,7 @@ def test_v60_character_identity_is_primary_and_legacy_cartoon_is_retained() -> N
 def test_runtime_media_manifest_resolves_hash_locked_assets_and_cues() -> None:
     manifest = runtime_media_manifest()
 
-    assert manifest["registry_version"] == "v60.runtime-media-registry.004"
+    assert manifest["registry_version"] == "v60.runtime-media-registry.005"
     assert manifest["assets"]["brand_logo"]["asset_ref"] == (
         "brand.abuknows-v60.logo.transparent.v1"
     )
@@ -146,7 +184,10 @@ def test_runtime_media_manifest_resolves_hash_locked_assets_and_cues() -> None:
         "/assets/v108/life-leaf-v1.webp"
     )
     assert manifest["assets"]["mingli_growth_day_video"]["sha256"] == (
-        "d056fa04688e93180e0e428b2ab1049a4e70fe993632fe10f256849f25f1f2f6"
+        "0862c45a4b8409dafef897c36961bd1cb07c641b371ab3fcc4a4736b5bb9a160"
+    )
+    assert manifest["assets"]["mingli_growth_day_video"]["url"] == (
+        "/assets/v128/mingli-branch/mingli-branch-growth-day-v7.mp4"
     )
     assert manifest["assets"]["mingli_growth_night_poster"]["url"] == (
         "/assets/v108/mingli-branch/mingli-branch-growth-night-v3-poster.webp"

@@ -101,7 +101,6 @@
 }
 
 .mingli-growth-world[data-growth-state="growing"] .mingli-growth-nodes {
-  opacity: 0;
   pointer-events: none;
 }
 
@@ -119,12 +118,37 @@
   transform: translate(-50%, -50%);
   cursor: pointer;
   isolation: isolate;
+  opacity: 0;
 }
 
+.mingli-growth-node.is-revealed {
+  opacity: 1;
+  transition: opacity 440ms var(--mingli-ease-out);
+}
+
+.mingli-growth-world[data-growth-state="growing"] .mingli-growth-node:not(.is-revealed) {
+  opacity: 0;
+  transition: none;
+}
+
+/* Frozen V128 Desktop Chrome hotspot frame (the prototype's <=680px base
+ * values are intentionally outside this round's Owner-approved viewport). */
 .mingli-growth-node.is-principle { top: 67.1%; left: 41.25%; width: 5.2%; }
 .mingli-growth-node.is-image { top: 48.35%; left: 63.35%; width: 9.6%; }
 .mingli-growth-node.is-themes { top: 41.9%; left: 75.05%; width: 6.5%; }
 .mingli-growth-node.is-timing { top: 57.95%; left: 79.55%; width: 5.8%; }
+
+.mingli-growth-world[data-light="day"] .mingli-growth-node.is-themes {
+  top: 44.8%;
+  left: 76.4%;
+  width: 6.2%;
+}
+
+.mingli-growth-world[data-light="day"] .mingli-growth-node.is-timing {
+  top: 58.9%;
+  left: 79.2%;
+  width: 5.4%;
+}
 
 .mingli-growth-node::before {
   position: absolute;
@@ -174,6 +198,20 @@
   inset: 16% 20% 13%;
   background: radial-gradient(ellipse, rgba(224, 241, 128, 0.78) 0 12%, rgba(184, 211, 83, 0.44) 29%, transparent 72%);
   animation-delay: -4.2s;
+}
+
+.mingli-growth-world[data-light="day"] .mingli-growth-node.is-themes::after {
+  background: radial-gradient(circle, rgba(242, 151, 171, 0.46) 0 12%, rgba(211, 107, 134, 0.24) 30%, rgba(169, 76, 101, 0.07) 52%, transparent 74%);
+  filter: blur(2.3px) saturate(0.92);
+  mix-blend-mode: soft-light;
+  opacity: 0.54;
+}
+
+.mingli-growth-world[data-light="day"] .mingli-growth-node.is-timing::after {
+  background: radial-gradient(ellipse, rgba(213, 112, 76, 0.42) 0 13%, rgba(173, 77, 49, 0.2) 31%, rgba(122, 55, 37, 0.06) 52%, transparent 74%);
+  filter: blur(2.2px) saturate(0.9);
+  mix-blend-mode: soft-light;
+  opacity: 0.5;
 }
 
 .mingli-growth-node > span {
