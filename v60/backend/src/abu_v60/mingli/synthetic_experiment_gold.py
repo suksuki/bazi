@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Final
 
 from abu_v60.mingli.synthetic_experiment_catalog import (
+    CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT_REF,
     FIRST_SYNTHETIC_EXPERIMENT_REF,
     HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF,
     HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
@@ -229,6 +230,85 @@ REGIME_WORK_PATH_GENERALIZATION_DEV_GOLD_HASH: Final = content_hash(
     REGIME_WORK_PATH_GENERALIZATION_DEV_GOLD
 )
 
+CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_DEV_GOLD: Final = {
+    "gold_version": "v60.mingli-synthetic-experiment-dev-gold.005",
+    "experiment_ref": CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT_REF,
+    "A_hour_fact": (
+        "壬午",
+        "食神",
+        ("丁", "己"),
+        ("正官", "正印"),
+    ),
+    "A_required_effective_root_status": "ABSENT",
+    "A_required_effective_root_coordinates": (),
+    "A_required_rooted_visible_support_status": "ABSENT",
+    "A_expected_visible_peer_coordinates": (),
+    "A_expected_resource_coordinates": (
+        "month支藏己(正印)",
+        "day支藏戊(偏印)",
+        "hour支藏己(正印)",
+    ),
+    "A_required_competition_kinds": ("HIDDEN_RESOURCE",),
+    "A_allowed_regime_classifications": (
+        "FALSE_FOLLOW_COMPETITION",
+        "UNRESOLVED",
+    ),
+    "A_expected_pattern_refs": (
+        "bazi.mechanism.output-to-wealth@1",
+        "bazi.mechanism.output-to-pressure@1",
+        "bazi.mechanism.wealth-to-pressure@1",
+    ),
+    "B_hour_fact": (
+        "甲申",
+        "偏财",
+        ("庚", "壬", "戊"),
+        ("比肩", "食神", "偏印"),
+    ),
+    "B_candidate_coordinate": "hour支藏庚",
+    "B_candidate_branch": "申",
+    "B_candidate_identity": "EXACT_DAY_MASTER",
+    "B_hidden_order": 1,
+    "B_hidden_rank": "PRIMARY_QI",
+    "B_minimum_anti_follow_gate": "PRESENT",
+    "B_required_effective_root_status": "PRESENT",
+    "B_required_effective_root_coordinates": ("hour支藏庚",),
+    "B_required_rooted_visible_support_status": "ABSENT",
+    "B_expected_visible_peer_coordinates": (),
+    "B_expected_resource_coordinates": (
+        "month支藏己(正印)",
+        "day支藏戊(偏印)",
+        "hour支藏戊(偏印)",
+    ),
+    "B_required_competition_kinds": ("HIDDEN_RESOURCE",),
+    "B_allowed_regime_classifications": (
+        "ORDINARY_WEAK",
+        "UNRESOLVED",
+        "NON_WEAK_OUTSIDE_SCOPE",
+    ),
+    "B_expected_pattern_refs": (
+        "bazi.mechanism.output-to-wealth@1",
+        "bazi.mechanism.output-to-pressure@1",
+        "bazi.mechanism.wealth-to-pressure@1",
+    ),
+    "candidate_partition": {
+        "candidate_count": 3,
+        "selected_count": 2,
+        "excluded_count": 1,
+        "winner_not_preselected": True,
+    },
+    "must_hold": (
+        "FIRST_THREE_PILLARS",
+        "DAY_MASTER",
+        "MONTH_COMMAND",
+        "VISIBLE_PEERS",
+        "MECHANISM_PATTERN_SET",
+    ),
+    "qualification_effect": "DEV_EVIDENCE_ONLY_NOT_METHOD_QUALIFICATION",
+}
+CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_DEV_GOLD_HASH: Final = content_hash(
+    CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_DEV_GOLD
+)
+
 SYNTHETIC_EXPERIMENT_DEV_GOLD_BY_REF: Final = {
     FIRST_SYNTHETIC_EXPERIMENT_REF: (
         FIRST_SYNTHETIC_EXPERIMENT_DEV_GOLD,
@@ -253,6 +333,10 @@ SYNTHETIC_EXPERIMENT_DEV_GOLD_BY_REF: Final = {
     REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT_REF: (
         REGIME_WORK_PATH_GENERALIZATION_DEV_GOLD,
         REGIME_WORK_PATH_GENERALIZATION_DEV_GOLD_HASH,
+    ),
+    CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT_REF: (
+        CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_DEV_GOLD,
+        CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_DEV_GOLD_HASH,
     ),
 }
 

@@ -10,6 +10,7 @@ from abu_v60.mingli.synthetic_experiment_catalog import (
 from abu_v60.mingli.synthetic_experiment_seed import seed_synthetic_experiment
 from abu_v60.mingli.synthetic_experiment_service import SyntheticExperimentService
 from abu_v60.mingli.synthetic_suite_catalog import (
+    CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_DEV_SUITE,
     HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_SUITE,
     HIDDEN_RANK_DEV_SUITE,
     REGIME_WORK_PATH_GENERALIZATION_DEV_SUITE,
@@ -104,11 +105,12 @@ def test_training_status_reopens_runs_when_the_evaluation_contract_changes() -> 
     by_ref = {item["suite_ref"]: item for item in status["suites"]}
 
     assert by_ref[HIDDEN_RANK_DEV_SUITE.suite_ref]["candidate_state"] == "READY_FOR_DEV_RUN"
-    assert by_ref[HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_SUITE.suite_ref][
-        "candidate_state"
-    ] == "READY_FOR_DEV_RUN"
+    assert (
+        by_ref[HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_SUITE.suite_ref]["candidate_state"]
+        == "READY_FOR_DEV_RUN"
+    )
     assert status["recommended_suite_ref"] == (
-        REGIME_WORK_PATH_GENERALIZATION_DEV_SUITE.suite_ref
+        CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_DEV_SUITE.suite_ref
     )
     assert status["browser_direct_model_call_allowed"] is False
 

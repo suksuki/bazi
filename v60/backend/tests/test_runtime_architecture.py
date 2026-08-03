@@ -7,7 +7,7 @@ from abu_v60.system_manifest import runtime_manifest
 def test_runtime_architecture_has_one_owner_per_schema_and_five_units() -> None:
     architecture = runtime_architecture()
     architecture.validate_boundaries()
-    assert architecture.architecture_version == "v60.runtime-architecture.074"
+    assert architecture.architecture_version == "v60.runtime-architecture.077"
     assert architecture.product_units == (
         "unit-mingli",
         "unit-dream",
@@ -58,7 +58,7 @@ def test_manifest_exposes_world_game_and_localization_reservation() -> None:
     assert manifest["engines"]["context"] == "v60.experience-context.003"
     assert manifest["engines"]["game"] == "v60.dream-game-engine.019"
     assert manifest["engines"]["world"] == "v60.world-continuity-engine.004"
-    assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.045"
+    assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.048"
     assert manifest["engines"]["story"] == "v60.life-story-engine.011"
     assert manifest["media_runtime_version"] == "v60.runtime-media-registry.006"
     source_review = manifest["source_review_profiles"]
@@ -115,12 +115,12 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     architecture = runtime_architecture()
     modules = {module.module_id: module for module in architecture.modules}
 
-    assert modules["mingli"].version == "v60.mingli-cognitive-engine.045"
+    assert modules["mingli"].version == "v60.mingli-cognitive-engine.048"
     assert modules["knowledge"].version == "v60.knowledge-authority.008"
     assert modules["media"].version == "v60.media-library.005"
-    assert modules["unit-mingli"].version == "v60.unit-mingli.035"
+    assert modules["unit-mingli"].version == "v60.unit-mingli.038"
     assert modules["unit-abu"].version == "v60.unit-abu-says.008"
-    assert modules["unit-lab"].version == "v60.unit-lab.031"
+    assert modules["unit-lab"].version == "v60.unit-lab.034"
     assert modules["unit-dream"].version == "v60.unit-dream.020"
     assert modules["media"].reads_from == ("identity", "mingli")
     assert "v128_experience_asset_parcel" in modules["media"].capabilities
@@ -190,6 +190,21 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     assert "server_derived_dev_review_disposition" in (
         modules["mingli"].capabilities
     )
+    for capability in (
+        "model_owned_primary_selection",
+        "primary_bound_work_path_projection",
+        "raw_decision_integrity_evaluation",
+        "cross_day_master_regime_work_path_generalization",
+        "structured_regime_exit_decision_table",
+        "exact_candidate_partition_ledger",
+        "actionable_method_falsifier_contract",
+        "cross_day_master_candidate_partition_generalization",
+        "enumerated_legal_regime_and_candidate_decision_rows",
+        "schema_bound_counterfactual_signal_semantics",
+        "raw_packet_bound_regime_evaluation",
+        "actionable_counterfactual_and_reversal_evaluation",
+    ):
+        assert capability in modules["mingli"].capabilities
     assert "controlled_synthetic_ab_comparison" in modules["unit-lab"].capabilities
     assert "synthetic_training_suite_summary" in modules["unit-lab"].capabilities
     assert "browser_read_only_experiment_snapshot" in modules["unit-lab"].capabilities
@@ -208,6 +223,10 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     )
     assert "recoverable_training_progress" in modules["unit-lab"].capabilities
     assert "dev_review_disposition_handoff" in modules["unit-lab"].capabilities
+    assert (
+        "raw_counterfactual_and_packet_fact_qualification"
+        in modules["unit-lab"].capabilities
+    )
     assert "four_layer_agent_reading_projection" in (
         modules["unit-mingli"].capabilities
     )
@@ -376,6 +395,19 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     assert "four_six_pillar_stage" in modules["unit-mingli"].capabilities
     assert "audio_current_time_narration" in modules["unit-mingli"].capabilities
     assert "claim_graph_layer_rehearsal" in modules["unit-mingli"].capabilities
+    assert "primary_bound_whole_chart_work_path" in modules["unit-mingli"].capabilities
+    assert (
+        "structured_regime_exit_and_counterfactual_method"
+        in modules["unit-mingli"].capabilities
+    )
+    assert (
+        "legal_decision_row_guided_whole_chart_reading"
+        in modules["unit-mingli"].capabilities
+    )
+    assert (
+        "counterfactual_semantics_repaired_before_projection"
+        in modules["unit-mingli"].capabilities
+    )
     assert "return_to_grove_after_reconciliation" in modules["unit-dream"].capabilities
     assert "pre_outcome_question_basis" in modules["unit-dream"].capabilities
     assert "read_only_reading_observation_lens" in modules["unit-dream"].capabilities
@@ -609,7 +641,6 @@ def test_world_runtime_writes_are_owned_by_world_engine() -> None:
         ):
             offenders.append(str(path.relative_to(source_root)))
     assert offenders == []
-
 
 def test_bootstrap_writes_route_through_each_schema_owner() -> None:
     source_root = Path(__file__).resolve().parents[1] / "src" / "abu_v60"

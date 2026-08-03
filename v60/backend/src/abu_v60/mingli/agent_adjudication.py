@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from abu_v60.mingli.agent_counterfactuals import (
+    method_falsifier_is_actionable,
+    repaired_method_falsifier,
+    reversal_is_actionable,
+)
 from abu_v60.mingli.agent_fact_language import (
     manifestation_claim_conflicts,
     resolution_ruling_conflicts,
@@ -60,7 +64,14 @@ class AgentMethodRuling(BaseModel):
     check_code: str = Field(pattern=r"^[A-Z][A-Z0-9_]{2,63}$")
     ruling: AgentMethodRulingValue
     rationale: str = Field(min_length=12, max_length=220)
-    condition_or_falsifier: str = Field(min_length=8, max_length=180)
+    condition_or_falsifier: str = Field(
+        min_length=8,
+        max_length=180,
+        description=(
+            "必须写：若可观察事实变化，则本项由当前 ruling 改判为另一 ruling。"
+            "不能复制当前事实或只写条件前件。"
+        ),
+    )
     evidence_ids: tuple[str, ...] = Field(max_length=8)
 
     @model_validator(mode="after")
@@ -109,8 +120,16 @@ class AgentReversalTest(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     question: str = Field(min_length=12, max_length=180)
-    winner_signal: str = Field(min_length=8, max_length=160)
-    loser_signal: str = Field(min_length=8, max_length=160)
+    winner_signal: str = Field(
+        min_length=8,
+        max_length=160,
+        description="若与主解释一致的观察出现，则明确维持 PRIMARY。",
+    )
+    loser_signal: str = Field(
+        min_length=8,
+        max_length=160,
+        description="若相反观察出现，则明确翻转为 ALTERNATIVE；禁止写维持 PRIMARY。",
+    )
 
     @model_validator(mode="after")
     def signals_are_distinct(self) -> AgentReversalTest:
@@ -273,15 +292,6 @@ def normalize_adjudication_output(
             if not isinstance(rationale, str) or len(rationale.strip()) < 12:
                 rationale = "这一项尚未形成足以改变整盘主次的明确判断。"
             falsifier = raw.get("condition_or_falsifier")
-            if (
-                not isinstance(falsifier, str)
-                or len(falsifier.strip()) < 8
-                or re.fullmatch(r"[A-Z_]+", falsifier.strip())
-                or not any(
-                    term in falsifier for term in ("若", "如果", "当", "只有", "除非", "反之")
-                )
-            ):
-                falsifier = "若现实反馈与此相反，就重排两种解释。"
             if manifestation_claim_conflicts(
                 f"{rationale}\n{falsifier}",
                 pillars=packet.pillars,
@@ -306,6 +316,12 @@ def normalize_adjudication_output(
                 rationale = "日主无根，浮比与藏印能否持续承载仍需整盘比较。"
                 falsifier = "若获得有效根或从势条件闭合，再重判承载。"
                 normalization_issues.add(f"DAY_MASTER_CAPACITY_H{index + 1}")
+            if not method_falsifier_is_actionable(
+                falsifier,
+                current_ruling=ruling,
+            ):
+                falsifier = repaired_method_falsifier(current_ruling=ruling)
+                normalization_issues.add(f"HYPOTHESIS_H{index + 1}")
             raw_evidence = raw.get("evidence_ids")
             evidence = raw_evidence if isinstance(raw_evidence, list) else []
             evidence = list(dict.fromkeys(item for item in evidence if item in natal_ids))
@@ -762,4 +778,9 @@ def _decision_matches_hypotheses(
         allowed = {item["check_code"] for item in hypothesis["method_rulings"]}
         if not set(side.decisive_checks).issubset(allowed):
             return False
-    return True
+    return reversal_is_actionable(
+        winner_signal=decision.reversal.winner_signal,
+        loser_signal=decision.reversal.loser_signal,
+        primary_name=primary.get("name"),
+        alternative_name=alternative.get("name"),
+    )

@@ -5,12 +5,12 @@ from typing import Literal
 
 from abu_v60.mingli.agent_root_gate import MINGLI_EFFECTIVE_ROOT_METHOD_VERSION
 
-MINGLI_AGENT_METHOD_DISTILLATION_VERSION = (
-    "v60.mingli-agent-method-distillation.005"
-)
+MINGLI_AGENT_METHOD_DISTILLATION_VERSION = "v60.mingli-agent-method-distillation.006"
 
 OUTPUT_TO_PRESSURE = "bazi.mechanism.output-to-pressure@1"
 OUTPUT_TO_WEALTH = "bazi.mechanism.output-to-wealth@1"
+WEALTH_TO_PRESSURE = "bazi.mechanism.wealth-to-pressure@1"
+PRESSURE_RESOURCE_SELF = "bazi.mechanism.pressure-resource-self@1"
 
 MethodGate = Literal["SUPPORTED", "CONDITIONAL", "BROKEN", "UNRESOLVED"]
 
@@ -119,6 +119,109 @@ _CHECK_GUIDANCE: dict[str, dict[str, dict[str, object]]] = {
             "counterexample": "浮透比肩只构成竞争证据，不等于结果事件",
         },
     },
+    WEALTH_TO_PRESSURE: {
+        "WEALTH_SOURCE_AVAILABILITY": {
+            "question": "精确到正财或偏财后，财富来源是否真实存在并能持续发起路径？",
+            "supports_when": "财源明透或有已准入的有效出处",
+            "opposes_when": "财源不存在、被夺或只是结构名称",
+            "conditional_when": "财源仅藏或仍受比劫、印食路径竞争",
+            "required_fact_keys": ("exact_source", "source_manifestation"),
+            "forbidden_shortcuts": ("见财星即认定财能生官杀",),
+            "counterexample": "财星存在不等于财富路径已经能够主导官杀",
+        },
+        "PRESSURE_TARGET_REACHABILITY": {
+            "question": "目标是正官还是七杀，财源与该精确目标是否真实可达？",
+            "supports_when": "官杀目标定位且与财源同层或有准入桥",
+            "opposes_when": "目标不存在，或显藏分层且没有桥",
+            "conditional_when": "目标仅藏、局部相生存在但全盘主导未定",
+            "required_fact_keys": ("exact_target", "target_manifestation"),
+            "forbidden_shortcuts": ("把正官七杀合称后直接判财生官杀",),
+            "counterexample": "明财与仅藏官杀之间没有通道时不能写成已生",
+        },
+        "DAY_MASTER_CAPACITY": {
+            "question": "日主能否承受财耗与官杀压力形成的连续负荷？",
+            "supports_when": "根、印比与全盘制化足以承接连续负荷",
+            "opposes_when": "财官压力闭合而日主无可持续承载或救应",
+            "conditional_when": "身弱、从势与救应竞争尚未裁决",
+            "required_fact_keys": ("season", "root", "peer", "resource"),
+            "forbidden_shortcuts": ("按同类数量投票决定承载",),
+            "counterexample": "路径存在不等于日主可以承受路径结果",
+        },
+        "VISIBLE_HIDDEN_REACHABILITY": {
+            "question": "财源与官杀目标是否同层，或存在可点名的显藏桥？",
+            "supports_when": "精确坐标同层直达或有已准入桥梁",
+            "opposes_when": "一方明透、一方仅藏且没有桥",
+            "conditional_when": "藏到藏存在局部候选但作用条件未闭合",
+            "required_fact_keys": ("source_manifestation", "target_manifestation"),
+            "forbidden_shortcuts": ("同为藏干即自动可达",),
+            "counterexample": "明财不能因官杀藏于另一支就自动形成直达",
+        },
+        "COMPETING_PATH_RESOLUTION": {
+            "question": "食伤生财、财被夺或印化官杀等竞争路径是否已比较？",
+            "supports_when": "竞争路径弱、被阻或已有清晰主次",
+            "opposes_when": "另一条路径更闭合并改变财官主导方向",
+            "conditional_when": "多条路径并存但主次仍需整盘裁决",
+            "required_fact_keys": ("structure_candidates", "exact_role_paths"),
+            "forbidden_shortcuts": ("只看财官成员而跳过竞争路径",),
+            "counterexample": "财居中也可能承接食伤，不必然以生官杀为主",
+        },
+    },
+    PRESSURE_RESOURCE_SELF: {
+        "PRESSURE_SOURCE_AVAILABILITY": {
+            "question": "精确到正官或七杀后，压力来源是否真实并具备全盘角色？",
+            "supports_when": "官杀来源定位且确实构成整盘压力",
+            "opposes_when": "来源不存在或只是孤立成员",
+            "conditional_when": "来源仅藏或与其他压力路径竞争",
+            "required_fact_keys": ("exact_source", "source_manifestation"),
+            "forbidden_shortcuts": ("见官杀即认定压力已成立",),
+            "counterexample": "孤立七杀不等于已经成为全盘压力源",
+        },
+        "RESOURCE_BRIDGE_REACHABILITY": {
+            "question": "正印或偏印能否从精确官杀来源承接，并继续指向日主？",
+            "supports_when": "官杀、印与日主坐标有连续准入路径",
+            "opposes_when": "印不存在、被坏或与官杀和日主均无通道",
+            "conditional_when": "印仅藏或只闭合其中一段",
+            "required_fact_keys": ("exact_role_paths", "resource"),
+            "forbidden_shortcuts": ("官杀与印都存在即认定杀印相生",),
+            "counterexample": "官杀生印与印生日主两段必须分别成立",
+        },
+        "SELF_TARGET_CAPACITY": {
+            "question": "日主能否真实承接印桥，而不是只在名义上成为终点？",
+            "supports_when": "印桥可达且日主有承接与转化条件",
+            "opposes_when": "印桥被阻或日主无法承接连续压力",
+            "conditional_when": "根、印比与泄耗比较尚未闭合",
+            "required_fact_keys": ("season", "root", "peer", "resource"),
+            "forbidden_shortcuts": ("见印即认定日主受生",),
+            "counterexample": "印星存在不等于压力已经转为日主可用支持",
+        },
+        "COMPETING_PATH_RESOLUTION": {
+            "question": "财生官杀、食伤制官杀或财坏印等竞争路径是否已比较？",
+            "supports_when": "竞争路径弱、被阻或不改变官印主轴",
+            "opposes_when": "另一条路径更闭合并破坏官印连续性",
+            "conditional_when": "竞争路径并存但主次未闭合",
+            "required_fact_keys": ("structure_candidates", "exact_role_paths"),
+            "forbidden_shortcuts": ("只凭官印成员数量决定主轴",),
+            "counterexample": "食伤直制官杀时不能同时无条件认定官印相生",
+        },
+        "SOURCE_BRIDGE_SAME_LAYER": {
+            "question": "官杀来源与印桥是否同层或有已准入连接？",
+            "supports_when": "精确官杀与精确印同层或有准入桥",
+            "opposes_when": "两者显藏分离且没有桥",
+            "conditional_when": "同支藏层候选存在但整体作用未定",
+            "required_fact_keys": ("exact_role_paths",),
+            "forbidden_shortcuts": ("官印各自存在即视为第一段闭合",),
+            "counterexample": "明官与异支藏印不能自动写成官生印",
+        },
+        "BRIDGE_TARGET_SAME_LAYER": {
+            "question": "印桥与日主之间是否具备可到达、可承接的第二段？",
+            "supports_when": "精确印坐标可达日主且承接条件成立",
+            "opposes_when": "印与日主分层断开或印已被破坏",
+            "conditional_when": "生扶方向存在但有效度尚待整盘比较",
+            "required_fact_keys": ("exact_role_paths",),
+            "forbidden_shortcuts": ("印生日主的五行关系即等于本盘做功",),
+            "counterexample": "理论相生不能替代本盘第二段坐标与承载审计",
+        },
+    },
 }
 
 _ROLE_PAIRS = {
@@ -133,6 +236,45 @@ _ROLE_PAIRS = {
         ("食神", "偏财", "FOOD_GOD_TO_INDIRECT_WEALTH", "食神生偏财候选"),
         ("伤官", "正财", "HURTING_OFFICIAL_TO_DIRECT_WEALTH", "伤官生正财候选"),
         ("伤官", "偏财", "HURTING_OFFICIAL_TO_INDIRECT_WEALTH", "伤官生偏财候选"),
+    ),
+    WEALTH_TO_PRESSURE: (
+        ("正财", "正官", "DIRECT_WEALTH_TO_PROPER_OFFICIAL", "正财生正官候选"),
+        ("正财", "七杀", "DIRECT_WEALTH_TO_SEVEN_KILLING", "正财生七杀候选"),
+        ("偏财", "正官", "INDIRECT_WEALTH_TO_PROPER_OFFICIAL", "偏财生正官候选"),
+        ("偏财", "七杀", "INDIRECT_WEALTH_TO_SEVEN_KILLING", "偏财生七杀候选"),
+    ),
+}
+
+_ROLE_TRIPLES = {
+    PRESSURE_RESOURCE_SELF: (
+        (
+            "正官",
+            "正印",
+            "日主",
+            "PROPER_OFFICIAL_TO_DIRECT_RESOURCE_TO_SELF",
+            "正官生正印生日主候选",
+        ),
+        (
+            "正官",
+            "偏印",
+            "日主",
+            "PROPER_OFFICIAL_TO_INDIRECT_RESOURCE_TO_SELF",
+            "正官生偏印生日主候选",
+        ),
+        (
+            "七杀",
+            "正印",
+            "日主",
+            "SEVEN_KILLING_TO_DIRECT_RESOURCE_TO_SELF",
+            "七杀生正印生日主候选",
+        ),
+        (
+            "七杀",
+            "偏印",
+            "日主",
+            "SEVEN_KILLING_TO_INDIRECT_RESOURCE_TO_SELF",
+            "七杀生偏印生日主候选",
+        ),
     ),
 }
 
@@ -149,11 +291,9 @@ def distilled_check_guidance(
             {
                 "check_code": check_code,
                 "ruling_rule": (
-                    f"SUPPORTS={guidance[check_code]['supports_when']}；"
-                    f"OPPOSES={guidance[check_code]['opposes_when']}；"
-                    f"其余按条件完整度裁 CONDITIONAL 或 UNRESOLVED"
+                    f"SUPPORTS:{guidance[check_code]['supports_when']}；"
+                    f"OPPOSES:{guidance[check_code]['opposes_when']}"
                 ),
-                "forbidden_shortcut": guidance[check_code]["forbidden_shortcuts"][0],
             }
             for check_code in required_checks
             if check_code in guidance
@@ -190,6 +330,34 @@ def exact_role_paths(
                     "manifestation": _manifestation(target_coordinates),
                 },
                 "identity_rule": "必须按本子路径裁决，禁止退回食伤／官杀／财星组名",
+            }
+        )
+    for source, bridge, target, path_ref, label in _ROLE_TRIPLES.get(pattern_ref, ()):
+        source_coordinates = tuple(ten_god_occurrences.get(source, ()))
+        bridge_coordinates = tuple(ten_god_occurrences.get(bridge, ()))
+        target_coordinates = tuple(ten_god_occurrences.get(target, ()))
+        if not source_coordinates or not bridge_coordinates or not target_coordinates:
+            continue
+        paths.append(
+            {
+                "role_path_ref": path_ref,
+                "label": label,
+                "source": {
+                    "ten_god": source,
+                    "coordinates": source_coordinates,
+                    "manifestation": _manifestation(source_coordinates),
+                },
+                "bridge": {
+                    "ten_god": bridge,
+                    "coordinates": bridge_coordinates,
+                    "manifestation": _manifestation(bridge_coordinates),
+                },
+                "target": {
+                    "ten_god": target,
+                    "coordinates": target_coordinates,
+                    "manifestation": _manifestation(target_coordinates),
+                },
+                "identity_rule": "两段必须分别裁决，禁止以官印相生组名替代坐标与可达性",
             }
         )
     return tuple(paths)
@@ -233,9 +401,7 @@ def day_master_regime_method_asset(
             "visible_peers": tuple(visible_peers),
             "hidden_resources": tuple(hidden_resources),
         },
-        "root_candidate_assessments": tuple(
-            dict(item) for item in root_candidate_assessments
-        ),
+        "root_candidate_assessments": tuple(dict(item) for item in root_candidate_assessments),
         "minimum_anti_follow_scope": {
             "gate_version": MINGLI_EFFECTIVE_ROOT_METHOD_VERSION,
             "rule": (
@@ -272,6 +438,47 @@ def day_master_regime_method_asset(
                 "requires": "无根而仍有浮比、弱藏印或合化未定等竞争证据",
             },
         ),
+        "ordered_exit_decision_table": (
+            {
+                "priority": 1,
+                "when": "day_master_state IN STRONG,BALANCED,SPECIALIZED_TENDENCY",
+                "classification": "NON_WEAK_OUTSIDE_SCOPE",
+            },
+            {
+                "priority": 2,
+                "when": (
+                    "day_master_state=WEAK AND (effective_root_status=PRESENT OR "
+                    "rooted_visible_support_status=PRESENT)"
+                ),
+                "classification": "ORDINARY_WEAK",
+            },
+            {
+                "priority": 3,
+                "when": (
+                    "effective_root_status=UNRESOLVED OR "
+                    "rooted_visible_support_status=UNRESOLVED OR "
+                    "dominant_chain_status!=CLOSED"
+                ),
+                "classification": "UNRESOLVED",
+            },
+            {
+                "priority": 4,
+                "when": (
+                    "root_and_rooted_support=ABSENT AND dominant_chain_status=CLOSED "
+                    "AND competition_kinds NONEMPTY"
+                ),
+                "classification": "FALSE_FOLLOW_COMPETITION",
+            },
+            {
+                "priority": 5,
+                "when": (
+                    "root_and_rooted_support=ABSENT AND dominant_chain_status=CLOSED "
+                    "AND competition_kinds EMPTY"
+                ),
+                "day_master_state": "FOLLOWING_TENDENCY",
+                "classification": "FOLLOW_TREND",
+            },
+        ),
         "required_typed_output": (
             "effective_root_status",
             "effective_root_coordinates",
@@ -281,9 +488,7 @@ def day_master_regime_method_asset(
             "classification",
         ),
         "typed_field_rules": {
-            "support_selection_root_status": (
-                "只表示 root_candidates 是否非空，不是有效根裁决"
-            ),
+            "support_selection_root_status": ("只表示 root_candidates 是否非空，不是有效根裁决"),
             "rooted_visible_support_status": (
                 "visible_peers 为空时必须为 ABSENT；这不改变 effective_root_status"
             ),
@@ -295,7 +500,8 @@ def day_master_regime_method_asset(
             ),
             "classification_follows_status": (
                 "WEAK 且 effective_root_status=PRESENT 时 classification=ORDINARY_WEAK；"
-                "STRONG、BALANCED 或 SPECIALIZED_TENDENCY 时固定为 NON_WEAK_OUTSIDE_SCOPE"
+                "STRONG、BALANCED 或 SPECIALIZED_TENDENCY 时固定为 NON_WEAK_OUTSIDE_SCOPE；"
+                "没有有效根与有根明透支持时禁止 ORDINARY_WEAK"
             ),
             "competition_is_exhaustive": (
                 "hidden_resources 非空必须列 HIDDEN_RESOURCE；visible_peers 非空且未形成"

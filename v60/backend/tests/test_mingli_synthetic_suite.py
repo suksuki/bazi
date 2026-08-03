@@ -8,11 +8,13 @@ import pytest
 from abu_v60.db import engine
 from abu_v60.db.schema import mingli_synthetic_suite_runs
 from abu_v60.mingli.synthetic_experiment_catalog import (
+    CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT_REF,
     HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
     HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF,
     resolve_synthetic_experiment,
 )
 from abu_v60.mingli.synthetic_suite_catalog import (
+    CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_DEV_SUITE,
     HIDDEN_RANK_DEV_SUITE,
     HIDDEN_RANK_DEV_SUITE_REF,
     SYNTHETIC_SUITE_MODE_CATALOG,
@@ -132,6 +134,18 @@ def test_hidden_rank_dev_suite_seals_order_mode_and_bridge() -> None:
         "QUALIFICATION": "LOCKED_OWNER_GATE",
         "HOLDOUT": "LOCKED_OWNER_GATE",
     }
+
+
+def test_decision_discipline_suite_is_one_unseen_pair_without_fixed_winner() -> None:
+    definition = CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_DEV_SUITE.public_definition()
+
+    assert definition["experiment_refs"] == (
+        CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT_REF,
+    )
+    assert "Gold 不指定机制胜者" in definition["inference_limit"]
+    assert definition["suite_definition_hash"] == content_hash(
+        {key: value for key, value in definition.items() if key != "suite_definition_hash"}
+    )
 
 
 def test_error_clusters_count_each_variant_without_inventing_scores() -> None:
@@ -408,9 +422,7 @@ def test_public_suite_projection_marks_old_review_contract_superseded() -> None:
     assert review["items"][0]["review_contract_status"] == "SUPERSEDED"
     assert "REVIEW_CONTRACT:SUPERSEDED" in review["items"][0]["review_reason_keys"]
     assert review["error_clusters"][0]["kind"] == "CONTRACT_SUPERSEDED"
-    review_identity = {
-        key: value for key, value in review.items() if key != "projection_hash"
-    }
+    review_identity = {key: value for key, value in review.items() if key != "projection_hash"}
     assert review["projection_hash"] == content_hash(review_identity)
     assert review["source_suite_run_ref"] == projected["suite_run_ref"]
     assert review["source_suite_run_hash"] == projected["suite_run_hash"]

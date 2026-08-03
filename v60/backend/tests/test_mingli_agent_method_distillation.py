@@ -6,8 +6,11 @@ from abu_v60.mingli.agent_method_cards import mechanism_method_card
 from abu_v60.mingli.agent_method_distillation import (
     OUTPUT_TO_PRESSURE,
     OUTPUT_TO_WEALTH,
+    PRESSURE_RESOURCE_SELF,
+    WEALTH_TO_PRESSURE,
     bound_method_context,
     cross_card_discriminator,
+    day_master_regime_method_asset,
     domain_method_assets,
     exact_role_paths,
     research_output_path_gate,
@@ -22,6 +25,8 @@ OWNER_OCCURRENCES = {
     "正官": ("year支藏庚", "month支藏庚"),
     "七杀": ("day支藏辛", "hour支藏辛"),
     "偏印": ("day支藏癸",),
+    "正印": ("hour支藏壬",),
+    "日主": ("day干乙",),
 }
 
 
@@ -84,6 +89,62 @@ def test_method_card_binds_rubric_to_chart_facts_by_pattern_not_evidence_order()
         "hidden_resources": ("day支藏癸(偏印)",),
         "counting_forbidden": True,
     }
+
+
+def test_distillation_covers_wealth_pressure_and_pressure_resource_self_paths() -> None:
+    wealth_pressure = exact_role_paths(WEALTH_TO_PRESSURE, OWNER_OCCURRENCES)
+    pressure_resource_self = exact_role_paths(
+        PRESSURE_RESOURCE_SELF,
+        OWNER_OCCURRENCES,
+    )
+
+    assert len(wealth_pressure) == 4
+    assert all("bridge" not in item for item in wealth_pressure)
+    assert len(pressure_resource_self) == 4
+    assert all(item["bridge"]["ten_god"] in {"正印", "偏印"} for item in pressure_resource_self)
+    assert all(item["target"]["coordinates"] == ("day干乙",) for item in pressure_resource_self)
+
+    for pattern_ref in (WEALTH_TO_PRESSURE, PRESSURE_RESOURCE_SELF):
+        context = bound_method_context(
+            pattern_ref=pattern_ref,
+            ten_god_occurrences=OWNER_OCCURRENCES,
+            root_candidates=(),
+            visible_peers=(),
+            hidden_resources=("day支藏癸(偏印)",),
+        )
+        card = mechanism_method_card(
+            SimpleNamespace(
+                pattern_ref=pattern_ref,
+                label="新机制候选",
+                evidence_id="E098",
+                blocker_codes=(),
+                role_summary=("SOURCE", "TARGET"),
+            ),
+            include_distilled_guidance=True,
+            distilled_context=context,
+        )
+        assert len(card["distilled_method"]["check_guidance"]) == len(card["required_checks"])
+        assert card["bound_method_context"]["exact_role_paths"]
+
+
+def test_regime_method_exits_forbid_ordinary_weak_without_rooted_support() -> None:
+    method = day_master_regime_method_asset(
+        seasonal_relation="OUTPUT_SEASONAL_DRAIN",
+        root_candidates=(),
+        visible_peers=(),
+        hidden_resources=("month支藏己(正印)",),
+        root_candidate_assessments=(),
+    )
+
+    exits = method["ordered_exit_decision_table"]
+    assert [item["classification"] for item in exits] == [
+        "NON_WEAK_OUTSIDE_SCOPE",
+        "ORDINARY_WEAK",
+        "UNRESOLVED",
+        "FALSE_FOLLOW_COMPETITION",
+        "FOLLOW_TREND",
+    ]
+    assert "禁止 ORDINARY_WEAK" in method["typed_field_rules"]["classification_follows_status"]
 
 
 def test_single_variable_reachability_flips_pressure_but_holds_wealth() -> None:

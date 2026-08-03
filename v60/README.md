@@ -220,7 +220,7 @@ The active local Mingli serving profile is
 temperature `0`, context `32768`, output budget `5200`. The larger output
 budget covers two fully adjudicated method cards; it does not add another
 model call. The current distilled method set is
-`v60.mingli-agent-method-distillation.005`, including the narrow
+`v60.mingli-agent-method-distillation.006`, including the narrow
 `v60.mingli-effective-root-method.001`; its readings remain private
 Owner-review candidates with publication disabled.
 
@@ -233,12 +233,15 @@ conditional Day-Master capacity. This is a reproducible structured first
 reading, not an advanced-master qualification; relationship/family positive
 methods and real timing adjudication remain missing.
 
-Six legal synthetic A/B experiments and three DEV Suites are now visible in
+Seven legal synthetic A/B experiments and four DEV Suites are now visible in
 Mingli Lab. The first repeatable Suite covers the two hidden-stem-rank
 experiments; the second changes to an unseen 丙火 Day Master; the third asks an
 unseen 戊土 pair to recompute whole-chart regime, candidate coverage, primary
-selection and the primary-bound work path. Runs use the version-locked local
-candidate and never need a chat turn or a browser model call.
+selection and the primary-bound work path. The fourth changes again to an
+unseen 庚金 pair with the same three mechanism candidates and tests exact
+candidate partition, packet-bound root facts, actionable method falsifiers and
+opposite primary/alternative reversal signals. Runs use the version-locked
+local candidate and never need a chat turn or a browser model call.
 
 The previous hidden-rank Suite Run is
 `v60-mingli-synthetic-suite-run-63da38288080c7fa5c3a`: 2/2 experiments sealed,
@@ -250,18 +253,22 @@ corrections remain. The Lab now shows this adjacent-run comparison and the
 complete model/Profile/Provider/Prompt identity instead of presenting a
 server-corrected result as model ability.
 
-The current 戊土 Suite Run is
-`v60-mingli-synthetic-suite-run-eeb96631646c98137cd9`, binding Experiment Run
-`v60-mingli-synthetic-run-3d96c4be35affd574214`, Evaluator `.007`, Gold `.005`,
-Profile `.027`, Prompt `.024` and Reading `.006`. The 3/3 hold checks pass and
-16 response checks pass, but the honest result remains
-`PRODUCT_SAFE_MODEL_FAIL`: A misclassifies a rootless/supportless chart as
-ordinary weak, A/B both duplicate selected cards in the excluded ledger, B's
-decision receipt needs repair, and all four raw method cards submit assertions
-where a falsifiable condition is required. Primary/work-path binding itself
-passes for both charts. This is measurable method training, not advanced-master
-qualification. Owner charts stay regressions while method discovery runs in
-DEV; QUALIFICATION and HOLDOUT remain locked until the method is frozen.
+The current 戊土 regression Suite Run is
+`v60-mingli-synthetic-suite-run-fc14464db3d5993bb0d3`, binding Experiment Run
+`v60-mingli-synthetic-run-78c5bdda338c851c1fa3`, Evaluator `.008`, Gold `.005`,
+Profile `.030`, Prompt `.027` and Reading `.006`. All 3 hold checks and 21
+response checks pass, but the honest result remains
+`PRODUCT_SAFE_MODEL_FAIL`: the rootless A chart still needs one regime repair,
+and A/B both fail the executable falsifier and reversal tests. The current 庚金
+Suite Run is `v60-mingli-synthetic-suite-run-edd6aacfc3e4f9e8786c`, binding
+Experiment Run `v60-mingli-synthetic-run-634f46b6061cbdb57713`. Its 4 hold and
+18 response checks pass; both variants now bind their raw regime to packet facts
+without a regime repair, but A still misses candidate closure, B leaves its
+second card incomplete, and neither variant independently writes actionable
+falsifiers or an opposite named reversal. This is measurable progress in
+whole-chart regime judgment, not advanced-master qualification. Owner charts
+stay regressions while method discovery runs in DEV; QUALIFICATION and HOLDOUT
+remain locked until the method is frozen.
 
 The engine and framework choices are recorded in
 [`docs/05_V60_ENGINE_AND_TECHNOLOGY_SELECTION.md`](docs/05_V60_ENGINE_AND_TECHNOLOGY_SELECTION.md).

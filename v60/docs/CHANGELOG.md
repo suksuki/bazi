@@ -2,6 +2,45 @@
 
 ## 2026-08-03
 
+### Whole-chart qualification now tests real counterfactual judgment
+
+- Added the seventh legal A/B experiment and fourth DEV Suite on an unseen 庚金
+  chart pair. Both charts preserve the same three candidates while the legal
+  hour changes from 壬午 to 甲申; Gold locks calendar facts, candidate universe,
+  root boundaries and allowed regimes without preselecting a mechanism winner,
+  useful element, event, probability or fortune.
+- Method `.006` now covers `wealth-to-pressure` and
+  `pressure-resource-self` with exact ten-god paths, and supplies ordered regime
+  exits plus legal candidate partitions. Zero/one-candidate packets keep
+  fallback hypotheses outside the real candidate universe instead of producing
+  a contradictory ledger.
+- Replaced prompt-only counterfactual promises with executable semantics.
+  Adjudication `.011` repairs a method falsifier unless it names an observable or
+  unresolved condition and explicitly changes the current ruling; a reversal is
+  preserved only when it names both hypotheses and uses opposite maintain/flip
+  actions. Evaluator `.008` measures these raw fields and packet-bound root,
+  visible-peer and hidden-resource facts before server repair.
+- Sealed current 戊土 regression Suite Run
+  `v60-mingli-synthetic-suite-run-fc14464db3d5993bb0d3` and 庚金 migration
+  Suite Run `v60-mingli-synthetic-suite-run-edd6aacfc3e4f9e8786c` with zero
+  runner errors. Both honestly remain `PRODUCT_SAFE_MODEL_FAIL`. The unseen
+  庚金 A/B pair now passes raw packet-bound regime judgment without a regime
+  repair, but candidate closure, the second B method card, and both variants'
+  falsifier/reversal work remain incomplete. The 戊土 rootless A chart still
+  needs a regime repair. This is a measured capability gain, not an
+  advanced-master declaration.
+- Added migration `0045_mingli_counterfactuals`; advanced Foundation to `.037`,
+  Mingli Engine to `.048`, Runtime Architecture to `.077`, Agent
+  Runtime/Profile/Prompt/Prompt View to `.032/.030/.027/.018`, Evaluator to
+  `.008`, and Unit Mingli/Lab to `.038/.034`. Reading `.006`, Gold `.005`, the
+  one-call local Gemma product path, Dream and V50 remain unchanged.
+- All 455 backend tests, Ruff, the production TypeScript/Vite build, Runtime
+  Architecture, source maintainability and Synthetic Lab browser-contract
+  audit pass. Real Desktop Chrome verified the seventh topic, 庚金 A/B stage
+  switching and exact B deep-link refresh; it did not rerun or cosmetically
+  upgrade the final `.008` model result. The two existing large graphics-chunk
+  warnings remain recorded performance debt.
+
 ### Whole-chart judgment now owns its primary work path
 
 - Added a sixth, previously unseen 戊土 A/B experiment and a third DEV Suite.

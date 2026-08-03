@@ -32,7 +32,7 @@ export function validateSyntheticExperimentCatalog(
   }
   const catalog = value as unknown as MingliSyntheticExperimentCatalog;
   if (
-    catalog.catalog_version !== "v60.mingli-synthetic-experiment-catalog.005" ||
+    catalog.catalog_version !== "v60.mingli-synthetic-experiment-catalog.006" ||
     catalog.browser_generation_allowed !== false ||
     catalog.read_only !== true ||
     catalog.experiments.length < 1
@@ -266,6 +266,7 @@ function validateCatalogEntry(value: unknown): void {
           "v60.mingli-synthetic-experiment-evaluator.005",
           "v60.mingli-synthetic-experiment-evaluator.006",
           "v60.mingli-synthetic-experiment-evaluator.007",
+          "v60.mingli-synthetic-experiment-evaluator.008",
         ].includes(item.evaluator_version) ||
         ![
           "v60.mingli-synthetic-experiment-dev-gold.001",
@@ -312,6 +313,7 @@ function validateDefinition(value: MingliSyntheticExperimentDefinition): void {
       "CONTROLLED_HIDDEN_RANK_SECONDARY_TERTIARY_PAIR",
       "CONTROLLED_HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_PAIR",
       "CONTROLLED_REGIME_WORK_PATH_GENERALIZATION_PAIR",
+      "CONTROLLED_DECISION_DISCIPLINE_GENERALIZATION_PAIR",
     ].includes(value.family) ||
     !value.title ||
     !value.question ||
@@ -321,6 +323,7 @@ function validateDefinition(value: MingliSyntheticExperimentDefinition): void {
       "NATAL_ROOT_GATE_ONLY_WITH_FULL_HOUR_COLLATERAL",
       "NATAL_HIDDEN_RANK_GATE_ONLY_WITH_FULL_HOUR_COLLATERAL",
       "NATAL_HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION",
+      "WHOLE_CHART_DECISION_DISCIPLINE_WITH_FULL_HOUR_COLLATERAL",
     ].includes(value.inference_scope) ||
     !value.inference_limit ||
     !Array.isArray(value.known_collateral_deltas) ||
@@ -365,6 +368,7 @@ function validateEvaluation(
       "v60.mingli-synthetic-experiment-evaluator.005",
       "v60.mingli-synthetic-experiment-evaluator.006",
       "v60.mingli-synthetic-experiment-evaluator.007",
+      "v60.mingli-synthetic-experiment-evaluator.008",
     ].includes(value.evaluator_version) ||
     ![
       "v60.mingli-synthetic-experiment-dev-gold.001",

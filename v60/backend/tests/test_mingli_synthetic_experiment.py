@@ -15,7 +15,10 @@ from abu_v60.mingli.agent_regime import (
     normalize_regime_decision,
     reconcile_day_master_state,
 )
-from abu_v60.mingli.agent_root_gate import root_candidate_assessments
+from abu_v60.mingli.agent_root_gate import (
+    minimum_anti_follow_root_coordinates,
+    root_candidate_assessments,
+)
 from abu_v60.mingli.agent_runtime import MINGLI_AGENT_PROMPT_VIEW_MAX_CHARS
 from abu_v60.mingli.agent_service import (
     MingliAgentService,
@@ -27,6 +30,8 @@ from abu_v60.mingli.synthetic_decision_integrity import (
     add_raw_decision_integrity_checks,
 )
 from abu_v60.mingli.synthetic_experiment_catalog import (
+    CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT,
+    CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT_REF,
     FIRST_SYNTHETIC_EXPERIMENT,
     FIRST_SYNTHETIC_EXPERIMENT_MEMBERS,
     FIRST_SYNTHETIC_EXPERIMENT_REF,
@@ -264,6 +269,51 @@ def _regime_work_path_readings(
     return result
 
 
+def _decision_discipline_readings(
+    packets: dict[str, Any],
+    *,
+    repeated_excluded_variant: str | None = None,
+) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for variant in ("A", "B"):
+        candidate_refs = tuple(item.evidence_id for item in packets[variant].mechanism_observations)
+        selected = candidate_refs[:2]
+        excluded_ref = selected[0] if repeated_excluded_variant == variant else candidate_refs[2]
+        result[variant] = SimpleNamespace(
+            output=SimpleNamespace(
+                regime_decision=SimpleNamespace(
+                    classification=("UNRESOLVED" if variant == "A" else "ORDINARY_WEAK"),
+                    effective_root_status=("ABSENT" if variant == "A" else "PRESENT"),
+                    effective_root_coordinates=(() if variant == "A" else ("hour支藏庚",)),
+                    rooted_visible_support_status="ABSENT",
+                    dominant_chain_status=("OPEN" if variant == "A" else "UNRESOLVED"),
+                    competition_kinds=("HIDDEN_RESOURCE",),
+                    evidence_ids=(packets[variant].day_master_support.evidence_id,),
+                ),
+                day_master_state=("UNCERTAIN" if variant == "A" else "WEAK"),
+                hypotheses=tuple(
+                    SimpleNamespace(
+                        hypothesis_id=f"H{index}",
+                        role="PRIMARY" if index == 1 else "ALTERNATIVE",
+                        method_card_ref=method_card_ref,
+                        adjudication="CONDITIONAL",
+                    )
+                    for index, method_card_ref in enumerate(selected, start=1)
+                ),
+                excluded_candidates=(SimpleNamespace(method_card_ref=excluded_ref),),
+                work_path=SimpleNamespace(
+                    selected_hypothesis_id="H1",
+                    method_card_ref=selected[0],
+                    transformation_codes=("CHANNELS",),
+                    closure="CONDITIONAL",
+                    evidence_ids=(packets[variant].pillars[0].evidence_id,),
+                ),
+                server_issue_keys=(),
+            )
+        )
+    return result
+
+
 def _raw_decision_integrity_readings(
     packets: dict[str, Any],
     *,
@@ -278,15 +328,21 @@ def _raw_decision_integrity_readings(
         cards = method_card_catalog(packet.mechanism_observations)
         hypotheses = []
         for index, method_card_ref in enumerate(selected_refs):
+            hypothesis_name = f"候选机制{index + 1}"
             hypotheses.append(
                 {
                     "hypothesis_id": f"H{index + 1}",
                     "role": "PRIMARY" if index == 0 else "ALTERNATIVE",
+                    "name": hypothesis_name,
                     "method_card_ref": method_card_ref,
                     "method_rulings": [
                         {
                             "method_card_ref": method_card_ref,
                             "check_code": check_code,
+                            "ruling": "UNRESOLVED",
+                            "condition_or_falsifier": (
+                                "若本检查出现相反证据，则本项由未决改判为有条件。"
+                            ),
                         }
                         for check_code in cards[method_card_ref]["required_checks"]
                     ],
@@ -297,10 +353,24 @@ def _raw_decision_integrity_readings(
             "regime_decision": {
                 "classification": "UNRESOLVED" if variant == "A" else "ORDINARY_WEAK",
                 "effective_root_status": "ABSENT" if variant == "A" else "PRESENT",
+                "effective_root_coordinates": list(
+                    minimum_anti_follow_root_coordinates(packet)
+                ),
                 "rooted_visible_support_status": "ABSENT",
+                "dominant_chain_status": "UNRESOLVED",
+                "competition_kinds": (
+                    ["HIDDEN_RESOURCE"] if packet.day_master_support.resource_support else []
+                ),
             },
             "hypotheses": hypotheses,
-            "hypothesis_decision": {"winner_id": "H1", "loser_id": "H2"},
+            "hypothesis_decision": {
+                "winner_id": "H1",
+                "loser_id": "H2",
+                "reversal": {
+                    "winner_signal": "若现实更符合候选机制1，维持候选机制1为主解释。",
+                    "loser_signal": "若现实更符合候选机制2，翻转为候选机制2。",
+                },
+            },
             "excluded_candidates": [
                 {"method_card_ref": method_card_ref}
                 for method_card_ref in candidate_refs
@@ -338,10 +408,10 @@ def test_public_definition_seals_full_inputs_and_inference_limit() -> None:
     assert content_hash(mutated) != definition["definition_hash"]
 
 
-def test_catalog_has_six_unique_real_calendar_experiments() -> None:
+def test_catalog_has_seven_unique_real_calendar_experiments() -> None:
     definitions = synthetic_experiment_public_definitions()
-    assert len(definitions) == 6
-    assert len({item["experiment_ref"] for item in definitions}) == 6
+    assert len(definitions) == 7
+    assert len({item["experiment_ref"] for item in definitions}) == 7
     assert definitions[0]["experiment_ref"] == FIRST_SYNTHETIC_EXPERIMENT_REF
     assert definitions[1]["experiment_ref"] == ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF
     assert definitions[1]["family"] == "CONTROLLED_ROOT_IDENTITY_PAIR"
@@ -356,13 +426,23 @@ def test_catalog_has_six_unique_real_calendar_experiments() -> None:
         "changed_slots": ["hour"],
         "legal_hour_pillar_change": "丁卯 → 丙寅",
     }
-    assert definitions[-1]["experiment_ref"] == REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT_REF
-    assert definitions[-1]["family"] == "CONTROLLED_REGIME_WORK_PATH_GENERALIZATION_PAIR"
-    assert definitions[-1]["full_pillar_delta"] == {
+    assert definitions[5]["experiment_ref"] == REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT_REF
+    assert definitions[5]["family"] == "CONTROLLED_REGIME_WORK_PATH_GENERALIZATION_PAIR"
+    assert definitions[5]["full_pillar_delta"] == {
         "A": ["癸酉", "甲子", "戊子", "辛酉"],
         "B": ["癸酉", "甲子", "戊子", "壬戌"],
         "changed_slots": ["hour"],
         "legal_hour_pillar_change": "辛酉 → 壬戌",
+    }
+    assert definitions[6]["experiment_ref"] == (
+        CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT_REF
+    )
+    assert definitions[6]["family"] == ("CONTROLLED_DECISION_DISCIPLINE_GENERALIZATION_PAIR")
+    assert definitions[6]["full_pillar_delta"] == {
+        "A": ["乙亥", "壬午", "庚辰", "壬午"],
+        "B": ["乙亥", "壬午", "庚辰", "甲申"],
+        "changed_slots": ["hour"],
+        "legal_hour_pillar_change": "壬午 → 甲申",
     }
     assert "不证明卯中乙无根" in definitions[1]["inference_limit"]
     assert definitions[2]["experiment_ref"] == (HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF)
@@ -417,15 +497,16 @@ def test_schema_metadata_matches_synthetic_run_table() -> None:
 def test_catalog_routes_multiple_experiments_and_isolates_run_history() -> None:
     service = SyntheticExperimentService(engine)
     catalog = service.catalog()
-    assert catalog["catalog_version"] == ("v60.mingli-synthetic-experiment-catalog.005")
+    assert catalog["catalog_version"] == ("v60.mingli-synthetic-experiment-catalog.006")
     entries = {item["experiment_ref"]: item for item in catalog["experiments"]}
     assert set(entries) == {
         FIRST_SYNTHETIC_EXPERIMENT_REF,
         ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF,
         HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
-            HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF,
-            HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF,
-            REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT_REF,
+        HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF,
+        HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF,
+        REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT_REF,
+        CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT_REF,
     }
     for experiment_ref, entry in entries.items():
         assert all(run["experiment_ref"] == experiment_ref for run in entry["runs"])
@@ -1126,6 +1207,83 @@ def test_regime_work_path_generalization_pair_locks_facts_without_fixing_winner(
     )
 
 
+def test_decision_discipline_pair_closes_three_candidate_ledger_without_fixing_winner() -> None:
+    packets = _seed_experiment_and_packets(CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT)
+    passing = evaluate_synthetic_experiment(
+        experiment=CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT,
+        readings=_decision_discipline_readings(packets),
+        packets=packets,
+    )
+    repeated = evaluate_synthetic_experiment(
+        experiment=CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT,
+        readings=_decision_discipline_readings(
+            packets,
+            repeated_excluded_variant="A",
+        ),
+        packets=packets,
+    )
+
+    assert tuple(item.pillar for item in packets["A"].pillars) == (
+        "乙亥",
+        "壬午",
+        "庚辰",
+        "壬午",
+    )
+    assert tuple(item.pillar for item in packets["B"].pillars) == (
+        "乙亥",
+        "壬午",
+        "庚辰",
+        "甲申",
+    )
+    assert packets["A"].day_master_support.same_element_hidden_support == ()
+    assert packets["B"].day_master_support.same_element_hidden_support == ("hour支藏庚",)
+    assert tuple(item.relation_type for item in packets["A"].natal_relations) == (
+        "same_branch_membership",
+    )
+    assert packets["B"].natal_relations == ()
+    assert passing["outcome"] == "PASS"
+    assert repeated["outcome"] == "MODEL_FAIL"
+    assert (
+        next(
+            item
+            for item in repeated["checks"]
+            if item["check_ref"] == "DECISION_DISCIPLINE_CANDIDATE_PARTITION"
+        )["status"]
+        == "FAIL"
+    )
+    prompt = packets["A"].model_prompt_view()["professional_adjudication"]
+    scaffold = prompt["candidate_method_cards"]["hypothesis_output_scaffold"]
+    assert scaffold["candidate_partition"]["excluded_count"] == 1
+    assert scaffold["candidate_partition"]["selected_and_excluded_disjoint"] is True
+    assert len(scaffold["candidate_partition"]["legal_partitions"]) == 3
+    assert all(
+        len(item["selected_method_card_ref_set"]) == 2
+        and len(item["excluded_method_card_refs_exact"]) == 1
+        and set(item["selected_method_card_ref_set"]).isdisjoint(
+            item["excluded_method_card_refs_exact"]
+        )
+        for item in scaffold["candidate_partition"]["legal_partitions"]
+    )
+    regime_options = prompt["output_field_contract"]["regime_decision"][
+        "packet_specific_allowed_projections"
+    ]["options"]
+    assert "ORDINARY_WEAK" not in {item.get("classification") for item in regime_options}
+    assert {
+        (item.get("dominant_chain_status"), item.get("classification")) for item in regime_options
+    } >= {
+        ("OPEN", "UNRESOLVED"),
+        ("UNRESOLVED", "UNRESOLVED"),
+        ("CLOSED", "FALSE_FOLLOW_COMPETITION"),
+    }
+    assert all(
+        card.get("distilled_method") and card["bound_method_context"]["exact_role_paths"]
+        for card in prompt["candidate_method_cards"]["mechanisms"]
+    )
+    assert len(canonical_json(packets["A"].model_prompt_view())) <= (
+        MINGLI_AGENT_PROMPT_VIEW_MAX_CHARS
+    )
+
+
 def test_raw_integrity_accepts_two_distinct_cards_from_three_candidate_pool() -> None:
     packets = _seed_experiment_and_packets(REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT)
     readings = _raw_decision_integrity_readings(
@@ -1145,7 +1303,10 @@ def test_raw_integrity_accepts_two_distinct_cards_from_three_candidate_pool() ->
 
     assert checks["A_RAW_METHOD_CARD_H1_COMPLETE"] is True
     assert checks["A_RAW_METHOD_CARD_H2_COMPLETE"] is True
+    assert checks["A_RAW_METHOD_FALSIFIERS_ACTIONABLE"] is True
+    assert checks["A_RAW_REVERSAL_ACTIONABLE"] is True
     assert checks["A_RAW_CANDIDATE_COVERAGE_COMPLETE"] is True
+    assert checks["A_RAW_REGIME_PACKET_FACTS_BOUND"] is True
     assert checks["A_RAW_REPAIRS_RECEIPTED"] is True
 
 

@@ -8,10 +8,15 @@ from abu_v60.mingli.agent_contracts import (
     MingliAgentCasePacket,
     MingliAgentReadingEnvelope,
 )
+from abu_v60.mingli.agent_counterfactuals import (
+    method_falsifier_is_actionable,
+    reversal_is_actionable,
+)
 from abu_v60.mingli.agent_method_cards import (
     FALLBACK_METHOD_CARD_REF,
     method_card_catalog,
 )
+from abu_v60.mingli.agent_root_gate import minimum_anti_follow_root_coordinates
 
 
 def add_raw_decision_integrity_checks(
@@ -45,6 +50,8 @@ def add_raw_decision_integrity_checks(
             and len(set(raw_method_refs)) == 2
         )
         method_integrity: list[bool] = []
+        falsifier_integrity: list[bool] = []
+        falsifier_details: list[dict[str, object]] = []
         for index in range(2):
             item = raw_hypotheses[index] if index < len(raw_hypotheses) else None
             expected_ref = (
@@ -102,6 +109,41 @@ def add_raw_decision_integrity_checks(
                 {"expected": expected_identity, "actual": actual_identity},
                 None,
             )
+            raw_rulings = (
+                item.get("method_rulings", [])
+                if isinstance(item, Mapping) and isinstance(item.get("method_rulings"), list)
+                else []
+            )
+            ruling_results = tuple(
+                method_falsifier_is_actionable(
+                    ruling.get("condition_or_falsifier"),
+                    current_ruling=ruling.get("ruling"),
+                )
+                for ruling in raw_rulings
+                if isinstance(ruling, Mapping)
+            )
+            falsifier_passed = bool(
+                passed
+                and len(ruling_results) == len(expected_identity)
+                and all(ruling_results)
+            )
+            falsifier_integrity.append(falsifier_passed)
+            falsifier_details.append(
+                {
+                    "hypothesis_id": f"H{index + 1}",
+                    "passed": falsifier_passed,
+                    "ruling_results": ruling_results,
+                }
+            )
+
+        add(
+            f"{variant}_RAW_METHOD_FALSIFIERS_ACTIONABLE",
+            "EXPECTED_CHANGE",
+            all(falsifier_integrity),
+            "模型原始方法卡必须写出可观察前件，以及由当前判断改判为另一判断的后件。",
+            falsifier_details,
+            None,
+        )
 
         raw_primary_items = [
             item
@@ -139,6 +181,36 @@ def add_raw_decision_integrity_checks(
                 "primary_id": raw_primary_id,
                 "winner_id": decision_winner_id,
             },
+            None,
+        )
+        raw_alternative = next(
+            (
+                item
+                for item in raw_hypotheses
+                if isinstance(item, Mapping) and item.get("role") == "ALTERNATIVE"
+            ),
+            None,
+        )
+        reversal = decision.get("reversal") if isinstance(decision, Mapping) else None
+        reversal_actionable = bool(
+            isinstance(reversal, Mapping)
+            and reversal_is_actionable(
+                winner_signal=reversal.get("winner_signal"),
+                loser_signal=reversal.get("loser_signal"),
+                primary_name=(raw_primary.get("name") if isinstance(raw_primary, Mapping) else None),
+                alternative_name=(
+                    raw_alternative.get("name")
+                    if isinstance(raw_alternative, Mapping)
+                    else None
+                ),
+            )
+        )
+        add(
+            f"{variant}_RAW_REVERSAL_ACTIONABLE",
+            "EXPECTED_CHANGE",
+            reversal_actionable,
+            "主次回执必须用相反观察分别维持具名主解释、翻转为具名替代解释。",
+            reversal,
             None,
         )
 
@@ -226,6 +298,15 @@ def add_raw_decision_integrity_checks(
             },
             None,
         )
+        packet_regime = _raw_regime_matches_packet(raw, packet=packet)
+        add(
+            f"{variant}_RAW_REGIME_PACKET_FACTS_BOUND",
+            "EXPECTED_CHANGE",
+            bool(packet_regime["valid"]),
+            "模型原始判型必须绑定本盘确定的无根／最低有效根、明干同类与藏印竞争事实。",
+            packet_regime,
+            None,
+        )
 
         expected_issues: set[str] = set()
         expected_issues.update(
@@ -233,9 +314,16 @@ def add_raw_decision_integrity_checks(
             for index, passed in enumerate(method_integrity)
             if not passed
         )
+        expected_issues.update(
+            f"HYPOTHESIS_H{index + 1}"
+            for index, passed in enumerate(falsifier_integrity)
+            if not passed
+        )
         if not primary_selection_valid:
             expected_issues.add("PRIMARY_SELECTION")
         if not primary_coherent:
+            expected_issues.add("HYPOTHESIS_DECISION")
+        if not reversal_actionable:
             expected_issues.add("HYPOTHESIS_DECISION")
         if not candidate_coverage:
             expected_issues.add("CANDIDATE_COVERAGE")
@@ -245,6 +333,10 @@ def add_raw_decision_integrity_checks(
             expected_issues.add("WORK_PATH_FORM")
         if not regime_coherent:
             expected_issues.add("DAY_MASTER_REGIME")
+        if not packet_regime["valid"]:
+            expected_issues.add("DAY_MASTER_REGIME")
+        if packet_regime["minimum_gate_repair_required"]:
+            expected_issues.add("DAY_MASTER_EFFECTIVE_ROOT_GATE")
         actual_issues = set(reading.output.server_issue_keys)
         add(
             f"{variant}_RAW_REPAIRS_RECEIPTED",
@@ -286,6 +378,66 @@ def _raw_regime_is_coherent(raw: object) -> bool:
             and regime.get("competition_kinds")
         )
     return classification == "UNRESOLVED" and state in {"WEAK", "UNCERTAIN"}
+
+
+def _raw_regime_matches_packet(
+    raw: object,
+    *,
+    packet: MingliAgentCasePacket,
+) -> dict[str, object]:
+    regime = raw.get("regime_decision") if isinstance(raw, Mapping) else None
+    if not isinstance(regime, Mapping):
+        return {"valid": False, "minimum_gate_repair_required": False}
+    candidates = tuple(packet.day_master_support.same_element_hidden_support)
+    minimum_roots = minimum_anti_follow_root_coordinates(packet)
+    raw_coordinates = regime.get("effective_root_coordinates")
+    coordinates = tuple(raw_coordinates) if isinstance(raw_coordinates, list) else ()
+    root_status = _string(regime.get("effective_root_status"))
+    minimum_gate_repair_required = bool(
+        minimum_roots
+        and (
+            root_status != "PRESENT"
+            or not set(minimum_roots).issubset(coordinates)
+        )
+    )
+    if not candidates:
+        root_bound = root_status == "ABSENT" and not coordinates
+    elif minimum_roots:
+        root_bound = bool(
+            root_status == "PRESENT"
+            and set(minimum_roots).issubset(coordinates)
+            and set(coordinates).issubset(candidates)
+        )
+    else:
+        root_bound = bool(
+            root_status in {"PRESENT", "UNRESOLVED"}
+            and set(coordinates).issubset(candidates)
+            and (root_status == "PRESENT") == bool(coordinates)
+        )
+    peers = tuple(packet.day_master_support.visible_peer_support)
+    rooted_support = _string(regime.get("rooted_visible_support_status"))
+    rooted_support_bound = rooted_support == "ABSENT" if not peers else rooted_support in {
+        "PRESENT",
+        "UNRESOLVED",
+    }
+    raw_competition = regime.get("competition_kinds")
+    competition = set(raw_competition) if isinstance(raw_competition, list) else set()
+    required_competition = set()
+    if packet.day_master_support.resource_support:
+        required_competition.add("HIDDEN_RESOURCE")
+    if peers and rooted_support != "PRESENT":
+        required_competition.add("VISIBLE_PEER")
+    competition_bound = required_competition.issubset(competition)
+    return {
+        "valid": root_bound and rooted_support_bound and competition_bound,
+        "minimum_gate_repair_required": minimum_gate_repair_required,
+        "required_minimum_roots": minimum_roots,
+        "candidate_coordinates": candidates,
+        "raw_root_status": root_status,
+        "raw_root_coordinates": coordinates,
+        "required_competition": tuple(sorted(required_competition)),
+        "raw_competition": tuple(sorted(competition)),
+    }
 
 
 def _raw_provider_output(reading: MingliAgentReadingEnvelope) -> Any:

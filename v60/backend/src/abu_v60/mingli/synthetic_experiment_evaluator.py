@@ -9,10 +9,14 @@ from abu_v60.mingli.agent_contracts import (
     MingliAgentReadingEnvelope,
 )
 from abu_v60.mingli.agent_root_gate import packet_root_candidate_assessments
+from abu_v60.mingli.synthetic_decision_discipline_evaluator import (
+    add_decision_discipline_checks,
+)
 from abu_v60.mingli.synthetic_decision_integrity import (
     add_raw_decision_integrity_checks,
 )
 from abu_v60.mingli.synthetic_experiment_catalog import (
+    CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT_REF,
     FIRST_SYNTHETIC_EXPERIMENT_REF,
     HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF,
     HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
@@ -97,8 +101,7 @@ def evaluate_synthetic_experiment(
             a_output=a_output,
             b_output=b_output,
             raw_outputs={
-                variant: _raw_provider_output(readings[variant])
-                for variant in ("A", "B")
+                variant: _raw_provider_output(readings[variant]) for variant in ("A", "B")
             },
         )
     elif experiment.experiment_ref == REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT_REF:
@@ -108,6 +111,17 @@ def evaluate_synthetic_experiment(
             packets=packets,
             a_output=a_output,
             b_output=b_output,
+        )
+    elif experiment.experiment_ref == CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT_REF:
+        add_decision_discipline_checks(
+            add=add,
+            gold=gold,
+            packets=packets,
+            a_output=a_output,
+            b_output=b_output,
+            hour_fact=_hour_fact,
+            regime_value=_regime_value,
+            final_work_path_value=_final_work_path_value,
         )
     else:
         raise ValueError("mingli_synthetic_experiment_evaluator_not_found")
@@ -390,8 +404,7 @@ def _add_regime_work_path_checks(
 ) -> None:
     regimes = {"A": a_output.regime_decision, "B": b_output.regime_decision}
     assessments = {
-        variant: packet_root_candidate_assessments(packets[variant])
-        for variant in ("A", "B")
+        variant: packet_root_candidate_assessments(packets[variant]) for variant in ("A", "B")
     }
     add(
         "REGIME_PATH_HOUR_FACTS",
@@ -423,16 +436,13 @@ def _add_regime_work_path_checks(
         and b_assessment.get("coordinate") == gold["B_candidate_coordinate"]
         and b_assessment.get("identity_match") == gold["B_candidate_identity"]
         and b_assessment.get("hidden_rank") == gold["B_hidden_rank"]
-        and b_assessment.get("minimum_anti_follow_gate")
-        == gold["B_minimum_anti_follow_gate"],
+        and b_assessment.get("minimum_anti_follow_gate") == gold["B_minimum_anti_follow_gate"],
         "A 没有根候选；B 的戌中戊必须以同字、第一藏干执行最低阻从门。",
         assessments["A"],
         assessments["B"],
     )
     pattern_sets = {
-        variant: tuple(
-            item.pattern_ref for item in packets[variant].mechanism_observations
-        )
+        variant: tuple(item.pattern_ref for item in packets[variant].mechanism_observations)
         for variant in ("A", "B")
     }
     add(
@@ -447,14 +457,11 @@ def _add_regime_work_path_checks(
     add(
         "REGIME_PATH_TYPED_OUTCOMES",
         "EXPECTED_CHANGE",
-        regimes["A"].effective_root_status
-        == gold["A_required_effective_root_status"]
+        regimes["A"].effective_root_status == gold["A_required_effective_root_status"]
         and not regimes["A"].effective_root_coordinates
         and regimes["A"].classification in gold["A_allowed_regime_classifications"]
-        and regimes["B"].effective_root_status
-        == gold["B_required_effective_root_status"]
-        and regimes["B"].effective_root_coordinates
-        == (gold["B_candidate_coordinate"],)
+        and regimes["B"].effective_root_status == gold["B_required_effective_root_status"]
+        and regimes["B"].effective_root_coordinates == (gold["B_candidate_coordinate"],)
         and regimes["B"].classification in gold["B_allowed_regime_classifications"],
         "A／B 必须执行各自有效根结果；Gold 不指定哪张机制卡胜出。",
         _regime_value(regimes["A"]),
@@ -478,9 +485,7 @@ def _final_work_path_value(output: Any, *, packet: MingliAgentCasePacket) -> dic
     primaries = [item for item in output.hypotheses if item.role == "PRIMARY"]
     primary = primaries[0] if len(primaries) == 1 else None
     path = output.work_path
-    natal_ids = {
-        item.evidence_id for item in packet.evidence_catalog if item.kind != "TIMING"
-    }
+    natal_ids = {item.evidence_id for item in packet.evidence_catalog if item.kind != "TIMING"}
     valid = bool(
         primary is not None
         and path.selected_hypothesis_id == primary.hypothesis_id
@@ -677,14 +682,10 @@ def _hour_fact(packet: MingliAgentCasePacket) -> tuple[object, ...]:
     )
 
 
-_RANK_MARKER = re.compile(
-    r"第一藏干|第二藏干|第三藏干|主气位置|第二藏气|第三藏气|余气|末气"
-)
+_RANK_MARKER = re.compile(r"第一藏干|第二藏干|第三藏干|主气位置|第二藏气|第三藏气|余气|末气")
 _RANK_WEIGHT = re.compile(r"权重|占比|比例|百分|\d+(?:\.\d+)?\s*%")
 _RANK_INVALIDITY = re.compile(r"无根|无效|不可用|不成根|可忽略|忽略不计")
-_RANK_STRENGTH_SHORTCUT = re.compile(
-    r"微弱|极弱|薄弱|根系?尚浅|根浅|无力|力弱"
-)
+_RANK_STRENGTH_SHORTCUT = re.compile(r"微弱|极弱|薄弱|根系?尚浅|根浅|无力|力弱")
 _SAFE_SCOPE_MARKERS = (
     "不等于",
     "不能判",
@@ -720,11 +721,7 @@ def _hidden_rank_prose_violations(
         candidate_linked = (
             bool(_RANK_MARKER.search(sentence))
             or coordinate in sentence
-            or (
-                bool(branch)
-                and branch in sentence
-                and stem in sentence
-            )
+            or (bool(branch) and branch in sentence and stem in sentence)
             or (
                 not packet.day_master_support.visible_peer_support
                 and any(marker in sentence for marker in ("比肩", "劫财"))

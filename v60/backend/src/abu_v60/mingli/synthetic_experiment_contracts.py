@@ -25,6 +25,7 @@ SyntheticExperimentEvaluatorVersion = Literal[
     "v60.mingli-synthetic-experiment-evaluator.005",
     "v60.mingli-synthetic-experiment-evaluator.006",
     "v60.mingli-synthetic-experiment-evaluator.007",
+    "v60.mingli-synthetic-experiment-evaluator.008",
 ]
 SyntheticExperimentDevGoldVersion = Literal[
     "v60.mingli-synthetic-experiment-dev-gold.001",

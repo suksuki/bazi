@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Final, Literal
 
 from abu_v60.mingli.synthetic_experiment_catalog import (
+    CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT_REF,
     HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF,
     HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
     HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF,
@@ -12,10 +13,8 @@ from abu_v60.mingli.synthetic_experiment_catalog import (
 )
 from abu_v60.provenance import content_hash, stable_ref
 
-SYNTHETIC_SUITE_CATALOG_VERSION: Final = "v60.mingli-synthetic-suite-catalog.003"
-SYNTHETIC_SUITE_DEFINITION_VERSION: Final = (
-    "v60.mingli-synthetic-suite-definition.001"
-)
+SYNTHETIC_SUITE_CATALOG_VERSION: Final = "v60.mingli-synthetic-suite-catalog.004"
+SYNTHETIC_SUITE_DEFINITION_VERSION: Final = "v60.mingli-synthetic-suite-definition.001"
 SYNTHETIC_SUITE_RUNNER_VERSION: Final = "v60.mingli-synthetic-suite-runner.002"
 
 SyntheticSuiteMode = Literal["DEV", "QUALIFICATION", "HOLDOUT"]
@@ -81,9 +80,9 @@ def _suite(
         "experiment_definition_hashes": tuple(
             {
                 "experiment_ref": experiment_ref,
-                "definition_hash": resolve_synthetic_experiment(
-                    experiment_ref
-                ).public_definition()["definition_hash"],
+                "definition_hash": resolve_synthetic_experiment(experiment_ref).public_definition()[
+                    "definition_hash"
+                ],
             }
             for experiment_ref in experiment_refs
         ),
@@ -154,10 +153,27 @@ REGIME_WORK_PATH_GENERALIZATION_DEV_SUITE: Final = _suite(
     ),
 )
 
+CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_DEV_SUITE: Final = _suite(
+    mode="DEV",
+    availability="ACTIVE",
+    title="整盘决策纪律泛化 · 庚金三候选",
+    question=(
+        "换成全新的庚金命盘，且 A／B 始终保留三张机制候选后，模型能否执行正确"
+        "判型出口、闭合候选账本，并写出能够真正翻转逐项裁决与主次选择的反证？"
+    ),
+    experiment_refs=(CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT_REF,),
+    execution_policy="SEQUENTIAL_CONTINUE_ON_BOUNDED_ERROR_THEN_SEAL",
+    inference_limit=(
+        "本 Suite 只做 DEV 盲测；Gold 不指定机制胜者，完整时柱存在多项伴随变化。"
+        "一次通过不解锁 Qualification、HOLDOUT 或正式高级命理师能力声明。"
+    ),
+)
+
 SYNTHETIC_SUITES: Final = (
     HIDDEN_RANK_DEV_SUITE,
     HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_SUITE,
     REGIME_WORK_PATH_GENERALIZATION_DEV_SUITE,
+    CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_DEV_SUITE,
 )
 SYNTHETIC_SUITE_BY_REF: Final = {item.suite_ref: item for item in SYNTHETIC_SUITES}
 HIDDEN_RANK_DEV_SUITE_REF: Final = HIDDEN_RANK_DEV_SUITE.suite_ref
@@ -166,6 +182,9 @@ HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_SUITE_REF: Final = (
 )
 REGIME_WORK_PATH_GENERALIZATION_DEV_SUITE_REF: Final = (
     REGIME_WORK_PATH_GENERALIZATION_DEV_SUITE.suite_ref
+)
+CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_DEV_SUITE_REF: Final = (
+    CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_DEV_SUITE.suite_ref
 )
 
 SYNTHETIC_SUITE_MODE_CATALOG: Final = (

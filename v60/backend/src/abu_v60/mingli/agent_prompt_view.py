@@ -250,7 +250,7 @@ def _professional_adjudication_view(packet: MingliAgentCasePacket) -> dict[str, 
                 }
                 for item in structure_candidates
             ),
-            "mechanisms": mechanism_cards,
+            "mechanisms": tuple(_compact_prompt_method_card(card) for card in mechanism_cards),
             "fallback_hypothesis": fallback_card,
             "hypothesis_output_scaffold": _hypothesis_output_scaffold(
                 mechanism_cards=mechanism_cards,
@@ -287,6 +287,56 @@ def _professional_adjudication_view(packet: MingliAgentCasePacket) -> dict[str, 
     }
 
 
+def _compact_prompt_method_card(card: dict[str, object]) -> dict[str, object]:
+    """Remove transport duplication while preserving every professional choice."""
+
+    compact = {
+        key: value for key, value in card.items() if key not in {"observed_blocker_codes", "status"}
+    }
+    fact_locks = card.get("fact_locks")
+    if isinstance(fact_locks, dict):
+        compact["fact_locks"] = {
+            key: value for key, value in fact_locks.items() if key == "role_manifestation"
+        }
+    distilled = card.get("distilled_method")
+    if isinstance(distilled, dict):
+        compact["distilled_method"] = {
+            key: value for key, value in distilled.items() if key == "check_guidance"
+        }
+    context = card.get("bound_method_context")
+    if isinstance(context, dict):
+        paths = context.get("exact_role_paths", ())
+        compact_paths = tuple(
+            _compact_prompt_role_path(path) for path in paths if isinstance(path, dict)
+        )
+        compact["bound_method_context"] = {
+            key: value for key, value in context.items() if key == "capacity_fact_lock"
+        } | {
+            "exact_role_paths": compact_paths,
+            "identity_rule": "逐段按精确十神与坐标裁决，禁止退回组名",
+        }
+    return compact
+
+
+def _compact_prompt_role_path(path: dict[str, object]) -> dict[str, object]:
+    roles: list[tuple[object, object, object]] = []
+    for key in ("source", "bridge", "target"):
+        role = path.get(key)
+        if not isinstance(role, dict):
+            continue
+        roles.append(
+            (
+                role.get("ten_god"),
+                role.get("coordinates"),
+                role.get("manifestation"),
+            )
+        )
+    return {
+        "role_path_ref": path.get("role_path_ref"),
+        "roles_in_order": tuple(roles),
+    }
+
+
 def _regime_output_scaffold(
     packet: MingliAgentCasePacket,
     *,
@@ -299,12 +349,8 @@ def _regime_output_scaffold(
         for item in root_assessments
         if item["minimum_anti_follow_gate"] == "PRESENT"
     )
-    required_competition = (
-        ("HIDDEN_RESOURCE",) if support.resource_support else ()
-    )
-    forbidden_competition = (
-        ("VISIBLE_PEER",) if not support.visible_peer_support else ()
-    )
+    required_competition = ("HIDDEN_RESOURCE",) if support.resource_support else ()
+    forbidden_competition = ("VISIBLE_PEER",) if not support.visible_peer_support else ()
     common = {
         "rooted_visible_support_status": (
             "ABSENT" if not support.visible_peer_support else "DERIVE_FROM_EFFECTIVE_ROOT"
@@ -319,9 +365,7 @@ def _regime_output_scaffold(
                 "effective_root_status": "PRESENT",
                 "effective_root_coordinates": minimum_roots,
                 "classification_when_day_master_state_is_WEAK": "ORDINARY_WEAK",
-                "classification_when_day_master_state_is_NON_WEAK": (
-                    "NON_WEAK_OUTSIDE_SCOPE"
-                ),
+                "classification_when_day_master_state_is_NON_WEAK": ("NON_WEAK_OUTSIDE_SCOPE"),
                 **common,
             },
         )
@@ -334,32 +378,65 @@ def _regime_output_scaffold(
                     "allowed": candidates,
                 },
                 "classification_when_day_master_state_is_WEAK": "ORDINARY_WEAK",
-                "classification_when_day_master_state_is_NON_WEAK": (
-                    "NON_WEAK_OUTSIDE_SCOPE"
-                ),
+                "classification_when_day_master_state_is_NON_WEAK": ("NON_WEAK_OUTSIDE_SCOPE"),
                 **common,
             },
             {
                 "effective_root_status": "UNRESOLVED",
                 "effective_root_coordinates": (),
                 "classification": "UNRESOLVED",
-                "classification_when_day_master_state_is_NON_WEAK": (
-                    "NON_WEAK_OUTSIDE_SCOPE"
-                ),
+                "classification_when_day_master_state_is_NON_WEAK": ("NON_WEAK_OUTSIDE_SCOPE"),
                 **common,
             },
         )
     else:
+        absent = {
+            "effective_root_status": "ABSENT",
+            "effective_root_coordinates": (),
+            "ordinary_weak_allowed": False,
+            "day_master_state_allowed": ("WEAK", "UNCERTAIN"),
+            **common,
+        }
         options = (
             {
-                "effective_root_status": "ABSENT",
-                "effective_root_coordinates": (),
-                "classification": "DERIVE_FROM_DOMINANT_CHAIN_AND_COMPETITION",
-                "classification_when_day_master_state_is_NON_WEAK": (
-                    "NON_WEAK_OUTSIDE_SCOPE"
+                **absent,
+                "day_master_state_allowed": (
+                    "STRONG",
+                    "BALANCED",
+                    "SPECIALIZED_TENDENCY",
                 ),
-                **common,
+                "dominant_chain_status": "COPY_WHOLE_CHART_RULING",
+                "classification": "NON_WEAK_OUTSIDE_SCOPE",
             },
+            {
+                **absent,
+                "dominant_chain_status": "OPEN",
+                "classification": "UNRESOLVED",
+            },
+            {
+                **absent,
+                "dominant_chain_status": "UNRESOLVED",
+                "classification": "UNRESOLVED",
+            },
+            {
+                **absent,
+                "dominant_chain_status": "CLOSED",
+                "competition_kinds_rule": "NONEMPTY",
+                "classification": "FALSE_FOLLOW_COMPETITION",
+            },
+            *(
+                ()
+                if required_competition
+                else (
+                    {
+                        **absent,
+                        "day_master_state_allowed": ("FOLLOWING_TENDENCY",),
+                        "dominant_chain_status": "CLOSED",
+                        "competition_kinds_exact": (),
+                        "classification": "FOLLOW_TREND",
+                    },
+                )
+            ),
         )
     return {
         "instruction": "SELECT_EXACTLY_ONE_OPTION_AND_COPY_ALL_DETERMINISTIC_FIELDS",
@@ -372,14 +449,70 @@ def _hypothesis_output_scaffold(
     mechanism_cards: tuple[dict[str, object], ...],
     fallback_card: dict[str, object],
 ) -> dict[str, object]:
-    if len(mechanism_cards) not in {1, 2}:
+    candidate_refs = tuple(str(item["method_card_ref"]) for item in mechanism_cards)
+    candidate_partition: dict[str, object] = {
+        "universe": candidate_refs,
+        "selected_candidate_ref_rule": (
+            "hypotheses method_card_refs INTERSECT universe; fallback never enters universe"
+        ),
+        "selected_candidate_refs_must_be_unique": True,
+        "excluded_set_equation": "universe - selected_candidate_refs",
+        "excluded_count": max(len(candidate_refs) - 2, 0),
+        "selected_and_excluded_disjoint": True,
+        "selected_candidate_refs_union_excluded_must_equal_universe": True,
+    }
+    if len(candidate_refs) <= 2:
+        candidate_partition["selected_candidate_refs_exact"] = candidate_refs
+        candidate_partition["excluded_method_card_refs_exact"] = ()
+    else:
+        candidate_partition["legal_partitions"] = tuple(
+            {
+                "selected_method_card_ref_set": (
+                    candidate_refs[left],
+                    candidate_refs[right],
+                ),
+                "excluded_method_card_refs_exact": tuple(
+                    candidate_ref
+                    for index, candidate_ref in enumerate(candidate_refs)
+                    if index not in {left, right}
+                ),
+            }
+            for left in range(len(candidate_refs))
+            for right in range(left + 1, len(candidate_refs))
+        )
+    shared_contract = {
+        "candidate_partition": candidate_partition,
+        "method_ruling_counterfactual_contract": {
+            "form": (
+                "若<未决阻断/承载/可达条件出现相反证据，或现实表现违背机制预期>，"
+                "则本项由<当前判断>改判为<另一判断>"
+            ),
+            "must_change_ruling": True,
+            "forbidden": (
+                "复制当前事实或判法规则",
+                "只写条件而不写如何改判",
+                "使用与本检查无关的通用兜底条件",
+            ),
+        },
+        "reversal_contract": {
+            "question": "只问一个能区分两条机制的双极现实问题",
+            "winner_signal": "若观察A成立，维持PRIMARY",
+            "loser_signal": "若相反观察B成立，翻转为ALTERNATIVE",
+            "signals_must_be_observably_opposite": True,
+        },
+    }
+    if len(mechanism_cards) > 2:
         return {
             "mode": "SELECT_TWO_DISTINCT_CARDS",
-            "allowed_method_card_refs": tuple(
-                str(item["method_card_ref"]) for item in mechanism_cards
-            ),
+            "instruction": "SELECT_ONE_LEGAL_PARTITION_THEN_COPY_ITS_EXCLUDED_SET_EXACTLY",
+            "allowed_method_card_refs": candidate_refs,
+            **shared_contract,
         }
-    selected = (*mechanism_cards, fallback_card)[:2]
+    selected = (
+        (fallback_card, fallback_card)
+        if not mechanism_cards
+        else (*mechanism_cards, fallback_card)[:2]
+    )
     return {
         "mode": "FIXED_SLOTS_COPY_EXACTLY",
         "slots": tuple(
@@ -393,8 +526,12 @@ def _hypothesis_output_scaffold(
                     }
                     for check_code in card["required_checks"]
                 ),
+                "method_rulings_exact_count": len(card["required_checks"]),
+                "last_check_must_be": card["required_checks"][-1],
             }
             for index, card in enumerate(selected, start=1)
         ),
         "role_policy": "EXACTLY_ONE_PRIMARY_AFTER_RULING_COMPARISON",
+        "excluded_candidates_exact": (),
+        **shared_contract,
     }

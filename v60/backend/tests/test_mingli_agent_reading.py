@@ -205,7 +205,9 @@ def _valid_output(*, suffix: str = "", packet: Any | None = None) -> MingliAgent
                 "check_code": check_code,
                 "ruling": "CONDITIONAL",
                 "rationale": "当前命盘位置支持这条路径，但仍要结合整盘承载判断。",
-                "condition_or_falsifier": "若该位置长期不能形成对应结果，这一项需要重判。",
+                "condition_or_falsifier": (
+                    "若本检查出现相反证据，则本项由有条件改判为反对。"
+                ),
                 "evidence_ids": [evidence_id],
             }
             for check_code in cards[card_ref]["required_checks"]
@@ -321,8 +323,8 @@ def _valid_output(*, suffix: str = "", packet: Any | None = None) -> MingliAgent
                 },
                 "reversal": {
                     "question": "现实中的任务增加后，成果更集中还是方向更分散？",
-                    "winner_signal": "任务越复杂，反而越能收束为一条稳定成果路径。",
-                    "loser_signal": "任务越复杂，越容易由局部力量带着方向持续分散。",
+                    "winner_signal": f"若成果持续集中，维持{h1_name}为主解释。",
+                    "loser_signal": f"若方向持续分散，翻转为{h2_name}。",
                 },
             },
             "work_path": {
@@ -874,6 +876,9 @@ def test_ollama_adapter_preserves_reversed_valid_candidate_identity() -> None:
         {
             "ruling": "OPPOSES",
             "rationale": "官杀全部藏而未透，不能证明食伤已经直接制到压力目标。",
+            "condition_or_falsifier": (
+                "若官杀路径重新出现可达证据，则本项由反对改判为有条件。"
+            ),
         }
     )
     raw["hypothesis_decision"].update(
@@ -882,8 +887,8 @@ def test_ollama_adapter_preserves_reversed_valid_candidate_identity() -> None:
             "loser_id": "H2",
             "reversal": {
                 "question": "成果更常形成明确价值，还是更常用于处理规则压力？",
-                "winner_signal": "成果稳定进入定价和回报环节，维持食伤生财主线。",
-                "loser_signal": "输出长期直接降低规则压力，食伤制杀才可能翻盘。",
+                "winner_signal": "若成果稳定进入价值环节，维持食伤生财条件主线为主解释。",
+                "loser_signal": "若输出持续降低规则压力，翻转为食伤制杀受阻线。",
             },
         }
     )
@@ -1478,6 +1483,15 @@ def test_candidate_coverage_handles_zero_one_and_four_candidates() -> None:
     zero_packet = type(owner_packet).issue(**packet_values)
     zero_output = _valid_output(packet=zero_packet)
     assert {item.method_card_ref for item in zero_output.hypotheses} == {FALLBACK_METHOD_CARD_REF}
+    zero_scaffold = zero_packet.model_prompt_view()["professional_adjudication"][
+        "candidate_method_cards"
+    ]["hypothesis_output_scaffold"]
+    assert [item["method_card_ref"] for item in zero_scaffold["slots"]] == [
+        FALLBACK_METHOD_CARD_REF,
+        FALLBACK_METHOD_CARD_REF,
+    ]
+    assert zero_scaffold["candidate_partition"]["universe"] == ()
+    assert zero_scaffold["candidate_partition"]["selected_candidate_refs_exact"] == ()
     MingliAgentRuntime(
         provider=_OutputProvider(zero_output),
         enabled=True,
@@ -1492,6 +1506,16 @@ def test_candidate_coverage_handles_zero_one_and_four_candidates() -> None:
         one_packet.mechanism_observations[0].evidence_id,
         FALLBACK_METHOD_CARD_REF,
     }
+    one_scaffold = one_packet.model_prompt_view()["professional_adjudication"][
+        "candidate_method_cards"
+    ]["hypothesis_output_scaffold"]
+    assert tuple(item["method_card_ref"] for item in one_scaffold["slots"]) == (
+        one_packet.mechanism_observations[0].evidence_id,
+        FALLBACK_METHOD_CARD_REF,
+    )
+    assert one_scaffold["candidate_partition"]["selected_candidate_refs_exact"] == (
+        one_packet.mechanism_observations[0].evidence_id,
+    )
     MingliAgentRuntime(
         provider=_OutputProvider(one_output),
         enabled=True,
@@ -1567,16 +1591,33 @@ def test_valid_model_primary_and_reversal_copy_survive_server_repairs() -> None:
     raw = _valid_output(packet=packet).model_dump(mode="json")
     for ruling in raw["hypotheses"][0]["method_rulings"][:3]:
         ruling["ruling"] = "UNRESOLVED"
+        ruling["condition_or_falsifier"] = (
+            "若本检查出现明确支持证据，则本项由未决改判为有条件。"
+        )
     next(
         item
         for item in raw["hypotheses"][0]["method_rulings"]
         if item["check_code"] == "SOURCE_AND_TARGET_SAME_LAYER"
-    )["ruling"] = "UNRESOLVED"
-    raw["hypotheses"][1]["method_rulings"][0]["ruling"] = "UNRESOLVED"
+    ).update(
+        {
+            "ruling": "UNRESOLVED",
+            "condition_or_falsifier": (
+                "若可达条件出现明确支持证据，则本项由未决改判为有条件。"
+            ),
+        }
+    )
+    raw["hypotheses"][1]["method_rulings"][0].update(
+        {
+            "ruling": "UNRESOLVED",
+            "condition_or_falsifier": (
+                "若本检查出现明确支持证据，则本项由未决改判为有条件。"
+            ),
+        }
+    )
     raw["hypothesis_decision"]["reversal"].update(
         {
-            "winner_signal": "原来属于H1的收束路径信号仍然成立。",
-            "loser_signal": "原来属于H2的分散路径信号足以翻盘。",
+            "winner_signal": "若收束路径持续成立，维持食神到七杀路径为主解释。",
+            "loser_signal": "若分散路径持续成立，翻转为食神到正财路径。",
         }
     )
     peer_resolution = next(
@@ -1588,6 +1629,9 @@ def test_valid_model_primary_and_reversal_copy_survive_server_repairs() -> None:
         {
             "ruling": "SUPPORTS",
             "rationale": "双比肩意味着同辈竞争，会争夺财星的承接空间。",
+            "condition_or_falsifier": (
+                "若竞争重新形成明确阻断，则本项由支持改判为有条件。"
+            ),
         }
     )
     provider = OllamaMingliAgentProvider(
@@ -1623,10 +1667,10 @@ def test_valid_model_primary_and_reversal_copy_survive_server_repairs() -> None:
     assert "主解释对月令、透藏和整盘承接的覆盖更完整" in (
         output.hypothesis_decision.winner.rationale
     )
-    assert "原来属于食神到七杀路径的收束路径信号" in (
+    assert "维持食神到七杀路径为主解释" in (
         output.hypothesis_decision.reversal.winner_signal
     )
-    assert "原来属于食神到正财路径的分散路径信号" in (
+    assert "翻转为食神到正财路径" in (
         output.hypothesis_decision.reversal.loser_signal
     )
     assert output.server_issue_keys == ("HYPOTHESIS_H2",)

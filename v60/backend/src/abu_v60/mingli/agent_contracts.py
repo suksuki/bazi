@@ -18,7 +18,7 @@ from abu_v60.mingli.agent_regime_contracts import AgentRegimeDecision
 from abu_v60.provenance import content_hash, stable_ref
 
 MINGLI_AGENT_PACKET_VERSION = "v60.mingli-agent-case-packet.003"
-MINGLI_AGENT_PROMPT_VIEW_VERSION = "v60.mingli-agent-prompt-view.015"
+MINGLI_AGENT_PROMPT_VIEW_VERSION = "v60.mingli-agent-prompt-view.018"
 MINGLI_AGENT_READING_VERSION = "v60.mingli-agent-reading.006"
 MINGLI_AGENT_READING_REGIME_VERSIONS = frozenset(
     {

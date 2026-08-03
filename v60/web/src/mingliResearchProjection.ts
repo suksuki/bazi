@@ -79,6 +79,8 @@ export function syntheticFamilyLabel(
       return "跨日主泛化";
     case "CONTROLLED_REGIME_WORK_PATH_GENERALIZATION_PAIR":
       return "判型与主路径";
+    case "CONTROLLED_DECISION_DISCIPLINE_GENERALIZATION_PAIR":
+      return "候选闭合与反证";
   }
 }
 

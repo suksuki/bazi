@@ -452,6 +452,67 @@ checks      3/3 holds + 16 method responses passed
 判型出口、候选 ledger 集合运算、方法卡反证条件语法。只有新版本在另一组陌生盘上重跑
 并减少这些 raw failure，才算方法提升。
 
+## 第七组合成实验：候选闭合、反证与跨日主迁移
+
+为避免继续在戊土盘上追逐输出，本轮追加从未进入目录的庚金合法时柱对照：
+
+```text
+A：1995-06-18 12:00 Asia/Shanghai
+   乙亥 / 壬午 / 庚辰 / 壬午
+   无庚金根、无明干比劫；三处藏印只能进入竞争，不能冒充根
+
+B：1995-06-18 16:00 Asia/Shanghai
+   乙亥 / 壬午 / 庚辰 / 甲申
+   hour支藏庚 = EXACT_DAY_MASTER / PRIMARY_QI
+   minimum anti-follow gate = PRESENT
+```
+
+A 的午午同支成员在 B 消失；时干由壬食神改为甲偏财，完整时支藏干、印与输出载体、
+关系成员及起运边界也同时改变。因此 Gold 仍不做“申中庚导致全部变化”的单因果断言。
+两盘冻结同一组三张候选：
+
+```text
+output-to-wealth
+output-to-pressure
+wealth-to-pressure
+```
+
+Gold 只要求模型选两张不同卡、精确排除剩余一张，并保持胜者未知。Method `.006` 同时
+补齐 `wealth-to-pressure` 与 `pressure-resource-self` 的精确十神路径和逐项检查；Prompt
+View 为三张以上候选列出完整合法 partition。零／一张候选时，fallback 不再混入真实候选
+universe，两个固定槽与真实候选账本分别闭合。
+
+Evaluator `.008` 把上一版只写在提示里的要求变成可执行考试：
+
+- raw 判型必须直接绑定 packet 的无根／最低有效根、明干同类与藏印竞争；服务端补根不算
+  模型学会；
+- 每条 `condition_or_falsifier` 必须同时包含可观察或未决条件，以及“由当前判断改判为另一
+  判断”的后件；重复当前断言不通过；
+- reversal 必须分别具名主解释和替代解释，一条明确维持，一条明确翻转；同一信号写两遍
+  或两条都支持同一方不通过；
+- 任何修复仍须留下 H1／H2、主次、候选覆盖、根气或路径回执，产品安全与模型能力继续
+  分轨。
+
+本轮连续封存了三代候选的戊土回归与庚金迁移结果。Evaluator `.007` 与 `.008` 增加的
+检查项不同，绝对通过数不能横向冒充提升；同一版本内比较错误簇才有效。
+
+| 候选 | 戊土 Suite / Experiment | 庚金 Suite / Experiment | 真实结果 |
+| --- | --- | --- | --- |
+| Profile `.028` / Prompt `.025` / Eval `.007` | `793f2a...` / `3b68e3...`，3 hold + 15 response | `cf70a7...` / `0240d1...`，4 + 15 | 两盘仍有判型、候选覆盖或方法卡缺口 |
+| Profile `.029` / Prompt `.026` / Eval `.007` | `396e61...` / `d1211d...`，3 + 17 | `b1d8e2...` / `a0b7d0...`，4 + 14 | B 的方法卡闭合改善；A 判型与两盘候选账本仍不稳 |
+| Profile `.030` / Prompt `.027` / Eval `.008` | `fc1446...` / `78c5bd...`，3 + 21 | `edd6aa...` / `634f46...`，4 + 18 | 庚金 A/B 原生 packet-bound 判型通过；反证与主次翻转仍双盘失败 |
+
+所有六次运行均为 `PRODUCT_SAFE_MODEL_FAIL`，runner error 为 0。最新庚金运行中不再出现
+`DAY_MASTER_REGIME` 或 raw packet-fact failure，说明枚举判型出口对同一 Gemma 有真实帮助；
+但 A 的候选覆盖仍失败、B 的第二张方法卡仍不完整，A/B 的 raw falsifier 与 reversal 全部
+失败。最新戊土回归中，无根 A 仍需一次判型修复。这证明系统尚未达到高级命理师：它开始
+稳定掌握部分整盘入口，却还不能独立完成“为什么此路胜出、什么事实会推翻它”的专业比较。
+
+下一刀不再增加自由散文。系统应把每张方法卡编译成可选择的反事实决策行：当前 ruling、
+仍未裁定的阻断／承载／可达轴、允许的相反目标和改判动作都先类型化；模型在一次整盘调用
+里选择并结合本盘事实落地。跨卡 reversal 同样绑定两张卡的专属决胜项和相反动作。这样仍是
+一次 LLM 裁决，但把稳定集合运算与合法状态交给系统，把真正需要命理比较的取舍留给模型。
+
 ## V131 Lab 体验接线
 
 V131 commit `ea2db274ba55b8f9d323881c096d3a3a1ceba66c` 的水庭总览和合成验证目录
@@ -459,13 +520,13 @@ V131 commit `ea2db274ba55b8f9d323881c096d3a3a1ceba66c` 的水庭总览和合成�
 
 ```text
 六柱关系观察     -> canonical 四／六柱 Scene Player
-八字合成验证     -> 6 个真实课题、18 次封存运行、真实 Suite／训练任务状态
+八字合成验证     -> 7 个真实课题、24 次封存运行、真实 Suite／训练任务状态
 阿布说           -> 同一个六柱 Scene Player 与服务端锁定声画链
 ```
 
 总览为只读 GET；目录只增加一个服务端绑定任务入口，仍为零 Canvas。只有进入六柱、
 阿布说或具体封存现场后才懒加载唯一 Scene Player。最新戊土 DEV Suite 如实显示
-`1/1` 封存、`1` 项待复核和 `8` 个错误簇；跨日主与位阶 Suite 历史继续保留；
+`1/1` 封存、`1` 项待复核和 `10` 个错误簇；跨日主与位阶 Suite 历史继续保留；
 `QUALIFICATION / HOLDOUT` 继续显示 `Owner Gate 后开放`。当前页面是“已揭晓封存
 复盘”，不是盲审；原型的 `localStorage` 裁决、假 Run 身份和写死统计均未进入系统。
 
@@ -475,49 +536,48 @@ V131 commit `ea2db274ba55b8f9d323881c096d3a3a1ceba66c` 的水庭总览和合成�
 ## 当前版本
 
 ```text
-Foundation                 v60.foundation.034
-Mingli Engine              v60.mingli-cognitive-engine.045
-Runtime Architecture       v60.runtime-architecture.074
-Agent Runtime              v60.mingli-agent-runtime.029
-Agent Profile              v60.mingli-agent.whole-chart-cognition.027
-Agent Prompt               v60.prompt.mingli-agent-whole-chart.024
+Foundation                 v60.foundation.037
+Mingli Engine              v60.mingli-cognitive-engine.048
+Runtime Architecture       v60.runtime-architecture.077
+Agent Runtime              v60.mingli-agent-runtime.032
+Agent Profile              v60.mingli-agent.whole-chart-cognition.030
+Agent Prompt               v60.prompt.mingli-agent-whole-chart.027
 Provider Profile           v60.model-serving.gemma4-mingli-agent.003
-Agent Prompt View          v60.mingli-agent-prompt-view.015
+Agent Prompt View          v60.mingli-agent-prompt-view.018
 Agent Reading              v60.mingli-agent-reading.006
 Normalization Receipt      v60.mingli-agent-normalization-receipt.001
-Agent Adjudication         v60.mingli-agent-adjudication.010
+Agent Adjudication         v60.mingli-agent-adjudication.011
 Agent Output Repair        v60.mingli-agent-output-repair.004
-Method Distillation        v60.mingli-agent-method-distillation.005
+Method Distillation        v60.mingli-agent-method-distillation.006
 Effective-root Method      v60.mingli-effective-root-method.001
 Regime Decision            v60.mingli-agent-regime-decision.002
 Stage Projection           v60.mingli-stage-projection.004
-Synthetic Catalog          v60.mingli-synthetic-experiment-catalog.005
-Synthetic Evaluator        v60.mingli-synthetic-experiment-evaluator.007
+Synthetic Catalog          v60.mingli-synthetic-experiment-catalog.006
+Synthetic Evaluator        v60.mingli-synthetic-experiment-evaluator.008
 Synthetic DEV Gold         v60.mingli-synthetic-experiment-dev-gold.005
 Synthetic Run              v60.mingli-synthetic-experiment-run.001
 Synthetic Snapshot         v60.mingli-synthetic-experiment-snapshot.004
-Suite Catalog              v60.mingli-synthetic-suite-catalog.003
+Suite Catalog              v60.mingli-synthetic-suite-catalog.004
 Suite Definition           v60.mingli-synthetic-suite-definition.001
 Suite Runner               v60.mingli-synthetic-suite-runner.002
 Suite Run                  v60.mingli-synthetic-suite-run.002
 Training Request           v60.mingli-synthetic-suite-run-request.001
 Training Status            v60.mingli-synthetic-training-status.001
-Unit Mingli                v60.unit-mingli.035
-Unit Lab                   v60.unit-lab.031
-Migration                  0042_mingli_decision_path
+Unit Mingli                v60.unit-mingli.038
+Unit Lab                   v60.unit-lab.034
+Migration                  0045_mingli_counterfactuals
 ```
 
-Migration 0042 将 Reading `.006`、PRIMARY-bound work path、非弱态子审计出口、
-Evaluator `.007`、Gold `.005` 和第三条 DEV Suite 写入 Foundation `.034`；0041 的候选
-绑定、幂等且可恢复训练任务继续有效。迁移不改写任何 sealed run。最新 Suite
-`eeb966...` 绑定本地 Gemma4、Profile/Prompt `.027/.024` 与 Reading `.006`；历史
-Reading、Evaluator、Gold 与 Suite 仍按各自明确版本语义重放，不能被“当前版本”常量
-静默改义。
+Migration 0043/0044 追加判型出口、候选 partition、Method `.006` 与合法决策行；0045
+再追加 packet-bound 根气考试和可执行反证／翻转语义。它们均只更新 manifest，不改写任何
+sealed run。最新 Suite 绑定本地 Gemma4、Profile/Prompt `.030/.027`、Reading `.006`、
+Evaluator `.008` 与 Gold `.005`；历史 Reading、Evaluator、Gold 与 Suite 仍按各自明确版本
+语义重放，不能被“当前版本”常量静默改义。
 
 ## 验证
 
 ```text
-Backend tests              449 PASS
+Backend tests              455 PASS
 Ruff                       PASS
 TypeScript / Vite build    PASS
 Runtime Architecture       PASS
@@ -530,7 +590,9 @@ Real Desktop Chrome        PASS
 Vite 仍报告两个大于 500 kB 的既有异步图形 chunk；这是已记录性能债，不改变本轮方法
 Lab 的功能结论。
 
-真实 Desktop Chrome 已验证 V131 总庭、六课题目录、最新 Suite 优先、服务端任务启动、
-运行中状态、真实封存、A／B 切换与精确 B 深链接刷新；页面无控制台 error。既有完整
+真实 Desktop Chrome 已验证 V131 总庭、七课题目录、新庚金实验、最新 Suite 优先、
+A／B 切换与精确 B 深链接刷新；页面无控制台 error。Evaluator `.008` 的最终运行通过
+服务端契约、前端合成 Lab 契约与生产构建验证，未把它伪称为一次新的 Chrome 模型运行。
+既有完整
 六柱、阿布说 PREPARING、浏览器前进／后退与两种桌面宽度证据继续成立。总览／目录无 Canvas，深场
 始终只有一个 Scene Player。

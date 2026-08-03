@@ -26,7 +26,8 @@ export interface MingliSyntheticExperimentDefinition {
     | "CONTROLLED_HIDDEN_RANK_PRIMARY_SECONDARY_PAIR"
     | "CONTROLLED_HIDDEN_RANK_SECONDARY_TERTIARY_PAIR"
     | "CONTROLLED_HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_PAIR"
-    | "CONTROLLED_REGIME_WORK_PATH_GENERALIZATION_PAIR";
+    | "CONTROLLED_REGIME_WORK_PATH_GENERALIZATION_PAIR"
+    | "CONTROLLED_DECISION_DISCIPLINE_GENERALIZATION_PAIR";
   title: string;
   question: string;
   analysis_date: string;
@@ -35,7 +36,8 @@ export interface MingliSyntheticExperimentDefinition {
     | "WHOLE_HOUR_PILLAR_RESPONSE_NOT_ROOT_CAUSAL_ESTIMATE"
     | "NATAL_ROOT_GATE_ONLY_WITH_FULL_HOUR_COLLATERAL"
     | "NATAL_HIDDEN_RANK_GATE_ONLY_WITH_FULL_HOUR_COLLATERAL"
-    | "NATAL_HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION";
+    | "NATAL_HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION"
+    | "WHOLE_CHART_DECISION_DISCIPLINE_WITH_FULL_HOUR_COLLATERAL";
   inference_limit: string;
   known_collateral_deltas: string[];
   changed_input: {
@@ -74,7 +76,7 @@ export interface MingliSyntheticExperimentRunSummary {
 }
 
 export interface MingliSyntheticExperimentCatalog {
-  catalog_version: "v60.mingli-synthetic-experiment-catalog.005";
+  catalog_version: "v60.mingli-synthetic-experiment-catalog.006";
   experiments: MingliSyntheticExperimentCatalogEntry[];
   browser_generation_allowed: false;
   read_only: true;
@@ -97,7 +99,8 @@ export interface MingliSyntheticExperimentEvaluation {
     | "v60.mingli-synthetic-experiment-evaluator.004"
     | "v60.mingli-synthetic-experiment-evaluator.005"
     | "v60.mingli-synthetic-experiment-evaluator.006"
-    | "v60.mingli-synthetic-experiment-evaluator.007";
+    | "v60.mingli-synthetic-experiment-evaluator.007"
+    | "v60.mingli-synthetic-experiment-evaluator.008";
   dev_gold_version:
     | "v60.mingli-synthetic-experiment-dev-gold.001"
     | "v60.mingli-synthetic-experiment-dev-gold.002"

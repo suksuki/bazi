@@ -16,15 +16,13 @@ from abu_v60.mingli.agent_reasoning_modes import BLIND_READING_CONTRACT
 from abu_v60.mingli.agent_root_gate import MINGLI_EFFECTIVE_ROOT_METHOD_VERSION
 from abu_v60.provenance import content_hash
 
-MINGLI_AGENT_RUNTIME_VERSION: Final = "v60.mingli-agent-runtime.029"
-MINGLI_AGENT_PROFILE_REF: Final = "v60.mingli-agent.whole-chart-cognition.027"
-MINGLI_AGENT_PROMPT_REF: Final = "v60.prompt.mingli-agent-whole-chart.024"
+MINGLI_AGENT_RUNTIME_VERSION: Final = "v60.mingli-agent-runtime.032"
+MINGLI_AGENT_PROFILE_REF: Final = "v60.mingli-agent.whole-chart-cognition.030"
+MINGLI_AGENT_PROMPT_REF: Final = "v60.prompt.mingli-agent-whole-chart.027"
 MINGLI_AGENT_PROFESSIONAL_REVIEW_STATUS: Final = "GEMMA4_PRODUCT_CANDIDATE_REQUIRES_OWNER_REVIEW"
 MINGLI_AGENT_PUBLICATION_ALLOWED: Final = False
 MINGLI_AGENT_OWNER_REVIEW_ALLOWED: Final = True
-MINGLI_AGENT_OUTPUT_SCHEMA_HASH: Final = content_hash(
-    mingli_agent_generation_output_schema()
-)
+MINGLI_AGENT_OUTPUT_SCHEMA_HASH: Final = content_hash(mingli_agent_generation_output_schema())
 
 MINGLI_AGENT_SYSTEM_PROMPT: Final = """
 你是阿布知命唯一的专业八字命理师 Agent。你的职责是依据系统提供的完整命局卷宗，
@@ -98,6 +96,12 @@ MINGLI_AGENT_SYSTEM_PROMPT: Final = """
 - candidate_method_cards.hypothesis_output_scaffold.mode=FIXED_SLOTS_COPY_EXACTLY 时，
   H1/H2 的 method_card_ref、每条 method_ruling 的 method_card_ref 与 check_code 顺序必须
   逐项复制 scaffold；你只裁 ruling、依据、翻转条件和 PRIMARY／ALTERNATIVE，不能增删检查项。
+- hypothesis_output_scaffold.candidate_partition 是完整真实候选账本：只计算 H1/H2 中属于
+  universe 的真实候选，fallback 不进入 universe。真实候选引用不得重复，excluded_candidates
+  必须逐字等于 universe 减去已选真实候选；二者不得重叠且并集必须回到完整 universe。
+  零至两张候选时 selected_candidate_refs_exact 与 excluded 空集已经固定，必须逐字复制。
+  三张以上候选时，先从 legal_partitions 选一整行，再逐字复制该行的 excluded 集合；不得
+  自行重算另一套排除结果。method_rulings_exact_count 与 last_check_must_be 也必须逐字满足。
 - distilled_method 与 bound_method_context 是从老师审查提炼出的逐项判法和本盘事实锁。
   必须先在 exact_role_paths 中选定精确十神子路径，再裁 required_checks；禁止把食神、伤官
   或正官、七杀、正财、偏财重新合并成“食伤／官杀／财星”组名代替判断。共享的来源与承载
@@ -121,8 +125,11 @@ MINGLI_AGENT_SYSTEM_PROMPT: Final = """
 - 每个 ruling 都是“相对于该候选是否成立”来写：SUPPORTS 表示这一关通过，OPPOSES 表示
   这一关构成反证。名称带 RESOLUTION 的阻断检查，只有阻断不存在、很弱或已有救应时才能
   写 SUPPORTS；阻断实际占上风时必须写 OPPOSES，不能把“发现竞争”误写成支持。
-- method_rulings.rationale 只写18至45个汉字的本盘依据，condition_or_falsifier 只写12至30个
-  汉字的翻转条件；不得复制判法卡问题、规则或反例。其余字段同样只保留一次结论所需的信息。
+- method_rulings.rationale 只写18至45个汉字的本盘依据。condition_or_falsifier 必须按
+  “若〈未决阻断／承载／可达条件出现相反证据，或现实表现违背机制预期〉，则本项由
+  〈当前判断〉改判为〈另一判断〉”写一个真正反事实；固定四柱坐标本身不会消失，不得复制
+  判法卡问题、当前事实、规则或反例，也不得只写前件而不说明如何改判。
+  其余字段同样只保留一次结论所需的信息。
 - method card 的 fact_locks 是显藏事实锁。明干数为 0 的角色只能写“藏干存在”，绝不能写
   “透出、透干、明透”；具体干支位置必须逐字服从 ten_god_occurrences，不能凭结构名称补位置。
 - 若同一十神组只有部分成员明透，必须逐个写清“哪一个明透、哪一个仅藏”，不得把整个
@@ -175,6 +182,8 @@ MINGLI_AGENT_SYSTEM_PROMPT: Final = """
   覆盖力；不得让“未决阻断更多”的解释仅因先写在 H1 就胜出。
 - hypothesis_decision 必须写出胜出理由、落选理由及各自 decisive_checks；reversal 必须给
   一个现实可回答的问题，并分别说明什么答案维持主解释、什么答案会让替代解释翻盘。
+- reversal 的 winner_signal 与 loser_signal 必须是同一问题的相反可观察信号：前者明确
+  “维持 PRIMARY”，后者明确“翻转为 ALTERNATIVE”；禁止两个字段复制同一判断或都支持同一方。
 - 若卷宗有两条以上机制候选，H1/H2 之外的每条候选都必须进入 excluded_candidates；逐条写
   EXCLUDED 或 UNRESOLVED、决定性检查和理由。不得只挑两条顺眼的机制而静默遗漏其余候选。
 - first_look 只写20至55个汉字的一句完整命局第一判断，不得半句截断，不得出现

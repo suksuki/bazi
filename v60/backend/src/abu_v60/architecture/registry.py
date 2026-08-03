@@ -15,7 +15,7 @@ from abu_v60.architecture.contracts import (
 @lru_cache(maxsize=1)
 def runtime_architecture() -> RuntimeArchitecture:
     architecture = RuntimeArchitecture(
-        architecture_version="v60.runtime-architecture.074",
+        architecture_version="v60.runtime-architecture.077",
         modules=(
             RuntimeModule(
                 module_id="identity",
@@ -33,7 +33,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="mingli",
                 kind=ModuleKind.ENGINE,
-                version="v60.mingli-cognitive-engine.045",
+                version="v60.mingli-cognitive-engine.048",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("mingli",),
                 reads_from=("identity",),
@@ -133,6 +133,14 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "primary_bound_work_path_projection",
                     "raw_decision_integrity_evaluation",
                     "cross_day_master_regime_work_path_generalization",
+                    "structured_regime_exit_decision_table",
+                    "exact_candidate_partition_ledger",
+                    "actionable_method_falsifier_contract",
+                    "cross_day_master_candidate_partition_generalization",
+                    "enumerated_legal_regime_and_candidate_decision_rows",
+                    "schema_bound_counterfactual_signal_semantics",
+                    "raw_packet_bound_regime_evaluation",
+                    "actionable_counterfactual_and_reversal_evaluation",
                 ),
                 writes_canonical_state=True,
             ),
@@ -390,7 +398,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-mingli",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-mingli.035",
+                version="v60.unit-mingli.038",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "mingli", "media"),
                 capabilities=(
@@ -429,6 +437,9 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "claim_graph_layer_rehearsal",
                     "cross_day_master_hidden_rank_generalization",
                     "primary_bound_whole_chart_work_path",
+                    "structured_regime_exit_and_counterfactual_method",
+                    "legal_decision_row_guided_whole_chart_reading",
+                    "counterfactual_semantics_repaired_before_projection",
                 ),
             ),
             RuntimeModule(
@@ -464,7 +475,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-lab",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-lab.031",
+                version="v60.unit-lab.034",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "knowledge", "cognition", "mingli"),
                 capabilities=(
@@ -506,8 +517,11 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "server_side_synthetic_training_request",
                     "recoverable_training_progress",
                     "dev_review_disposition_handoff",
+                    "raw_counterfactual_and_packet_fact_qualification",
                     "raw_method_primary_and_work_path_training_checks",
                     "regime_work_path_generalization_suite",
+                    "candidate_partition_falsifier_generalization_suite",
+                    "adjacent_candidate_method_comparison",
                 ),
             ),
         ),

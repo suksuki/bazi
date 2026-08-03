@@ -7,20 +7,12 @@ from typing import Any, Final, Literal
 from abu_v60.mingli.calendar import BirthInput
 from abu_v60.provenance import content_hash, stable_ref
 
-SYNTHETIC_EXPERIMENT_CATALOG_VERSION: Final = (
-    "v60.mingli-synthetic-experiment-catalog.005"
-)
-SYNTHETIC_EXPERIMENT_DEFINITION_VERSION: Final = (
-    "v60.mingli-synthetic-experiment-catalog.001"
-)
-SYNTHETIC_EXPERIMENT_DEFINITION_VERSION_V2: Final = (
-    "v60.mingli-synthetic-experiment-catalog.002"
-)
+SYNTHETIC_EXPERIMENT_CATALOG_VERSION: Final = "v60.mingli-synthetic-experiment-catalog.006"
+SYNTHETIC_EXPERIMENT_DEFINITION_VERSION: Final = "v60.mingli-synthetic-experiment-catalog.001"
+SYNTHETIC_EXPERIMENT_DEFINITION_VERSION_V2: Final = "v60.mingli-synthetic-experiment-catalog.002"
 SYNTHETIC_RESEARCH_ACCOUNT_REF: Final = "v60-system-account-mingli-synthetic-lab-v1"
 SYNTHETIC_RESEARCH_BATCH_REF: Final = "v60-seed-batch-mingli-synthetic-lab-v1"
-SYNTHETIC_EXPERIMENT_EVALUATOR_VERSION: Final = (
-    "v60.mingli-synthetic-experiment-evaluator.007"
-)
+SYNTHETIC_EXPERIMENT_EVALUATOR_VERSION: Final = "v60.mingli-synthetic-experiment-evaluator.008"
 
 
 @dataclass(frozen=True, slots=True)
@@ -361,6 +353,39 @@ REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT: Final = _experiment(
     legal_hour_pillar_change="辛酉 → 壬戌",
 )
 
+CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT: Final = _experiment(
+    definition_version=SYNTHETIC_EXPERIMENT_DEFINITION_VERSION_V2,
+    seed_id="v60.mingli-synthetic-lab.candidate-partition-falsifier-generalization.001",
+    seed_batch_ref="v60-seed-batch-mingli-candidate-partition-falsifier-v1",
+    analysis_date=date(2026, 8, 3),
+    family="CONTROLLED_DECISION_DISCIPLINE_GENERALIZATION_PAIR",
+    title="换成庚金日主后，候选账本与反证能否一起闭合？",
+    question=(
+        "两盘保持食伤生财、食伤制官与财生官杀三个候选不变；合法时柱从壬午"
+        "变为甲申后，检查模型能否重做无根／有根判型、只选两张不同机制、精确"
+        "排除剩余一张，并写出真正能够推翻每项判断与主次选择的条件。"
+    ),
+    inference_scope="WHOLE_CHART_DECISION_DISCIPLINE_WITH_FULL_HOUR_COLLATERAL",
+    inference_limit=(
+        "完整时柱同时改变时干、全部藏干、来源载体、印星位置、同支成员关系与起运"
+        "边界；本实验只检验整盘响应、候选账本和反证自洽，不预选机制胜者，也不把"
+        "任何结论单独归因于申中庚根。"
+    ),
+    known_collateral_deltas=(
+        "前三柱固定为乙亥、壬午、庚辰；两盘均有相同的三张机制候选",
+        "时干由壬食神变为甲偏财，输出与财富的明透载体同时变化",
+        "时支藏干由午中丁己变为申中庚壬戊，根、输出与印载体同时变化",
+        "A 的月支午与时支午有同支成员，B 换申后该成员消失；两盘均无原局六冲或六合",
+        "起运边界与岁运坐标同时变化；Timing 保存但不参与本组评分",
+    ),
+    birth_date=date(1995, 6, 18),
+    member_a_time=time(12, 0),
+    member_b_time=time(16, 0),
+    member_a_pillars=("乙亥", "壬午", "庚辰", "壬午"),
+    member_b_pillars=("乙亥", "壬午", "庚辰", "甲申"),
+    legal_hour_pillar_change="壬午 → 甲申",
+)
+
 SYNTHETIC_EXPERIMENTS: Final = (
     FIRST_SYNTHETIC_EXPERIMENT,
     ROOT_IDENTITY_SYNTHETIC_EXPERIMENT,
@@ -368,18 +393,13 @@ SYNTHETIC_EXPERIMENTS: Final = (
     HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT,
     HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT,
     REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT,
+    CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT,
 )
-SYNTHETIC_EXPERIMENT_BY_REF: Final = {
-    item.experiment_ref: item for item in SYNTHETIC_EXPERIMENTS
-}
+SYNTHETIC_EXPERIMENT_BY_REF: Final = {item.experiment_ref: item for item in SYNTHETIC_EXPERIMENTS}
 FIRST_SYNTHETIC_EXPERIMENT_REF: Final = FIRST_SYNTHETIC_EXPERIMENT.experiment_ref
 FIRST_SYNTHETIC_EXPERIMENT_MEMBERS: Final = FIRST_SYNTHETIC_EXPERIMENT.members
-ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF: Final = (
-    ROOT_IDENTITY_SYNTHETIC_EXPERIMENT.experiment_ref
-)
-ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_MEMBERS: Final = (
-    ROOT_IDENTITY_SYNTHETIC_EXPERIMENT.members
-)
+ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF: Final = ROOT_IDENTITY_SYNTHETIC_EXPERIMENT.experiment_ref
+ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_MEMBERS: Final = ROOT_IDENTITY_SYNTHETIC_EXPERIMENT.members
 HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF: Final = (
     HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT.experiment_ref
 )
@@ -392,15 +412,14 @@ HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF: Final = (
 REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT_REF: Final = (
     REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT.experiment_ref
 )
+CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT_REF: Final = (
+    CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT.experiment_ref
+)
 SYNTHETIC_MEMBER_BY_SUBJECT: Final = {
-    item.subject_id: item
-    for experiment in SYNTHETIC_EXPERIMENTS
-    for item in experiment.members
+    item.subject_id: item for experiment in SYNTHETIC_EXPERIMENTS for item in experiment.members
 }
 SYNTHETIC_MEMBER_BY_CASE: Final = {
-    item.case_ref: item
-    for experiment in SYNTHETIC_EXPERIMENTS
-    for item in experiment.members
+    item.case_ref: item for experiment in SYNTHETIC_EXPERIMENTS for item in experiment.members
 }
 SYNTHETIC_RESEARCH_CASE_REFS: Final = frozenset(SYNTHETIC_MEMBER_BY_CASE)
 SYNTHETIC_EXPERIMENT_ANALYSIS_DATE: Final = FIRST_SYNTHETIC_EXPERIMENT.analysis_date
