@@ -7,14 +7,27 @@ import {
   loadSyntheticExperimentCatalog,
   loadSyntheticExperimentSnapshot,
 } from "../mingliSyntheticLabApi";
+import { loadSyntheticSuiteCatalog } from "../mingliSyntheticSuiteApi";
 import type { MingliSyntheticLabRoute } from "../mingliSyntheticLabNavigation";
 import type {
   MingliSyntheticExperimentCatalog,
   MingliSyntheticExperimentSnapshot,
 } from "../mingliSyntheticLabTypes";
+import type {
+  MingliSyntheticSuiteCatalog,
+  MingliSyntheticSuiteRunSelection,
+} from "../mingliSyntheticSuiteTypes";
+import {
+  exactSyntheticSuiteItem,
+  findSyntheticSuiteRun,
+  latestSyntheticSuiteRunSelection,
+  resolveSyntheticSuiteRoute,
+} from "../mingliSyntheticSuiteSelection";
 import type { MingliStageViewContext } from "../mingliStageTypes";
 import { MingliScenePlayer } from "./MingliScenePlayer";
 import { MingliSyntheticExperimentInspector } from "./MingliSyntheticExperimentInspector";
+import { MingliSyntheticExperimentToolbar } from "./MingliSyntheticExperimentToolbar";
+import { MingliSyntheticSuiteSummary } from "./MingliSyntheticSuiteSummary";
 
 export function MingliSyntheticExperimentScene({
   onBackToCurrent,
@@ -35,6 +48,8 @@ export function MingliSyntheticExperimentScene({
   route: MingliSyntheticLabRoute;
 }) {
   const [catalog, setCatalog] = useState<MingliSyntheticExperimentCatalog | null>(null);
+  const [suiteCatalog, setSuiteCatalog] =
+    useState<MingliSyntheticSuiteCatalog | null>(null);
   const [snapshot, setSnapshot] =
     useState<MingliSyntheticExperimentSnapshot | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
@@ -46,6 +61,16 @@ export function MingliSyntheticExperimentScene({
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [retry, setRetry] = useState(0);
+  const suiteSelection = useMemo(
+    () => route.suiteRunRef && suiteCatalog
+      ? findSyntheticSuiteRun(suiteCatalog, route.suiteRunRef)
+      : null,
+    [route.suiteRunRef, suiteCatalog],
+  );
+  const boundSuiteItem = useMemo(
+    () => exactSyntheticSuiteItem(suiteSelection, route),
+    [route, suiteSelection],
+  );
   const committedSnapshot = snapshot
     && snapshot.experiment_ref === route.experimentRef
     && snapshot.run_ref === route.runRef
@@ -63,10 +88,14 @@ export function MingliSyntheticExperimentScene({
     setLoading(true);
     setCatalogError(null);
     onContextChange({ subjectId: "current", status: "LOADING", projection: null });
-    void loadSyntheticExperimentCatalog(controller.signal)
-      .then((value) => {
+    void Promise.all([
+      loadSyntheticExperimentCatalog(controller.signal),
+      loadSyntheticSuiteCatalog(route.suiteRunRef, controller.signal),
+    ])
+      .then(([experimentValue, suiteValue]) => {
         if (controller.signal.aborted) return;
-        setCatalog(value);
+        setCatalog(experimentValue);
+        setSuiteCatalog(suiteValue);
       })
       .catch((caught) => {
         if (!controller.signal.aborted) {
@@ -76,10 +105,50 @@ export function MingliSyntheticExperimentScene({
         }
       });
     return () => controller.abort();
-  }, [onContextChange, retry]);
+  }, [onContextChange, retry, route.suiteRunRef]);
 
   useEffect(() => {
-    if (!catalog) return;
+    if (!catalog || !suiteCatalog) return;
+    if (route.suiteRunRef) {
+      if (!suiteSelection) {
+        setSnapshot(null);
+        setCatalogError("mingli_synthetic_suite_run_not_found");
+        setLoading(false);
+        onContextChange({ subjectId: "current", status: "ERROR", projection: null });
+        return;
+      }
+      const resolution = resolveSyntheticSuiteRoute(suiteSelection, route);
+      if (resolution.status === "PATCH") {
+        onRouteChange({
+          ...route,
+          experimentRef: resolution.experimentRef,
+          runRef: resolution.runRef,
+        }, "replace");
+        return;
+      }
+      if (resolution.status === "ERROR") {
+        setSnapshot(null);
+        setCatalogError(resolution.error);
+        setLoading(false);
+        onContextChange({ subjectId: "current", status: "ERROR", projection: null });
+        return;
+      }
+    } else if (!route.experimentRef && !route.runRef) {
+      const latest = latestSyntheticSuiteRunSelection(suiteCatalog);
+      const first = latest?.review.items.find(
+        (item) => item.execution_status === "SEALED" && item.experiment_run_ref,
+      );
+      if (latest && first?.experiment_run_ref) {
+        onRouteChange({
+          mode: "synthetic",
+          suiteRunRef: latest.run.suite_run_ref,
+          experimentRef: first.experiment_ref,
+          runRef: first.experiment_run_ref,
+          variant: "A",
+        }, "replace");
+        return;
+      }
+    }
     const selected = route.experimentRef
       ? catalog.experiments.find(
           (item) => item.experiment_ref === route.experimentRef,
@@ -105,6 +174,7 @@ export function MingliSyntheticExperimentScene({
       ) {
         onRouteChange({
           mode: "synthetic",
+          suiteRunRef: null,
           experimentRef: selected.experiment_ref,
           runRef: null,
           variant: route.variant,
@@ -115,6 +185,7 @@ export function MingliSyntheticExperimentScene({
     setCatalogError(null);
     const next = {
       mode: "synthetic" as const,
+      suiteRunRef: route.suiteRunRef,
       experimentRef: selected.experiment_ref,
       runRef:
         route.experimentRef === selected.experiment_ref && route.runRef
@@ -125,10 +196,23 @@ export function MingliSyntheticExperimentScene({
     if (next.experimentRef !== route.experimentRef || next.runRef !== route.runRef) {
       onRouteChange(next, "replace");
     }
-  }, [catalog, onContextChange, onRouteChange, route]);
+  }, [
+    boundSuiteItem,
+    catalog,
+    onContextChange,
+    onRouteChange,
+    route,
+    suiteCatalog,
+    suiteSelection,
+  ]);
 
   useEffect(() => {
-    if (!catalog || !route.experimentRef || !route.runRef) return;
+    if (
+      !catalog
+      || !route.experimentRef
+      || !route.runRef
+      || (route.suiteRunRef && !boundSuiteItem)
+    ) return;
     const experimentRef = route.experimentRef;
     const runRef = route.runRef;
     const variant = route.variant;
@@ -157,6 +241,10 @@ export function MingliSyntheticExperimentScene({
     )
       .then((value) => {
         if (controller.signal.aborted) return;
+        if (
+          boundSuiteItem?.experiment_run_hash
+          && value.run_hash !== boundSuiteItem.experiment_run_hash
+        ) throw new Error("mingli_synthetic_suite_run_hash_mismatch");
         setSnapshot(value);
         setLoading(false);
         onContextChange({
@@ -182,7 +270,16 @@ export function MingliSyntheticExperimentScene({
         }
       });
     return () => controller.abort();
-  }, [catalog, onContextChange, retry, route.experimentRef, route.runRef, route.variant]);
+  }, [
+    boundSuiteItem,
+    catalog,
+    onContextChange,
+    retry,
+    route.experimentRef,
+    route.runRef,
+    route.suiteRunRef,
+    route.variant,
+  ]);
 
   const frame = useMemo(
     () => committedSnapshot
@@ -204,7 +301,8 @@ export function MingliSyntheticExperimentScene({
   const displayedVariant = committedSnapshot?.selected_variant ?? route.variant;
   const latestRunRef = experiment?.latest_run_ref ?? null;
   const hasSealedRun = experiment?.run_status === "SEALED"
-    && Boolean(route.experimentRef && route.runRef);
+    && Boolean(route.experimentRef && route.runRef)
+    && (!route.suiteRunRef || Boolean(boundSuiteItem));
 
   const retryCurrent = () => {
     setLoading(true);
@@ -224,10 +322,66 @@ export function MingliSyntheticExperimentScene({
     }
     onRouteChange({
       mode: "synthetic",
+      suiteRunRef: null,
       experimentRef: experiment.experiment_ref,
       runRef: latestRunRef,
       variant: committedSnapshot?.selected_variant ?? route.variant,
     }, "replace");
+  };
+
+  const selectExperiment = (experimentRef: string) => {
+    const selected = catalog?.experiments.find(
+      (item) => item.experiment_ref === experimentRef,
+    );
+    if (!selected) return;
+    setSnapshot(null);
+    setCatalogError(null);
+    setSnapshotError(null);
+    const suiteItem = suiteSelection?.review.items.find(
+      (item) => item.experiment_ref === selected.experiment_ref
+        && item.execution_status === "SEALED"
+        && item.experiment_run_ref,
+    );
+    onRouteChange({
+      mode: "synthetic",
+      suiteRunRef: suiteItem ? suiteSelection?.run.suite_run_ref ?? null : null,
+      experimentRef: selected.experiment_ref,
+      runRef: suiteItem?.experiment_run_ref ?? selected.latest_run_ref,
+      variant: "A",
+    });
+  };
+
+  const selectRun = (runRef: string) => {
+    if (!experiment) return;
+    setSnapshot(null);
+    setSnapshotError(null);
+    onRouteChange({
+      ...route,
+      suiteRunRef: null,
+      experimentRef: experiment.experiment_ref,
+      runRef,
+    });
+  };
+
+  const selectVariant = (variant: "A" | "B") => {
+    if (route.variant === variant) {
+      if (activeSnapshotError) retryCurrent();
+      return;
+    }
+    onRouteChange({ ...route, variant });
+  };
+
+  const selectSuiteItem = (experimentRef: string, runRef: string) => {
+    if (!suiteSelection) return;
+    setSnapshot(null);
+    setSnapshotError(null);
+    onRouteChange({
+      mode: "synthetic",
+      suiteRunRef: suiteSelection.run.suite_run_ref,
+      experimentRef,
+      runRef,
+      variant: "A",
+    });
   };
 
   return (
@@ -253,86 +407,18 @@ export function MingliSyntheticExperimentScene({
         </div>
       </header>
 
-      <div className="mingli-scene-toolbar" aria-label="选择合成命盘实验成员">
-        <label className="mingli-synthetic-selector">
-          <small>研究课题</small>
-          <select
-            aria-label="选择合成实验"
-            disabled={!catalog}
-            onChange={(event) => {
-              const selected = catalog?.experiments.find(
-                (item) => item.experiment_ref === event.target.value,
-              );
-              if (!selected) return;
-              setSnapshot(null);
-              setCatalogError(null);
-              setSnapshotError(null);
-              onRouteChange({
-                mode: "synthetic",
-                experimentRef: selected.experiment_ref,
-                runRef: selected.latest_run_ref,
-                variant: "A",
-              });
-            }}
-            value={experiment?.experiment_ref ?? ""}
-          >
-            {!experiment && <option value="">未识别的研究课题</option>}
-            {catalog?.experiments.map((item, index) => (
-              <option key={item.experiment_ref} value={item.experiment_ref}>
-                {index + 1} · {item.title}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="mingli-synthetic-selector mingli-synthetic-run-selector">
-          <small>封存复盘</small>
-          <select
-            aria-label="选择封存运行"
-            disabled={!experiment || experiment.runs.length === 0}
-            onChange={(event) => {
-              if (!experiment) return;
-              setSnapshot(null);
-              setSnapshotError(null);
-              onRouteChange({
-                ...route,
-                experimentRef: experiment.experiment_ref,
-                runRef: event.target.value,
-              });
-            }}
-            value={route.runRef ?? ""}
-          >
-            {experiment?.runs.length ? experiment.runs.map((run) => (
-              <option key={run.run_ref} value={run.run_ref}>
-                {formatRunLabel(
-                  run.created_at,
-                  run.model_independence,
-                  run.review_contract_status,
-                )}
-              </option>
-            )) : <option value="">尚未生成</option>}
-          </select>
-        </label>
-        <div className="mingli-stage-mode" role="group" aria-label="选择 A 或 B 命盘">
-          {(["A", "B"] as const).map((variant) => (
-            <button
-              aria-pressed={displayedVariant === variant}
-              disabled={!hasSealedRun}
-              key={variant}
-              onClick={() => {
-                if (route.variant === variant) {
-                  if (activeSnapshotError) retryCurrent();
-                  return;
-                }
-                onRouteChange({ ...route, variant });
-              }}
-              type="button"
-            >
-              {variant} · {experiment?.changed_input[variant] ?? "--:--"}
-            </button>
-          ))}
-        </div>
-        <span className="mingli-synthetic-read-only">只读结果 · 页面不会调用模型</span>
-      </div>
+      <MingliSyntheticExperimentToolbar
+        boundSuiteItem={boundSuiteItem}
+        catalog={catalog}
+        displayedVariant={displayedVariant}
+        experiment={experiment}
+        hasSealedRun={hasSealedRun}
+        onSelectExperiment={selectExperiment}
+        onSelectRun={selectRun}
+        onSelectVariant={selectVariant}
+        selectedRunRef={route.runRef}
+        suiteSelection={suiteSelection}
+      />
 
       {committedSnapshot && frame ? (
         <div className="mingli-scene-composition mingli-synthetic-composition" data-overlay="LAB">
@@ -341,7 +427,17 @@ export function MingliSyntheticExperimentScene({
             frame={frame}
             stage={committedSnapshot.stage}
           />
-          <MingliSyntheticExperimentInspector snapshot={committedSnapshot} />
+          <MingliSyntheticExperimentInspector
+            snapshot={committedSnapshot}
+            suiteSummary={suiteSelection ? (
+              <MingliSyntheticSuiteSummary
+                currentExperimentRef={route.experimentRef}
+                experiments={catalog!}
+                onSelect={selectSuiteItem}
+                selection={suiteSelection}
+              />
+            ) : undefined}
+          />
           {loading && (
             <div className="mingli-synthetic-switching" role="status">
               正在读取 {route.variant} 组；当前仍显示 {displayedVariant} 组
@@ -360,6 +456,14 @@ export function MingliSyntheticExperimentScene({
         </div>
       ) : (
         <div className="mingli-synthetic-empty" role="status">
+          {suiteSelection && catalog && (
+            <MingliSyntheticSuiteSummary
+              currentExperimentRef={route.experimentRef}
+              experiments={catalog}
+              onSelect={selectSuiteItem}
+              selection={suiteSelection}
+            />
+          )}
           {loading ? (
             <p>正在读取离线封存的 A／B 实验……</p>
           ) : catalogError || activeSnapshotError ? (
@@ -367,7 +471,9 @@ export function MingliSyntheticExperimentScene({
               <p>
                 {activeSnapshotError
                   ? "当前链接的封存结果不可用；不会拿别的命盘顶替。"
-                  : "封存实验暂时无法读取；不会在浏览器补跑模型。"}
+                  : catalogError?.startsWith("mingli_synthetic_suite")
+                    ? "当前批次链接与封存课题不一致；不会拿其他运行顶替。"
+                    : "封存实验暂时无法读取；不会在浏览器补跑模型。"}
               </p>
               <div>
                 <button onClick={retryCurrent} type="button">重新读取</button>
@@ -390,18 +496,4 @@ export function MingliSyntheticExperimentScene({
       </footer>
     </div>
   );
-}
-
-function formatRunLabel(
-  createdAt: string,
-  model: "PASS" | "FAIL" | "NOT_EVALUABLE",
-  contract: "CURRENT" | "SUPERSEDED",
-): string {
-  const date = createdAt.replace("T", " ").slice(0, 16);
-  const status = model === "PASS"
-    ? "模型独立"
-    : model === "FAIL"
-      ? "仍需校正"
-      : "实验不可评价";
-  return `${date} · ${status} · ${contract === "CURRENT" ? "当前口径" : "旧口径"}`;
 }

@@ -276,17 +276,17 @@ B：effective_root = PRESENT [hour支藏甲]
 
 ## 当前能力与下一组矩阵
 
-本轮完成的是“系统能用多组合法成对命盘发现方法缺口、写入窄规则、重跑并封存差异”，
-不是完整断命资格。当前最大问题已经从“只测 Owner 一盘”收窄为：实验仍集中在根身份与
-完整时柱对照，藏干位阶、组合竞争、明确失效、多根、岁运保持和应事矩阵尚未展开，而且
-模型原始结果仍需服务端修正。
+本轮完成的是“系统能用候选绑定的批次脚本顺序运行多组合法成对命盘、聚合专业错误并
+封存差异”，不是完整断命资格。第一／第二／第三藏干位阶矩阵已经完成首轮 DEV 验证；
+当前最大问题不再是位阶事实缺失，而是模型在四个变体上都不能独立稳定完成日主／根气
+裁决，并在一个变体上出现工作路径归槽错误。
 
 下一批按方法矩阵推进，不继续人工围绕某一真人命盘扩写：
 
-1. `1980-06-01 05:00 / 07:00 / 13:00`：卯中乙第一藏干、辰中乙第二藏干、
-   未中乙第三藏干；先拆为两个 A／B 实验，不伪造第二、第三藏干“无效”；
+1. 以当前错误簇为靶点，减少 `DAY_MASTER_REGIME` 与 `WORK_PATH` 服务端修正，并要求
+   同一 Suite 在不放宽 Gold 的前提下复跑；
 2. 有六冲／六合成员关系但作用未决的保留未决组；
-3. 具备明确失效证据后才允许 `DOES_NOT_BLOCK` 的反例组；
+3. 具备明确失效证据后才允许 `DOES_NOT_BLOCK / ABSENT` 的反例组；
 4. 多个根候选的合并与竞争组；
 5. 只改变大运／流年的原局保持组，禁止岁运回写原局；
 6. 根气判型稳定后，再进入食伤生财／制杀、财星通关、调候与人生应事方法矩阵。
@@ -297,12 +297,12 @@ B：effective_root = PRESENT [hour支藏甲]
 ## 当前版本
 
 ```text
-Foundation                 v60.foundation.029
-Mingli Engine              v60.mingli-cognitive-engine.040
-Runtime Architecture       v60.runtime-architecture.067
-Agent Runtime              v60.mingli-agent-runtime.024
-Agent Profile              v60.mingli-agent.whole-chart-cognition.022
-Agent Prompt               v60.prompt.mingli-agent-whole-chart.019
+Foundation                 v60.foundation.031
+Mingli Engine              v60.mingli-cognitive-engine.042
+Runtime Architecture       v60.runtime-architecture.069
+Agent Runtime              v60.mingli-agent-runtime.025
+Agent Profile              v60.mingli-agent.whole-chart-cognition.023
+Agent Prompt               v60.prompt.mingli-agent-whole-chart.020
 Provider Profile           v60.model-serving.gemma4-mingli-agent.003
 Agent Prompt View          v60.mingli-agent-prompt-view.011
 Agent Reading              v60.mingli-agent-reading.005
@@ -312,24 +312,28 @@ Method Distillation        v60.mingli-agent-method-distillation.003
 Effective-root Method      v60.mingli-effective-root-method.001
 Regime Decision            v60.mingli-agent-regime-decision.001
 Stage Projection           v60.mingli-stage-projection.004
-Synthetic Catalog          v60.mingli-synthetic-experiment-catalog.002
-Synthetic Evaluator        v60.mingli-synthetic-experiment-evaluator.003
+Synthetic Catalog          v60.mingli-synthetic-experiment-catalog.003
+Synthetic Evaluator        v60.mingli-synthetic-experiment-evaluator.005
 Synthetic Run              v60.mingli-synthetic-experiment-run.001
-Synthetic Snapshot         v60.mingli-synthetic-experiment-snapshot.003
-Unit Mingli                v60.unit-mingli.030
-Unit Lab                   v60.unit-lab.026
-Migration                  0037_mingli_root_matrix
+Synthetic Snapshot         v60.mingli-synthetic-experiment-snapshot.004
+Suite Catalog              v60.mingli-synthetic-suite-catalog.001
+Suite Definition           v60.mingli-synthetic-suite-definition.001
+Suite Runner               v60.mingli-synthetic-suite-runner.002
+Suite Run                  v60.mingli-synthetic-suite-run.002
+Unit Mingli                v60.unit-mingli.032
+Unit Lab                   v60.unit-lab.028
+Migration                  0039_mingli_suite_contract
 ```
 
-Migration 0037 只升级 manifest 与能力声明，不调用模型、不改写 sealed run。
-最新 `f90c01...` 由本地 Gemma4 两次独立调用形成，绑定 Profile/Prompt `.022/.019` 与
-Reading `.005`；历史 Reading、Evaluator 与 Gold 仍按各自明确版本语义重放，不能被
-“当前版本”常量静默改义。
+Migrations 0038/0039 新增 Suite append-only 表并收紧候选／子 Run 谱系，不调用模型、
+不改写 sealed run。最新 Suite `a72328...` 绑定本地 Gemma4、Profile/Prompt
+`.023/.020` 与 Reading `.005`；历史 Reading、Evaluator、Gold 与 Suite 仍按各自明确
+版本语义重放，不能被“当前版本”常量静默改义。
 
 ## 验证
 
 ```text
-Backend tests              409 PASS
+Backend tests              419 PASS
 Ruff                       PASS
 TypeScript / Vite build    PASS
 Runtime Architecture       PASS

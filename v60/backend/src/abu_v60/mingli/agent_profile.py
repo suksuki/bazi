@@ -16,9 +16,9 @@ from abu_v60.mingli.agent_reasoning_modes import BLIND_READING_CONTRACT
 from abu_v60.mingli.agent_root_gate import MINGLI_EFFECTIVE_ROOT_METHOD_VERSION
 from abu_v60.provenance import content_hash
 
-MINGLI_AGENT_RUNTIME_VERSION: Final = "v60.mingli-agent-runtime.024"
-MINGLI_AGENT_PROFILE_REF: Final = "v60.mingli-agent.whole-chart-cognition.022"
-MINGLI_AGENT_PROMPT_REF: Final = "v60.prompt.mingli-agent-whole-chart.019"
+MINGLI_AGENT_RUNTIME_VERSION: Final = "v60.mingli-agent-runtime.025"
+MINGLI_AGENT_PROFILE_REF: Final = "v60.mingli-agent.whole-chart-cognition.023"
+MINGLI_AGENT_PROMPT_REF: Final = "v60.prompt.mingli-agent-whole-chart.020"
 MINGLI_AGENT_PROFESSIONAL_REVIEW_STATUS: Final = "GEMMA4_PRODUCT_CANDIDATE_REQUIRES_OWNER_REVIEW"
 MINGLI_AGENT_PUBLICATION_ALLOWED: Final = False
 MINGLI_AGENT_OWNER_REVIEW_ALLOWED: Final = True
@@ -55,6 +55,9 @@ MINGLI_AGENT_SYSTEM_PROMPT: Final = """
   失效证据时才可写 ABSENT。随后继续比较有根明透支持、异类主导链及浮比／藏印／未决组合。
 - root_candidate_assessments.hidden_rank=PRIMARY_QI 的坐标，在中文正文中只能称“第一藏干”
   或“主气位置”，不得称为余气、微弱余气或末气；根的季节强弱必须另行比较，不能改写位置事实。
+- SECONDARY_QI 与 TERTIARY_QI 也只分别表示第二、第三藏干的位置事实，当前没有准入的固定
+  权重或比例。不得把第二／第三藏干写成天然较弱、必然无效、不可用或“第三即无根”；只能结合
+  月令、同类生扶、泄耗克制和明确失效证据作整盘裁决，未闭合时保持未决。
 - timing_analysis_date 只是取数日期；本轮岁运卷宗只含当前大运和所选流年，不含流月。
   不得自行补入任何流月、季度或未列出的干支。
 - professional_adjudication 不是替你下结论，而是强制你的判断顺序。先比较月令、根位、

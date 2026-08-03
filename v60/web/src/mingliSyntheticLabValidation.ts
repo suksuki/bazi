@@ -32,7 +32,7 @@ export function validateSyntheticExperimentCatalog(
   }
   const catalog = value as unknown as MingliSyntheticExperimentCatalog;
   if (
-    catalog.catalog_version !== "v60.mingli-synthetic-experiment-catalog.002" ||
+    catalog.catalog_version !== "v60.mingli-synthetic-experiment-catalog.003" ||
     catalog.browser_generation_allowed !== false ||
     catalog.read_only !== true ||
     catalog.experiments.length < 1
@@ -71,7 +71,7 @@ export function validateSyntheticExperimentSnapshot(
     (item) => item.variant === expected.variant,
   );
   if (
-    snapshot.snapshot_version !== "v60.mingli-synthetic-experiment-snapshot.003" ||
+    snapshot.snapshot_version !== "v60.mingli-synthetic-experiment-snapshot.004" ||
     !snapshot.snapshot_ref ||
     !HASH.test(snapshot.snapshot_hash) ||
     snapshot.experiment_ref !== expected.experimentRef ||
@@ -262,11 +262,14 @@ function validateCatalogEntry(value: unknown): void {
           "v60.mingli-synthetic-experiment-evaluator.001",
           "v60.mingli-synthetic-experiment-evaluator.002",
           "v60.mingli-synthetic-experiment-evaluator.003",
+          "v60.mingli-synthetic-experiment-evaluator.004",
+          "v60.mingli-synthetic-experiment-evaluator.005",
         ].includes(item.evaluator_version) ||
         ![
           "v60.mingli-synthetic-experiment-dev-gold.001",
           "v60.mingli-synthetic-experiment-dev-gold.002",
           "v60.mingli-synthetic-experiment-dev-gold.003",
+          "v60.mingli-synthetic-experiment-dev-gold.004",
         ].includes(item.dev_gold_version) ||
         !["CURRENT", "SUPERSEDED"].includes(item.review_contract_status) ||
         !Number.isInteger(item.changed_pass_count) ||
@@ -292,19 +295,26 @@ function validateCatalogEntry(value: unknown): void {
 
 function validateDefinition(value: MingliSyntheticExperimentDefinition): void {
   if (
-    value.catalog_version !== "v60.mingli-synthetic-experiment-catalog.001" ||
+    ![
+      "v60.mingli-synthetic-experiment-catalog.001",
+      "v60.mingli-synthetic-experiment-catalog.002",
+    ].includes(value.catalog_version) ||
     !value.experiment_ref ||
     !HASH.test(value.definition_hash) ||
     value.suite !== "DEV" ||
-    !["CONTROLLED_LEGAL_HOUR_PAIR", "CONTROLLED_ROOT_IDENTITY_PAIR"].includes(
-      value.family,
-    ) ||
+    ![
+      "CONTROLLED_LEGAL_HOUR_PAIR",
+      "CONTROLLED_ROOT_IDENTITY_PAIR",
+      "CONTROLLED_HIDDEN_RANK_PRIMARY_SECONDARY_PAIR",
+      "CONTROLLED_HIDDEN_RANK_SECONDARY_TERTIARY_PAIR",
+    ].includes(value.family) ||
     !value.title ||
     !value.question ||
     value.blind_protocol !== "MEMBERS_INDEPENDENT_GOLD_NOT_IN_AGENT_PACKET" ||
     ![
       "WHOLE_HOUR_PILLAR_RESPONSE_NOT_ROOT_CAUSAL_ESTIMATE",
       "NATAL_ROOT_GATE_ONLY_WITH_FULL_HOUR_COLLATERAL",
+      "NATAL_HIDDEN_RANK_GATE_ONLY_WITH_FULL_HOUR_COLLATERAL",
     ].includes(value.inference_scope) ||
     !value.inference_limit ||
     !Array.isArray(value.known_collateral_deltas) ||
@@ -345,11 +355,14 @@ function validateEvaluation(
       "v60.mingli-synthetic-experiment-evaluator.001",
       "v60.mingli-synthetic-experiment-evaluator.002",
       "v60.mingli-synthetic-experiment-evaluator.003",
+      "v60.mingli-synthetic-experiment-evaluator.004",
+      "v60.mingli-synthetic-experiment-evaluator.005",
     ].includes(value.evaluator_version) ||
     ![
       "v60.mingli-synthetic-experiment-dev-gold.001",
       "v60.mingli-synthetic-experiment-dev-gold.002",
       "v60.mingli-synthetic-experiment-dev-gold.003",
+      "v60.mingli-synthetic-experiment-dev-gold.004",
     ].includes(value.dev_gold_version) ||
     !HASH.test(value.dev_gold_hash) ||
     !OUTCOMES.includes(value.outcome) ||

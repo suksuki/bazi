@@ -2,6 +2,40 @@
 
 ## 2026-08-03
 
+### Hidden-stem-rank DEV Suite becomes a repeatable training loop
+
+- Added two calendar-resolved experiments for first/second and second/third
+  hidden-stem rank. Their Gold checks only identity, order, collateral facts,
+  the narrow minimum gate and prose scope; it never assigns fixed rank weight
+  or equates a secondary/tertiary hidden stem with weak, invalid or unusable.
+- Added the sequential offline Suite runner, candidate-bound append-only Suite
+  Run, deterministic error clustering and exact historical Run endpoint. A
+  candidate identity is required even when every child execution fails; invalid
+  child lineage cannot be converted into an ordinary runner error or reach
+  append-only storage.
+- Sealed real local Gemma4 Suite Run
+  `v60-mingli-synthetic-suite-run-a72328f9cf2f9cdfceb0`: 2/2 experiments
+  sealed, 0 runner errors, 2 review-required. Both pass 3/3 holds and 4/4
+  method-response checks, but remain `PRODUCT_SAFE_MODEL_FAIL` because four
+  variants needed `DAY_MASTER_REGIME` repair and one needed `WORK_PATH` repair.
+- Added a visible Lab batch summary with the two training topics and clustered
+  professional errors. Suite/experiment/run/variant deep links recover exactly;
+  mismatched identities fail visibly instead of substituting another result,
+  and old Runs remain readable with an explicit superseded-review marker.
+- Kept sealed Suite `items/counts/error_clusters` exactly bound to the stored
+  Run Hash. The dynamic old/current-contract judgment now lives in a separate,
+  source-bound and independently hashed `current_review_projection`; the API no
+  longer returns rewritten review fields under an immutable Suite Hash.
+- Added migrations `0038_mingli_synthetic_suite_runner` and
+  `0039_mingli_synthetic_suite_contract`; advanced Foundation/Mingli/
+  Architecture to `.031/.042/.069`, Agent Runtime/Profile/Prompt to
+  `.025/.023/.020`, Unit Mingli/Lab to `.032/.028`, Evaluator/Snapshot to
+  `.005/.004`, and Suite Runner/Run to `.002/.002`.
+- All 419 backend tests, Ruff, TypeScript/Vite build, Runtime Architecture,
+  source maintainability, shared Scene and synthetic Lab contracts pass. Real
+  Desktop Chrome verified latest/old/mismatched deep links, refresh/back
+  recovery and a 1512px layout without horizontal overflow.
+
 ### Synthetic Lab adds the root-identity matrix without leaking Gold into doctrine
 
 - Added a second legal synthetic experiment comparing `hour支藏乙` as

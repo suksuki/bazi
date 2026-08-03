@@ -10,9 +10,14 @@ from abu_v60.mingli.synthetic_experiment_service import (
     SyntheticExperimentError,
     SyntheticExperimentService,
 )
+from abu_v60.mingli.synthetic_suite_service import (
+    SyntheticSuiteService,
+    SyntheticSuiteServiceError,
+)
 
 router = APIRouter(prefix="/api/v60/mingli/lab", tags=["mingli-synthetic-lab"])
 service = SyntheticExperimentService(engine)
+suite_service = SyntheticSuiteService(engine)
 SYNTHETIC_LAB_REVIEWER_ROLES = frozenset({"admin", "local_qa_owner"})
 
 
@@ -32,6 +37,44 @@ def synthetic_experiment_catalog(
     _require_synthetic_lab_reviewer(session)
     response.headers["Cache-Control"] = "private, no-store"
     return service.catalog()
+
+
+@router.get("/synthetic-suite-runs")
+def synthetic_suite_run_catalog(
+    response: Response,
+    session: SessionDependency,
+) -> dict[str, Any]:
+    _require_synthetic_lab_reviewer(session)
+    try:
+        catalog = suite_service.catalog()
+    except SyntheticSuiteServiceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+    response.headers["Cache-Control"] = "private, no-store"
+    return catalog
+
+
+@router.get("/synthetic-suite-runs/{suite_run_ref}")
+def synthetic_suite_run_snapshot(
+    suite_run_ref: str,
+    response: Response,
+    session: SessionDependency,
+) -> dict[str, Any]:
+    _require_synthetic_lab_reviewer(session)
+    try:
+        catalog = suite_service.catalog(suite_run_ref=suite_run_ref)
+    except SyntheticSuiteServiceError as exc:
+        reason = str(exc)
+        code = (
+            status.HTTP_404_NOT_FOUND
+            if reason == "mingli_synthetic_suite_run_not_found"
+            else status.HTTP_409_CONFLICT
+        )
+        raise HTTPException(status_code=code, detail=reason) from exc
+    response.headers["Cache-Control"] = "private, no-store"
+    return catalog
 
 
 @router.get("/synthetic-experiments/{experiment_ref}/snapshot")

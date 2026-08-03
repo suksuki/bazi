@@ -345,6 +345,31 @@ mingli_synthetic_experiment_runs = Table(
     schema="mingli",
 )
 
+mingli_synthetic_suite_runs = Table(
+    "synthetic_suite_runs",
+    metadata,
+    Column("suite_run_ref", String(180), primary_key=True),
+    Column("suite_run_version", String(100), nullable=False),
+    Column("suite_ref", String(180), nullable=False),
+    Column("suite_definition_hash", String(64), nullable=False),
+    Column("suite_mode", String(40), nullable=False),
+    Column("runner_version", String(100), nullable=False),
+    Column("status", String(60), nullable=False),
+    Column("experiment_count", Integer, nullable=False),
+    Column("sealed_count", Integer, nullable=False),
+    Column("error_count", Integer, nullable=False),
+    Column("review_required_count", Integer, nullable=False),
+    Column("run_json", JSONB, nullable=False),
+    Column("run_hash", String(64), nullable=False, unique=True),
+    Column(
+        "created_at",
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    ),
+    schema="mingli",
+)
+
 mingli_relation_effect_evidence_request_receipts = Table(
     "relation_effect_evidence_request_receipts",
     metadata,

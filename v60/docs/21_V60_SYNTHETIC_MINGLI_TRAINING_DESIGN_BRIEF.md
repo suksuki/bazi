@@ -54,7 +54,8 @@ Owner 已授权继续沿合成命局验证方向推进。以下属于设计师�
 
 ## 2026-08-03 真实数据交接
 
-设计师现在不必再用四行固定 mock 表达“实验书架／运行历史”。V60 已提供两个真实实验：
+设计师现在不必再用四行固定 mock 表达“实验书架／运行历史”。V60 已提供四个真实实验；
+新增的两项藏干位阶实验由同一个真实 DEV Suite 组织：
 
 ```text
 课题一：完整合法时柱变化下的最低阻从根响应
@@ -65,6 +66,19 @@ sealed runs: 4
 experiment_ref: v60-mingli-synthetic-experiment-a44f56c301a35d48ff0f
 current run: v60-mingli-synthetic-run-f90c01fefacdc663a5ea
 superseded dev preflight: v60-mingli-synthetic-run-ec587bce4fe1e0e09856
+
+课题三：第一藏干与第二藏干的最低门
+experiment_ref: v60-mingli-synthetic-experiment-c70c5f66db664e1d4e0b
+current run: v60-mingli-synthetic-run-ead9d8cf76183dbbc37c
+
+课题四：第二藏干与第三藏干不得被位阶自动抹除
+experiment_ref: v60-mingli-synthetic-experiment-ebc68620f04cf106c2ec
+current run: v60-mingli-synthetic-run-fe47a371df2c4fa34525
+
+DEV Suite: 藏干位阶训练 · 第一至第三藏干
+suite run: v60-mingli-synthetic-suite-run-a72328f9cf2f9cdfceb0
+result: 2 封存 / 0 执行失败 / 2 需复核
+error clusters: 日主与根气裁决 × 4 / 模型判断归槽 × 1
 ```
 
 目录会为每个 Run 返回 Profile／Prompt／Evaluator／Gold 身份，并标出 `CURRENT` 或
@@ -73,7 +87,8 @@ superseded dev preflight: v60-mingli-synthetic-run-ec587bce4fe1e0e09856
 书架。请在整体原型中把这些状态做成“选择研究课题 → 选择一次封存复盘 → 回到上次位置”
 的温润体验，而不是工程 Ref 列表。
 
-课题二可作为新的主要原型样例：A 与 B 的产品响应正确，但候选模型仍依赖服务端修正。
+课题三／四及其批次摘要可作为新的主要原型样例：产品方法响应正确，但候选模型仍依赖
+服务端修正。
 设计上需要让人一眼看懂“系统学会了这条方法”和“模型还没独立学会”可以同时成立；不要
 用一个绿色总分合并二者。旧预检 Run 必须保留为旧口径历史，但不应与当前干净 Run 同等
 突出。

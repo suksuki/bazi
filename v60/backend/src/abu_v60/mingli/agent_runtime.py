@@ -316,6 +316,21 @@ class MingliAgentRuntime:
     def ready(self) -> bool:
         return self._enabled and self._provider is not None
 
+    def candidate_identity(self) -> dict[str, str]:
+        provider = self._required_provider()
+        return {
+            "agent_profile_ref": MINGLI_AGENT_PROFILE_REF,
+            "agent_profile_hash": MINGLI_AGENT_PROFILE_HASH,
+            "provider_id": provider.provider_id,
+            "model_ref": provider.model_ref,
+            "model_digest": provider.model_digest,
+            "provider_profile_ref": provider.provider_profile_ref,
+            "provider_profile_hash": provider.provider_profile_hash,
+            "prompt_ref": MINGLI_AGENT_PROMPT_REF,
+            "prompt_hash": MINGLI_AGENT_PROMPT_HASH,
+            "agent_reading_version": MINGLI_AGENT_READING_VERSION,
+        }
+
     def generation_key(
         self,
         *,
@@ -473,9 +488,7 @@ def mingli_agent_runtime_manifest(
         "method_distillation_ref": MINGLI_AGENT_METHOD_DISTILLATION_VERSION,
         "effective_root_method_ref": MINGLI_EFFECTIVE_ROOT_METHOD_VERSION,
         "output_repair_contract_ref": MINGLI_AGENT_OUTPUT_REPAIR_VERSION,
-        "normalization_receipt_contract_ref": (
-            MINGLI_AGENT_NORMALIZATION_RECEIPT_VERSION
-        ),
+        "normalization_receipt_contract_ref": (MINGLI_AGENT_NORMALIZATION_RECEIPT_VERSION),
         "regime_decision_contract_ref": MINGLI_AGENT_REGIME_DECISION_VERSION,
         "method_adjudication": "TYPED_CHECK_RULINGS_AND_SERVER_DERIVED_AGGREGATE",
         "whole_chart_judgment_required": True,

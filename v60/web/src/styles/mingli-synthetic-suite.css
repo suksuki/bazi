@@ -1,0 +1,108 @@
+.mingli-synthetic-suite-summary {
+  display: grid;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid rgba(208, 187, 126, 0.28);
+  border-radius: 13px;
+  background: linear-gradient(145deg, rgba(46, 52, 30, 0.38), rgba(3, 20, 14, 0.38));
+}
+
+.mingli-synthetic-suite-summary > header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 9px;
+}
+
+.mingli-synthetic-suite-summary > header > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.mingli-synthetic-suite-summary header small,
+.mingli-synthetic-suite-clusters > small {
+  color: #d4bf89;
+  font-size: 8px;
+}
+
+.mingli-synthetic-suite-summary header strong {
+  color: #e3ebe5;
+  font-size: 10px;
+  font-weight: 560;
+  line-height: 1.45;
+}
+
+.mingli-synthetic-suite-summary header > span {
+  padding: 4px 7px;
+  color: #a5b7ac;
+  border: 1px solid rgba(194, 217, 201, 0.14);
+  border-radius: 999px;
+  font-size: 7px;
+  white-space: nowrap;
+}
+
+.mingli-synthetic-suite-summary header > span[data-status="COMPLETED_WITH_ERRORS"] {
+  color: #d9a38e;
+  border-color: rgba(215, 135, 112, 0.38);
+}
+
+.mingli-synthetic-suite-topics {
+  display: grid;
+  gap: 5px;
+}
+
+.mingli-synthetic-suite-topics button {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: center;
+  gap: 5px;
+  padding: 7px 8px;
+  color: #aebfb4;
+  border: 1px solid rgba(194, 217, 201, 0.11);
+  border-radius: 9px;
+  background: rgba(2, 15, 11, 0.26);
+  cursor: pointer;
+  font-size: 8px;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.mingli-synthetic-suite-topics button[aria-current="true"] {
+  color: #ebdfad;
+  border-color: rgba(218, 192, 126, 0.48);
+  background: rgba(179, 145, 71, 0.12);
+}
+
+.mingli-synthetic-suite-topics button:disabled {
+  color: #a78073;
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.mingli-synthetic-suite-clusters {
+  display: grid;
+  gap: 5px;
+}
+
+.mingli-synthetic-suite-clusters > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.mingli-synthetic-suite-clusters span {
+  padding: 4px 6px;
+  color: #c9b790;
+  border: 1px solid rgba(210, 185, 120, 0.2);
+  border-radius: 999px;
+  background: rgba(210, 185, 120, 0.05);
+  font-size: 7px;
+}
+
+.mingli-synthetic-suite-summary > p {
+  margin: 0;
+  color: #83988c;
+  font-size: 7px;
+  line-height: 1.5;
+}

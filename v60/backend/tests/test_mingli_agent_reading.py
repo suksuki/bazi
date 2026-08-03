@@ -404,6 +404,7 @@ def _packet_with_candidate_count(count: int):
                   ON m.vector_ref = r.mechanism_vector_ref
                 WHERE jsonb_array_length(m.vector_json -> 'candidates') = :count
                   AND c.status = 'ACTIVE'
+                  AND c.subject_kind IN ('HUMAN_OWNER', 'HUMAN_REFERENCE')
                 ORDER BY r.created_at DESC
                 LIMIT 1
                 """

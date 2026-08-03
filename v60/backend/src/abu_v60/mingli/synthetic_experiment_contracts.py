@@ -9,7 +9,7 @@ from abu_v60.mingli.stage_contracts import MingliStageProjection
 
 SYNTHETIC_EXPERIMENT_RUN_VERSION = "v60.mingli-synthetic-experiment-run.001"
 SYNTHETIC_EXPERIMENT_SNAPSHOT_VERSION = (
-    "v60.mingli-synthetic-experiment-snapshot.003"
+    "v60.mingli-synthetic-experiment-snapshot.004"
 )
 SyntheticExperimentOutcome = Literal[
     "PASS",
@@ -21,11 +21,14 @@ SyntheticExperimentEvaluatorVersion = Literal[
     "v60.mingli-synthetic-experiment-evaluator.001",
     "v60.mingli-synthetic-experiment-evaluator.002",
     "v60.mingli-synthetic-experiment-evaluator.003",
+    "v60.mingli-synthetic-experiment-evaluator.004",
+    "v60.mingli-synthetic-experiment-evaluator.005",
 ]
 SyntheticExperimentDevGoldVersion = Literal[
     "v60.mingli-synthetic-experiment-dev-gold.001",
     "v60.mingli-synthetic-experiment-dev-gold.002",
     "v60.mingli-synthetic-experiment-dev-gold.003",
+    "v60.mingli-synthetic-experiment-dev-gold.004",
 ]
 
 

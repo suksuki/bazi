@@ -23,7 +23,6 @@ from abu_v60.mingli.service import MingliCaseService
 from abu_v60.mingli.stage import MingliStageService
 from abu_v60.mingli.stage_contracts import MingliStageMode, MingliStageProjection
 from abu_v60.mingli.synthetic_experiment_catalog import (
-    FIRST_SYNTHETIC_EXPERIMENT,
     FIRST_SYNTHETIC_EXPERIMENT_REF,
     SYNTHETIC_EXPERIMENT_CATALOG_VERSION,
     SYNTHETIC_EXPERIMENT_EVALUATOR_VERSION,
@@ -41,6 +40,7 @@ from abu_v60.mingli.synthetic_experiment_contracts import (
 from abu_v60.mingli.synthetic_experiment_evaluator import (
     evaluate_synthetic_experiment,
 )
+from abu_v60.mingli.synthetic_experiment_gold import synthetic_experiment_dev_gold
 from abu_v60.mingli.synthetic_experiment_seed import (
     seed_synthetic_experiment,
 )
@@ -266,6 +266,9 @@ class SyntheticExperimentService:
     @staticmethod
     def _run_summary(run: Mapping[str, Any]) -> dict[str, Any]:
         evaluation = run["evaluation_json"]
+        current_gold, current_gold_hash = synthetic_experiment_dev_gold(
+            run["experiment_ref"]
+        )
         checks = tuple(evaluation["checks"])
         issue_keys = evaluation["server_issue_keys"]
         model_independence = (
@@ -296,6 +299,8 @@ class SyntheticExperimentService:
                 "CURRENT"
                 if evaluation["evaluator_version"]
                 == SYNTHETIC_EXPERIMENT_EVALUATOR_VERSION
+                and evaluation["dev_gold_version"] == current_gold["gold_version"]
+                and evaluation["dev_gold_hash"] == current_gold_hash
                 else "SUPERSEDED"
             ),
             "changed_pass_count": evaluation["changed_pass_count"],
@@ -449,18 +454,6 @@ class SyntheticExperimentService:
             quant_vector=self._quant.get(vector_ref=reading.quant_vector_ref),
             mechanism_vector=self._mechanism.get(vector_ref=reading.mechanism_vector_ref),
             timing_vector=self._timing.get(vector_ref=reading.timing_vector_ref),
-        )
-
-    @staticmethod
-    def _evaluate(
-        *,
-        readings: Mapping[str, MingliAgentReadingEnvelope],
-        packets: Mapping[str, MingliAgentCasePacket],
-    ) -> dict[str, Any]:
-        return evaluate_synthetic_experiment(
-            experiment=FIRST_SYNTHETIC_EXPERIMENT,
-            readings=readings,
-            packets=packets,
         )
 
     def _ensure_run(

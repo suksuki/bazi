@@ -226,20 +226,24 @@ conditional Day-Master capacity. This is a reproducible structured first
 reading, not an advanced-master qualification; relationship/family positive
 methods and real timing adjudication remain missing.
 
-Two legal synthetic A/B experiments are now sealed and visible in Mingli Lab.
-The second experiment separates an `hour支藏乙` same-element candidate from an
-`hour支藏甲` exact-Day-Master root. Its current Run passes all four hold checks
-and all three expected responses, but both local-model outputs still required
-server regime normalization; its status therefore remains
-`PRODUCT_SAFE_MODEL_FAIL`, not an advanced-master qualification. The latest
-Run seals the structured raw model answer and a replay-verified field-level
-normalization receipt: A misclassified 卯中乙 as resource support and called
-the first hidden stem residual qi; B recognized 寅中甲 but also duplicated it
-into resource support and invented an unsupported competing resource. The
-current Agent Profile/Prompt are `.022/.019`; the system now knows the narrow
-root-identity distinction, while Gemma4 has not independently mastered it.
-Owner charts now serve as regressions while method discovery moves to synthetic
-DEV, qualification and holdout suites.
+Four legal synthetic A/B experiments are now sealed and visible in Mingli Lab.
+The first repeatable DEV Suite covers the two hidden-stem-rank experiments:
+first versus second, then second versus third hidden stem. Run it from `v60/`
+with `./.venv/bin/python tools/run_mingli_synthetic_suite.py`; it uses the
+version-locked local candidate, reuses already sealed child Runs, and never
+needs a chat turn or a browser model call.
+
+The current Suite Run is
+`v60-mingli-synthetic-suite-run-a72328f9cf2f9cdfceb0`: 2/2 experiments sealed,
+0 runner errors and 2 results requiring review. Each experiment passes 3/3
+hold checks and 4/4 method-response checks, including the prohibition against
+inventing fixed weight or declaring a second/third hidden stem invalid merely
+because of its rank. Gemma4 still needs four `DAY_MASTER_REGIME` repairs and
+one `WORK_PATH` repair, so both outcomes honestly remain
+`PRODUCT_SAFE_MODEL_FAIL`. The current Agent Profile/Prompt are `.023/.020`;
+the system has acquired a repeatable training loop, not advanced-master
+qualification. Owner charts stay regressions while method discovery runs in
+DEV; QUALIFICATION and HOLDOUT remain locked until the method is frozen.
 
 The engine and framework choices are recorded in
 [`docs/05_V60_ENGINE_AND_TECHNOLOGY_SELECTION.md`](docs/05_V60_ENGINE_AND_TECHNOLOGY_SELECTION.md).
@@ -284,7 +288,7 @@ The Owner-approved cognitive-system constitution, shared Reading Claim Graph,
 blind/reconciliation boundary and functional delivery sequence are recorded in
 [`docs/19_V60_MINGLI_COGNITIVE_SYSTEM_CONSTITUTION_V1.md`](docs/19_V60_MINGLI_COGNITIVE_SYSTEM_CONSTITUTION_V1.md).
 The legal paired-chart method Lab, minimum anti-follow root rule, append-only
-experiment history and next synthetic qualification matrix are recorded in
+experiment/Suite history and next synthetic qualification matrix are recorded in
 [`docs/20_V60_SYNTHETIC_MINGLI_METHOD_LAB.md`](docs/20_V60_SYNTHETIC_MINGLI_METHOD_LAB.md).
 The consolidated prototype request for blind review, three-track adjudication,
 method candidates, Abu guidance and Desktop Chrome states is recorded in

@@ -22,8 +22,13 @@ from abu_v60.mingli.agent_service import (
 from abu_v60.mingli.stage import MingliStageError, MingliStageService
 from abu_v60.mingli.stage_contracts import MingliStageMode
 from abu_v60.mingli.synthetic_experiment_catalog import (
+    FIRST_SYNTHETIC_EXPERIMENT,
     FIRST_SYNTHETIC_EXPERIMENT_MEMBERS,
     FIRST_SYNTHETIC_EXPERIMENT_REF,
+    HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT,
+    HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
+    HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT,
+    HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF,
     ROOT_IDENTITY_SYNTHETIC_EXPERIMENT,
     ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF,
     SYNTHETIC_EXPERIMENT_ANALYSIS_DATE,
@@ -99,6 +104,22 @@ def _seed_root_identity_and_packets() -> tuple[dict[str, Any], dict[str, Any]]:
     return by_case, packets
 
 
+def _seed_experiment_and_packets(experiment: Any) -> dict[str, Any]:
+    seeded = seed_synthetic_experiment(
+        engine,
+        experiment_ref=experiment.experiment_ref,
+    )
+    by_case = {item["case_ref"]: item for item in seeded["members"]}
+    service = SyntheticExperimentService(engine)
+    return {
+        member.variant: service._packet(
+            case_ref=member.case_ref,
+            reading_ref=str(by_case[member.case_ref]["reading_ref"]),
+        )
+        for member in experiment.members
+    }
+
+
 def _passing_readings(*, issues: tuple[str, ...] = ()) -> dict[str, Any]:
     a_regime = SimpleNamespace(
         classification="UNRESOLVED",
@@ -138,13 +159,9 @@ def _passing_root_identity_readings(
         "A": SimpleNamespace(
             output=SimpleNamespace(
                 regime_decision=SimpleNamespace(
-                    classification=(
-                        "ORDINARY_WEAK" if a_status == "PRESENT" else "UNRESOLVED"
-                    ),
+                    classification=("ORDINARY_WEAK" if a_status == "PRESENT" else "UNRESOLVED"),
                     effective_root_status=a_status,
-                    effective_root_coordinates=(
-                        ("hour支藏乙",) if a_status == "PRESENT" else ()
-                    ),
+                    effective_root_coordinates=(("hour支藏乙",) if a_status == "PRESENT" else ()),
                 ),
                 day_master_state="WEAK",
                 server_issue_keys=issues,
@@ -155,15 +172,37 @@ def _passing_root_identity_readings(
                 regime_decision=SimpleNamespace(
                     classification="ORDINARY_WEAK",
                     effective_root_status=b_status,
-                    effective_root_coordinates=(
-                        ("hour支藏甲",) if b_status == "PRESENT" else ()
-                    ),
+                    effective_root_coordinates=(("hour支藏甲",) if b_status == "PRESENT" else ()),
                 ),
                 day_master_state="WEAK",
                 server_issue_keys=issues,
             )
         ),
     }
+
+
+def _hidden_rank_readings(
+    *,
+    a_status: str,
+    b_status: str,
+    a_thesis: str = "",
+    b_thesis: str = "",
+) -> dict[str, Any]:
+    def reading(status: str, thesis: str) -> Any:
+        return SimpleNamespace(
+            output=SimpleNamespace(
+                regime_decision=SimpleNamespace(
+                    classification="ORDINARY_WEAK",
+                    effective_root_status=status,
+                    effective_root_coordinates=(("hour支藏乙",) if status == "PRESENT" else ()),
+                ),
+                day_master_state="WEAK",
+                whole_chart_thesis=thesis,
+                server_issue_keys=(),
+            )
+        )
+
+    return {"A": reading(a_status, a_thesis), "B": reading(b_status, b_thesis)}
 
 
 def test_public_definition_seals_full_inputs_and_inference_limit() -> None:
@@ -184,10 +223,10 @@ def test_public_definition_seals_full_inputs_and_inference_limit() -> None:
     assert content_hash(mutated) != definition["definition_hash"]
 
 
-def test_catalog_has_two_unique_real_calendar_experiments() -> None:
+def test_catalog_has_four_unique_real_calendar_experiments() -> None:
     definitions = synthetic_experiment_public_definitions()
-    assert len(definitions) == 2
-    assert len({item["experiment_ref"] for item in definitions}) == 2
+    assert len(definitions) == 4
+    assert len({item["experiment_ref"] for item in definitions}) == 4
     assert definitions[0]["experiment_ref"] == FIRST_SYNTHETIC_EXPERIMENT_REF
     assert definitions[1]["experiment_ref"] == ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF
     assert definitions[1]["family"] == "CONTROLLED_ROOT_IDENTITY_PAIR"
@@ -203,10 +242,24 @@ def test_catalog_has_two_unique_real_calendar_experiments() -> None:
         "legal_hour_pillar_change": "丁卯 → 丙寅",
     }
     assert "不证明卯中乙无根" in definitions[1]["inference_limit"]
+    assert definitions[2]["experiment_ref"] == (HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF)
+    assert definitions[2]["changed_input"] == {
+        "field": "birth_time",
+        "A": "06:00:00",
+        "B": "08:00:00",
+    }
+    assert definitions[3]["experiment_ref"] == (HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF)
+    assert definitions[3]["changed_input"] == {
+        "field": "birth_time",
+        "A": "08:00:00",
+        "B": "14:00:00",
+    }
+    assert all(
+        item["catalog_version"] == "v60.mingli-synthetic-experiment-catalog.002"
+        for item in definitions[2:]
+    )
     for definition in definitions:
-        identity = {
-            key: value for key, value in definition.items() if key != "definition_hash"
-        }
+        identity = {key: value for key, value in definition.items() if key != "definition_hash"}
         assert definition["definition_hash"] == content_hash(identity)
 
 
@@ -224,20 +277,16 @@ def test_schema_metadata_matches_synthetic_run_table() -> None:
 def test_catalog_routes_multiple_experiments_and_isolates_run_history() -> None:
     service = SyntheticExperimentService(engine)
     catalog = service.catalog()
-    assert catalog["catalog_version"] == (
-        "v60.mingli-synthetic-experiment-catalog.002"
-    )
-    entries = {
-        item["experiment_ref"]: item for item in catalog["experiments"]
-    }
+    assert catalog["catalog_version"] == ("v60.mingli-synthetic-experiment-catalog.003")
+    entries = {item["experiment_ref"]: item for item in catalog["experiments"]}
     assert set(entries) == {
         FIRST_SYNTHETIC_EXPERIMENT_REF,
         ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF,
+        HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
+        HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF,
     }
     for experiment_ref, entry in entries.items():
-        assert all(
-            run["experiment_ref"] == experiment_ref for run in entry["runs"]
-        )
+        assert all(run["experiment_ref"] == experiment_ref for run in entry["runs"])
         if entry["runs"]:
             assert entry["run_status"] == "SEALED"
             assert entry["latest_run_ref"] == entry["runs"][0]["run_ref"]
@@ -272,26 +321,29 @@ def test_seed_uses_real_calendar_and_shared_materialization_without_leaking_gold
         for item in first["members"]
     )
     with engine.connect() as connection:
-        profiles = connection.execute(
-            text(
-                """
+        profiles = (
+            connection.execute(
+                text(
+                    """
                 SELECT input_json
                 FROM identity.profiles
                 WHERE account_ref = :account_ref
                   AND input_json ->> 'experiment_ref' = :experiment_ref
                 ORDER BY profile_ref
                 """
-            ),
-            {
-                "account_ref": SYNTHETIC_RESEARCH_ACCOUNT_REF,
-                "experiment_ref": FIRST_SYNTHETIC_EXPERIMENT_REF,
-            },
-        ).scalars().all()
+                ),
+                {
+                    "account_ref": SYNTHETIC_RESEARCH_ACCOUNT_REF,
+                    "experiment_ref": FIRST_SYNTHETIC_EXPERIMENT_REF,
+                },
+            )
+            .scalars()
+            .all()
+        )
     assert len(profiles) == 2
     assert all(payload["gold_in_profile"] is False for payload in profiles)
     assert all(
-        "effective_root_status" not in str(payload)
-        and "regime_classification" not in str(payload)
+        "effective_root_status" not in str(payload) and "regime_classification" not in str(payload)
         for payload in profiles
     )
 
@@ -309,21 +361,25 @@ def test_root_identity_seed_is_idempotent_and_keeps_gold_out_of_cases() -> None:
     assert first["analysis_date"] == "2026-08-03"
     assert len(first["members"]) == 2
     with engine.connect() as connection:
-        profiles = connection.execute(
-            text(
-                """
+        profiles = (
+            connection.execute(
+                text(
+                    """
                 SELECT input_json
                 FROM identity.profiles
                 WHERE account_ref = :account_ref
                   AND input_json ->> 'experiment_ref' = :experiment_ref
                 ORDER BY profile_ref
                 """
-            ),
-            {
-                "account_ref": SYNTHETIC_RESEARCH_ACCOUNT_REF,
-                "experiment_ref": ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF,
-            },
-        ).scalars().all()
+                ),
+                {
+                    "account_ref": SYNTHETIC_RESEARCH_ACCOUNT_REF,
+                    "experiment_ref": ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF,
+                },
+            )
+            .scalars()
+            .all()
+        )
     assert len(profiles) == 2
     assert all(payload["gold_in_profile"] is False for payload in profiles)
     assert all("minimum_anti_follow_gate" not in str(payload) for payload in profiles)
@@ -473,9 +529,7 @@ def test_first_pair_packet_expands_source_capacity_and_has_expected_controls() -
     assert 18000 < prompt_length <= MINGLI_AGENT_PROMPT_VIEW_MAX_CHARS
     assert a_packet.timing_analysis_date == b_packet.timing_analysis_date == "2026-08-02"
 
-    method = b_packet.model_prompt_view()["professional_adjudication"][
-        "day_master_regime_method"
-    ]
+    method = b_packet.model_prompt_view()["professional_adjudication"]["day_master_regime_method"]
     root = method["root_candidate_assessments"][0]
     assert root == {
         "coordinate": "hour支藏甲",
@@ -490,9 +544,7 @@ def test_first_pair_packet_expands_source_capacity_and_has_expected_controls() -
             "仅在阻断直接从势的窄范围内，最低有效根成立。"
         ),
     }
-    assert "DAY_MASTER_STRONG" in method["minimum_anti_follow_scope"][
-        "does_not_prove"
-    ]
+    assert "DAY_MASTER_STRONG" in method["minimum_anti_follow_scope"]["does_not_prove"]
 
 
 def test_root_identity_pair_distinguishes_candidate_identity_without_overclaim() -> None:
@@ -518,12 +570,8 @@ def test_root_identity_pair_distinguishes_candidate_identity_without_overclaim()
         variant: root_candidate_assessments(
             day_master_stem=packet.day_master_stem,
             pillars=packet.pillars,
-            same_element_candidates=(
-                packet.day_master_support.same_element_hidden_support
-            ),
-            same_identity_candidates=(
-                packet.day_master_support.same_identity_hidden_support
-            ),
+            same_element_candidates=(packet.day_master_support.same_element_hidden_support),
+            same_identity_candidates=(packet.day_master_support.same_identity_hidden_support),
             natal_relations=packet.natal_relations,
         )[0]
         for variant, packet in packets.items()
@@ -534,10 +582,7 @@ def test_root_identity_pair_distinguishes_candidate_identity_without_overclaim()
     assert assessments["B"]["identity_match"] == "EXACT_DAY_MASTER"
     assert assessments["B"]["hidden_rank"] == "PRIMARY_QI"
     assert assessments["B"]["minimum_anti_follow_gate"] == "PRESENT"
-    assert all(
-        item["relation_competition_evidence_ids"] == ()
-        for item in assessments.values()
-    )
+    assert all(item["relation_competition_evidence_ids"] == () for item in assessments.values())
 
 
 def test_same_element_different_stem_whole_chart_verdict_is_not_erased() -> None:
@@ -682,56 +727,61 @@ def test_minimum_anti_follow_gate_does_not_turn_uncertain_state_into_weak() -> N
 
 def test_evaluator_separates_experiment_invalidity_from_model_failure() -> None:
     _, packets = _seed_and_packets()
-    passing = SyntheticExperimentService._evaluate(
+    passing = evaluate_synthetic_experiment(
+        experiment=FIRST_SYNTHETIC_EXPERIMENT,
         readings=_passing_readings(),
         packets=packets,
     )
     reordered = packets["B"].model_copy(
-        update={
-            "mechanism_observations": tuple(
-                reversed(packets["B"].mechanism_observations)
-            )
-        }
+        update={"mechanism_observations": tuple(reversed(packets["B"].mechanism_observations))}
     )
-    reordered_result = SyntheticExperimentService._evaluate(
+    reordered_result = evaluate_synthetic_experiment(
+        experiment=FIRST_SYNTHETIC_EXPERIMENT,
         readings=_passing_readings(),
         packets={**packets, "B": reordered},
     )
-    date_drift = packets["B"].model_copy(
-        update={"timing_analysis_date": "2026-08-03"}
-    )
+    date_drift = packets["B"].model_copy(update={"timing_analysis_date": "2026-08-03"})
     no_root_support = packets["B"].day_master_support.model_copy(
         update={
             "same_identity_hidden_support": (),
             "same_element_hidden_support": (),
         }
     )
-    root_compiler_drift = packets["B"].model_copy(
-        update={"day_master_support": no_root_support}
-    )
-    month_hold_drift = packets["B"].model_copy(
-        update={"month_command_branch": "辰"}
-    )
+    root_compiler_drift = packets["B"].model_copy(update={"day_master_support": no_root_support})
+    month_hold_drift = packets["B"].model_copy(update={"month_command_branch": "辰"})
 
     assert passing["outcome"] == "PASS"
     assert reordered_result["outcome"] == "PASS"
-    assert SyntheticExperimentService._evaluate(
-        readings=_passing_readings(),
-        packets={**packets, "B": date_drift},
-    )["outcome"] == "INVALID_EXPERIMENT"
-    invalid_root = SyntheticExperimentService._evaluate(
+    assert (
+        evaluate_synthetic_experiment(
+            experiment=FIRST_SYNTHETIC_EXPERIMENT,
+            readings=_passing_readings(),
+            packets={**packets, "B": date_drift},
+        )["outcome"]
+        == "INVALID_EXPERIMENT"
+    )
+    invalid_root = evaluate_synthetic_experiment(
+        experiment=FIRST_SYNTHETIC_EXPERIMENT,
         readings=_passing_readings(),
         packets={**packets, "B": root_compiler_drift},
     )
     assert invalid_root["outcome"] == "INVALID_EXPERIMENT"
-    assert next(
-        item for item in invalid_root["checks"] if item["check_ref"] == "ROOT_CANDIDATE_FLIP"
-    )["group"] == "EXPERIMENT_VALIDITY"
-    assert SyntheticExperimentService._evaluate(
-        readings=_passing_readings(issues=("DAY_MASTER_REGIME",)),
-        packets=packets,
-    )["outcome"] == "PRODUCT_SAFE_MODEL_FAIL"
-    hold_invalid = SyntheticExperimentService._evaluate(
+    assert (
+        next(item for item in invalid_root["checks"] if item["check_ref"] == "ROOT_CANDIDATE_FLIP")[
+            "group"
+        ]
+        == "EXPERIMENT_VALIDITY"
+    )
+    assert (
+        evaluate_synthetic_experiment(
+            experiment=FIRST_SYNTHETIC_EXPERIMENT,
+            readings=_passing_readings(issues=("DAY_MASTER_REGIME",)),
+            packets=packets,
+        )["outcome"]
+        == "PRODUCT_SAFE_MODEL_FAIL"
+    )
+    hold_invalid = evaluate_synthetic_experiment(
+        experiment=FIRST_SYNTHETIC_EXPERIMENT,
         readings=_passing_readings(),
         packets={**packets, "B": month_hold_drift},
     )
@@ -771,9 +821,7 @@ def test_root_identity_evaluator_scores_only_the_natal_minimum_gate() -> None:
     assert passing["changed_pass_count"] == 3
     assert passing["hold_pass_count"] == 4
     assert {
-        item["check_ref"]
-        for item in passing["checks"]
-        if item["group"] == "EXPERIMENT_VALIDITY"
+        item["check_ref"] for item in passing["checks"] if item["group"] == "EXPERIMENT_VALIDITY"
     } >= {"ROOT_IDENTITY_CONTRAST", "MINIMUM_GATE_CONTRAST"}
     assert wrong_a["outcome"] == "MODEL_FAIL"
     assert wrong_b["outcome"] == "MODEL_FAIL"
@@ -784,12 +832,112 @@ def test_root_identity_evaluator_scores_only_the_natal_minimum_gate() -> None:
     )
     assert invalid["outcome"] == "INVALID_EXPERIMENT"
     assert invalid["drift_checks"] == ["MONTH_COMMAND_HOLD"]
-    assert all(
-        item["check_ref"] != "TIMING_COORDINATES_HOLD"
-        for item in passing["checks"]
-    )
+    assert all(item["check_ref"] != "TIMING_COORDINATES_HOLD" for item in passing["checks"])
     assert SyntheticExperimentEvaluation.model_validate(passing).dev_gold_version == (
         "v60.mingli-synthetic-experiment-dev-gold.003"
+    )
+
+
+def test_hidden_rank_pairs_lock_rank_facts_without_inventing_rank_weights() -> None:
+    primary_secondary_packets = _seed_experiment_and_packets(
+        HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT
+    )
+    secondary_tertiary_packets = _seed_experiment_and_packets(
+        HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT
+    )
+    primary_secondary = evaluate_synthetic_experiment(
+        experiment=HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT,
+        readings=_hidden_rank_readings(a_status="PRESENT", b_status="UNRESOLVED"),
+        packets=primary_secondary_packets,
+    )
+    secondary_tertiary = evaluate_synthetic_experiment(
+        experiment=HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT,
+        readings=_hidden_rank_readings(a_status="PRESENT", b_status="UNRESOLVED"),
+        packets=secondary_tertiary_packets,
+    )
+
+    assert primary_secondary["outcome"] == "PASS"
+    assert secondary_tertiary["outcome"] == "PASS"
+    assert primary_secondary["changed_pass_count"] == 4
+    assert secondary_tertiary["changed_pass_count"] == 4
+    assert primary_secondary["hold_pass_count"] == 3
+    assert secondary_tertiary["hold_pass_count"] == 3
+    assert all(
+        item["status"] == "PASS"
+        for evaluation in (primary_secondary, secondary_tertiary)
+        for item in evaluation["checks"]
+    )
+    rank_facts = next(
+        item
+        for item in primary_secondary["checks"]
+        if item["check_ref"] == "HIDDEN_RANK_GATE_FACTS"
+    )
+    assert (rank_facts["A"]["branch"], rank_facts["A"]["hidden_order"]) == (
+        "卯",
+        1,
+    )
+    assert (rank_facts["B"]["branch"], rank_facts["B"]["hidden_order"]) == (
+        "辰",
+        2,
+    )
+    wrong_tertiary = evaluate_synthetic_experiment(
+        experiment=HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT,
+        readings=_hidden_rank_readings(a_status="UNRESOLVED", b_status="ABSENT"),
+        packets=secondary_tertiary_packets,
+    )
+    assert wrong_tertiary["outcome"] == "MODEL_FAIL"
+    for a_status, b_status in (
+        ("PRESENT", "PRESENT"),
+        ("UNRESOLVED", "UNRESOLVED"),
+        ("UNRESOLVED", "PRESENT"),
+    ):
+        allowed = evaluate_synthetic_experiment(
+            experiment=HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT,
+            readings=_hidden_rank_readings(
+                a_status=a_status,
+                b_status=b_status,
+            ),
+            packets=secondary_tertiary_packets,
+        )
+        assert allowed["outcome"] == "PASS"
+    for a_status, b_status in (("ABSENT", "PRESENT"), ("PRESENT", "ABSENT")):
+        rejected = evaluate_synthetic_experiment(
+            experiment=HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT,
+            readings=_hidden_rank_readings(
+                a_status=a_status,
+                b_status=b_status,
+            ),
+            packets=secondary_tertiary_packets,
+        )
+        assert rejected["outcome"] == "MODEL_FAIL"
+    prose_overclaim = evaluate_synthetic_experiment(
+        experiment=HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT,
+        readings=_hidden_rank_readings(
+            a_status="UNRESOLVED",
+            b_status="UNRESOLVED",
+            b_thesis="第三藏干权重极低，可视为无根。",
+        ),
+        packets=secondary_tertiary_packets,
+    )
+    assert prose_overclaim["outcome"] == "MODEL_FAIL"
+    assert next(
+        item
+        for item in prose_overclaim["checks"]
+        if item["check_ref"] == "HIDDEN_RANK_PROSE_WITHIN_SCOPE"
+    )["B"] == ("FIXED_HIDDEN_RANK_WEIGHT", "RANK_ONLY_ROOT_INVALIDATION")
+    scoped_prose = evaluate_synthetic_experiment(
+        experiment=HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT,
+        readings=_hidden_rank_readings(
+            a_status="UNRESOLVED",
+            b_status="UNRESOLVED",
+            b_thesis="第三藏干不等于无根，也没有固定权重。",
+        ),
+        packets=secondary_tertiary_packets,
+    )
+    assert scoped_prose["outcome"] == "PASS"
+    assert (
+        SyntheticExperimentEvaluation.model_validate(secondary_tertiary).dev_gold_version
+        == "v60.mingli-synthetic-experiment-dev-gold.004"
     )
 
 

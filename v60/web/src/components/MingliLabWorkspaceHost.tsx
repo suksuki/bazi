@@ -47,6 +47,7 @@ export function MingliLabWorkspaceHost({
         onBackToCurrent={() =>
           navigate({
             mode: "current",
+            suiteRunRef: null,
             experimentRef: null,
             runRef: null,
             variant: "A",
@@ -70,6 +71,7 @@ export function MingliLabWorkspaceHost({
       onOpenSyntheticLab={() =>
         navigate({
           mode: "synthetic",
+          suiteRunRef: null,
           experimentRef: null,
           runRef: null,
           variant: "A",

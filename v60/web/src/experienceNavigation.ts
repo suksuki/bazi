@@ -46,6 +46,7 @@ export function writeNavigation(
   }
   if (scope !== "home" || unit !== "lab") {
     url.searchParams.delete("lab_mode");
+    url.searchParams.delete("lab_suite");
     url.searchParams.delete("lab_experiment");
     url.searchParams.delete("lab_run");
     url.searchParams.delete("lab_variant");

@@ -8,15 +8,18 @@ from abu_v60.mingli.calendar import BirthInput
 from abu_v60.provenance import content_hash, stable_ref
 
 SYNTHETIC_EXPERIMENT_CATALOG_VERSION: Final = (
-    "v60.mingli-synthetic-experiment-catalog.002"
+    "v60.mingli-synthetic-experiment-catalog.003"
 )
 SYNTHETIC_EXPERIMENT_DEFINITION_VERSION: Final = (
     "v60.mingli-synthetic-experiment-catalog.001"
 )
+SYNTHETIC_EXPERIMENT_DEFINITION_VERSION_V2: Final = (
+    "v60.mingli-synthetic-experiment-catalog.002"
+)
 SYNTHETIC_RESEARCH_ACCOUNT_REF: Final = "v60-system-account-mingli-synthetic-lab-v1"
 SYNTHETIC_RESEARCH_BATCH_REF: Final = "v60-seed-batch-mingli-synthetic-lab-v1"
 SYNTHETIC_EXPERIMENT_EVALUATOR_VERSION: Final = (
-    "v60.mingli-synthetic-experiment-evaluator.003"
+    "v60.mingli-synthetic-experiment-evaluator.005"
 )
 
 
@@ -102,6 +105,7 @@ def _member(
 
 def _experiment(
     *,
+    definition_version: str = SYNTHETIC_EXPERIMENT_DEFINITION_VERSION,
     seed_id: str,
     seed_batch_ref: str,
     analysis_date: date,
@@ -130,7 +134,7 @@ def _experiment(
         # This field is part of the sealed experiment identity.  Keep the
         # definition schema stable while the surrounding catalog transport
         # advances independently.
-        "catalog_version": SYNTHETIC_EXPERIMENT_DEFINITION_VERSION,
+        "catalog_version": definition_version,
         "suite": "DEV",
         "family": family,
         "analysis_date": analysis_date.isoformat(),
@@ -235,9 +239,71 @@ ROOT_IDENTITY_SYNTHETIC_EXPERIMENT: Final = _experiment(
     legal_hour_pillar_change="丁卯 → 丙寅",
 )
 
+HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT: Final = _experiment(
+    definition_version=SYNTHETIC_EXPERIMENT_DEFINITION_VERSION_V2,
+    seed_id="v60.mingli-synthetic-lab.hidden-rank-primary-secondary.001",
+    seed_batch_ref="v60-seed-batch-mingli-hidden-rank-primary-secondary-v1",
+    analysis_date=date(2026, 8, 3),
+    family="CONTROLLED_HIDDEN_RANK_PRIMARY_SECONDARY_PAIR",
+    title="同为乙木根候选，第一与第二藏干如何进入最低门？",
+    question=(
+        "只改变合法出生时刻，让乙木从卯中第一藏干移到辰中第二藏干；检查系统是否"
+        "识别位阶与最低阻从门变化，同时保留完整时柱带来的其他差异。"
+    ),
+    inference_scope="NATAL_HIDDEN_RANK_GATE_ONLY_WITH_FULL_HOUR_COLLATERAL",
+    inference_limit=(
+        "本实验只验证乙木第一／第二藏干身份与最低门；不提供位阶权重，"
+        "也不把整盘判型、机制或岁运差异单独归因于藏干位置。"
+    ),
+    known_collateral_deltas=(
+        "时干由己偏财变为庚正官",
+        "时支藏干由卯中乙变为辰中戊乙癸",
+        "辰中同时新增正财与偏印成员，不能作为纯位阶单变量",
+        "起运边界与岁运关系成员会变化；Timing 保存但不参与本组评分",
+    ),
+    birth_date=date(1980, 6, 1),
+    member_a_time=time(6, 0),
+    member_b_time=time(8, 0),
+    member_a_pillars=("庚申", "辛巳", "乙巳", "己卯"),
+    member_b_pillars=("庚申", "辛巳", "乙巳", "庚辰"),
+    legal_hour_pillar_change="己卯 → 庚辰",
+)
+
+HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT: Final = _experiment(
+    definition_version=SYNTHETIC_EXPERIMENT_DEFINITION_VERSION_V2,
+    seed_id="v60.mingli-synthetic-lab.hidden-rank-secondary-tertiary.001",
+    seed_batch_ref="v60-seed-batch-mingli-hidden-rank-secondary-tertiary-v1",
+    analysis_date=date(2026, 8, 3),
+    family="CONTROLLED_HIDDEN_RANK_SECONDARY_TERTIARY_PAIR",
+    title="最低门未裁定时，第二与第三藏干会被误判成无根吗？",
+    question=(
+        "只改变合法出生时刻，让乙木从辰中第二藏干移到未中第三藏干；检查系统是否"
+        "准确保存位阶，并避免在没有失效证据时把任一候选判成无根。"
+    ),
+    inference_scope="NATAL_HIDDEN_RANK_GATE_ONLY_WITH_FULL_HOUR_COLLATERAL",
+    inference_limit=(
+        "本实验只验证第二／第三藏干身份与不自动失效；不要求两盘最终判型翻转，"
+        "也不预设第三藏干必然弱、无效或不可用。"
+    ),
+    known_collateral_deltas=(
+        "时干由庚正官变为癸偏印",
+        "时支藏干由辰中戊乙癸变为未中己丁乙",
+        "财、印与食神载体以及机制候选同时改变，不能作为纯位阶单变量",
+        "起运边界与岁运关系成员会变化；Timing 保存但不参与本组评分",
+    ),
+    birth_date=date(1980, 6, 1),
+    member_a_time=time(8, 0),
+    member_b_time=time(14, 0),
+    member_a_pillars=("庚申", "辛巳", "乙巳", "庚辰"),
+    member_b_pillars=("庚申", "辛巳", "乙巳", "癸未"),
+    legal_hour_pillar_change="庚辰 → 癸未",
+)
+
 SYNTHETIC_EXPERIMENTS: Final = (
     FIRST_SYNTHETIC_EXPERIMENT,
     ROOT_IDENTITY_SYNTHETIC_EXPERIMENT,
+    HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT,
+    HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT,
 )
 SYNTHETIC_EXPERIMENT_BY_REF: Final = {
     item.experiment_ref: item for item in SYNTHETIC_EXPERIMENTS
@@ -249,6 +315,12 @@ ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF: Final = (
 )
 ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_MEMBERS: Final = (
     ROOT_IDENTITY_SYNTHETIC_EXPERIMENT.members
+)
+HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF: Final = (
+    HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT.experiment_ref
+)
+HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF: Final = (
+    HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT.experiment_ref
 )
 SYNTHETIC_MEMBER_BY_SUBJECT: Final = {
     item.subject_id: item

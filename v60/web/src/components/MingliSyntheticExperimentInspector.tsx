@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type {
   MingliSyntheticExperimentCheck,
   MingliSyntheticExperimentSnapshot,
@@ -6,13 +7,15 @@ import type {
 const GROUPS = [
   ["EXPERIMENT_VALIDITY", "实验是否有效"],
   ["MUST_HOLD", "不该变的是否保持"],
-  ["EXPECTED_CHANGE", "该变的判断是否改变"],
+  ["EXPECTED_CHANGE", "方法边界是否正确响应"],
 ] as const;
 
 export function MingliSyntheticExperimentInspector({
   snapshot,
+  suiteSummary,
 }: {
   snapshot: MingliSyntheticExperimentSnapshot;
+  suiteSummary?: ReactNode;
 }) {
   const { definition, evaluation } = snapshot;
   return (
@@ -25,6 +28,8 @@ export function MingliSyntheticExperimentInspector({
         <h2>{definition.title}</h2>
         <span>{definition.question}</span>
       </header>
+
+      {suiteSummary}
 
       <section className="mingli-synthetic-pair" aria-label="A B 命盘输入对照">
         {(["A", "B"] as const).map((variant) => (

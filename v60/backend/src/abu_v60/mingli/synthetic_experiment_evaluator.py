@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from typing import Any
 
@@ -10,6 +11,8 @@ from abu_v60.mingli.agent_contracts import (
 from abu_v60.mingli.agent_root_gate import packet_root_candidate_assessments
 from abu_v60.mingli.synthetic_experiment_catalog import (
     FIRST_SYNTHETIC_EXPERIMENT_REF,
+    HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
+    HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF,
     ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF,
     SYNTHETIC_EXPERIMENT_EVALUATOR_VERSION,
     SyntheticExperimentDefinition,
@@ -54,11 +57,11 @@ def evaluate_synthetic_experiment(
         add=add,
         experiment=experiment,
         packets=packets,
-        include_mechanism_hold=(
-            experiment.experiment_ref == FIRST_SYNTHETIC_EXPERIMENT_REF
-        ),
-        include_timing_hold=(
-            experiment.experiment_ref == FIRST_SYNTHETIC_EXPERIMENT_REF
+        include_mechanism_hold=(experiment.experiment_ref == FIRST_SYNTHETIC_EXPERIMENT_REF),
+        include_timing_hold=(experiment.experiment_ref == FIRST_SYNTHETIC_EXPERIMENT_REF),
+        include_resource_hold=(
+            experiment.experiment_ref
+            in {FIRST_SYNTHETIC_EXPERIMENT_REF, ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF}
         ),
     )
     if experiment.experiment_ref == FIRST_SYNTHETIC_EXPERIMENT_REF:
@@ -71,6 +74,17 @@ def evaluate_synthetic_experiment(
         )
     elif experiment.experiment_ref == ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF:
         _add_root_identity_checks(
+            add=add,
+            gold=gold,
+            packets=packets,
+            a_output=a_output,
+            b_output=b_output,
+        )
+    elif experiment.experiment_ref in {
+        HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
+        HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF,
+    }:
+        _add_hidden_rank_checks(
             add=add,
             gold=gold,
             packets=packets,
@@ -94,6 +108,7 @@ def _add_common_checks(
     packets: Mapping[str, MingliAgentCasePacket],
     include_mechanism_hold: bool,
     include_timing_hold: bool,
+    include_resource_hold: bool,
 ) -> None:
     a_packet, b_packet = packets["A"], packets["B"]
     members = experiment.member_by_variant
@@ -101,8 +116,7 @@ def _add_common_checks(
         "LEGAL_HOUR_DELTA",
         "EXPERIMENT_VALIDITY",
         tuple(item.pillar for item in a_packet.pillars) == members["A"].expected_pillars
-        and tuple(item.pillar for item in b_packet.pillars)
-        == members["B"].expected_pillars
+        and tuple(item.pillar for item in b_packet.pillars) == members["B"].expected_pillars
         and tuple(item.pillar for item in a_packet.pillars[:3])
         == tuple(item.pillar for item in b_packet.pillars[:3]),
         "两份命盘必须精确等于历法锁定的 A／B 四柱，且只有时柱位置不同。",
@@ -143,13 +157,16 @@ def _add_common_checks(
             a_packet.day_master_support.visible_peer_support,
             b_packet.day_master_support.visible_peer_support,
         ),
-        (
-            "RESOURCE_SUPPORT_HOLD",
-            "印星生扶不得漂移。",
-            a_packet.day_master_support.resource_support,
-            b_packet.day_master_support.resource_support,
-        ),
     ]
+    if include_resource_hold:
+        holds.append(
+            (
+                "RESOURCE_SUPPORT_HOLD",
+                "印星生扶不得漂移。",
+                a_packet.day_master_support.resource_support,
+                b_packet.day_master_support.resource_support,
+            )
+        )
     if include_timing_hold:
         holds.append(
             (
@@ -204,8 +221,7 @@ def _add_first_pair_checks(
         "ROOT_CANDIDATE_FLIP",
         "EXPERIMENT_VALIDITY",
         not a_packet.day_master_support.same_element_hidden_support
-        and b_packet.day_master_support.same_element_hidden_support
-        == ("hour支藏甲",),
+        and b_packet.day_master_support.same_element_hidden_support == ("hour支藏甲",),
         "根候选应从无变为寅中甲木主气坐标。",
         a_packet.day_master_support.same_element_hidden_support,
         b_packet.day_master_support.same_element_hidden_support,
@@ -267,8 +283,7 @@ def _add_root_identity_checks(
     add(
         "ROOT_IDENTITY_CONTRAST",
         "EXPERIMENT_VALIDITY",
-        a_packet.day_master_support.same_element_hidden_support
-        == (gold["A_candidate_coordinate"],)
+        a_packet.day_master_support.same_element_hidden_support == (gold["A_candidate_coordinate"],)
         and not a_packet.day_master_support.same_identity_hidden_support
         and b_packet.day_master_support.same_element_hidden_support
         == (gold["B_candidate_coordinate"],)
@@ -289,12 +304,10 @@ def _add_root_identity_checks(
         "EXPERIMENT_VALIDITY",
         a_assessment is not None
         and a_assessment["identity_match"] == gold["A_candidate_identity"]
-        and a_assessment["minimum_anti_follow_gate"]
-        == gold["A_minimum_anti_follow_gate"]
+        and a_assessment["minimum_anti_follow_gate"] == gold["A_minimum_anti_follow_gate"]
         and b_assessment is not None
         and b_assessment["identity_match"] == gold["B_candidate_identity"]
-        and b_assessment["minimum_anti_follow_gate"]
-        == gold["B_minimum_anti_follow_gate"],
+        and b_assessment["minimum_anti_follow_gate"] == gold["B_minimum_anti_follow_gate"],
         "最低阻从门必须区分同元素异字与日主同字，不能把两者自动等价。",
         a_assessment,
         b_assessment,
@@ -344,6 +357,217 @@ def _add_root_identity_checks(
     )
 
 
+def _add_hidden_rank_checks(
+    *,
+    add: Any,
+    gold: Mapping[str, object],
+    packets: Mapping[str, MingliAgentCasePacket],
+    a_output: Any,
+    b_output: Any,
+) -> None:
+    assessments = {
+        variant: packet_root_candidate_assessments(packets[variant]) for variant in ("A", "B")
+    }
+    selected = {
+        variant: values[0] if len(values) == 1 else None for variant, values in assessments.items()
+    }
+    add(
+        "HIDDEN_RANK_FACT_CONTRAST",
+        "EXPERIMENT_VALIDITY",
+        all(
+            packets[variant].day_master_support.same_element_hidden_support
+            == (gold[f"{variant}_candidate_coordinate"],)
+            and packets[variant].day_master_support.same_identity_hidden_support
+            == (gold[f"{variant}_candidate_coordinate"],)
+            for variant in ("A", "B")
+        ),
+        "两盘都必须只有一个日主同字根候选；坐标相同不代表支位与藏干顺序相同。",
+        {
+            "coordinate": packets["A"].day_master_support.same_identity_hidden_support,
+            "pillar": packets["A"].pillars[-1].pillar,
+        },
+        {
+            "coordinate": packets["B"].day_master_support.same_identity_hidden_support,
+            "pillar": packets["B"].pillars[-1].pillar,
+        },
+    )
+    add(
+        "HIDDEN_RANK_GATE_FACTS",
+        "EXPERIMENT_VALIDITY",
+        all(
+            selected[variant] is not None
+            and selected[variant]["coordinate"] == gold[f"{variant}_candidate_coordinate"]
+            and selected[variant]["branch"] == gold[f"{variant}_branch"]
+            and selected[variant]["hidden_order"] == gold[f"{variant}_hidden_order"]
+            and selected[variant]["hidden_rank"] == gold[f"{variant}_hidden_rank"]
+            and selected[variant]["identity_match"] == "EXACT_DAY_MASTER"
+            and selected[variant]["minimum_anti_follow_gate"]
+            == gold[f"{variant}_minimum_anti_follow_gate"]
+            for variant in ("A", "B")
+        ),
+        "Evaluator 必须同时核对坐标、支位、藏干顺序、位阶与最低门，不能只比较同名坐标。",
+        selected["A"],
+        selected["B"],
+    )
+    hour_facts = {variant: _hour_fact(packets[variant]) for variant in ("A", "B")}
+    add(
+        "HOUR_COLLATERAL_FACTS",
+        "EXPERIMENT_VALIDITY",
+        all(hour_facts[variant] == gold[f"{variant}_hour_fact"] for variant in ("A", "B")),
+        "时干十神与完整藏干／十神序列必须保存；这些差异只作 collateral，不进入位阶因果评分。",
+        hour_facts["A"],
+        hour_facts["B"],
+    )
+    regimes = {
+        "A": a_output.regime_decision,
+        "B": b_output.regime_decision,
+    }
+    for variant in ("A", "B"):
+        other = "B" if variant == "A" else "A"
+        add(
+            f"{variant}_HIDDEN_RANK_OUTCOME_WITHIN_SCOPE",
+            "EXPECTED_CHANGE",
+            _hidden_rank_outcome_allowed(
+                variant=variant,
+                gold=gold,
+                regime=regimes[variant],
+            ),
+            (
+                f"{variant} 的最低门结果必须被执行，但位阶本身不得被扩写为固定权重、"
+                "无根或必然身强弱。"
+            ),
+            _regime_value(regimes[variant]),
+            _regime_value(regimes[other]),
+        )
+    add(
+        "HIDDEN_RANK_TYPED_REGIME_WITHIN_SCOPE",
+        "EXPECTED_CHANGE",
+        all(
+            regimes[variant].classification in gold[f"{variant}_allowed_regime_classifications"]
+            for variant in ("A", "B")
+        ),
+        "本组只裁定藏干位阶与最低根门；不得由此强迫整盘强弱、用神或吉凶结论。",
+        regimes["A"].classification,
+        regimes["B"].classification,
+    )
+    prose_violations = {
+        "A": _hidden_rank_prose_violations(a_output),
+        "B": _hidden_rank_prose_violations(b_output),
+    }
+    add(
+        "HIDDEN_RANK_PROSE_WITHIN_SCOPE",
+        "EXPECTED_CHANGE",
+        not prose_violations["A"] and not prose_violations["B"],
+        "正文不得为第二／第三藏干编造固定权重，也不得仅凭位阶宣称无根、无效或不可用。",
+        prose_violations["A"],
+        prose_violations["B"],
+    )
+
+
+def _hidden_rank_outcome_allowed(
+    *,
+    variant: str,
+    gold: Mapping[str, object],
+    regime: Any,
+) -> bool:
+    required = gold.get(f"{variant}_required_effective_root_status")
+    allowed = gold.get(f"{variant}_allowed_effective_root_statuses")
+    status_allowed = (
+        regime.effective_root_status == required
+        if required is not None
+        else regime.effective_root_status in allowed
+    )
+    coordinate = gold[f"{variant}_candidate_coordinate"]
+    coordinates_allowed = (
+        regime.effective_root_coordinates == (coordinate,)
+        if regime.effective_root_status == "PRESENT"
+        else not regime.effective_root_coordinates
+    )
+    return bool(
+        status_allowed
+        and coordinates_allowed
+        and regime.classification in gold[f"{variant}_allowed_regime_classifications"]
+    )
+
+
+def _regime_value(regime: Any) -> dict[str, object]:
+    return {
+        "classification": regime.classification,
+        "effective_root_status": regime.effective_root_status,
+        "effective_root_coordinates": regime.effective_root_coordinates,
+    }
+
+
+def _hour_fact(packet: MingliAgentCasePacket) -> tuple[object, ...]:
+    hour = packet.pillars[-1]
+    return (
+        hour.pillar,
+        hour.visible_ten_god,
+        hour.hidden_stems,
+        hour.hidden_ten_gods,
+    )
+
+
+_RANK_MARKER = re.compile(r"第二藏干|第三藏干|第二藏气|第三藏气|余气|末气")
+_RANK_WEIGHT = re.compile(r"权重|占比|比例|百分|\d+(?:\.\d+)?\s*%")
+_RANK_INVALIDITY = re.compile(r"无根|无效|不可用|不成根|可忽略|忽略不计")
+_SAFE_SCOPE_MARKERS = (
+    "不等于",
+    "不能判",
+    "不得判",
+    "不可直接判",
+    "并非",
+    "不是",
+    "不代表",
+    "未必",
+    "没有固定",
+    "不设固定",
+)
+
+
+def _hidden_rank_prose_violations(output: Any) -> tuple[str, ...]:
+    violations: set[str] = set()
+    for sentence in re.split(r"[。！？；;\n]", _hidden_rank_reasoning_text(output)):
+        if not _RANK_MARKER.search(sentence):
+            continue
+        safe_scope = any(marker in sentence for marker in _SAFE_SCOPE_MARKERS)
+        if _RANK_WEIGHT.search(sentence) and not safe_scope:
+            violations.add("FIXED_HIDDEN_RANK_WEIGHT")
+        if _RANK_INVALIDITY.search(sentence) and not safe_scope:
+            violations.add("RANK_ONLY_ROOT_INVALIDATION")
+    return tuple(sorted(violations))
+
+
+def _hidden_rank_reasoning_text(output: Any) -> str:
+    values = [
+        getattr(output, "first_look", ""),
+        getattr(output, "whole_chart_thesis", ""),
+        getattr(output, "day_master_rationale", ""),
+    ]
+    for hypothesis in getattr(output, "hypotheses", ()):
+        values.extend(
+            (
+                getattr(hypothesis, "thesis", ""),
+                getattr(hypothesis, "failure_condition", ""),
+            )
+        )
+        for ruling in getattr(hypothesis, "method_rulings", ()):
+            values.extend(
+                (
+                    getattr(ruling, "rationale", ""),
+                    getattr(ruling, "condition_or_falsifier", ""),
+                )
+            )
+    work_path = getattr(output, "work_path", None)
+    values.extend(
+        (
+            getattr(work_path, "path_statement", ""),
+            getattr(work_path, "condition", ""),
+        )
+    )
+    return "\n".join(str(value) for value in values if value)
+
+
 def _finalize(
     *,
     checks: list[dict[str, Any]],
@@ -352,17 +576,14 @@ def _finalize(
     gold_hash: str,
 ) -> dict[str, Any]:
     issue_keys = {
-        variant: list(readings[variant].output.server_issue_keys)
-        for variant in ("A", "B")
+        variant: list(readings[variant].output.server_issue_keys) for variant in ("A", "B")
     }
     validity_failed = any(
-        item["status"] == "FAIL"
-        and item["group"] in {"EXPERIMENT_VALIDITY", "MUST_HOLD"}
+        item["status"] == "FAIL" and item["group"] in {"EXPERIMENT_VALIDITY", "MUST_HOLD"}
         for item in checks
     )
     model_failed = any(
-        item["status"] == "FAIL" and item["group"] == "EXPECTED_CHANGE"
-        for item in checks
+        item["status"] == "FAIL" and item["group"] == "EXPECTED_CHANGE" for item in checks
     )
     outcome: SyntheticExperimentOutcome = (
         "INVALID_EXPERIMENT"
@@ -381,12 +602,10 @@ def _finalize(
         "checks": checks,
         "server_issue_keys": issue_keys,
         "changed_pass_count": sum(
-            item["status"] == "PASS" and item["group"] == "EXPECTED_CHANGE"
-            for item in checks
+            item["status"] == "PASS" and item["group"] == "EXPECTED_CHANGE" for item in checks
         ),
         "hold_pass_count": sum(
-            item["status"] == "PASS" and item["group"] == "MUST_HOLD"
-            for item in checks
+            item["status"] == "PASS" and item["group"] == "MUST_HOLD" for item in checks
         ),
         "drift_checks": [
             item["check_ref"]
