@@ -23,27 +23,26 @@ from abu_v60.mingli.service import MingliCaseService
 from abu_v60.mingli.stage import MingliStageService
 from abu_v60.mingli.stage_contracts import MingliStageMode, MingliStageProjection
 from abu_v60.mingli.synthetic_experiment_catalog import (
-    FIRST_SYNTHETIC_EXPERIMENT_MEMBERS,
+    FIRST_SYNTHETIC_EXPERIMENT,
     FIRST_SYNTHETIC_EXPERIMENT_REF,
-    SYNTHETIC_EXPERIMENT_ANALYSIS_DATE,
+    SYNTHETIC_EXPERIMENT_CATALOG_VERSION,
     SYNTHETIC_EXPERIMENT_EVALUATOR_VERSION,
-    SYNTHETIC_MEMBER_BY_VARIANT,
+    SYNTHETIC_EXPERIMENTS,
     SYNTHETIC_RESEARCH_ACCOUNT_REF,
+    SyntheticExperimentDefinition,
     resolve_research_stage_subject,
-    synthetic_experiment_public_definition,
+    resolve_synthetic_experiment,
 )
 from abu_v60.mingli.synthetic_experiment_contracts import (
     SYNTHETIC_EXPERIMENT_RUN_VERSION,
     SYNTHETIC_EXPERIMENT_SNAPSHOT_VERSION,
-    SyntheticExperimentOutcome,
     SyntheticExperimentRunIdentity,
 )
-from abu_v60.mingli.synthetic_experiment_gold import (
-    FIRST_SYNTHETIC_EXPERIMENT_DEV_GOLD,
-    FIRST_SYNTHETIC_EXPERIMENT_DEV_GOLD_HASH,
+from abu_v60.mingli.synthetic_experiment_evaluator import (
+    evaluate_synthetic_experiment,
 )
 from abu_v60.mingli.synthetic_experiment_seed import (
-    seed_first_synthetic_experiment,
+    seed_synthetic_experiment,
 )
 from abu_v60.mingli.synthetic_experiment_store import (
     MingliSyntheticExperimentRunStore,
@@ -78,7 +77,17 @@ class SyntheticExperimentService:
         self._runs = MingliSyntheticExperimentRunStore(engine)
 
     def run_first_experiment(self) -> dict[str, Any]:
-        seeded = seed_first_synthetic_experiment(self._engine)
+        return self.run_experiment(experiment_ref=FIRST_SYNTHETIC_EXPERIMENT_REF)
+
+    def run_experiment(self, *, experiment_ref: str) -> dict[str, Any]:
+        try:
+            experiment = resolve_synthetic_experiment(experiment_ref)
+        except ValueError as exc:
+            raise SyntheticExperimentError(str(exc)) from exc
+        seeded = seed_synthetic_experiment(
+            self._engine,
+            experiment_ref=experiment.experiment_ref,
+        )
         by_case = {item["case_ref"]: item for item in seeded["members"]}
         agent = MingliAgentService(self._engine, runtime=self._runtime)
         readings: dict[str, MingliAgentReadingEnvelope] = {}
@@ -86,10 +95,10 @@ class SyntheticExperimentService:
         stages: dict[str, MingliStageProjection] = {}
         stage_service = MingliStageService(
             self._engine,
-            current_date_provider=lambda _: SYNTHETIC_EXPERIMENT_ANALYSIS_DATE,
+            current_date_provider=lambda _: experiment.analysis_date,
             research_subject_resolver=resolve_research_stage_subject,
         )
-        for member in FIRST_SYNTHETIC_EXPERIMENT_MEMBERS:
+        for member in experiment.members:
             materialized = by_case[member.case_ref]
             generated = agent.generate(
                 requester_account_ref=SYNTHETIC_RESEARCH_ACCOUNT_REF,
@@ -109,26 +118,40 @@ class SyntheticExperimentService:
                 pinned_reading_ref=generated.reading_ref,
                 pinned_reading_hash=generated.reading_hash,
             )
-        evaluation = self._evaluate(readings=readings, packets=packets)
+        evaluation = evaluate_synthetic_experiment(
+            experiment=experiment,
+            readings=readings,
+            packets=packets,
+        )
         return self._ensure_run(
+            experiment=experiment,
             readings=readings,
             stages=stages,
             evaluation=evaluation,
         )
 
     def catalog(self) -> dict[str, Any]:
-        definition = synthetic_experiment_public_definition()
-        latest = self._runs.latest(experiment_ref=FIRST_SYNTHETIC_EXPERIMENT_REF)
-        return {
-            "catalog_version": definition["catalog_version"],
-            "experiments": [
+        experiments = []
+        for experiment in SYNTHETIC_EXPERIMENTS:
+            definition = experiment.public_definition()
+            history = self._runs.history(experiment_ref=experiment.experiment_ref)
+            latest = history[0] if history else None
+            experiments.append(
                 {
                     **definition,
                     "run_status": "SEALED" if latest is not None else "NOT_RUN",
-                    "latest_run_ref": latest["run_ref"] if latest is not None else None,
-                    "latest_outcome": latest["outcome"] if latest is not None else None,
+                    "latest_run_ref": (
+                        latest["run_ref"] if latest is not None else None
+                    ),
+                    "latest_outcome": (
+                        latest["outcome"] if latest is not None else None
+                    ),
+                    "runs": [self._run_summary(item) for item in history],
                 }
-            ],
+            )
+        return {
+            "catalog_version": SYNTHETIC_EXPERIMENT_CATALOG_VERSION,
+            "experiments": experiments,
             "browser_generation_allowed": False,
             "read_only": True,
         }
@@ -136,22 +159,27 @@ class SyntheticExperimentService:
     def snapshot(
         self,
         *,
+        experiment_ref: str = FIRST_SYNTHETIC_EXPERIMENT_REF,
         variant: Literal["A", "B"],
         run_ref: str | None = None,
     ) -> dict[str, Any]:
+        try:
+            experiment = resolve_synthetic_experiment(experiment_ref)
+        except ValueError as exc:
+            raise SyntheticExperimentError(str(exc)) from exc
         run = (
             self._runs.get(run_ref=run_ref)
             if run_ref is not None
-            else self._runs.latest(experiment_ref=FIRST_SYNTHETIC_EXPERIMENT_REF)
+            else self._runs.latest(experiment_ref=experiment.experiment_ref)
         )
         if run is None:
             raise SyntheticExperimentError("mingli_synthetic_experiment_not_run")
-        if run["experiment_ref"] != FIRST_SYNTHETIC_EXPERIMENT_REF:
+        if run["experiment_ref"] != experiment.experiment_ref:
             raise SyntheticExperimentError("mingli_synthetic_experiment_run_mismatch")
-        definition = synthetic_experiment_public_definition()
+        definition = experiment.public_definition()
         if run["definition_hash"] != definition["definition_hash"]:
             raise SyntheticExperimentError("mingli_synthetic_experiment_definition_drift")
-        member = SYNTHETIC_MEMBER_BY_VARIANT[variant]
+        member = experiment.member_by_variant[variant]
         sealed_readings = {
             member_variant: self._agent_readings.get(
                 requester_account_ref=SYNTHETIC_RESEARCH_ACCOUNT_REF,
@@ -165,31 +193,27 @@ class SyntheticExperimentService:
             )
             for member_variant in ("A", "B")
         }
+        sealed_stages = {
+            member_variant: MingliStageProjection.model_validate(
+                run[
+                    "member_a_stage_json"
+                    if member_variant == "A"
+                    else "member_b_stage_json"
+                ]
+            )
+            for member_variant in ("A", "B")
+        }
+        self._validate_sealed_members(
+            experiment=experiment,
+            readings=sealed_readings,
+            stages=sealed_stages,
+        )
         sealed_agent_reading = sealed_readings[variant]
         sealed_agent_reading_ref = sealed_agent_reading.agent_reading_ref
-        if sealed_agent_reading.case_ref != member.case_ref:
-            raise SyntheticExperimentError(
-                "mingli_synthetic_experiment_member_reading_mismatch"
-            )
-        stage = MingliStageProjection.model_validate(
-            run[
-                "member_a_stage_json"
-                if variant == "A"
-                else "member_b_stage_json"
-            ]
-        )
-        if (
-            stage.subject_id != member.subject_id
-            or stage.case_ref != member.case_ref
-            or stage.reading_ref != sealed_agent_reading.reading_ref
-            or stage.reading_hash != sealed_agent_reading.reading_hash
-        ):
-            raise SyntheticExperimentError(
-                "mingli_synthetic_experiment_sealed_stage_mismatch"
-            )
+        stage = sealed_stages[variant]
         identity = {
             "snapshot_version": SYNTHETIC_EXPERIMENT_SNAPSHOT_VERSION,
-            "experiment_ref": FIRST_SYNTHETIC_EXPERIMENT_REF,
+            "experiment_ref": experiment.experiment_ref,
             "run_ref": run["run_ref"],
             "run_hash": run["run_hash"],
             "selected_variant": variant,
@@ -210,6 +234,72 @@ class SyntheticExperimentService:
             "definition": definition,
             "browser_generation_allowed": False,
             "read_only": True,
+        }
+
+    @staticmethod
+    def _validate_sealed_members(
+        *,
+        experiment: SyntheticExperimentDefinition,
+        readings: Mapping[str, MingliAgentReadingEnvelope],
+        stages: Mapping[str, MingliStageProjection],
+    ) -> None:
+        """Close both sides of a paired run before either side is exposed."""
+
+        for variant in ("A", "B"):
+            member = experiment.member_by_variant[variant]
+            reading = readings[variant]
+            stage = stages[variant]
+            if reading.case_ref != member.case_ref:
+                raise SyntheticExperimentError(
+                    "mingli_synthetic_experiment_member_reading_mismatch"
+                )
+            if (
+                stage.subject_id != member.subject_id
+                or stage.case_ref != member.case_ref
+                or stage.reading_ref != reading.reading_ref
+                or stage.reading_hash != reading.reading_hash
+            ):
+                raise SyntheticExperimentError(
+                    "mingli_synthetic_experiment_sealed_stage_mismatch"
+                )
+
+    @staticmethod
+    def _run_summary(run: Mapping[str, Any]) -> dict[str, Any]:
+        evaluation = run["evaluation_json"]
+        checks = tuple(evaluation["checks"])
+        issue_keys = evaluation["server_issue_keys"]
+        model_independence = (
+            "NOT_EVALUABLE"
+            if any(
+                item["group"] in {"EXPERIMENT_VALIDITY", "MUST_HOLD"}
+                and item["status"] == "FAIL"
+                for item in checks
+            )
+            else "FAIL"
+            if issue_keys["A"]
+            or issue_keys["B"]
+            or any(
+                item["group"] == "EXPECTED_CHANGE" and item["status"] == "FAIL"
+                for item in checks
+            )
+            else "PASS"
+        )
+        return {
+            "run_ref": run["run_ref"],
+            "experiment_ref": run["experiment_ref"],
+            "created_at": run["created_at"].isoformat(),
+            "outcome": run["outcome"],
+            "model_independence": model_independence,
+            "evaluator_version": evaluation["evaluator_version"],
+            "dev_gold_version": evaluation["dev_gold_version"],
+            "review_contract_status": (
+                "CURRENT"
+                if evaluation["evaluator_version"]
+                == SYNTHETIC_EXPERIMENT_EVALUATOR_VERSION
+                else "SUPERSEDED"
+            ),
+            "changed_pass_count": evaluation["changed_pass_count"],
+            "hold_pass_count": evaluation["hold_pass_count"],
         }
 
     @staticmethod
@@ -367,237 +457,27 @@ class SyntheticExperimentService:
         readings: Mapping[str, MingliAgentReadingEnvelope],
         packets: Mapping[str, MingliAgentCasePacket],
     ) -> dict[str, Any]:
-        a_packet, b_packet = packets["A"], packets["B"]
-        a_output, b_output = readings["A"].output, readings["B"].output
-        a_regime, b_regime = a_output.regime_decision, b_output.regime_decision
-        if a_regime is None or b_regime is None:
-            raise SyntheticExperimentError("mingli_synthetic_experiment_regime_missing")
-        checks: list[dict[str, Any]] = []
-
-        def add(
-            check_ref: str,
-            group: str,
-            passed: bool,
-            statement: str,
-            a_value: object,
-            b_value: object,
-        ) -> None:
-            checks.append(
-                {
-                    "check_ref": check_ref,
-                    "group": group,
-                    "status": "PASS" if passed else "FAIL",
-                    "statement": statement,
-                    "A": a_value,
-                    "B": b_value,
-                }
-            )
-
-        add(
-            "LEGAL_HOUR_DELTA",
-            "EXPERIMENT_VALIDITY",
-            tuple(item.pillar for item in a_packet.pillars)
-            == SYNTHETIC_MEMBER_BY_VARIANT["A"].expected_pillars
-            and tuple(item.pillar for item in b_packet.pillars)
-            == SYNTHETIC_MEMBER_BY_VARIANT["B"].expected_pillars,
-            "两份命盘必须精确等于历法锁定的 A／B 四柱，且只有时柱位置不同。",
-            [item.pillar for item in a_packet.pillars],
-            [item.pillar for item in b_packet.pillars],
+        return evaluate_synthetic_experiment(
+            experiment=FIRST_SYNTHETIC_EXPERIMENT,
+            readings=readings,
+            packets=packets,
         )
-        add(
-            "PACKET_CONTEXT_BINDING",
-            "EXPERIMENT_VALIDITY",
-            a_packet.case_ref == SYNTHETIC_MEMBER_BY_VARIANT["A"].case_ref
-            and b_packet.case_ref == SYNTHETIC_MEMBER_BY_VARIANT["B"].case_ref
-            and a_packet.subject_kind == b_packet.subject_kind == "CANONICAL_SYNTHETIC"
-            and a_packet.gender == b_packet.gender == "male"
-            and a_packet.birth_timezone == b_packet.birth_timezone == "Asia/Shanghai"
-            and a_packet.timing_analysis_date
-            == b_packet.timing_analysis_date
-            == SYNTHETIC_EXPERIMENT_ANALYSIS_DATE.isoformat(),
-            "A／B 必须绑定各自实验 Case，并保持合成身份、性别、时区和分析日期一致。",
-            {
-                "case_ref": a_packet.case_ref,
-                "subject_kind": a_packet.subject_kind,
-                "gender": a_packet.gender,
-                "timezone": a_packet.birth_timezone,
-                "analysis_date": a_packet.timing_analysis_date,
-            },
-            {
-                "case_ref": b_packet.case_ref,
-                "subject_kind": b_packet.subject_kind,
-                "gender": b_packet.gender,
-                "timezone": b_packet.birth_timezone,
-                "analysis_date": b_packet.timing_analysis_date,
-            },
-        )
-        for check_ref, statement, a_value, b_value in (
-            (
-                "DAY_MASTER_HOLD",
-                "日主必须保持。",
-                a_packet.day_master_stem,
-                b_packet.day_master_stem,
-            ),
-            (
-                "MONTH_COMMAND_HOLD",
-                "月令必须保持。",
-                a_packet.month_command_branch,
-                b_packet.month_command_branch,
-            ),
-            (
-                "VISIBLE_PEERS_HOLD",
-                "明干同类不得漂移。",
-                a_packet.day_master_support.visible_peer_support,
-                b_packet.day_master_support.visible_peer_support,
-            ),
-            (
-                "RESOURCE_SUPPORT_HOLD",
-                "印星生扶不得漂移。",
-                a_packet.day_master_support.resource_support,
-                b_packet.day_master_support.resource_support,
-            ),
-            (
-                "MECHANISM_SET_HOLD",
-                "候选机制集合不得漂移。",
-                tuple(
-                    sorted(item.pattern_ref for item in a_packet.mechanism_observations)
-                ),
-                tuple(
-                    sorted(item.pattern_ref for item in b_packet.mechanism_observations)
-                ),
-            ),
-            (
-                "TIMING_COORDINATES_HOLD",
-                "固定分析日的大运与流年坐标不得漂移。",
-                tuple((item.layer, item.pillar) for item in a_packet.timing_coordinates),
-                tuple((item.layer, item.pillar) for item in b_packet.timing_coordinates),
-            ),
-        ):
-            add(
-                check_ref,
-                "MUST_HOLD",
-                a_value == b_value,
-                statement,
-                a_value,
-                b_value,
-            )
-        add(
-            "ROOT_CANDIDATE_FLIP",
-            "EXPERIMENT_VALIDITY",
-            not a_packet.day_master_support.same_element_hidden_support
-            and b_packet.day_master_support.same_element_hidden_support
-            == ("hour支藏甲",),
-            "根候选应从无变为寅中甲木主气坐标。",
-            a_packet.day_master_support.same_element_hidden_support,
-            b_packet.day_master_support.same_element_hidden_support,
-        )
-        gold = FIRST_SYNTHETIC_EXPERIMENT_DEV_GOLD
-        add(
-            "B_EFFECTIVE_ROOT",
-            "EXPECTED_CHANGE",
-            b_regime.effective_root_status == gold["B_effective_root_status"]
-            and b_regime.effective_root_coordinates
-            == gold["B_effective_root_coordinates"],
-            "B 必须真正裁定新增根候选是否有效，不能只复述候选存在。",
-            a_regime.effective_root_status,
-            {
-                "status": b_regime.effective_root_status,
-                "coordinates": b_regime.effective_root_coordinates,
-            },
-        )
-        add(
-            "B_REGIME_EXIT_FOLLOW",
-            "EXPECTED_CHANGE",
-            b_regime.classification == gold["B_regime_classification"]
-            and b_output.day_master_state == gold["B_required_day_master_state"],
-            "B 的完整时柱证据支持有效根后，应退出从势并进入普通身弱工作判断；"
-            "本实验不把变化单独归因于根气。",
-            {
-                "classification": a_regime.classification,
-                "day_master_state": a_output.day_master_state,
-            },
-            {
-                "classification": b_regime.classification,
-                "day_master_state": b_output.day_master_state,
-            },
-        )
-        add(
-            "A_NO_FORCED_FOLLOW",
-            "EXPECTED_CHANGE",
-            a_regime.classification in gold["A_allowed_regime_classifications"],
-            "A 无根不等于必须判从；主导链未闭合时允许保持未决。",
-            a_regime.classification,
-            b_regime.classification,
-        )
-        issue_keys = {
-            "A": list(a_output.server_issue_keys),
-            "B": list(b_output.server_issue_keys),
-        }
-        validity_failed = any(
-            item["status"] == "FAIL" and item["group"] in {
-                "EXPERIMENT_VALIDITY",
-                "MUST_HOLD",
-            }
-            for item in checks
-        )
-        model_failed = any(
-            item["status"] == "FAIL" and item["group"] == "EXPECTED_CHANGE"
-            for item in checks
-        )
-        outcome: SyntheticExperimentOutcome = (
-            "INVALID_EXPERIMENT"
-            if validity_failed
-            else "PRODUCT_SAFE_MODEL_FAIL"
-            if issue_keys["A"] or issue_keys["B"]
-            else "MODEL_FAIL"
-            if model_failed
-            else "PASS"
-        )
-        return {
-            "evaluator_version": SYNTHETIC_EXPERIMENT_EVALUATOR_VERSION,
-            "dev_gold_version": gold["gold_version"],
-            "dev_gold_hash": FIRST_SYNTHETIC_EXPERIMENT_DEV_GOLD_HASH,
-            "outcome": outcome,
-            "checks": checks,
-            "server_issue_keys": issue_keys,
-            "changed_pass_count": sum(
-                item["status"] == "PASS" and item["group"] == "EXPECTED_CHANGE"
-                for item in checks
-            ),
-            "hold_pass_count": sum(
-                item["status"] == "PASS" and item["group"] == "MUST_HOLD"
-                for item in checks
-            ),
-            "drift_checks": [
-                item["check_ref"]
-                for item in checks
-                if item["status"] == "FAIL" and item["group"] == "MUST_HOLD"
-            ],
-            "qualification_effect": gold["qualification_effect"],
-            "summary": {
-                "PASS": "首组开发实验通过，但只进入复核，不代表方法已取得资格。",
-                "PRODUCT_SAFE_MODEL_FAIL": (
-                    "服务端修正后产品没有越界，但模型原始判断尚未独立通过。"
-                ),
-                "MODEL_FAIL": "实验结构有效，但模型没有完成该变与保持的全部要求。",
-                "INVALID_EXPERIMENT": "控制变量发生漂移，本轮结果不能用于评价模型。",
-            }[outcome],
-        }
 
     def _ensure_run(
         self,
         *,
+        experiment: SyntheticExperimentDefinition,
         readings: Mapping[str, MingliAgentReadingEnvelope],
         stages: Mapping[str, MingliStageProjection],
         evaluation: dict[str, Any],
     ) -> dict[str, Any]:
-        definition = synthetic_experiment_public_definition()
+        definition = experiment.public_definition()
         identity = SyntheticExperimentRunIdentity(
             run_version=SYNTHETIC_EXPERIMENT_RUN_VERSION,
-            experiment_ref=FIRST_SYNTHETIC_EXPERIMENT_REF,
+            experiment_ref=experiment.experiment_ref,
             definition_hash=str(definition["definition_hash"]),
             evaluator_version=SYNTHETIC_EXPERIMENT_EVALUATOR_VERSION,
-            analysis_date=SYNTHETIC_EXPERIMENT_ANALYSIS_DATE,
+            analysis_date=experiment.analysis_date,
             member_a_agent_reading_ref=readings["A"].agent_reading_ref,
             member_b_agent_reading_ref=readings["B"].agent_reading_ref,
             member_a_stage_json=stages["A"],

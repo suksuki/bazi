@@ -2,7 +2,7 @@
 
 状态：`IMPLEMENTED / DEV_EVIDENCE_ONLY / PRODUCT_PUBLICATION_BLOCKED`
 
-日期：2026-08-02
+日期：2026-08-03
 
 ## 目标
 
@@ -76,9 +76,10 @@ v60.mingli-effective-root-method.001
 → 转入普通身弱或其他整盘竞争判断
 ```
 
-它不允许推出身强、可用根、用神、关系作用成立、有效做功或吉凶。若存在候选但未
-满足最低规则，且没有明确的失效证据，状态必须保持 `UNRESOLVED`，不得被模型无证据
-抹成 `ABSENT`。
+它不允许推出身强、可用根、用神、关系作用成立、有效做功或吉凶。若存在候选但最低门
+返回 `NOT_DETERMINED`，它必须交给整盘继续裁决：明确整盘依据可形成 `PRESENT`，依据
+不闭合时保持 `UNRESOLVED`，只有明确失效证据才能写 `ABSENT`。最低门本身绝不能把它
+无证据抹成 `ABSENT`，也不能把实验的预期答案硬编码进全局裁决。
 若最低阻从根已经成立，但 Agent 对全盘强弱的原始判断仍是 `UNCERTAIN`，系统只能保留
 `UNRESOLVED / UNCERTAIN`；根的存在本身不能把强弱未定静默改写为身弱。
 
@@ -162,6 +163,80 @@ B
 因此这一轮不是继续“拟合 Owner 一盘”，而是第一次得到能直接反馈给 Prompt、规则和
 后续模型的错误类型：事实归槽错误、根状态与文字自相矛盾、typed 判型对象缺失。
 
+## 第二组合成实验：同元素候选不等于日主同字门
+
+实验：`v60-mingli-synthetic-experiment-a44f56c301a35d48ff0f`
+
+```text
+A：1989-06-03 06:00 Asia/Shanghai
+   己巳 / 己巳 / 甲午 / 丁卯
+
+B：1989-06-03 04:00 Asia/Shanghai
+   己巳 / 己巳 / 甲午 / 丙寅
+```
+
+原设计的 `05:00 / 03:00` 都落在时辰边界，而且 1989-06-03 上海处于历史夏令时区间。
+正式 Case 改为 `06:00 / 04:00`：V60 当前历法仍得到相同卯／寅时柱；即使以后明确采用
+减一小时的 DST 处理，两者也仍留在各自时辰内。这个调整是历法稳健化，不是为了改变 Gold。
+
+两盘都只有一个木根候选，且都位于第一藏干：
+
+```text
+A：hour支藏乙
+   SAME_ELEMENT_DIFFERENT_STEM
+   minimum_anti_follow_gate = NOT_DETERMINED
+
+B：hour支藏甲
+   EXACT_DAY_MASTER
+   minimum_anti_follow_gate = PRESENT
+```
+
+这组只验证最低阻从门是否区分“同元素异字”与“日主同字”。A 的 `NOT_DETERMINED`
+不是“无根”：它必须回到月令、藏干位置、生扶泄耗和组合竞争中作整盘工作裁决；Agent
+若有明确整盘依据可以写 `PRESENT`，依据不闭合则写 `UNRESOLVED`，只有明确失效证据
+才能写 `ABSENT`。B 的 `PRESENT` 也只排除直接从势，不证明身强、可用根、用神或吉凶。
+
+完整时柱仍同时改变丁伤官／丙食神与卯中乙／寅中甲丙戊。两盘当前均无准入的原局
+六冲／六合竞争，但未来关系库可能讨论卯午破、寅巳刑害或寅午半合，所以不得宣称
+“没有任何关系”。出生时刻还会让 canonical 起运日期相差十天；Timing 被完整保存，
+但不参加本组评分。
+
+### 当前干净封存运行
+
+```text
+run_ref: v60-mingli-synthetic-run-f90c01fefacdc663a5ea
+profile / prompt: .022 / .019
+provider profile: v60.model-serving.gemma4-mingli-agent.003
+evaluator / Gold: .003 / .003
+holds: 4 / 4
+expected responses: 3 / 3
+outcome: PRODUCT_SAFE_MODEL_FAIL
+```
+
+当前产品结果为：
+
+```text
+A：effective_root = UNRESOLVED
+   regime = UNRESOLVED
+
+B：effective_root = PRESENT [hour支藏甲]
+   regime = ORDINARY_WEAK
+```
+
+真实 Gemma4 原断暴露出两类稳定错误：
+
+- A 把 `hour支藏乙` 填进印星资源，称为“余气”，并漏掉 typed `regime_decision`；
+- B 正确识别 `hour支藏甲` 与 `ORDINARY_WEAK`，却同时把同一坐标写进印星资源，
+  又虚构 `HIDDEN_RESOURCE` 竞争与未决的有根明透支持。
+
+服务端修正后，A 没被写成无根，B 的最低同字门成立，三条预期响应全部通过；但 A／B
+仍都有 `DAY_MASTER_REGIME`，所以本地模型没有独立通过。系统现在会这条窄判断，Gemma
+尚未稳定学会事实归槽与 typed 判型；这两件事必须分开陈述。
+
+此前的 `v60-mingli-synthetic-run-ec587bce4fe1e0e09856` 保持 append-only，但只作为
+`SUPERSEDED` DEV 预检记录：它复用了旧 Profile Ref 的不同 Hash，并把 A 的最终
+`UNRESOLVED` 错当成 Gold 必答。当前目录会明确标成“旧口径”，不得参与方法或模型资格。
+
 ## 可见 Lab 闭环
 
 入口：
@@ -184,32 +259,37 @@ B
 - 失效的 pinned run 可以改读 catalog 中最新封存运行；
 - 浏览器只有两个 GET 读取入口，没有模型 POST；
 - 首屏明确分开“实验有效性／模型独立能力／产品结果”三条轨道；
+- 两个实验及各自封存历史都可发现；目录明确区分当前／旧审阅口径；
+- 跨实验或 Run 的 URL 先关闭旧 Snapshot，绝不在新标题下短暂显示旧命盘；
+- 返回任一 Snapshot 前同时验证 A／B 两侧 Case、Reading、Stage 与实验成员绑定；
 - 最新运行可展开“模型原断 → 系统校正”，旧运行诚实显示原断未封存；
 - 合成 Lab 只允许 `admin / local_qa_owner` 审阅角色读取，普通会员不能读取 DEV Gold；
 - Desktop Chrome 1440×900 与 1280×800 均无舞台／Inspector 重叠或横向溢出。
 
-原有 Chrome 证据在 `.artifacts/mingli-synthetic-lab/`，最新三轨与字段差异证据在
-`.artifacts/mingli-synthetic-model-trace/`。macOS 125% 缩放下，物理
+原有 Chrome 证据在 `.artifacts/mingli-synthetic-lab/`，三轨与字段差异证据在
+`.artifacts/mingli-synthetic-model-trace/`，第二组证据在
+`.artifacts/mingli-synthetic-root-identity/`。macOS 125% 缩放下，物理
 1440×900／1280×800 分别对应 CSS 1152×720／1024×640；证据 JSON 明确记录两种尺寸。
+第二组最终运行另在 Desktop Chrome CSS 1512×861、DPR 2 下验证 A／B、刷新、前进后退、
+两实验历史、未知实验不回退、无横向溢出与舞台／Inspector 不重叠；同目录
+`browser-audit.json` 记录断言。
 
 ## 当前能力与下一组矩阵
 
-本轮完成的是“系统第一次能用合法成对命盘发现方法缺口、写入窄规则、重跑并封存
-差异”，不是完整断命资格。当前最大问题已经从“只测 Owner 一盘”收窄为：样本仍只有
-一组完整时柱对照，且模型原始结果仍需服务端修正。
+本轮完成的是“系统能用多组合法成对命盘发现方法缺口、写入窄规则、重跑并封存差异”，
+不是完整断命资格。当前最大问题已经从“只测 Owner 一盘”收窄为：实验仍集中在根身份与
+完整时柱对照，藏干位阶、组合竞争、明确失效、多根、岁运保持和应事矩阵尚未展开，而且
+模型原始结果仍需服务端修正。
 
-下一批按方法矩阵推进，不继续人工围绕某一真人命盘扩写。先做两个已通过历法核对的
-窄矩阵：
+下一批按方法矩阵推进，不继续人工围绕某一真人命盘扩写：
 
-1. `1989-06-03 05:00 / 03:00`：同元素异字的卯中乙，对照日主同字的寅中甲；
-   只验证 `NOT_DETERMINED` 与最低阻从 `PRESENT` 的边界；
-2. `1980-06-01 05:00 / 07:00 / 13:00`：卯中乙第一藏干、辰中乙第二藏干、
+1. `1980-06-01 05:00 / 07:00 / 13:00`：卯中乙第一藏干、辰中乙第二藏干、
    未中乙第三藏干；先拆为两个 A／B 实验，不伪造第二、第三藏干“无效”；
-3. 有六冲／六合成员关系但作用未决的保留未决组；
-4. 具备明确失效证据后才允许 `DOES_NOT_BLOCK` 的反例组；
-5. 多个根候选的合并与竞争组；
-6. 只改变大运／流年的原局保持组，禁止岁运回写原局；
-7. 根气判型稳定后，再进入食伤生财／制杀、财星通关、调候与人生应事方法矩阵。
+2. 有六冲／六合成员关系但作用未决的保留未决组；
+3. 具备明确失效证据后才允许 `DOES_NOT_BLOCK` 的反例组；
+4. 多个根候选的合并与竞争组；
+5. 只改变大运／流年的原局保持组，禁止岁运回写原局；
+6. 根气判型稳定后，再进入食伤生财／制杀、财星通关、调候与人生应事方法矩阵。
 
 后续实验拆为 `DEV / QUALIFICATION / HOLDOUT`。DEV 用于发现与修正方法；只有冻结
 方法后运行的陌生 QUALIFICATION／HOLDOUT 结果，才有资格参与模型能力声明。
@@ -217,12 +297,13 @@ B
 ## 当前版本
 
 ```text
-Foundation                 v60.foundation.028
-Mingli Engine              v60.mingli-cognitive-engine.039
-Runtime Architecture       v60.runtime-architecture.066
-Agent Runtime              v60.mingli-agent-runtime.022
-Agent Profile              v60.mingli-agent.whole-chart-cognition.021
-Agent Prompt               v60.prompt.mingli-agent-whole-chart.018
+Foundation                 v60.foundation.029
+Mingli Engine              v60.mingli-cognitive-engine.040
+Runtime Architecture       v60.runtime-architecture.067
+Agent Runtime              v60.mingli-agent-runtime.024
+Agent Profile              v60.mingli-agent.whole-chart-cognition.022
+Agent Prompt               v60.prompt.mingli-agent-whole-chart.019
+Provider Profile           v60.model-serving.gemma4-mingli-agent.003
 Agent Prompt View          v60.mingli-agent-prompt-view.011
 Agent Reading              v60.mingli-agent-reading.005
 Normalization Receipt      v60.mingli-agent-normalization-receipt.001
@@ -231,24 +312,24 @@ Method Distillation        v60.mingli-agent-method-distillation.003
 Effective-root Method      v60.mingli-effective-root-method.001
 Regime Decision            v60.mingli-agent-regime-decision.001
 Stage Projection           v60.mingli-stage-projection.004
-Synthetic Catalog          v60.mingli-synthetic-experiment-catalog.001
-Synthetic Evaluator        v60.mingli-synthetic-experiment-evaluator.001
+Synthetic Catalog          v60.mingli-synthetic-experiment-catalog.002
+Synthetic Evaluator        v60.mingli-synthetic-experiment-evaluator.003
 Synthetic Run              v60.mingli-synthetic-experiment-run.001
-Synthetic Snapshot         v60.mingli-synthetic-experiment-snapshot.002
-Unit Mingli                v60.unit-mingli.029
-Unit Lab                   v60.unit-lab.025
-Migration                  0036_mingli_model_trace
+Synthetic Snapshot         v60.mingli-synthetic-experiment-snapshot.003
+Unit Mingli                v60.unit-mingli.030
+Unit Lab                   v60.unit-lab.026
+Migration                  0037_mingli_root_matrix
 ```
 
-Migration 0036 only升级 manifest 与能力声明，不调用模型、不重写前三个 sealed run。
-最新 `b11507...` 由本地 Gemma4 两次独立调用形成，绑定 Profile/Prompt `.021/.018` 与
-Reading `.005`；历史 `.003/.004` Reading 仍按各自明确版本语义重放，不能被“当前版本”
-常量静默改义。
+Migration 0037 只升级 manifest 与能力声明，不调用模型、不改写 sealed run。
+最新 `f90c01...` 由本地 Gemma4 两次独立调用形成，绑定 Profile/Prompt `.022/.019` 与
+Reading `.005`；历史 Reading、Evaluator 与 Gold 仍按各自明确版本语义重放，不能被
+“当前版本”常量静默改义。
 
 ## 验证
 
 ```text
-Backend tests              402 PASS
+Backend tests              409 PASS
 Ruff                       PASS
 TypeScript / Vite build    PASS
 Runtime Architecture       PASS

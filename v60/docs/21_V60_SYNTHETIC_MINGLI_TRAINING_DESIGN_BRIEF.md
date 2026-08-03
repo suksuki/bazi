@@ -1,8 +1,8 @@
 # V60 阿布 Lab 合成命局训练体验任务书
 
-状态：`DESIGN_REQUEST / PROTOTYPE_REQUIRED / IMPLEMENTATION_NOT_YET_BASELINED`
+状态：`DESIGN_REQUEST / PROTOTYPE_REQUIRED / REAL_DATA_HANDOFF_AVAILABLE`
 
-日期：2026-08-02
+日期：2026-08-03
 
 ## 给设计师的完整任务
 
@@ -51,6 +51,32 @@ DESIGN_REQUEST
 
 Owner 已授权继续沿合成命局验证方向推进。以下属于设计师职责内的整体体验设计；若原型
 发现必须删减核心步骤、改变产品对象或降低可信边界，再提交 Owner Gate。
+
+## 2026-08-03 真实数据交接
+
+设计师现在不必再用四行固定 mock 表达“实验书架／运行历史”。V60 已提供两个真实实验：
+
+```text
+课题一：完整合法时柱变化下的最低阻从根响应
+experiment_ref: v60-mingli-synthetic-experiment-999b1a4568cb0bf3c399
+sealed runs: 4
+
+课题二：同元素异字与日主同字的根身份边界
+experiment_ref: v60-mingli-synthetic-experiment-a44f56c301a35d48ff0f
+current run: v60-mingli-synthetic-run-f90c01fefacdc663a5ea
+superseded dev preflight: v60-mingli-synthetic-run-ec587bce4fe1e0e09856
+```
+
+目录会为每个 Run 返回 Profile／Prompt／Evaluator／Gold 身份，并标出 `CURRENT` 或
+`SUPERSEDED` 审阅合同；Snapshot 同时提供 A／B 产品结果、三轨状态和裁剪后的模型原断
+差异。当前 V60 的下拉选择器只是让真实数据可验证的临时接线，不是要求原型照搬的最终
+书架。请在整体原型中把这些状态做成“选择研究课题 → 选择一次封存复盘 → 回到上次位置”
+的温润体验，而不是工程 Ref 列表。
+
+课题二可作为新的主要原型样例：A 与 B 的产品响应正确，但候选模型仍依赖服务端修正。
+设计上需要让人一眼看懂“系统学会了这条方法”和“模型还没独立学会”可以同时成立；不要
+用一个绿色总分合并二者。旧预检 Run 必须保留为旧口径历史，但不应与当前干净 Run 同等
+突出。
 
 ## 用户进入与第一眼
 

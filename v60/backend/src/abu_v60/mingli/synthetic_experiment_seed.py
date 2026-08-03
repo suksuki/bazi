@@ -20,44 +20,59 @@ from abu_v60.mingli.calendar import CALENDAR_ENGINE_VERSION, resolve_four_pillar
 from abu_v60.mingli.compiler import compile_birth_case
 from abu_v60.mingli.materialization import MingliCaseMaterializationService
 from abu_v60.mingli.synthetic_experiment_catalog import (
-    FIRST_SYNTHETIC_EXPERIMENT_MEMBERS,
+    FIRST_SYNTHETIC_EXPERIMENT,
     FIRST_SYNTHETIC_EXPERIMENT_REF,
-    SYNTHETIC_EXPERIMENT_ANALYSIS_DATE,
     SYNTHETIC_RESEARCH_ACCOUNT_REF,
     SYNTHETIC_RESEARCH_BATCH_REF,
+    SyntheticExperimentDefinition,
+    resolve_synthetic_experiment,
 )
 from abu_v60.provenance import content_hash
 
 
 def seed_first_synthetic_experiment(engine: Engine) -> dict[str, Any]:
-    """Admit two real-calendar research Cases, then build their shared evidence chain."""
+    return seed_synthetic_experiment(
+        engine,
+        experiment_ref=FIRST_SYNTHETIC_EXPERIMENT_REF,
+    )
 
-    manifest = {
-        "seed_id": "v60.mingli-synthetic-lab.first-pair.001",
-        "experiment_ref": FIRST_SYNTHETIC_EXPERIMENT_REF,
-        "subject_kind": "CANONICAL_SYNTHETIC",
-        "source_origin": "V60_CONTROLLED_SYNTHETIC_RESEARCH",
-        "calendar_engine_version": CALENDAR_ENGINE_VERSION,
-        "case_refs": [item.case_ref for item in FIRST_SYNTHETIC_EXPERIMENT_MEMBERS],
-        "gold_in_seed": False,
-        "llm_calls": 0,
-    }
+
+def seed_synthetic_experiment(
+    engine: Engine,
+    *,
+    experiment_ref: str,
+) -> dict[str, Any]:
+    """Admit one real-calendar pair, then build its shared evidence chain."""
+
+    experiment = resolve_synthetic_experiment(experiment_ref)
+    _ensure_research_account_batch(engine)
+    return _seed_experiment(engine, experiment=experiment)
+
+
+def _seed_experiment(
+    engine: Engine,
+    *,
+    experiment: SyntheticExperimentDefinition,
+) -> dict[str, Any]:
+    members = experiment.members
+
+    manifest = _experiment_manifest(experiment)
     with engine.begin() as connection:
         MigrationBatchAdmissionService().admit(
             connection,
             definition=MigrationBatchDefinition(
-                batch_ref=SYNTHETIC_RESEARCH_BATCH_REF,
+                batch_ref=experiment.seed_batch_ref,
                 source_system="V60",
                 source_database="qiazhi_v60",
                 status="COMPLETED",
                 manifest=manifest,
             ),
         )
-        for member in FIRST_SYNTHETIC_EXPERIMENT_MEMBERS:
+        for member in members:
             resolved = resolve_four_pillars(member.birth_input)
             if tuple(resolved.ordered()) != member.expected_pillars:
                 raise ValueError(f"synthetic_experiment_calendar_drift:{member.member_ref}")
-            _admit_identity(connection, member=member)
+            _admit_identity(connection, member=member, experiment=experiment)
             compiled = compile_birth_case(
                 case_ref=member.case_ref,
                 birth_input=member.birth_input,
@@ -74,10 +89,10 @@ def seed_first_synthetic_experiment(engine: Engine) -> dict[str, Any]:
                     algorithm_version=CALENDAR_ENGINE_VERSION,
                     source_manifest={
                         "source_origin": "V60_CONTROLLED_SYNTHETIC_RESEARCH",
-                        "experiment_ref": FIRST_SYNTHETIC_EXPERIMENT_REF,
+                        "experiment_ref": experiment.experiment_ref,
                         "member_ref": member.member_ref,
                         "variant": member.variant,
-                        "seed_batch_ref": SYNTHETIC_RESEARCH_BATCH_REF,
+                        "seed_batch_ref": experiment.seed_batch_ref,
                         "synthetic_identity": True,
                         "gold_in_case": False,
                         "llm_calls": 0,
@@ -90,31 +105,67 @@ def seed_first_synthetic_experiment(engine: Engine) -> dict[str, Any]:
             account_ref=SYNTHETIC_RESEARCH_ACCOUNT_REF,
             case_ref=member.case_ref,
             subject_kind="CANONICAL_SYNTHETIC",
-            analysis_date=SYNTHETIC_EXPERIMENT_ANALYSIS_DATE,
+            analysis_date=experiment.analysis_date,
         )
-        for member in FIRST_SYNTHETIC_EXPERIMENT_MEMBERS
+        for member in members
     )
     return {
-        "seed_batch_ref": SYNTHETIC_RESEARCH_BATCH_REF,
-        "experiment_ref": FIRST_SYNTHETIC_EXPERIMENT_REF,
-        "analysis_date": SYNTHETIC_EXPERIMENT_ANALYSIS_DATE.isoformat(),
+        "seed_batch_ref": experiment.seed_batch_ref,
+        "experiment_ref": experiment.experiment_ref,
+        "analysis_date": experiment.analysis_date.isoformat(),
         "members": list(materialized),
     }
 
 
-def _admit_identity(connection: Any, *, member: Any) -> None:
+def _experiment_manifest(
+    experiment: SyntheticExperimentDefinition,
+) -> dict[str, object]:
+    return {
+        "seed_id": experiment.seed_id,
+        "experiment_ref": experiment.experiment_ref,
+        "subject_kind": "CANONICAL_SYNTHETIC",
+        "source_origin": "V60_CONTROLLED_SYNTHETIC_RESEARCH",
+        "calendar_engine_version": CALENDAR_ENGINE_VERSION,
+        "case_refs": [item.case_ref for item in experiment.members],
+        "gold_in_seed": False,
+        "llm_calls": 0,
+    }
+
+
+def _ensure_research_account_batch(engine: Engine) -> None:
+    """Admit the account's original source batch without seeding its cases."""
+
+    with engine.begin() as connection:
+        MigrationBatchAdmissionService().admit(
+            connection,
+            definition=MigrationBatchDefinition(
+                batch_ref=SYNTHETIC_RESEARCH_BATCH_REF,
+                source_system="V60",
+                source_database="qiazhi_v60",
+                status="COMPLETED",
+                manifest=_experiment_manifest(FIRST_SYNTHETIC_EXPERIMENT),
+            ),
+        )
+
+
+def _admit_identity(
+    connection: Any,
+    *,
+    member: Any,
+    experiment: SyntheticExperimentDefinition,
+) -> None:
     account_identity = {
         "account_ref": SYNTHETIC_RESEARCH_ACCOUNT_REF,
         "purpose": "controlled synthetic Mingli Lab experiments",
     }
-    source_ref = f"v60.synthetic-lab:{FIRST_SYNTHETIC_EXPERIMENT_REF}:{member.variant}"
+    source_ref = f"v60.synthetic-lab:{experiment.experiment_ref}:{member.variant}"
     profile_payload = {
         **member.birth_input.model_dump(mode="json"),
         "display_name": member.display_name,
         "gender": "male",
         "birth_location": "合成研究坐标",
         "source_origin": "V60_CONTROLLED_SYNTHETIC_RESEARCH",
-        "experiment_ref": FIRST_SYNTHETIC_EXPERIMENT_REF,
+        "experiment_ref": experiment.experiment_ref,
         "member_ref": member.member_ref,
         "variant": member.variant,
         "subject_kind": "CANONICAL_SYNTHETIC",

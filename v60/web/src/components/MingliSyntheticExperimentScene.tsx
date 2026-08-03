@@ -38,9 +38,25 @@ export function MingliSyntheticExperimentScene({
   const [snapshot, setSnapshot] =
     useState<MingliSyntheticExperimentSnapshot | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
-  const [snapshotError, setSnapshotError] = useState<string | null>(null);
+  const [snapshotError, setSnapshotError] = useState<{
+    experimentRef: string;
+    message: string;
+    runRef: string;
+    variant: "A" | "B";
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [retry, setRetry] = useState(0);
+  const committedSnapshot = snapshot
+    && snapshot.experiment_ref === route.experimentRef
+    && snapshot.run_ref === route.runRef
+    ? snapshot
+    : null;
+  const activeSnapshotError = snapshotError
+    && snapshotError.experimentRef === route.experimentRef
+    && snapshotError.runRef === route.runRef
+    && snapshotError.variant === route.variant
+    ? snapshotError.message
+    : null;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -64,15 +80,39 @@ export function MingliSyntheticExperimentScene({
 
   useEffect(() => {
     if (!catalog) return;
-    const selected =
-      catalog.experiments.find((item) => item.experiment_ref === route.experimentRef)
-      ?? catalog.experiments[0];
-    if (selected.run_status !== "SEALED" || !selected.latest_run_ref) {
+    const selected = route.experimentRef
+      ? catalog.experiments.find(
+          (item) => item.experiment_ref === route.experimentRef,
+        )
+      : catalog.experiments[0];
+    if (!selected) {
       setSnapshot(null);
+      setSnapshotError(null);
+      setCatalogError("mingli_synthetic_experiment_not_found");
       setLoading(false);
-      onContextChange({ subjectId: "current", status: "LOADING", projection: null });
+      onContextChange({ subjectId: "current", status: "ERROR", projection: null });
       return;
     }
+    if (selected.run_status !== "SEALED" || !selected.latest_run_ref) {
+      setSnapshot(null);
+      setSnapshotError(null);
+      setCatalogError(null);
+      setLoading(false);
+      onContextChange({ subjectId: "current", status: "LOADING", projection: null });
+      if (
+        route.experimentRef !== selected.experiment_ref
+        || route.runRef !== null
+      ) {
+        onRouteChange({
+          mode: "synthetic",
+          experimentRef: selected.experiment_ref,
+          runRef: null,
+          variant: route.variant,
+        }, "replace");
+      }
+      return;
+    }
+    setCatalogError(null);
     const next = {
       mode: "synthetic" as const,
       experimentRef: selected.experiment_ref,
@@ -88,19 +128,31 @@ export function MingliSyntheticExperimentScene({
   }, [catalog, onContextChange, onRouteChange, route]);
 
   useEffect(() => {
-    if (!route.experimentRef || !route.runRef) return;
+    if (!catalog || !route.experimentRef || !route.runRef) return;
+    const experimentRef = route.experimentRef;
+    const runRef = route.runRef;
+    const variant = route.variant;
+    const selected = catalog.experiments.find(
+      (item) => item.experiment_ref === experimentRef,
+    );
+    if (!selected || selected.run_status !== "SEALED") return;
     const controller = new AbortController();
+    setSnapshot((current) => current
+      && current.experiment_ref === experimentRef
+      && current.run_ref === runRef
+      ? current
+      : null);
     setLoading(true);
     setSnapshotError(null);
     onContextChange({
-      subjectId: snapshot?.stage.subject_id ?? "current",
+      subjectId: "current",
       status: "LOADING",
       projection: null,
     });
     void loadSyntheticExperimentSnapshot(
-      route.experimentRef,
-      route.runRef,
-      route.variant,
+      experimentRef,
+      runRef,
+      variant,
       controller.signal,
     )
       .then((value) => {
@@ -115,35 +167,44 @@ export function MingliSyntheticExperimentScene({
       })
       .catch((caught) => {
         if (!controller.signal.aborted) {
-          setSnapshotError(caught instanceof Error ? caught.message : String(caught));
+          setSnapshotError({
+            experimentRef,
+            message: caught instanceof Error ? caught.message : String(caught),
+            runRef,
+            variant,
+          });
           setLoading(false);
           onContextChange({
-            subjectId: snapshot?.stage.subject_id ?? "current",
+            subjectId: "current",
             status: "ERROR",
             projection: null,
           });
         }
       });
     return () => controller.abort();
-  }, [onContextChange, retry, route.experimentRef, route.runRef, route.variant]);
+  }, [catalog, onContextChange, retry, route.experimentRef, route.runRef, route.variant]);
 
   const frame = useMemo(
-    () => snapshot
+    () => committedSnapshot
       ? directMingliScene({
           clock: INITIAL_MINGLI_CLOCK,
           narrationOpen: false,
           selectedRelationRef: null,
-          stage: snapshot.stage,
+          stage: committedSnapshot.stage,
           surface: "LAB",
         })
       : null,
-    [snapshot],
+    [committedSnapshot],
   );
-  const experiment = catalog?.experiments.find(
-    (item) => item.experiment_ref === route.experimentRef,
-  ) ?? catalog?.experiments[0] ?? null;
-  const displayedVariant = snapshot?.selected_variant ?? route.variant;
+  const experiment = route.experimentRef
+    ? catalog?.experiments.find(
+        (item) => item.experiment_ref === route.experimentRef,
+      ) ?? null
+    : catalog?.experiments[0] ?? null;
+  const displayedVariant = committedSnapshot?.selected_variant ?? route.variant;
   const latestRunRef = experiment?.latest_run_ref ?? null;
+  const hasSealedRun = experiment?.run_status === "SEALED"
+    && Boolean(route.experimentRef && route.runRef);
 
   const retryCurrent = () => {
     setLoading(true);
@@ -165,7 +226,7 @@ export function MingliSyntheticExperimentScene({
       mode: "synthetic",
       experimentRef: experiment.experiment_ref,
       runRef: latestRunRef,
-      variant: snapshot?.selected_variant ?? route.variant,
+      variant: committedSnapshot?.selected_variant ?? route.variant,
     }, "replace");
   };
 
@@ -183,7 +244,7 @@ export function MingliSyntheticExperimentScene({
         <div className="mingli-scene-title">
           <p>阿布 Lab · 合成验证</p>
           <h1>{experiment?.title ?? "正在读取封存实验"}</h1>
-          <span>{snapshot ? `${snapshot.selected_variant} 组 · 研究合成命盘` : "离线运行 · 浏览器只读"}</span>
+          <span>{committedSnapshot ? `${committedSnapshot.selected_variant} 组 · 研究合成命盘` : "离线运行 · 浏览器只读"}</span>
         </div>
         <div className="mingli-scene-surfaces" role="group" aria-label="命理阅读与 Lab">
           <button aria-pressed="false" onClick={onOpenReading} type="button">命理阅读</button>
@@ -193,19 +254,73 @@ export function MingliSyntheticExperimentScene({
       </header>
 
       <div className="mingli-scene-toolbar" aria-label="选择合成命盘实验成员">
-        <span className="mingli-synthetic-seal">
-          <small>封存运行</small>
-          <strong>{route.runRef ? shortRef(route.runRef) : "尚未生成"}</strong>
-        </span>
+        <label className="mingli-synthetic-selector">
+          <small>研究课题</small>
+          <select
+            aria-label="选择合成实验"
+            disabled={!catalog}
+            onChange={(event) => {
+              const selected = catalog?.experiments.find(
+                (item) => item.experiment_ref === event.target.value,
+              );
+              if (!selected) return;
+              setSnapshot(null);
+              setCatalogError(null);
+              setSnapshotError(null);
+              onRouteChange({
+                mode: "synthetic",
+                experimentRef: selected.experiment_ref,
+                runRef: selected.latest_run_ref,
+                variant: "A",
+              });
+            }}
+            value={experiment?.experiment_ref ?? ""}
+          >
+            {!experiment && <option value="">未识别的研究课题</option>}
+            {catalog?.experiments.map((item, index) => (
+              <option key={item.experiment_ref} value={item.experiment_ref}>
+                {index + 1} · {item.title}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="mingli-synthetic-selector mingli-synthetic-run-selector">
+          <small>封存复盘</small>
+          <select
+            aria-label="选择封存运行"
+            disabled={!experiment || experiment.runs.length === 0}
+            onChange={(event) => {
+              if (!experiment) return;
+              setSnapshot(null);
+              setSnapshotError(null);
+              onRouteChange({
+                ...route,
+                experimentRef: experiment.experiment_ref,
+                runRef: event.target.value,
+              });
+            }}
+            value={route.runRef ?? ""}
+          >
+            {experiment?.runs.length ? experiment.runs.map((run) => (
+              <option key={run.run_ref} value={run.run_ref}>
+                {formatRunLabel(
+                  run.created_at,
+                  run.model_independence,
+                  run.review_contract_status,
+                )}
+              </option>
+            )) : <option value="">尚未生成</option>}
+          </select>
+        </label>
         <div className="mingli-stage-mode" role="group" aria-label="选择 A 或 B 命盘">
           {(["A", "B"] as const).map((variant) => (
             <button
               aria-pressed={displayedVariant === variant}
-              disabled={!route.experimentRef || !route.runRef}
+              disabled={!hasSealedRun}
               key={variant}
               onClick={() => {
                 if (route.variant === variant) {
-                  if (snapshotError) retryCurrent();
+                  if (activeSnapshotError) retryCurrent();
                   return;
                 }
                 onRouteChange({ ...route, variant });
@@ -219,20 +334,20 @@ export function MingliSyntheticExperimentScene({
         <span className="mingli-synthetic-read-only">只读结果 · 页面不会调用模型</span>
       </div>
 
-      {snapshot && frame ? (
+      {committedSnapshot && frame ? (
         <div className="mingli-scene-composition mingli-synthetic-composition" data-overlay="LAB">
           <MingliScenePlayer
             fallbackClock={INITIAL_MINGLI_CLOCK}
             frame={frame}
-            stage={snapshot.stage}
+            stage={committedSnapshot.stage}
           />
-          <MingliSyntheticExperimentInspector snapshot={snapshot} />
+          <MingliSyntheticExperimentInspector snapshot={committedSnapshot} />
           {loading && (
             <div className="mingli-synthetic-switching" role="status">
               正在读取 {route.variant} 组；当前仍显示 {displayedVariant} 组
             </div>
           )}
-          {snapshotError && (
+          {activeSnapshotError && (
             <div className="mingli-synthetic-load-error" role="alert">
               <strong>{route.variant} 组读取失败，当前仍显示 {displayedVariant} 组。</strong>
               <span>没有补跑模型，也没有把旧舞台冒充成新变体。</span>
@@ -247,16 +362,16 @@ export function MingliSyntheticExperimentScene({
         <div className="mingli-synthetic-empty" role="status">
           {loading ? (
             <p>正在读取离线封存的 A／B 实验……</p>
-          ) : catalogError || snapshotError ? (
+          ) : catalogError || activeSnapshotError ? (
             <>
               <p>
-                {snapshotError
+                {activeSnapshotError
                   ? "当前链接的封存结果不可用；不会拿别的命盘顶替。"
                   : "封存实验暂时无法读取；不会在浏览器补跑模型。"}
               </p>
               <div>
                 <button onClick={retryCurrent} type="button">重新读取</button>
-                {snapshotError && experiment && latestRunRef && (
+                {activeSnapshotError && experiment && latestRunRef && (
                   <button onClick={restoreLatest} type="button">
                     改读最新封存结果
                   </button>
@@ -271,12 +386,22 @@ export function MingliSyntheticExperimentScene({
 
       <footer className="mingli-stage-boundary">
         <span>Owner 命盘只做回归；合成命盘负责控制变量、发现漂移和推动方法升级。</span>
-        <small>当前对照含完整时柱连带变化，不能把结果单独归因于根气。</small>
+        <small>{experiment?.inference_limit ?? "只展示离线封存的开发证据。"}</small>
       </footer>
     </div>
   );
 }
 
-function shortRef(value: string): string {
-  return value.length > 26 ? `${value.slice(0, 12)}…${value.slice(-10)}` : value;
+function formatRunLabel(
+  createdAt: string,
+  model: "PASS" | "FAIL" | "NOT_EVALUABLE",
+  contract: "CURRENT" | "SUPERSEDED",
+): string {
+  const date = createdAt.replace("T", " ").slice(0, 16);
+  const status = model === "PASS"
+    ? "模型独立"
+    : model === "FAIL"
+      ? "仍需校正"
+      : "实验不可评价";
+  return `${date} · ${status} · ${contract === "CURRENT" ? "当前口径" : "旧口径"}`;
 }

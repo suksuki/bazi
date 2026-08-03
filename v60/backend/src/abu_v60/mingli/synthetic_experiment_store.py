@@ -88,6 +88,32 @@ class MingliSyntheticExperimentRunStore:
             )
         return None if row is None else self._validated(dict(row))
 
+    def history(
+        self,
+        *,
+        experiment_ref: str,
+        limit: int = 12,
+    ) -> tuple[dict[str, Any], ...]:
+        if limit < 1 or limit > 50:
+            raise ValueError("mingli_synthetic_experiment_history_limit_invalid")
+        with self._engine.connect() as connection:
+            rows = (
+                connection.execute(
+                    text(
+                        f"""
+                        {self._select_sql()}
+                        WHERE experiment_ref = :experiment_ref
+                        ORDER BY created_at DESC, run_ref DESC
+                        LIMIT :limit
+                        """
+                    ),
+                    {"experiment_ref": experiment_ref, "limit": limit},
+                )
+                .mappings()
+                .all()
+            )
+        return tuple(self._validated(dict(row)) for row in rows)
+
     def get(self, *, run_ref: str) -> dict[str, Any] | None:
         with self._engine.connect() as connection:
             row = (

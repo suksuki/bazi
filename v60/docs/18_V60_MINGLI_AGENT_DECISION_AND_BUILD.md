@@ -457,7 +457,8 @@ Owner 盘从方法发现主样本退回回归样本；离线 Lab 分别生成 A�
 它是否足以改变从势竞争。`v60.mingli-effective-root-method.001` 现在只在“日主同字＋
 第一藏干＋无原局冲合成员关系竞争”同时成立时，裁为最低阻从有效根。这只能排除直接
 从势，不能证明身强、根可用、用神、做功或吉凶；不满足最低规则且没有明确失效证据的
-候选保持 `UNRESOLVED`，不能被模型抹成 `ABSENT`。
+候选不能被最低门抹成 `ABSENT`：它应进入整盘裁决，由明确依据决定 `PRESENT`，依据
+不闭合时保持 `UNRESOLVED`，只有明确失效方法才可写 `ABSENT`。
 即使最低阻从根成立，只要模型原始强弱状态仍是 `UNCERTAIN`，服务端也必须保持
 `UNRESOLVED / UNCERTAIN`，不能仅凭这条根法静默改成 `WEAK`。
 
@@ -475,3 +476,38 @@ Owner 盘从方法发现主样本退回回归样本；离线 Lab 分别生成 A�
 
 下一刀不再回到 Owner 单盘追加规则，而是扩展第一／二／三藏干、同字／同元素、冲合未决、
 明确失效、多根竞争与岁运不回写原局的合成矩阵；冻结方法后再建立陌生资格集和保留集。
+
+## 第五条已实施纵切：根身份矩阵与整盘裁决分层
+
+第二组合成实验把“同元素候选”与“日主同字最低门”拆开：
+
+```text
+A：己巳 / 己巳 / 甲午 / 丁卯
+   hour支藏乙 = SAME_ELEMENT_DIFFERENT_STEM
+   minimum_anti_follow_gate = NOT_DETERMINED
+
+B：己巳 / 己巳 / 甲午 / 丙寅
+   hour支藏甲 = EXACT_DAY_MASTER
+   minimum_anti_follow_gate = PRESENT
+```
+
+这次同时修正了一条重要方法边界：`NOT_DETERMINED` 只是最低门没有直接裁定，不能在全局
+Normalizer 中被硬编码为最终 `UNRESOLVED`。Agent 仍可依据整盘把 A 的候选裁为
+`PRESENT`；依据不闭合时才保留 `UNRESOLVED`，只有明确失效证据才允许 `ABSENT`。实验
+Evaluator 只检查门级身份和不得越界的结果集合，不再把 DEV Gold 泄漏成正式整盘规则。
+
+当前干净运行 `v60-mingli-synthetic-run-f90c01fefacdc663a5ea` 通过 4/4 保持与 3/3
+预期响应。产品结果为 A `UNRESOLVED / UNRESOLVED`、B
+`PRESENT [hour支藏甲] / ORDINARY_WEAK`，但两盘都有 `DAY_MASTER_REGIME` 服务端修正，
+仍是 `PRODUCT_SAFE_MODEL_FAIL`。Gemma4 在 A 将卯中乙错放进印星资源并错称余气；在 B
+虽认出寅中甲，却重复放进印星资源并虚构竞争证据。系统已经会区分这条窄规则，当前模型
+仍没有稳定掌握事实归槽和 typed 判型。
+
+Lab 现在可以选择多个实验及各自 append-only Run，明确标记当前／旧审阅口径；URL 精确
+恢复实验、运行和 A／B，Snapshot 同时校验两侧身份，跨实验切换不会把旧命盘画在新标题
+下面。旧开发预检 Run `ec587...` 保留但标为 `SUPERSEDED`，不参加能力资格。
+
+下一刀进入藏干位阶矩阵：用卯中乙第一藏干、辰中乙第二藏干、未中乙第三藏干拆成两个
+合法 A／B 实验。目标不是预先宣布第二、第三藏干无效，而是迫使系统和模型分别回答：
+坐标身份是什么、最低门是否裁定、整盘还需要哪些竞争证据，以及什么情况下才允许从
+`UNRESOLVED` 走向 `PRESENT` 或 `ABSENT`。

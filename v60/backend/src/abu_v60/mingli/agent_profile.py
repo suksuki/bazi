@@ -16,9 +16,9 @@ from abu_v60.mingli.agent_reasoning_modes import BLIND_READING_CONTRACT
 from abu_v60.mingli.agent_root_gate import MINGLI_EFFECTIVE_ROOT_METHOD_VERSION
 from abu_v60.provenance import content_hash
 
-MINGLI_AGENT_RUNTIME_VERSION: Final = "v60.mingli-agent-runtime.022"
-MINGLI_AGENT_PROFILE_REF: Final = "v60.mingli-agent.whole-chart-cognition.021"
-MINGLI_AGENT_PROMPT_REF: Final = "v60.prompt.mingli-agent-whole-chart.018"
+MINGLI_AGENT_RUNTIME_VERSION: Final = "v60.mingli-agent-runtime.024"
+MINGLI_AGENT_PROFILE_REF: Final = "v60.mingli-agent.whole-chart-cognition.022"
+MINGLI_AGENT_PROMPT_REF: Final = "v60.prompt.mingli-agent-whole-chart.019"
 MINGLI_AGENT_PROFESSIONAL_REVIEW_STATUS: Final = "GEMMA4_PRODUCT_CANDIDATE_REQUIRES_OWNER_REVIEW"
 MINGLI_AGENT_PUBLICATION_ALLOWED: Final = False
 MINGLI_AGENT_OWNER_REVIEW_ALLOWED: Final = True
@@ -48,9 +48,11 @@ MINGLI_AGENT_SYSTEM_PROMPT: Final = """
 - regime_decision 必须执行 REGIME_WEAK_VS_FOLLOW_TREND_001。通常根候选仍只是待裁坐标，
   但 day_master_regime_method.root_candidate_assessments 已明确给出藏干顺序与最低阻断从势门：
   minimum_anti_follow_gate=PRESENT 的坐标必须写入有效根，并退出直接从势竞争；不得把第一藏干
-  错写成余气。这个窄门只证明“不能直接从”，不证明身强、用神、机制可用或吉凶。其余候选
-  仍逐项裁定；在卷宗没有提供明确失效证据前，不得把已存在的根候选裁成 ABSENT，只能保留
-  UNRESOLVED。随后继续比较有根明透支持、异类主导链及浮比／藏印／未决组合。
+  错写成余气。这个窄门只证明“不能直接从”，不证明身强、用神、机制可用或吉凶。
+  minimum_anti_follow_gate=NOT_DETERMINED 表示窄门没有作结论，不表示该候选无根或失效。
+  你仍须把它放回月令、藏干位置、同类生扶、泄耗克制和组合竞争中作整盘工作裁决：只有
+  给出明确整盘依据时才可写 PRESENT；证据尚不能闭合时写 UNRESOLVED；只有卷宗提供明确
+  失效证据时才可写 ABSENT。随后继续比较有根明透支持、异类主导链及浮比／藏印／未决组合。
 - root_candidate_assessments.hidden_rank=PRIMARY_QI 的坐标，在中文正文中只能称“第一藏干”
   或“主气位置”，不得称为余气、微弱余气或末气；根的季节强弱必须另行比较，不能改写位置事实。
 - timing_analysis_date 只是取数日期；本轮岁运卷宗只含当前大运和所选流年，不含流月。

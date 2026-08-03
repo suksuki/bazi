@@ -258,6 +258,7 @@ Case / Chart / TimeContext
 - [x] 固定本轮真实 Owner Gemma4 输出，精确回归 15 个 Claim 的状态、证据与依赖边；
 - [x] 建立首组真实历法可解析的根气／完整时柱响应盘、隐藏 Gold、append-only Run 与
   可视 Lab 复盘；
+- [x] 建立第二组同元素异字／日主同字根身份矩阵，并将门级 Gold 与整盘裁决物理分层；
 - [ ] 将固定命盘套件扩展为流年保持、稳定性、对抗、陌生资格与保留盘；
 - [x] 保留事实向量级根气、显藏可达、财富目标、比劫竞争与性别通道 flip／hold 回归，
   并让第一组方法进入真实 Case／Reading／Agent 链路；
@@ -363,7 +364,8 @@ Owner 盘最终复测 Reading `v60-mingli-agent-reading-d0aab120f2ffd51cc377` �
 
 本轮从失败中蒸馏出 `v60.mingli-effective-root-method.001`：日主同字的第一藏干，在没有
 原局冲合成员关系竞争时，只足以成为“最低阻从有效根”。它不自动变成身强、可用根、用神
-或吉凶；其余候选在没有明确失效证据时必须保持未决。当前 B 能从直接从势竞争退出，A 不被
+或吉凶；其余候选在最低门只能保持 `NOT_DETERMINED`，再由整盘依据决定 `PRESENT`、
+`UNRESOLVED` 或经明确失效方法决定 `ABSENT`。当前 B 能从直接从势竞争退出，A 不被
 强迫判从，但 Gemma4 的原始输出仍需服务端归一化，因此产品结果安全不等于模型资格通过。
 最低根法也不能把模型原本的 `UNCERTAIN` 强弱状态改写为 `WEAK`；这种组合继续保持
 `UNRESOLVED / UNCERTAIN`，直到整盘泄耗、生扶与承载比较真正完成。
@@ -372,3 +374,22 @@ Owner 盘最终复测 Reading `v60-mingli-agent-reading-d0aab120f2ffd51cc377` �
 QUALIFICATION 与 HOLDOUT；合成盘证明推理响应与稳定性，不冒充现实应事命中率。
 具体实现和下一组矩阵见
 [`20_V60_SYNTHETIC_MINGLI_METHOD_LAB.md`](20_V60_SYNTHETIC_MINGLI_METHOD_LAB.md)。
+
+## 15. 2026-08-03 根身份矩阵校准
+
+第二组合成实验已经证明，认知系统不能把“同五行”压扁成一个布尔根状态。事实层必须先
+保存 `EXACT_DAY_MASTER / SAME_ELEMENT_DIFFERENT_STEM`、藏干位阶和具体坐标；最低门
+只回答它能否直接阻止从势，整盘 Agent 再结合月令、生扶泄耗、透藏与组合竞争形成工作
+判型。`NOT_DETERMINED` 不是无效、不是无根，也不是最终结论。
+
+这条分层已落实到真实链路：两个合法 Case 各自历法解析、生成 Reading／Packet、调用
+Gemma4、经过类型化裁决并写入同一个 append-only 实验 Run。当前干净 Run
+`v60-mingli-synthetic-run-f90c01fefacdc663a5ea` 的门级响应全部成立，但模型仍把木根
+误归到印星资源、误报藏干位阶和虚构竞争支持；系统修正后才得到安全产品结果，所以模型
+独立能力仍为 FAIL。
+
+这一结果也冻结了训练原则：合成实验 Gold 只能定义本实验要验证的最小响应与允许集合，
+不得偷偷成为全局 Normalizer；旧 Run 按当时 Profile／Prompt／Evaluator／Gold 重放，
+不能用新常量改义；任何能力声明必须区分“系统方法成立”“产品被规则收稳”和“候选模型
+独立掌握”。下一矩阵优先校准第一／第二／第三藏干的身份与整盘作用，不回到 Owner 单盘
+拟合，也不提前把位阶写成吉凶或根的必然有效性。

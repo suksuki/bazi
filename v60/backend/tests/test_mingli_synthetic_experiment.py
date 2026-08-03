@@ -23,18 +23,27 @@ from abu_v60.mingli.stage import MingliStageError, MingliStageService
 from abu_v60.mingli.stage_contracts import MingliStageMode
 from abu_v60.mingli.synthetic_experiment_catalog import (
     FIRST_SYNTHETIC_EXPERIMENT_MEMBERS,
+    FIRST_SYNTHETIC_EXPERIMENT_REF,
+    ROOT_IDENTITY_SYNTHETIC_EXPERIMENT,
+    ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF,
     SYNTHETIC_EXPERIMENT_ANALYSIS_DATE,
     SYNTHETIC_RESEARCH_ACCOUNT_REF,
     resolve_research_stage_subject,
     synthetic_experiment_public_definition,
+    synthetic_experiment_public_definitions,
 )
 from abu_v60.mingli.synthetic_experiment_contracts import (
     SyntheticExperimentEvaluation,
 )
+from abu_v60.mingli.synthetic_experiment_evaluator import (
+    evaluate_synthetic_experiment,
+)
 from abu_v60.mingli.synthetic_experiment_seed import (
     seed_first_synthetic_experiment,
+    seed_synthetic_experiment,
 )
 from abu_v60.mingli.synthetic_experiment_service import (
+    SyntheticExperimentError,
     SyntheticExperimentService,
 )
 from abu_v60.provenance import canonical_json, content_hash
@@ -73,6 +82,23 @@ def _seed_and_packets() -> tuple[dict[str, Any], dict[str, Any]]:
     return by_case, packets
 
 
+def _seed_root_identity_and_packets() -> tuple[dict[str, Any], dict[str, Any]]:
+    seeded = seed_synthetic_experiment(
+        engine,
+        experiment_ref=ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF,
+    )
+    by_case = {item["case_ref"]: item for item in seeded["members"]}
+    service = SyntheticExperimentService(engine)
+    packets = {
+        member.variant: service._packet(
+            case_ref=member.case_ref,
+            reading_ref=str(by_case[member.case_ref]["reading_ref"]),
+        )
+        for member in ROOT_IDENTITY_SYNTHETIC_EXPERIMENT.members
+    }
+    return by_case, packets
+
+
 def _passing_readings(*, issues: tuple[str, ...] = ()) -> dict[str, Any]:
     a_regime = SimpleNamespace(
         classification="UNRESOLVED",
@@ -102,6 +128,44 @@ def _passing_readings(*, issues: tuple[str, ...] = ()) -> dict[str, Any]:
     }
 
 
+def _passing_root_identity_readings(
+    *,
+    a_status: str = "UNRESOLVED",
+    b_status: str = "PRESENT",
+    issues: tuple[str, ...] = (),
+) -> dict[str, Any]:
+    return {
+        "A": SimpleNamespace(
+            output=SimpleNamespace(
+                regime_decision=SimpleNamespace(
+                    classification=(
+                        "ORDINARY_WEAK" if a_status == "PRESENT" else "UNRESOLVED"
+                    ),
+                    effective_root_status=a_status,
+                    effective_root_coordinates=(
+                        ("hour支藏乙",) if a_status == "PRESENT" else ()
+                    ),
+                ),
+                day_master_state="WEAK",
+                server_issue_keys=issues,
+            )
+        ),
+        "B": SimpleNamespace(
+            output=SimpleNamespace(
+                regime_decision=SimpleNamespace(
+                    classification="ORDINARY_WEAK",
+                    effective_root_status=b_status,
+                    effective_root_coordinates=(
+                        ("hour支藏甲",) if b_status == "PRESENT" else ()
+                    ),
+                ),
+                day_master_state="WEAK",
+                server_issue_keys=issues,
+            )
+        ),
+    }
+
+
 def test_public_definition_seals_full_inputs_and_inference_limit() -> None:
     definition = synthetic_experiment_public_definition()
     identity = {key: value for key, value in definition.items() if key != "definition_hash"}
@@ -120,6 +184,32 @@ def test_public_definition_seals_full_inputs_and_inference_limit() -> None:
     assert content_hash(mutated) != definition["definition_hash"]
 
 
+def test_catalog_has_two_unique_real_calendar_experiments() -> None:
+    definitions = synthetic_experiment_public_definitions()
+    assert len(definitions) == 2
+    assert len({item["experiment_ref"] for item in definitions}) == 2
+    assert definitions[0]["experiment_ref"] == FIRST_SYNTHETIC_EXPERIMENT_REF
+    assert definitions[1]["experiment_ref"] == ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF
+    assert definitions[1]["family"] == "CONTROLLED_ROOT_IDENTITY_PAIR"
+    assert definitions[1]["changed_input"] == {
+        "field": "birth_time",
+        "A": "06:00:00",
+        "B": "04:00:00",
+    }
+    assert definitions[1]["full_pillar_delta"] == {
+        "A": ["己巳", "己巳", "甲午", "丁卯"],
+        "B": ["己巳", "己巳", "甲午", "丙寅"],
+        "changed_slots": ["hour"],
+        "legal_hour_pillar_change": "丁卯 → 丙寅",
+    }
+    assert "不证明卯中乙无根" in definitions[1]["inference_limit"]
+    for definition in definitions:
+        identity = {
+            key: value for key, value in definition.items() if key != "definition_hash"
+        }
+        assert definition["definition_hash"] == content_hash(identity)
+
+
 def test_schema_metadata_matches_synthetic_run_table() -> None:
     actual = {
         item["name"]
@@ -129,6 +219,43 @@ def test_schema_metadata_matches_synthetic_run_table() -> None:
         )
     }
     assert actual == set(mingli_synthetic_experiment_runs.c.keys())
+
+
+def test_catalog_routes_multiple_experiments_and_isolates_run_history() -> None:
+    service = SyntheticExperimentService(engine)
+    catalog = service.catalog()
+    assert catalog["catalog_version"] == (
+        "v60.mingli-synthetic-experiment-catalog.002"
+    )
+    entries = {
+        item["experiment_ref"]: item for item in catalog["experiments"]
+    }
+    assert set(entries) == {
+        FIRST_SYNTHETIC_EXPERIMENT_REF,
+        ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF,
+    }
+    for experiment_ref, entry in entries.items():
+        assert all(
+            run["experiment_ref"] == experiment_ref for run in entry["runs"]
+        )
+        if entry["runs"]:
+            assert entry["run_status"] == "SEALED"
+            assert entry["latest_run_ref"] == entry["runs"][0]["run_ref"]
+            assert entry["latest_outcome"] == entry["runs"][0]["outcome"]
+        else:
+            assert entry["run_status"] == "NOT_RUN"
+            assert entry["latest_run_ref"] is None
+    first_run = entries[FIRST_SYNTHETIC_EXPERIMENT_REF]["latest_run_ref"]
+    assert first_run is not None
+    with pytest.raises(
+        SyntheticExperimentError,
+        match="mingli_synthetic_experiment_run_mismatch",
+    ):
+        service.snapshot(
+            experiment_ref=ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF,
+            run_ref=first_run,
+            variant="A",
+        )
 
 
 def test_seed_uses_real_calendar_and_shared_materialization_without_leaking_gold() -> None:
@@ -148,13 +275,17 @@ def test_seed_uses_real_calendar_and_shared_materialization_without_leaking_gold
         profiles = connection.execute(
             text(
                 """
-                    SELECT input_json
+                SELECT input_json
                 FROM identity.profiles
                 WHERE account_ref = :account_ref
+                  AND input_json ->> 'experiment_ref' = :experiment_ref
                 ORDER BY profile_ref
                 """
             ),
-            {"account_ref": SYNTHETIC_RESEARCH_ACCOUNT_REF},
+            {
+                "account_ref": SYNTHETIC_RESEARCH_ACCOUNT_REF,
+                "experiment_ref": FIRST_SYNTHETIC_EXPERIMENT_REF,
+            },
         ).scalars().all()
     assert len(profiles) == 2
     assert all(payload["gold_in_profile"] is False for payload in profiles)
@@ -163,6 +294,39 @@ def test_seed_uses_real_calendar_and_shared_materialization_without_leaking_gold
         and "regime_classification" not in str(payload)
         for payload in profiles
     )
+
+
+def test_root_identity_seed_is_idempotent_and_keeps_gold_out_of_cases() -> None:
+    first = seed_synthetic_experiment(
+        engine,
+        experiment_ref=ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF,
+    )
+    replay = seed_synthetic_experiment(
+        engine,
+        experiment_ref=ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF,
+    )
+    assert replay == first
+    assert first["analysis_date"] == "2026-08-03"
+    assert len(first["members"]) == 2
+    with engine.connect() as connection:
+        profiles = connection.execute(
+            text(
+                """
+                SELECT input_json
+                FROM identity.profiles
+                WHERE account_ref = :account_ref
+                  AND input_json ->> 'experiment_ref' = :experiment_ref
+                ORDER BY profile_ref
+                """
+            ),
+            {
+                "account_ref": SYNTHETIC_RESEARCH_ACCOUNT_REF,
+                "experiment_ref": ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF,
+            },
+        ).scalars().all()
+    assert len(profiles) == 2
+    assert all(payload["gold_in_profile"] is False for payload in profiles)
+    assert all("minimum_anti_follow_gate" not in str(payload) for payload in profiles)
 
 
 def test_research_cases_are_hidden_from_normal_subjects_and_guard_agent_generation() -> None:
@@ -235,6 +399,66 @@ def test_research_stage_is_explicitly_scoped_and_pins_base_reading() -> None:
         )
 
 
+def test_snapshot_binding_closes_both_experiment_members() -> None:
+    by_case, _ = _seed_root_identity_and_packets()
+    stage_service = MingliStageService(
+        engine,
+        current_date_provider=lambda _: ROOT_IDENTITY_SYNTHETIC_EXPERIMENT.analysis_date,
+        research_subject_resolver=resolve_research_stage_subject,
+    )
+    readings: dict[str, Any] = {}
+    stages: dict[str, Any] = {}
+    for member in ROOT_IDENTITY_SYNTHETIC_EXPERIMENT.members:
+        materialized = by_case[member.case_ref]
+        readings[member.variant] = SimpleNamespace(
+            case_ref=member.case_ref,
+            reading_ref=str(materialized["reading_ref"]),
+            reading_hash=str(materialized["reading_hash"]),
+        )
+        stages[member.variant] = stage_service.project(
+            account_ref=SYNTHETIC_RESEARCH_ACCOUNT_REF,
+            subject_id=member.subject_id,
+            stage_mode=MingliStageMode.NATAL_4,
+            pinned_reading_ref=str(materialized["reading_ref"]),
+            pinned_reading_hash=str(materialized["reading_hash"]),
+        )
+
+    SyntheticExperimentService._validate_sealed_members(
+        experiment=ROOT_IDENTITY_SYNTHETIC_EXPERIMENT,
+        readings=readings,
+        stages=stages,
+    )
+    wrong_b = SimpleNamespace(
+        **{
+            **readings["B"].__dict__,
+            "case_ref": FIRST_SYNTHETIC_EXPERIMENT_MEMBERS[1].case_ref,
+        }
+    )
+    with pytest.raises(
+        SyntheticExperimentError,
+        match="mingli_synthetic_experiment_member_reading_mismatch",
+    ):
+        SyntheticExperimentService._validate_sealed_members(
+            experiment=ROOT_IDENTITY_SYNTHETIC_EXPERIMENT,
+            readings={**readings, "B": wrong_b},
+            stages=stages,
+        )
+    with pytest.raises(
+        SyntheticExperimentError,
+        match="mingli_synthetic_experiment_sealed_stage_mismatch",
+    ):
+        SyntheticExperimentService._validate_sealed_members(
+            experiment=ROOT_IDENTITY_SYNTHETIC_EXPERIMENT,
+            readings=readings,
+            stages={
+                **stages,
+                "B": stages["B"].model_copy(
+                    update={"subject_id": ROOT_IDENTITY_SYNTHETIC_EXPERIMENT.members[0].subject_id}
+                ),
+            },
+        )
+
+
 def test_first_pair_packet_expands_source_capacity_and_has_expected_controls() -> None:
     _, packets = _seed_and_packets()
     a_packet, b_packet = packets["A"], packets["B"]
@@ -269,6 +493,76 @@ def test_first_pair_packet_expands_source_capacity_and_has_expected_controls() -
     assert "DAY_MASTER_STRONG" in method["minimum_anti_follow_scope"][
         "does_not_prove"
     ]
+
+
+def test_root_identity_pair_distinguishes_candidate_identity_without_overclaim() -> None:
+    _, packets = _seed_root_identity_and_packets()
+    a_packet, b_packet = packets["A"], packets["B"]
+    assert [item.pillar for item in a_packet.pillars] == [
+        "己巳",
+        "己巳",
+        "甲午",
+        "丁卯",
+    ]
+    assert [item.pillar for item in b_packet.pillars] == [
+        "己巳",
+        "己巳",
+        "甲午",
+        "丙寅",
+    ]
+    assert a_packet.day_master_support.same_element_hidden_support == ("hour支藏乙",)
+    assert a_packet.day_master_support.same_identity_hidden_support == ()
+    assert b_packet.day_master_support.same_element_hidden_support == ("hour支藏甲",)
+    assert b_packet.day_master_support.same_identity_hidden_support == ("hour支藏甲",)
+    assessments = {
+        variant: root_candidate_assessments(
+            day_master_stem=packet.day_master_stem,
+            pillars=packet.pillars,
+            same_element_candidates=(
+                packet.day_master_support.same_element_hidden_support
+            ),
+            same_identity_candidates=(
+                packet.day_master_support.same_identity_hidden_support
+            ),
+            natal_relations=packet.natal_relations,
+        )[0]
+        for variant, packet in packets.items()
+    }
+    assert assessments["A"]["identity_match"] == "SAME_ELEMENT_DIFFERENT_STEM"
+    assert assessments["A"]["hidden_rank"] == "PRIMARY_QI"
+    assert assessments["A"]["minimum_anti_follow_gate"] == "NOT_DETERMINED"
+    assert assessments["B"]["identity_match"] == "EXACT_DAY_MASTER"
+    assert assessments["B"]["hidden_rank"] == "PRIMARY_QI"
+    assert assessments["B"]["minimum_anti_follow_gate"] == "PRESENT"
+    assert all(
+        item["relation_competition_evidence_ids"] == ()
+        for item in assessments.values()
+    )
+
+
+def test_same_element_different_stem_whole_chart_verdict_is_not_erased() -> None:
+    _, packets = _seed_root_identity_and_packets()
+    a_packet = packets["A"]
+    issues: set[str] = set()
+    normalized = normalize_regime_decision(
+        {
+            "method_asset_ref": "REGIME_WEAK_VS_FOLLOW_TREND_001",
+            "classification": "ORDINARY_WEAK",
+            "effective_root_status": "PRESENT",
+            "effective_root_coordinates": ["hour支藏乙"],
+            "rooted_visible_support_status": "ABSENT",
+            "dominant_chain_status": "UNRESOLVED",
+            "competition_kinds": [],
+            "evidence_ids": [a_packet.day_master_support.evidence_id],
+        },
+        packet=a_packet,
+        day_master_state="WEAK",
+        normalization_issues=issues,
+    )
+    assert normalized["effective_root_status"] == "PRESENT"
+    assert normalized["effective_root_coordinates"] == ["hour支藏乙"]
+    assert normalized["classification"] == "ORDINARY_WEAK"
+    assert issues == set()
 
 
 def test_minimum_anti_follow_gate_promotes_only_high_certainty_primary_root() -> None:
@@ -445,6 +739,57 @@ def test_evaluator_separates_experiment_invalidity_from_model_failure() -> None:
     assert hold_invalid["drift_checks"] == ["MONTH_COMMAND_HOLD"]
     assert SyntheticExperimentEvaluation.model_validate(hold_invalid).outcome == (
         "INVALID_EXPERIMENT"
+    )
+
+
+def test_root_identity_evaluator_scores_only_the_natal_minimum_gate() -> None:
+    _, packets = _seed_root_identity_and_packets()
+    passing = evaluate_synthetic_experiment(
+        experiment=ROOT_IDENTITY_SYNTHETIC_EXPERIMENT,
+        readings=_passing_root_identity_readings(),
+        packets=packets,
+    )
+    whole_chart_a_present = evaluate_synthetic_experiment(
+        experiment=ROOT_IDENTITY_SYNTHETIC_EXPERIMENT,
+        readings=_passing_root_identity_readings(a_status="PRESENT"),
+        packets=packets,
+    )
+    wrong_a = evaluate_synthetic_experiment(
+        experiment=ROOT_IDENTITY_SYNTHETIC_EXPERIMENT,
+        readings=_passing_root_identity_readings(a_status="ABSENT"),
+        packets=packets,
+    )
+    wrong_b = evaluate_synthetic_experiment(
+        experiment=ROOT_IDENTITY_SYNTHETIC_EXPERIMENT,
+        readings=_passing_root_identity_readings(b_status="UNRESOLVED"),
+        packets=packets,
+    )
+    month_drift = packets["B"].model_copy(update={"month_command_branch": "辰"})
+
+    assert passing["outcome"] == "PASS"
+    assert whole_chart_a_present["outcome"] == "PASS"
+    assert passing["changed_pass_count"] == 3
+    assert passing["hold_pass_count"] == 4
+    assert {
+        item["check_ref"]
+        for item in passing["checks"]
+        if item["group"] == "EXPERIMENT_VALIDITY"
+    } >= {"ROOT_IDENTITY_CONTRAST", "MINIMUM_GATE_CONTRAST"}
+    assert wrong_a["outcome"] == "MODEL_FAIL"
+    assert wrong_b["outcome"] == "MODEL_FAIL"
+    invalid = evaluate_synthetic_experiment(
+        experiment=ROOT_IDENTITY_SYNTHETIC_EXPERIMENT,
+        readings=_passing_root_identity_readings(),
+        packets={**packets, "B": month_drift},
+    )
+    assert invalid["outcome"] == "INVALID_EXPERIMENT"
+    assert invalid["drift_checks"] == ["MONTH_COMMAND_HOLD"]
+    assert all(
+        item["check_ref"] != "TIMING_COORDINATES_HOLD"
+        for item in passing["checks"]
+    )
+    assert SyntheticExperimentEvaluation.model_validate(passing).dev_gold_version == (
+        "v60.mingli-synthetic-experiment-dev-gold.003"
     )
 
 

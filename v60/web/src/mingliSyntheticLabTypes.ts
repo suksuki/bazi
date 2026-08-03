@@ -18,12 +18,14 @@ export interface MingliSyntheticExperimentDefinition {
   experiment_ref: string;
   definition_hash: string;
   suite: "DEV";
-  family: "CONTROLLED_LEGAL_HOUR_PAIR";
+  family: "CONTROLLED_LEGAL_HOUR_PAIR" | "CONTROLLED_ROOT_IDENTITY_PAIR";
   title: string;
   question: string;
   analysis_date: string;
   blind_protocol: "MEMBERS_INDEPENDENT_GOLD_NOT_IN_AGENT_PACKET";
-  inference_scope: "WHOLE_HOUR_PILLAR_RESPONSE_NOT_ROOT_CAUSAL_ESTIMATE";
+  inference_scope:
+    | "WHOLE_HOUR_PILLAR_RESPONSE_NOT_ROOT_CAUSAL_ESTIMATE"
+    | "NATAL_ROOT_GATE_ONLY_WITH_FULL_HOUR_COLLATERAL";
   inference_limit: string;
   known_collateral_deltas: string[];
   changed_input: {
@@ -45,10 +47,24 @@ export interface MingliSyntheticExperimentCatalogEntry
   run_status: "SEALED" | "NOT_RUN";
   latest_run_ref: string | null;
   latest_outcome: MingliSyntheticOutcome | null;
+  runs: MingliSyntheticExperimentRunSummary[];
+}
+
+export interface MingliSyntheticExperimentRunSummary {
+  run_ref: string;
+  experiment_ref: string;
+  created_at: string;
+  outcome: MingliSyntheticOutcome;
+  model_independence: "PASS" | "FAIL" | "NOT_EVALUABLE";
+  evaluator_version: MingliSyntheticExperimentEvaluation["evaluator_version"];
+  dev_gold_version: MingliSyntheticExperimentEvaluation["dev_gold_version"];
+  review_contract_status: "CURRENT" | "SUPERSEDED";
+  changed_pass_count: number;
+  hold_pass_count: number;
 }
 
 export interface MingliSyntheticExperimentCatalog {
-  catalog_version: "v60.mingli-synthetic-experiment-catalog.001";
+  catalog_version: "v60.mingli-synthetic-experiment-catalog.002";
   experiments: MingliSyntheticExperimentCatalogEntry[];
   browser_generation_allowed: false;
   read_only: true;
@@ -64,8 +80,14 @@ export interface MingliSyntheticExperimentCheck {
 }
 
 export interface MingliSyntheticExperimentEvaluation {
-  evaluator_version: "v60.mingli-synthetic-experiment-evaluator.001";
-  dev_gold_version: "v60.mingli-synthetic-experiment-dev-gold.001";
+  evaluator_version:
+    | "v60.mingli-synthetic-experiment-evaluator.001"
+    | "v60.mingli-synthetic-experiment-evaluator.002"
+    | "v60.mingli-synthetic-experiment-evaluator.003";
+  dev_gold_version:
+    | "v60.mingli-synthetic-experiment-dev-gold.001"
+    | "v60.mingli-synthetic-experiment-dev-gold.002"
+    | "v60.mingli-synthetic-experiment-dev-gold.003";
   dev_gold_hash: string;
   outcome: MingliSyntheticOutcome;
   checks: MingliSyntheticExperimentCheck[];
@@ -126,7 +148,7 @@ export interface MingliSyntheticModelTrace {
 }
 
 export interface MingliSyntheticExperimentSnapshot {
-  snapshot_version: "v60.mingli-synthetic-experiment-snapshot.002";
+  snapshot_version: "v60.mingli-synthetic-experiment-snapshot.003";
   snapshot_ref: string;
   snapshot_hash: string;
   experiment_ref: string;

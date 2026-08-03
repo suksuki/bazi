@@ -1,5 +1,43 @@
 # V60 Change Log
 
+## 2026-08-03
+
+### Synthetic Lab adds the root-identity matrix without leaking Gold into doctrine
+
+- Added a second legal synthetic experiment comparing `hour支藏乙` as
+  `SAME_ELEMENT_DIFFERENT_STEM` with `hour支藏甲` as `EXACT_DAY_MASTER`.
+  The narrow gate now distinguishes `NOT_DETERMINED` from `PRESENT` without
+  pretending that the former means absent or that the latter proves strength,
+  root usability, useful deity, effective work or fortune.
+- Kept gate-level Gold separate from whole-chart adjudication. A
+  `NOT_DETERMINED` candidate may still become `PRESENT` through explicit
+  whole-chart evidence, remain `UNRESOLVED` when evidence is incomplete, or
+  become `ABSENT` only through an admitted invalidation method. The DEV
+  experiment no longer rewrites global Reading semantics.
+- Sealed real local Gemma4 Run
+  `v60-mingli-synthetic-run-f90c01fefacdc663a5ea`: 4/4 holds and 3/3 expected
+  responses, with A `UNRESOLVED` and B `PRESENT / ORDINARY_WEAK`. Both outputs
+  still required server adjudication. A misfiled 卯中乙 as resource support
+  and misnamed its hidden-stem rank; B duplicated 寅中甲 into resource support
+  and invented unsupported competing evidence. The honest result remains
+  `PRODUCT_SAFE_MODEL_FAIL`.
+- Generalized the definition, seed, evaluator, service, CLI and Lab projection
+  to multiple experiments and append-only histories. Exact experiment/run/A-B
+  URLs recover after refresh and browser history; cross-experiment snapshots,
+  stale paints, invalid NOT_RUN links and one-sided lineage validation now fail
+  closed. Historical Runs explicitly show current or superseded review
+  contracts.
+- Preserved the superseded development preflight Run `ec587...` rather than
+  rewriting it. New Profile/Prompt/provider identities `.022/.019/.003` and
+  catalog/evaluator/snapshot contracts `.002/.003/.003` prevent the same Ref
+  from silently acquiring a different Hash.
+- Added migration `0037_mingli_root_matrix`; advanced Foundation/Mingli/
+  Architecture to `.029/.040/.067`, Agent Runtime to `.024`, and Unit
+  Mingli/Lab to `.030/.026`. The next synthetic matrix targets first/second/
+  third hidden-stem rank without pre-declaring weaker ranks invalid. All 409
+  backend tests, Ruff, TypeScript/build, Runtime Architecture, source
+  maintainability and the synthetic Lab contract pass.
+
 ## 2026-08-02
 
 ### Synthetic training now exposes what the model actually got wrong

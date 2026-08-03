@@ -2,78 +2,21 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, time
-from typing import Final, Literal
+from typing import Any, Final, Literal
 
 from abu_v60.mingli.calendar import BirthInput
 from abu_v60.provenance import content_hash, stable_ref
 
 SYNTHETIC_EXPERIMENT_CATALOG_VERSION: Final = (
+    "v60.mingli-synthetic-experiment-catalog.002"
+)
+SYNTHETIC_EXPERIMENT_DEFINITION_VERSION: Final = (
     "v60.mingli-synthetic-experiment-catalog.001"
 )
 SYNTHETIC_RESEARCH_ACCOUNT_REF: Final = "v60-system-account-mingli-synthetic-lab-v1"
 SYNTHETIC_RESEARCH_BATCH_REF: Final = "v60-seed-batch-mingli-synthetic-lab-v1"
 SYNTHETIC_EXPERIMENT_EVALUATOR_VERSION: Final = (
-    "v60.mingli-synthetic-experiment-evaluator.001"
-)
-
-_EXPERIMENT_TITLE: Final = "合法时柱改变后，日主判型是否随证据改变？"
-_EXPERIMENT_QUESTION: Final = (
-    "只改变合法出生时刻，让时柱从己巳变为丙寅；检查系统是否识别新增的寅中甲根"
-    "以及同时发生的时柱十神变化，并守住前三柱、月令等不该漂移的部分。"
-)
-_MEMBER_A_BIRTH_INPUT: Final = BirthInput(
-    calendar_type="solar",
-    birth_date=date(2006, 10, 12),
-    birth_time=time(9, 0),
-    timezone="Asia/Shanghai",
-    true_solar_time_policy="not_applied",
-)
-_MEMBER_B_BIRTH_INPUT: Final = BirthInput(
-    calendar_type="solar",
-    birth_date=date(2006, 10, 12),
-    birth_time=time(3, 0),
-    timezone="Asia/Shanghai",
-    true_solar_time_policy="not_applied",
-)
-_MEMBER_A_EXPECTED_PILLARS: Final = ("丙戌", "戊戌", "甲戌", "己巳")
-_MEMBER_B_EXPECTED_PILLARS: Final = ("丙戌", "戊戌", "甲戌", "丙寅")
-
-_EXPERIMENT_IDENTITY = {
-    "catalog_version": SYNTHETIC_EXPERIMENT_CATALOG_VERSION,
-    "suite": "DEV",
-    "family": "CONTROLLED_LEGAL_HOUR_PAIR",
-    "analysis_date": "2026-08-02",
-    "title": _EXPERIMENT_TITLE,
-    "question": _EXPERIMENT_QUESTION,
-    "blind_protocol": "MEMBERS_INDEPENDENT_GOLD_NOT_IN_AGENT_PACKET",
-    "inference_scope": "WHOLE_HOUR_PILLAR_RESPONSE_NOT_ROOT_CAUSAL_ESTIMATE",
-    "inference_limit": (
-        "该合法时柱对照同时改变时干十神与支藏成员，不能把判型变化单独归因于根气。"
-    ),
-    "known_collateral_deltas": (
-        "时干由己正财变为丙食神",
-        "时支藏干由巳中丙戊庚变为寅中甲丙戊",
-        "新增甲比肩根候选，同时移除庚七杀成员",
-    ),
-    "changed_input": {
-        "field": "birth_time",
-        "A": "09:00:00",
-        "B": "03:00:00",
-    },
-    "controlled_members": {
-        "A": {
-            "birth_input": _MEMBER_A_BIRTH_INPUT.model_dump(mode="json"),
-            "expected_pillars": _MEMBER_A_EXPECTED_PILLARS,
-        },
-        "B": {
-            "birth_input": _MEMBER_B_BIRTH_INPUT.model_dump(mode="json"),
-            "expected_pillars": _MEMBER_B_EXPECTED_PILLARS,
-        },
-    },
-}
-FIRST_SYNTHETIC_EXPERIMENT_REF: Final = stable_ref(
-    "v60-mingli-synthetic-experiment",
-    _EXPERIMENT_IDENTITY,
+    "v60.mingli-synthetic-experiment-evaluator.003"
 )
 
 
@@ -90,6 +33,43 @@ class SyntheticExperimentMember:
 
 
 @dataclass(frozen=True, slots=True)
+class SyntheticExperimentDefinition:
+    experiment_ref: str
+    seed_id: str
+    seed_batch_ref: str
+    analysis_date: date
+    identity: dict[str, Any]
+    members: tuple[SyntheticExperimentMember, SyntheticExperimentMember]
+    legal_hour_pillar_change: str
+
+    @property
+    def member_by_variant(self) -> dict[str, SyntheticExperimentMember]:
+        return {item.variant: item for item in self.members}
+
+    def public_definition(self) -> dict[str, object]:
+        members = self.member_by_variant
+        identity = {
+            **self.identity,
+            "experiment_ref": self.experiment_ref,
+            "members": tuple(
+                {
+                    "variant": item.variant,
+                    "member_ref": item.member_ref,
+                    "subject_id": item.subject_id,
+                }
+                for item in self.members
+            ),
+            "full_pillar_delta": {
+                "A": list(members["A"].expected_pillars),
+                "B": list(members["B"].expected_pillars),
+                "changed_slots": ["hour"],
+                "legal_hour_pillar_change": self.legal_hour_pillar_change,
+            },
+        }
+        return {**identity, "definition_hash": content_hash(identity)}
+
+
+@dataclass(frozen=True, slots=True)
 class MingliResearchStageBinding:
     account_ref: str
     case_ref: str
@@ -100,15 +80,13 @@ class MingliResearchStageBinding:
 
 
 def _member(
+    experiment_ref: str,
     variant: Literal["A", "B"],
     *,
     birth_input: BirthInput,
     expected_pillars: tuple[str, str, str, str],
 ) -> SyntheticExperimentMember:
-    identity = {
-        "experiment_ref": FIRST_SYNTHETIC_EXPERIMENT_REF,
-        "variant": variant,
-    }
+    identity = {"experiment_ref": experiment_ref, "variant": variant}
     member_ref = stable_ref("v60-mingli-synthetic-member", identity)
     return SyntheticExperimentMember(
         variant=variant,
@@ -122,34 +100,179 @@ def _member(
     )
 
 
-FIRST_SYNTHETIC_EXPERIMENT_MEMBERS: Final = (
-    _member(
-        "A",
-        birth_input=_MEMBER_A_BIRTH_INPUT,
-        expected_pillars=_MEMBER_A_EXPECTED_PILLARS,
+def _experiment(
+    *,
+    seed_id: str,
+    seed_batch_ref: str,
+    analysis_date: date,
+    family: str,
+    title: str,
+    question: str,
+    inference_scope: str,
+    inference_limit: str,
+    known_collateral_deltas: tuple[str, ...],
+    birth_date: date,
+    member_a_time: time,
+    member_b_time: time,
+    member_a_pillars: tuple[str, str, str, str],
+    member_b_pillars: tuple[str, str, str, str],
+    legal_hour_pillar_change: str,
+) -> SyntheticExperimentDefinition:
+    member_a_birth = BirthInput(
+        calendar_type="solar",
+        birth_date=birth_date,
+        birth_time=member_a_time,
+        timezone="Asia/Shanghai",
+        true_solar_time_policy="not_applied",
+    )
+    member_b_birth = member_a_birth.model_copy(update={"birth_time": member_b_time})
+    identity = {
+        # This field is part of the sealed experiment identity.  Keep the
+        # definition schema stable while the surrounding catalog transport
+        # advances independently.
+        "catalog_version": SYNTHETIC_EXPERIMENT_DEFINITION_VERSION,
+        "suite": "DEV",
+        "family": family,
+        "analysis_date": analysis_date.isoformat(),
+        "title": title,
+        "question": question,
+        "blind_protocol": "MEMBERS_INDEPENDENT_GOLD_NOT_IN_AGENT_PACKET",
+        "inference_scope": inference_scope,
+        "inference_limit": inference_limit,
+        "known_collateral_deltas": known_collateral_deltas,
+        "changed_input": {
+            "field": "birth_time",
+            "A": member_a_time.isoformat(),
+            "B": member_b_time.isoformat(),
+        },
+        "controlled_members": {
+            "A": {
+                "birth_input": member_a_birth.model_dump(mode="json"),
+                "expected_pillars": member_a_pillars,
+            },
+            "B": {
+                "birth_input": member_b_birth.model_dump(mode="json"),
+                "expected_pillars": member_b_pillars,
+            },
+        },
+    }
+    experiment_ref = stable_ref("v60-mingli-synthetic-experiment", identity)
+    return SyntheticExperimentDefinition(
+        experiment_ref=experiment_ref,
+        seed_id=seed_id,
+        seed_batch_ref=seed_batch_ref,
+        analysis_date=analysis_date,
+        identity=identity,
+        members=(
+            _member(
+                experiment_ref,
+                "A",
+                birth_input=member_a_birth,
+                expected_pillars=member_a_pillars,
+            ),
+            _member(
+                experiment_ref,
+                "B",
+                birth_input=member_b_birth,
+                expected_pillars=member_b_pillars,
+            ),
+        ),
+        legal_hour_pillar_change=legal_hour_pillar_change,
+    )
+
+
+FIRST_SYNTHETIC_EXPERIMENT: Final = _experiment(
+    seed_id="v60.mingli-synthetic-lab.first-pair.001",
+    seed_batch_ref=SYNTHETIC_RESEARCH_BATCH_REF,
+    analysis_date=date(2026, 8, 2),
+    family="CONTROLLED_LEGAL_HOUR_PAIR",
+    title="合法时柱改变后，日主判型是否随证据改变？",
+    question=(
+        "只改变合法出生时刻，让时柱从己巳变为丙寅；检查系统是否识别新增的寅中甲根"
+        "以及同时发生的时柱十神变化，并守住前三柱、月令等不该漂移的部分。"
     ),
-    _member(
-        "B",
-        birth_input=_MEMBER_B_BIRTH_INPUT,
-        expected_pillars=_MEMBER_B_EXPECTED_PILLARS,
+    inference_scope="WHOLE_HOUR_PILLAR_RESPONSE_NOT_ROOT_CAUSAL_ESTIMATE",
+    inference_limit="该合法时柱对照同时改变时干十神与支藏成员，不能把判型变化单独归因于根气。",
+    known_collateral_deltas=(
+        "时干由己正财变为丙食神",
+        "时支藏干由巳中丙戊庚变为寅中甲丙戊",
+        "新增甲比肩根候选，同时移除庚七杀成员",
     ),
+    birth_date=date(2006, 10, 12),
+    member_a_time=time(9, 0),
+    member_b_time=time(3, 0),
+    member_a_pillars=("丙戌", "戊戌", "甲戌", "己巳"),
+    member_b_pillars=("丙戌", "戊戌", "甲戌", "丙寅"),
+    legal_hour_pillar_change="己巳 → 丙寅",
 )
-SYNTHETIC_MEMBER_BY_VARIANT: Final = {
-    item.variant: item for item in FIRST_SYNTHETIC_EXPERIMENT_MEMBERS
+
+ROOT_IDENTITY_SYNTHETIC_EXPERIMENT: Final = _experiment(
+    seed_id="v60.mingli-synthetic-lab.root-identity-pair.001",
+    seed_batch_ref="v60-seed-batch-mingli-synthetic-root-identity-v1",
+    analysis_date=date(2026, 8, 3),
+    family="CONTROLLED_ROOT_IDENTITY_PAIR",
+    title="同为木根候选，乙木与甲木能否得到相同裁决？",
+    question=(
+        "只改变合法出生时刻，让时柱从丁卯变为丙寅；检查系统是否区分卯中乙木的"
+        "同元素候选，与寅中甲木的日主同字候选。两盘时间均避开时辰边界。"
+    ),
+    inference_scope="NATAL_ROOT_GATE_ONLY_WITH_FULL_HOUR_COLLATERAL",
+    inference_limit=(
+        "本实验只验证最低阻从门中的同字条件；不证明卯中乙无根、不可用，"
+        "也不把整盘强弱变化单独归因于时支。"
+    ),
+    known_collateral_deltas=(
+        "时干由丁伤官变为丙食神",
+        "时支藏干由卯中乙变为寅中甲丙戊",
+        "两盘都有木根候选，但只有 B 与甲日主同字",
+        "出生时刻会改变大运起止边界；Timing 保存但不参与本组评分",
+    ),
+    birth_date=date(1989, 6, 3),
+    member_a_time=time(6, 0),
+    member_b_time=time(4, 0),
+    member_a_pillars=("己巳", "己巳", "甲午", "丁卯"),
+    member_b_pillars=("己巳", "己巳", "甲午", "丙寅"),
+    legal_hour_pillar_change="丁卯 → 丙寅",
+)
+
+SYNTHETIC_EXPERIMENTS: Final = (
+    FIRST_SYNTHETIC_EXPERIMENT,
+    ROOT_IDENTITY_SYNTHETIC_EXPERIMENT,
+)
+SYNTHETIC_EXPERIMENT_BY_REF: Final = {
+    item.experiment_ref: item for item in SYNTHETIC_EXPERIMENTS
 }
+FIRST_SYNTHETIC_EXPERIMENT_REF: Final = FIRST_SYNTHETIC_EXPERIMENT.experiment_ref
+FIRST_SYNTHETIC_EXPERIMENT_MEMBERS: Final = FIRST_SYNTHETIC_EXPERIMENT.members
+ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF: Final = (
+    ROOT_IDENTITY_SYNTHETIC_EXPERIMENT.experiment_ref
+)
+ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_MEMBERS: Final = (
+    ROOT_IDENTITY_SYNTHETIC_EXPERIMENT.members
+)
 SYNTHETIC_MEMBER_BY_SUBJECT: Final = {
-    item.subject_id: item for item in FIRST_SYNTHETIC_EXPERIMENT_MEMBERS
+    item.subject_id: item
+    for experiment in SYNTHETIC_EXPERIMENTS
+    for item in experiment.members
 }
 SYNTHETIC_MEMBER_BY_CASE: Final = {
-    item.case_ref: item for item in FIRST_SYNTHETIC_EXPERIMENT_MEMBERS
+    item.case_ref: item
+    for experiment in SYNTHETIC_EXPERIMENTS
+    for item in experiment.members
 }
 SYNTHETIC_RESEARCH_CASE_REFS: Final = frozenset(SYNTHETIC_MEMBER_BY_CASE)
-SYNTHETIC_EXPERIMENT_ANALYSIS_DATE: Final = date(2026, 8, 2)
+SYNTHETIC_EXPERIMENT_ANALYSIS_DATE: Final = FIRST_SYNTHETIC_EXPERIMENT.analysis_date
+SYNTHETIC_MEMBER_BY_VARIANT: Final = FIRST_SYNTHETIC_EXPERIMENT.member_by_variant
 
 
-def resolve_research_stage_subject(
-    subject_id: str,
-) -> MingliResearchStageBinding | None:
+def resolve_synthetic_experiment(experiment_ref: str) -> SyntheticExperimentDefinition:
+    try:
+        return SYNTHETIC_EXPERIMENT_BY_REF[experiment_ref]
+    except KeyError as exc:
+        raise ValueError("mingli_synthetic_experiment_not_found") from exc
+
+
+def resolve_research_stage_subject(subject_id: str) -> MingliResearchStageBinding | None:
     member = SYNTHETIC_MEMBER_BY_SUBJECT.get(subject_id)
     if member is None:
         return None
@@ -160,26 +283,11 @@ def resolve_research_stage_subject(
     )
 
 
-def synthetic_experiment_public_definition() -> dict[str, object]:
-    identity = {
-        **_EXPERIMENT_IDENTITY,
-        "experiment_ref": FIRST_SYNTHETIC_EXPERIMENT_REF,
-        "members": tuple(
-            {
-                "variant": item.variant,
-                "member_ref": item.member_ref,
-                "subject_id": item.subject_id,
-            }
-            for item in FIRST_SYNTHETIC_EXPERIMENT_MEMBERS
-        ),
-        "full_pillar_delta": {
-            "A": list(SYNTHETIC_MEMBER_BY_VARIANT["A"].expected_pillars),
-            "B": list(SYNTHETIC_MEMBER_BY_VARIANT["B"].expected_pillars),
-            "changed_slots": ["hour"],
-            "legal_hour_pillar_change": "己巳 → 丙寅",
-        },
-    }
-    return {
-        **identity,
-        "definition_hash": content_hash(identity),
-    }
+def synthetic_experiment_public_definition(
+    experiment_ref: str = FIRST_SYNTHETIC_EXPERIMENT_REF,
+) -> dict[str, object]:
+    return resolve_synthetic_experiment(experiment_ref).public_definition()
+
+
+def synthetic_experiment_public_definitions() -> tuple[dict[str, object], ...]:
+    return tuple(item.public_definition() for item in SYNTHETIC_EXPERIMENTS)

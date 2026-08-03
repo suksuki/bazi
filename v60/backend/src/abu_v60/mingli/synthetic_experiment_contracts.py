@@ -9,13 +9,23 @@ from abu_v60.mingli.stage_contracts import MingliStageProjection
 
 SYNTHETIC_EXPERIMENT_RUN_VERSION = "v60.mingli-synthetic-experiment-run.001"
 SYNTHETIC_EXPERIMENT_SNAPSHOT_VERSION = (
-    "v60.mingli-synthetic-experiment-snapshot.002"
+    "v60.mingli-synthetic-experiment-snapshot.003"
 )
 SyntheticExperimentOutcome = Literal[
     "PASS",
     "PRODUCT_SAFE_MODEL_FAIL",
     "MODEL_FAIL",
     "INVALID_EXPERIMENT",
+]
+SyntheticExperimentEvaluatorVersion = Literal[
+    "v60.mingli-synthetic-experiment-evaluator.001",
+    "v60.mingli-synthetic-experiment-evaluator.002",
+    "v60.mingli-synthetic-experiment-evaluator.003",
+]
+SyntheticExperimentDevGoldVersion = Literal[
+    "v60.mingli-synthetic-experiment-dev-gold.001",
+    "v60.mingli-synthetic-experiment-dev-gold.002",
+    "v60.mingli-synthetic-experiment-dev-gold.003",
 ]
 
 
@@ -40,8 +50,8 @@ class SyntheticExperimentIssueKeys(BaseModel):
 class SyntheticExperimentEvaluation(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    evaluator_version: Literal["v60.mingli-synthetic-experiment-evaluator.001"]
-    dev_gold_version: Literal["v60.mingli-synthetic-experiment-dev-gold.001"]
+    evaluator_version: SyntheticExperimentEvaluatorVersion
+    dev_gold_version: SyntheticExperimentDevGoldVersion
     dev_gold_hash: str = Field(min_length=64, max_length=64)
     outcome: SyntheticExperimentOutcome
     checks: tuple[SyntheticExperimentCheck, ...] = Field(min_length=1)
@@ -103,7 +113,7 @@ class SyntheticExperimentRunIdentity(BaseModel):
     run_version: Literal["v60.mingli-synthetic-experiment-run.001"]
     experiment_ref: str = Field(min_length=1)
     definition_hash: str = Field(min_length=64, max_length=64)
-    evaluator_version: Literal["v60.mingli-synthetic-experiment-evaluator.001"]
+    evaluator_version: SyntheticExperimentEvaluatorVersion
     analysis_date: date
     member_a_agent_reading_ref: str = Field(min_length=1)
     member_b_agent_reading_ref: str = Field(min_length=1)

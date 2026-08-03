@@ -56,7 +56,7 @@ LOCAL_MINGLI_AGENT_DEFAULTS = {
         "c6eb396dbd5992bbe3f5cdb947e8bbc0ee413d7c17e2beaae69f5d569cf982eb"
     ),
     "V60_MINGLI_AGENT_PROFILE_REF": (
-        "v60.model-serving.gemma4-mingli-agent.002"
+        "v60.model-serving.gemma4-mingli-agent.003"
     ),
     "V60_MINGLI_AGENT_BASE_URL": "http://dblife.com:11888",
     "V60_MINGLI_AGENT_TIMEOUT_SECONDS": "420",

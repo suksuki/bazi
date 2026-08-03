@@ -209,7 +209,7 @@ mutation, stability, adversarial and professional qualification contract; it
 is not currently integrated, qualified or the default.
 
 The active local Mingli serving profile is
-`v60.model-serving.gemma4-mingli-agent.002`: one structured whole-chart call,
+`v60.model-serving.gemma4-mingli-agent.003`: one structured whole-chart call,
 temperature `0`, context `32768`, output budget `5200`. The larger output
 budget covers two fully adjudicated method cards; it does not add another
 model call. The current distilled method set is
@@ -226,15 +226,20 @@ conditional Day-Master capacity. This is a reproducible structured first
 reading, not an advanced-master qualification; relationship/family positive
 methods and real timing adjudication remain missing.
 
-The first legal synthetic A/B pair is now sealed and visible in Mingli Lab.
-The current Run passes all six hold checks and all three expected response
-checks, but both local-model outputs required server regime normalization; its
-status therefore remains `PRODUCT_SAFE_MODEL_FAIL`, not an advanced-master
-qualification. The latest Run now seals the structured raw model answer and a
-replay-verified field-level normalization receipt: A invented a root coordinate;
-B recognized 寅中甲 in prose but put it in peer support, left root status as
-`NONE`, and omitted the typed regime object. Owner charts now serve as regressions
-while method discovery moves to synthetic DEV, qualification and holdout suites.
+Two legal synthetic A/B experiments are now sealed and visible in Mingli Lab.
+The second experiment separates an `hour支藏乙` same-element candidate from an
+`hour支藏甲` exact-Day-Master root. Its current Run passes all four hold checks
+and all three expected responses, but both local-model outputs still required
+server regime normalization; its status therefore remains
+`PRODUCT_SAFE_MODEL_FAIL`, not an advanced-master qualification. The latest
+Run seals the structured raw model answer and a replay-verified field-level
+normalization receipt: A misclassified 卯中乙 as resource support and called
+the first hidden stem residual qi; B recognized 寅中甲 but also duplicated it
+into resource support and invented an unsupported competing resource. The
+current Agent Profile/Prompt are `.022/.019`; the system now knows the narrow
+root-identity distinction, while Gemma4 has not independently mastered it.
+Owner charts now serve as regressions while method discovery moves to synthetic
+DEV, qualification and holdout suites.
 
 The engine and framework choices are recorded in
 [`docs/05_V60_ENGINE_AND_TECHNOLOGY_SELECTION.md`](docs/05_V60_ENGINE_AND_TECHNOLOGY_SELECTION.md).

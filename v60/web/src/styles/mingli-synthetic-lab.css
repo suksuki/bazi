@@ -10,6 +10,22 @@
   align-items: center;
 }
 
+.mingli-synthetic-selector select {
+  width: min(31vw, 340px);
+  min-width: 230px;
+  text-overflow: ellipsis;
+}
+
+.mingli-synthetic-run-selector select {
+  width: min(20vw, 230px);
+  min-width: 178px;
+}
+
+.mingli-synthetic-selector select:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
 .mingli-synthetic-seal {
   display: grid;
   gap: 2px;
@@ -532,5 +548,18 @@
 
   .mingli-synthetic-inspector {
     width: 365px;
+  }
+
+  .mingli-synthetic-selector select {
+    width: 260px;
+    min-width: 0;
+  }
+
+  .mingli-synthetic-run-selector select {
+    width: 180px;
+  }
+
+  .mingli-synthetic-read-only {
+    display: none;
   }
 }

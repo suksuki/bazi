@@ -44,10 +44,11 @@ def synthetic_experiment_snapshot(
 ) -> dict[str, Any]:
     _require_synthetic_lab_reviewer(session)
     try:
-        catalog = service.catalog()["experiments"][0]
-        if experiment_ref != catalog["experiment_ref"]:
-            raise SyntheticExperimentError("mingli_synthetic_experiment_not_found")
-        snapshot = service.snapshot(variant=variant, run_ref=run_ref)
+        snapshot = service.snapshot(
+            experiment_ref=experiment_ref,
+            variant=variant,
+            run_ref=run_ref,
+        )
     except SyntheticExperimentError as exc:
         reason = str(exc)
         code = (

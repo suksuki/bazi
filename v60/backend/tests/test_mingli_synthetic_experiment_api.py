@@ -15,7 +15,7 @@ from httpx import ASGITransport, AsyncClient
 class _ReadOnlySyntheticService:
     def __init__(self) -> None:
         self.catalog_calls = 0
-        self.snapshot_calls: list[tuple[str, str | None]] = []
+        self.snapshot_calls: list[tuple[str, str, str | None]] = []
 
     def catalog(self) -> dict[str, Any]:
         self.catalog_calls += 1
@@ -30,10 +30,16 @@ class _ReadOnlySyntheticService:
             "read_only": True,
         }
 
-    def snapshot(self, *, variant: str, run_ref: str | None) -> dict[str, Any]:
-        self.snapshot_calls.append((variant, run_ref))
+    def snapshot(
+        self,
+        *,
+        experiment_ref: str,
+        variant: str,
+        run_ref: str | None,
+    ) -> dict[str, Any]:
+        self.snapshot_calls.append((experiment_ref, variant, run_ref))
         return {
-            "experiment_ref": "experiment:sealed",
+            "experiment_ref": experiment_ref,
             "run_ref": run_ref,
             "selected_variant": variant,
             "browser_generation_allowed": False,
@@ -64,16 +70,22 @@ def test_catalog_and_snapshot_are_authenticated_read_only_gets(monkeypatch: Any)
 
     assert catalog["browser_generation_allowed"] is False
     assert snapshot["selected_variant"] == "B"
-    assert stub.catalog_calls == 2
-    assert stub.snapshot_calls == [("B", "run:sealed")]
+    assert stub.catalog_calls == 1
+    assert stub.snapshot_calls == [("experiment:sealed", "B", "run:sealed")]
     assert catalog_response.headers["Cache-Control"] == "private, no-store"
     assert snapshot_response.headers["Cache-Control"] == "private, no-store"
 
 
 def test_snapshot_maps_missing_and_drift_without_running_model(monkeypatch: Any) -> None:
     class _FailingService(_ReadOnlySyntheticService):
-        def snapshot(self, *, variant: str, run_ref: str | None) -> dict[str, Any]:
-            del variant, run_ref
+        def snapshot(
+            self,
+            *,
+            experiment_ref: str,
+            variant: str,
+            run_ref: str | None,
+        ) -> dict[str, Any]:
+            del experiment_ref, variant, run_ref
             raise SyntheticExperimentError("mingli_synthetic_experiment_definition_drift")
 
     monkeypatch.setattr(mingli_synthetic_lab, "service", _FailingService())

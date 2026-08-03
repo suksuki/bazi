@@ -32,7 +32,7 @@ export function validateSyntheticExperimentCatalog(
   }
   const catalog = value as unknown as MingliSyntheticExperimentCatalog;
   if (
-    catalog.catalog_version !== "v60.mingli-synthetic-experiment-catalog.001" ||
+    catalog.catalog_version !== "v60.mingli-synthetic-experiment-catalog.002" ||
     catalog.browser_generation_allowed !== false ||
     catalog.read_only !== true ||
     catalog.experiments.length < 1
@@ -40,6 +40,12 @@ export function validateSyntheticExperimentCatalog(
     throw new Error("mingli_synthetic_catalog_shape_invalid");
   }
   catalog.experiments.forEach(validateCatalogEntry);
+  if (
+    new Set(catalog.experiments.map((item) => item.experiment_ref)).size
+      !== catalog.experiments.length
+  ) {
+    throw new Error("mingli_synthetic_catalog_experiment_duplicate");
+  }
   return catalog;
 }
 
@@ -65,7 +71,7 @@ export function validateSyntheticExperimentSnapshot(
     (item) => item.variant === expected.variant,
   );
   if (
-    snapshot.snapshot_version !== "v60.mingli-synthetic-experiment-snapshot.002" ||
+    snapshot.snapshot_version !== "v60.mingli-synthetic-experiment-snapshot.003" ||
     !snapshot.snapshot_ref ||
     !HASH.test(snapshot.snapshot_hash) ||
     snapshot.experiment_ref !== expected.experimentRef ||
@@ -231,12 +237,54 @@ function validateCatalogEntry(value: unknown): void {
   if (!isRecord(value)) throw new Error("mingli_synthetic_catalog_entry_invalid");
   const entry = value as unknown as MingliSyntheticExperimentCatalogEntry;
   validateDefinition(entry);
+  const runs = entry.runs;
   if (
+    !Array.isArray(runs) ||
+    runs.some((item) => !isRecord(item)) ||
     !["SEALED", "NOT_RUN"].includes(entry.run_status) ||
     (entry.run_status === "SEALED" && !entry.latest_run_ref) ||
     (entry.run_status === "NOT_RUN" && entry.latest_run_ref !== null) ||
     (entry.run_status === "NOT_RUN" && entry.latest_outcome !== null) ||
-    (entry.latest_outcome !== null && !OUTCOMES.includes(entry.latest_outcome))
+    (entry.latest_outcome !== null && !OUTCOMES.includes(entry.latest_outcome)) ||
+    (entry.run_status === "NOT_RUN" && runs.length !== 0) ||
+    (entry.run_status === "SEALED" && runs.length < 1) ||
+    new Set(runs.map((item) => item.run_ref)).size !== runs.length ||
+    runs.some(
+      (item) =>
+        !item.run_ref ||
+        item.experiment_ref !== entry.experiment_ref ||
+        Number.isNaN(Date.parse(item.created_at)) ||
+        !OUTCOMES.includes(item.outcome) ||
+        !["PASS", "FAIL", "NOT_EVALUABLE"].includes(
+          item.model_independence,
+        ) ||
+        ![
+          "v60.mingli-synthetic-experiment-evaluator.001",
+          "v60.mingli-synthetic-experiment-evaluator.002",
+          "v60.mingli-synthetic-experiment-evaluator.003",
+        ].includes(item.evaluator_version) ||
+        ![
+          "v60.mingli-synthetic-experiment-dev-gold.001",
+          "v60.mingli-synthetic-experiment-dev-gold.002",
+          "v60.mingli-synthetic-experiment-dev-gold.003",
+        ].includes(item.dev_gold_version) ||
+        !["CURRENT", "SUPERSEDED"].includes(item.review_contract_status) ||
+        !Number.isInteger(item.changed_pass_count) ||
+        item.changed_pass_count < 0 ||
+        !Number.isInteger(item.hold_pass_count) ||
+        item.hold_pass_count < 0,
+    ) ||
+    runs.some(
+      (item, index) =>
+        index > 0 && item.created_at > runs[index - 1].created_at,
+    ) ||
+    (
+      entry.run_status === "SEALED" &&
+      (
+        runs[0]?.run_ref !== entry.latest_run_ref ||
+        runs[0]?.outcome !== entry.latest_outcome
+      )
+    )
   ) {
     throw new Error("mingli_synthetic_catalog_run_invalid");
   }
@@ -248,19 +296,30 @@ function validateDefinition(value: MingliSyntheticExperimentDefinition): void {
     !value.experiment_ref ||
     !HASH.test(value.definition_hash) ||
     value.suite !== "DEV" ||
-    value.family !== "CONTROLLED_LEGAL_HOUR_PAIR" ||
+    !["CONTROLLED_LEGAL_HOUR_PAIR", "CONTROLLED_ROOT_IDENTITY_PAIR"].includes(
+      value.family,
+    ) ||
     !value.title ||
     !value.question ||
+    value.blind_protocol !== "MEMBERS_INDEPENDENT_GOLD_NOT_IN_AGENT_PACKET" ||
+    ![
+      "WHOLE_HOUR_PILLAR_RESPONSE_NOT_ROOT_CAUSAL_ESTIMATE",
+      "NATAL_ROOT_GATE_ONLY_WITH_FULL_HOUR_COLLATERAL",
+    ].includes(value.inference_scope) ||
     !value.inference_limit ||
     !Array.isArray(value.known_collateral_deltas) ||
     value.known_collateral_deltas.length < 1 ||
     value.changed_input.field !== "birth_time" ||
+    !value.changed_input.A ||
+    !value.changed_input.B ||
     !Array.isArray(value.members) ||
     value.members.length !== 2 ||
     !Array.isArray(value.full_pillar_delta.A) ||
     !Array.isArray(value.full_pillar_delta.B) ||
     value.full_pillar_delta.A.length !== 4 ||
     value.full_pillar_delta.B.length !== 4
+    || value.full_pillar_delta.changed_slots.join("") !== "hour"
+    || !value.full_pillar_delta.legal_hour_pillar_change
   ) {
     throw new Error("mingli_synthetic_definition_invalid");
   }
@@ -282,8 +341,16 @@ function validateEvaluation(
   value: MingliSyntheticExperimentSnapshot["evaluation"],
 ): void {
   if (
-    value.evaluator_version !== "v60.mingli-synthetic-experiment-evaluator.001" ||
-    value.dev_gold_version !== "v60.mingli-synthetic-experiment-dev-gold.001" ||
+    ![
+      "v60.mingli-synthetic-experiment-evaluator.001",
+      "v60.mingli-synthetic-experiment-evaluator.002",
+      "v60.mingli-synthetic-experiment-evaluator.003",
+    ].includes(value.evaluator_version) ||
+    ![
+      "v60.mingli-synthetic-experiment-dev-gold.001",
+      "v60.mingli-synthetic-experiment-dev-gold.002",
+      "v60.mingli-synthetic-experiment-dev-gold.003",
+    ].includes(value.dev_gold_version) ||
     !HASH.test(value.dev_gold_hash) ||
     !OUTCOMES.includes(value.outcome) ||
     !Array.isArray(value.checks) ||

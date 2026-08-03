@@ -65,8 +65,18 @@ expect(
     scene.includes("当前仍显示 {displayedVariant} 组") &&
     scene.includes("当前链接的封存结果不可用") &&
     occurrences(scene, /改读最新封存结果/g) === 2 &&
-    scene.includes("snapshotError && experiment && latestRunRef") &&
-    scene.includes("displayedVariant === variant"),
+    scene.includes("activeSnapshotError && experiment && latestRunRef") &&
+    scene.includes("displayedVariant === variant") &&
+    scene.includes('aria-label="选择合成实验"') &&
+    scene.includes('aria-label="选择封存运行"') &&
+    scene.includes("experiment.runs") &&
+    scene.includes("run.review_contract_status") &&
+    scene.includes("setSnapshot(null)") &&
+    /route\.experimentRef\s*\?/.test(scene) &&
+    scene.includes("const committedSnapshot = snapshot") &&
+    scene.includes("snapshot.experiment_ref === route.experimentRef") &&
+    scene.includes("stage={committedSnapshot.stage}") &&
+    scene.includes('selected.run_status !== "SEALED"'),
   "synthetic-scene:must-have-one-persistent-player-and-no-browser-run-control",
 );
 expect(
@@ -100,7 +110,11 @@ expect(
     syntheticValidation.includes("value.outcome !== expectedOutcome") &&
     syntheticValidation.includes("TRACE_STAGES.includes") &&
     syntheticValidation.includes("value.stage_counts.reduce") &&
-    syntheticValidation.includes("sameStrings(value.server_issue_keys, expectedIssues)"),
+    syntheticValidation.includes("sameStrings(value.server_issue_keys, expectedIssues)") &&
+    syntheticValidation.includes("mingli_synthetic_catalog_experiment_duplicate") &&
+    syntheticValidation.includes("item.experiment_ref !== entry.experiment_ref") &&
+    syntheticValidation.includes("runs[0]?.run_ref !== entry.latest_run_ref") &&
+    syntheticValidation.includes("item.review_contract_status"),
   "synthetic-validation:must-recompute-outcomes-and-close-trace-invariants",
 );
 
@@ -111,6 +125,7 @@ console.log(JSON.stringify({
   runtimeScenePlayers: 1,
   resultTracks: 3,
   normalizationTrace: "FIELD_LEVEL_OR_HONEST_LEGACY",
+  experimentDiscovery: "MULTI_EXPERIMENT_AND_RUN_HISTORY",
   routeRecovery: ["experiment", "run", "variant"],
   ordinarySubjectLeakage: false,
   failures,
