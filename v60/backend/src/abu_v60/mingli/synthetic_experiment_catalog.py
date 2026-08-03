@@ -19,7 +19,7 @@ SYNTHETIC_EXPERIMENT_DEFINITION_VERSION_V2: Final = (
 SYNTHETIC_RESEARCH_ACCOUNT_REF: Final = "v60-system-account-mingli-synthetic-lab-v1"
 SYNTHETIC_RESEARCH_BATCH_REF: Final = "v60-seed-batch-mingli-synthetic-lab-v1"
 SYNTHETIC_EXPERIMENT_EVALUATOR_VERSION: Final = (
-    "v60.mingli-synthetic-experiment-evaluator.005"
+    "v60.mingli-synthetic-experiment-evaluator.006"
 )
 
 

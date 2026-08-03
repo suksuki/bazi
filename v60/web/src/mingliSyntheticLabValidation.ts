@@ -264,6 +264,7 @@ function validateCatalogEntry(value: unknown): void {
           "v60.mingli-synthetic-experiment-evaluator.003",
           "v60.mingli-synthetic-experiment-evaluator.004",
           "v60.mingli-synthetic-experiment-evaluator.005",
+          "v60.mingli-synthetic-experiment-evaluator.006",
         ].includes(item.evaluator_version) ||
         ![
           "v60.mingli-synthetic-experiment-dev-gold.001",
@@ -357,6 +358,7 @@ function validateEvaluation(
       "v60.mingli-synthetic-experiment-evaluator.003",
       "v60.mingli-synthetic-experiment-evaluator.004",
       "v60.mingli-synthetic-experiment-evaluator.005",
+      "v60.mingli-synthetic-experiment-evaluator.006",
     ].includes(value.evaluator_version) ||
     ![
       "v60.mingli-synthetic-experiment-dev-gold.001",

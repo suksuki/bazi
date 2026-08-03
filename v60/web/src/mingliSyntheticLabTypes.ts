@@ -92,7 +92,8 @@ export interface MingliSyntheticExperimentEvaluation {
     | "v60.mingli-synthetic-experiment-evaluator.002"
     | "v60.mingli-synthetic-experiment-evaluator.003"
     | "v60.mingli-synthetic-experiment-evaluator.004"
-    | "v60.mingli-synthetic-experiment-evaluator.005";
+    | "v60.mingli-synthetic-experiment-evaluator.005"
+    | "v60.mingli-synthetic-experiment-evaluator.006";
   dev_gold_version:
     | "v60.mingli-synthetic-experiment-dev-gold.001"
     | "v60.mingli-synthetic-experiment-dev-gold.002"

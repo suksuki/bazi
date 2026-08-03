@@ -23,6 +23,7 @@ from abu_v60.mingli.agent_contracts import (
     MingliAgentModelOutput,
     MingliAgentReadingEnvelope,
     mingli_agent_generation_key,
+    mingli_agent_generation_output_schema,
 )
 from abu_v60.mingli.agent_fact_binding import bind_packet_fact_fields
 from abu_v60.mingli.agent_method_cards import MINGLI_AGENT_ADJUDICATION_VERSION
@@ -279,7 +280,7 @@ class OllamaMingliAgentProvider:
 
     def _payload(self, *, packet: MingliAgentCasePacket) -> dict[str, Any]:
         prompt = canonical_json(packet.model_prompt_view())
-        output_schema = MingliAgentModelOutput.model_json_schema()
+        output_schema = mingli_agent_generation_output_schema()
         if len(prompt) > MINGLI_AGENT_PROMPT_VIEW_MAX_CHARS:
             raise MingliAgentProviderError("mingli_agent_prompt_view_budget_exceeded")
         if len(canonical_json(output_schema)) > MINGLI_AGENT_OUTPUT_SCHEMA_MAX_CHARS:

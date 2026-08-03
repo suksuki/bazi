@@ -159,6 +159,14 @@ def normalize_adjudication_output(
     hypotheses = value.get("hypotheses")
     if not isinstance(hypotheses, list):
         return value
+    raw_primary_method_ref = next(
+        (
+            item.get("method_card_ref")
+            for item in hypotheses[:2]
+            if isinstance(item, dict) and item.get("role") == "PRIMARY"
+        ),
+        None,
+    )
     cards = method_card_catalog(packet.mechanism_observations)
     candidate_refs = [item.evidence_id for item in packet.mechanism_observations]
     assigned_refs, identity_repaired = _assign_method_card_refs(
@@ -297,16 +305,24 @@ def normalize_adjudication_output(
         normalized=normalized,
         identity_repaired=identity_repaired,
     )
-    if normalization_issues:
-        value[MINGLI_AGENT_NORMALIZATION_ISSUE_FIELD] = sorted(normalization_issues)
     primary = next(item for item in normalized if item["role"] == "PRIMARY")
+    if (
+        raw_primary_method_ref is not None
+        and raw_primary_method_ref != primary["method_card_ref"]
+    ):
+        normalization_issues.add("WORK_PATH")
     work_path = value.get("work_path")
     if isinstance(work_path, dict) and work_path.get("closure") == "CLOSED":
-        work_path["closure"] = {
+        repaired_closure = {
             "CONDITIONAL": "CONDITIONAL",
             "UNRESOLVED": "UNCERTAIN",
             "BROKEN": "BROKEN",
         }.get(primary["adjudication"], "CLOSED")
+        if repaired_closure != work_path["closure"]:
+            work_path["closure"] = repaired_closure
+            normalization_issues.add("WORK_PATH")
+    if normalization_issues:
+        value[MINGLI_AGENT_NORMALIZATION_ISSUE_FIELD] = sorted(normalization_issues)
     return value
 
 

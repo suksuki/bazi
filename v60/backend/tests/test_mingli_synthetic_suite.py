@@ -78,7 +78,7 @@ def _sealed_item(
         experiment_run_ref=f"experiment-run:{position}",
         experiment_run_hash=str(position) * 64,
         outcome="PASS",
-        evaluator_version="v60.mingli-synthetic-experiment-evaluator.005",
+        evaluator_version="v60.mingli-synthetic-experiment-evaluator.006",
         dev_gold_version="v60.mingli-synthetic-experiment-dev-gold.004",
         dev_gold_hash="4" * 64,
         model_independence="FAIL" if reason_keys else "PASS",

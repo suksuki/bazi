@@ -58,7 +58,7 @@ def test_manifest_exposes_world_game_and_localization_reservation() -> None:
     assert manifest["engines"]["context"] == "v60.experience-context.003"
     assert manifest["engines"]["game"] == "v60.dream-game-engine.019"
     assert manifest["engines"]["world"] == "v60.world-continuity-engine.004"
-    assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.042"
+    assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.043"
     assert manifest["engines"]["story"] == "v60.life-story-engine.011"
     source_review = manifest["source_review_profiles"]
     assert len(source_review) == 1
@@ -114,7 +114,7 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     architecture = runtime_architecture()
     modules = {module.module_id: module for module in architecture.modules}
 
-    assert modules["mingli"].version == "v60.mingli-cognitive-engine.042"
+    assert modules["mingli"].version == "v60.mingli-cognitive-engine.043"
     assert modules["knowledge"].version == "v60.knowledge-authority.008"
     assert modules["media"].version == "v60.media-library.003"
     assert modules["unit-mingli"].version == "v60.unit-mingli.032"

@@ -1,18 +1,32 @@
 import type { MingliSyntheticExperimentCatalog } from "../mingliSyntheticLabTypes";
+import type { MingliSyntheticSuiteRunComparison } from "../mingliSyntheticSuiteSelection";
 import type { MingliSyntheticSuiteRunSelection } from "../mingliSyntheticSuiteTypes";
+import { MingliSyntheticSuiteTrainingComparison } from "./MingliSyntheticSuiteComparison";
 
 export function MingliSyntheticSuiteSummary({
+  comparison,
   currentExperimentRef,
   experiments,
   onSelect,
+  onSelectRun,
   selection,
 }: {
+  comparison: MingliSyntheticSuiteRunComparison | null;
   currentExperimentRef: string | null;
   experiments: MingliSyntheticExperimentCatalog;
   onSelect: (experimentRef: string, runRef: string) => void;
+  onSelectRun: (selection: MingliSyntheticSuiteRunSelection) => void;
   selection: MingliSyntheticSuiteRunSelection;
 }) {
   const { review, run, suite } = selection;
+  const independentCount = review.items.filter(
+    (item) => item.model_independence === "PASS",
+  ).length;
+  const suiteIndependent = review.counts.sealed === review.counts.experiments
+    && review.counts.runner_errors === 0
+    && independentCount === review.counts.experiments
+    && review.items.every((item) => item.review_contract_status === "CURRENT")
+    && review.error_clusters.length === 0;
   const titles = new Map(
     experiments.experiments.map((item) => [item.experiment_ref, item.title]),
   );
@@ -24,9 +38,22 @@ export function MingliSyntheticSuiteSummary({
           <strong>{suite.title}</strong>
         </div>
         <span data-status={run.status}>
-          {review.counts.sealed} 封存 · {review.counts.runner_errors} 执行失败 · {review.counts.review_required} 需复核
+          {independentCount}/{review.counts.experiments} 模型独立 · {review.counts.review_required} 需校正
         </span>
       </header>
+      <div className="mingli-synthetic-suite-verdict" data-pass={suiteIndependent}>
+        <strong>{suiteIndependent ? "本轮模型独立通过" : "本轮尚未模型独立"}</strong>
+        <span>
+          {suiteIndependent
+            ? "全部课题在当前评尺下无服务端专业修正。"
+            : "封存结果可用于继续训练；修正后的产品输出仍与模型原生能力分开计算。"}
+        </span>
+      </div>
+      <MingliSyntheticSuiteTrainingComparison
+        comparison={comparison}
+        currentCandidate={run.candidate_identity}
+        onSelectRun={onSelectRun}
+      />
       <div className="mingli-synthetic-suite-topics" aria-label="训练课题">
         {review.items.map((item) => {
           const active = item.experiment_ref === currentExperimentRef;

@@ -213,7 +213,7 @@ The active local Mingli serving profile is
 temperature `0`, context `32768`, output budget `5200`. The larger output
 budget covers two fully adjudicated method cards; it does not add another
 model call. The current distilled method set is
-`v60.mingli-agent-method-distillation.003`, including the narrow
+`v60.mingli-agent-method-distillation.004`, including the narrow
 `v60.mingli-effective-root-method.001`; its readings remain private
 Owner-review candidates with publication disabled.
 
@@ -234,14 +234,15 @@ version-locked local candidate, reuses already sealed child Runs, and never
 needs a chat turn or a browser model call.
 
 The current Suite Run is
-`v60-mingli-synthetic-suite-run-a72328f9cf2f9cdfceb0`: 2/2 experiments sealed,
+`v60-mingli-synthetic-suite-run-63da38288080c7fa5c3a`: 2/2 experiments sealed,
 0 runner errors and 2 results requiring review. Each experiment passes 3/3
-hold checks and 4/4 method-response checks, including the prohibition against
-inventing fixed weight or declaring a second/third hidden stem invalid merely
-because of its rank. Gemma4 still needs four `DAY_MASTER_REGIME` repairs and
-one `WORK_PATH` repair, so both outcomes honestly remain
-`PRODUCT_SAFE_MODEL_FAIL`. The current Agent Profile/Prompt are `.023/.020`;
-the system has acquired a repeatable training loop, not advanced-master
+hold checks and 4/4 method-response checks. Under the same Evaluator `.006`
+and Gold `.004`, the preceding candidate's hidden-rank prose, H1-capacity and
+two regime errors were removed; two regime corrections and two work-path
+corrections remain. The Lab now shows this adjacent-run comparison and the
+complete model/Profile/Provider/Prompt identity instead of presenting a
+server-corrected result as model ability. The current Agent Profile/Prompt are
+`.026/.023`; this is measurable method training, not advanced-master
 qualification. Owner charts stay regressions while method discovery runs in
 DEV; QUALIFICATION and HOLDOUT remain locked until the method is frozen.
 

@@ -6,7 +6,7 @@ from typing import Literal
 from abu_v60.mingli.agent_root_gate import MINGLI_EFFECTIVE_ROOT_METHOD_VERSION
 
 MINGLI_AGENT_METHOD_DISTILLATION_VERSION = (
-    "v60.mingli-agent-method-distillation.003"
+    "v60.mingli-agent-method-distillation.004"
 )
 
 OUTPUT_TO_PRESSURE = "bazi.mechanism.output-to-pressure@1"
@@ -273,6 +273,28 @@ def day_master_regime_method_asset(
             "competition_kinds",
             "classification",
         ),
+        "typed_field_rules": {
+            "support_selection_root_status": (
+                "只表示 root_candidates 是否非空，不是有效根裁决"
+            ),
+            "rooted_visible_support_status": (
+                "visible_peers 为空时必须为 ABSENT；这不改变 effective_root_status"
+            ),
+            "unresolved_is_complete_output": (
+                "方法未闭合时返回完整 regime_decision 并使用 UNRESOLVED，不得省略字段"
+            ),
+            "coordinates_follow_status": (
+                "effective_root_status 不是 PRESENT 时 effective_root_coordinates 必须为空"
+            ),
+            "classification_follows_status": (
+                "WEAK 且 effective_root_status=PRESENT 时 classification=ORDINARY_WEAK"
+            ),
+            "competition_is_exhaustive": (
+                "hidden_resources 非空必须列 HIDDEN_RESOURCE；visible_peers 非空且未形成"
+                "有根明透支持时必须列 VISIBLE_PEER"
+            ),
+            "minimum_evidence": "regime evidence_ids 必须包含 day_master_support evidence_id",
+        },
         "hard_rules": (
             "有有效根或透而有根的印比时不得判从",
             "minimum_anti_follow_gate 为 PRESENT 的坐标不得写成余气或继续保留有效根未决",

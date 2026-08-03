@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
@@ -9,25 +10,15 @@ from abu_v60.mingli.agent_adjudication import (
     AgentHypothesis,
     AgentHypothesisDecision,
 )
-from abu_v60.mingli.agent_method_cards import (
-    fallback_hypothesis_method_card,
-    mechanism_method_card,
-)
-from abu_v60.mingli.agent_method_distillation import (
-    bound_method_context,
-    cross_card_discriminator,
-    day_master_regime_method_asset,
-    domain_method_assets,
-)
 from abu_v60.mingli.agent_normalization_receipt import (
     MingliAgentNormalizationReceipt,
 )
+from abu_v60.mingli.agent_prompt_view import _professional_adjudication_view
 from abu_v60.mingli.agent_regime_contracts import AgentRegimeDecision
-from abu_v60.mingli.agent_root_gate import packet_root_candidate_assessments
 from abu_v60.provenance import content_hash, stable_ref
 
 MINGLI_AGENT_PACKET_VERSION = "v60.mingli-agent-case-packet.003"
-MINGLI_AGENT_PROMPT_VIEW_VERSION = "v60.mingli-agent-prompt-view.011"
+MINGLI_AGENT_PROMPT_VIEW_VERSION = "v60.mingli-agent-prompt-view.014"
 MINGLI_AGENT_READING_VERSION = "v60.mingli-agent-reading.005"
 MINGLI_AGENT_READING_REGIME_VERSIONS = frozenset(
     {
@@ -317,241 +308,26 @@ class MingliAgentCasePacket(BaseModel):
         )
 
 
-_BRANCH_ELEMENT = {
-    "寅": "wood",
-    "卯": "wood",
-    "辰": "earth",
-    "巳": "fire",
-    "午": "fire",
-    "未": "earth",
-    "申": "metal",
-    "酉": "metal",
-    "戌": "earth",
-    "亥": "water",
-    "子": "water",
-    "丑": "earth",
-}
-_GENERATES = {
-    "wood": "fire",
-    "fire": "earth",
-    "earth": "metal",
-    "metal": "water",
-    "water": "wood",
-}
-_CONTROLS = {
-    "wood": "earth",
-    "earth": "water",
-    "water": "fire",
-    "fire": "metal",
-    "metal": "wood",
-}
-_THREE_HARMONY_GROUPS = (
-    ("申子辰", "water"),
-    ("亥卯未", "wood"),
-    ("寅午戌", "fire"),
-    ("巳酉丑", "metal"),
-)
-_ELEMENT_LABEL = {
-    "wood": "木",
-    "fire": "火",
-    "earth": "土",
-    "metal": "金",
-    "water": "水",
-}
-
-
-def _professional_adjudication_view(packet: MingliAgentCasePacket) -> dict[str, Any]:
-    month_element = _BRANCH_ELEMENT[packet.month_command_branch]
-    day_element = packet.day_master_element
-    if month_element == day_element:
-        seasonal_relation = "SAME_ELEMENT_SEASONAL_SUPPORT"
-    elif _GENERATES[month_element] == day_element:
-        seasonal_relation = "RESOURCE_SEASONAL_SUPPORT"
-    elif _GENERATES[day_element] == month_element:
-        seasonal_relation = "OUTPUT_SEASONAL_DRAIN"
-    elif _CONTROLS[month_element] == day_element:
-        seasonal_relation = "OFFICIAL_SEASONAL_PRESSURE"
-    else:
-        seasonal_relation = "WEALTH_SEASONAL_DRAIN"
-
-    branch_coordinates: dict[str, list[dict[str, str]]] = {}
-    for pillar in packet.pillars:
-        branch_coordinates.setdefault(pillar.branch, []).append(
-            {
-                "slot": pillar.slot,
-                "branch": pillar.branch,
-                "evidence_id": pillar.evidence_id,
-            }
-        )
-    structure_candidates = []
-    present_branches = set(branch_coordinates)
-    for members, result_element in _THREE_HARMONY_GROUPS:
-        if not set(members).issubset(present_branches):
-            continue
-        member_coordinates = tuple(
-            coordinate for member in members for coordinate in branch_coordinates[member]
-        )
-        structure_candidates.append(
-            {
-                "relation_type": "three_harmony_membership_candidate",
-                "label": f"{members}三合{_ELEMENT_LABEL[result_element]}成员齐备候选",
-                "members": tuple(members),
-                "result_element": result_element,
-                "member_coordinates": member_coordinates,
-                "evidence_ids": tuple(
-                    dict.fromkeys(coordinate["evidence_id"] for coordinate in member_coordinates)
-                ),
-                "membership_status": "CLASSICAL_MEMBER_SET_PRESENT",
-                "effect_status": "REQUIRES_WHOLE_CHART_ADJUDICATION",
-            }
-        )
-
-    occurrence_map: dict[str, list[str]] = {}
-    for pillar in packet.pillars:
-        occurrence_map.setdefault(pillar.visible_ten_god, []).append(
-            f"{pillar.slot}干{pillar.stem}"
-        )
-        for hidden_stem, ten_god in zip(
-            pillar.hidden_stems,
-            pillar.hidden_ten_gods,
-            strict=True,
-        ):
-            occurrence_map.setdefault(ten_god, []).append(f"{pillar.slot}支藏{hidden_stem}")
-    natal_evidence_ids = tuple(
-        item.evidence_id for item in packet.evidence_catalog if item.kind != "TIMING"
-    )
-    timing_evidence_ids = tuple(
-        item.evidence_id for item in packet.evidence_catalog if item.kind == "TIMING"
-    )
-    mechanism_evidence_ids = {item.evidence_id for item in packet.mechanism_observations}
-    chart_basis_evidence_ids = tuple(
-        item for item in natal_evidence_ids if item not in mechanism_evidence_ids
-    )
-    return {
-        "natal_evidence_ids": natal_evidence_ids,
-        "timing_evidence_ids": timing_evidence_ids,
-        "field_evidence_scope": {
-            "natal_only_fields": (
-                "first_look",
-                "whole_chart_thesis",
-                "hypotheses",
-                "work_path",
-                "life_image",
-                "domains",
-                "timing.natal_baseline",
-            ),
-            "natal_allowed": natal_evidence_ids,
-            "primary_requires_chart_basis_from": chart_basis_evidence_ids,
-            "natal_prose_forbidden": (
-                "大运",
-                "流年",
-                "岁运",
-                *(item.pillar for item in packet.timing_coordinates),
-            ),
-        },
-        "seasonal_context": {
-            "month_command_branch": packet.month_command_branch,
-            "month_command_element": month_element,
-            "relation_to_day_master": seasonal_relation,
-            "counting_warning": "SEASON_ROOT_POSITION_AND_PATH_MUST_BE_WEIGHED_NOT_COUNTED",
-        },
-        "support_order": {
-            "hidden_root_candidates": packet.day_master_support.same_element_hidden_support,
-            "visible_peer_support": packet.day_master_support.visible_peer_support,
-            "hidden_resource_support": packet.day_master_support.resource_support,
-            "decision_warning": (
-                "VISIBLE_PEERS_OR_HIDDEN_RESOURCE_CANNOT_BY_THEMSELVES_OVERRIDE_"
-                "SEASON_AND_ROOT_STATUS"
-            ),
-        },
-        "day_master_regime_method": day_master_regime_method_asset(
-            seasonal_relation=seasonal_relation,
-            root_candidates=packet.day_master_support.same_element_hidden_support,
-            visible_peers=packet.day_master_support.visible_peer_support,
-            hidden_resources=packet.day_master_support.resource_support,
-            root_candidate_assessments=packet_root_candidate_assessments(packet),
-        ),
-        "ten_god_occurrences": tuple(
-            {
-                "ten_god": ten_god,
-                "coordinates": tuple(coordinates),
-            }
-            for ten_god, coordinates in sorted(occurrence_map.items())
-        ),
-        "professional_structure_candidates": tuple(structure_candidates),
-        "candidate_method_cards": {
-            "authority": "CHECKS_REQUIRE_AGENT_RULING",
-            "three_harmony": tuple(
-                {
-                    "candidate_label": item["label"],
-                    "required_checks": (
-                        "MEMBER_COMPLETION_TYPE",
-                        "MONTH_COMMAND_SUPPORT_OR_RESISTANCE",
-                        "RESULT_ELEMENT_STEM_VISIBILITY",
-                        "DISRUPTION_OR_COMPETING_PATH",
-                        "DAY_MASTER_AND_WHOLE_CHART_CAPACITY",
-                    ),
-                    "shortcut_forbidden": (
-                        "MEMBERS_PRESENT_DOES_NOT_MEAN_EFFECT_OR_TRANSFORMATION"
-                    ),
-                }
-                for item in structure_candidates
-            ),
-            "mechanisms": tuple(
-                mechanism_method_card(
-                    item,
-                    include_distilled_guidance=True,
-                    distilled_context=bound_method_context(
-                        pattern_ref=item.pattern_ref,
-                        ten_god_occurrences=occurrence_map,
-                        root_candidates=(
-                            packet.day_master_support.same_element_hidden_support
-                        ),
-                        visible_peers=packet.day_master_support.visible_peer_support,
-                        hidden_resources=packet.day_master_support.resource_support,
-                    ),
-                )
-                for item in packet.mechanism_observations
-            ),
-            "fallback_hypothesis": fallback_hypothesis_method_card(),
-            "cross_card_discriminator": cross_card_discriminator(),
-            "work_path_closure": {
-                "closed_allowed_when": ("ALL_PRIMARY_BLOCKING_AND_CONDITIONING_CHECKS_SUPPORT"),
-                "otherwise_allowed": ("CONDITIONAL", "UNCERTAIN", "BROKEN"),
-            },
-        },
-        "domain_method_assets": domain_method_assets(
-            gender=packet.gender,
-            ten_god_occurrences=occurrence_map,
-            spouse_palace={
-                "slot": "day",
-                "pillar": packet.pillars[2].pillar,
-                "branch": packet.pillars[2].branch,
-                "evidence_id": packet.pillars[2].evidence_id,
-                "hidden_stems": packet.pillars[2].hidden_stems,
-                "hidden_ten_gods": packet.pillars[2].hidden_ten_gods,
-            },
-        ),
-        "required_decision_order": (
-            "WEIGH_SEASON_ROOT_PEER_RESOURCE_DRAIN_WEALTH_AND_PRESSURE",
-            "LOCK_NATAL_PRIMARY_AND_ALTERNATIVE_EXPLANATIONS",
-            "COMPARE_PATTERN_SUCCESS_FAILURE_RESCUE_AND_TRANSFORMATION",
-            "DERIVE_LIFE_DOMAINS_FROM_THE_NATAL_PRIMARY_ONLY",
-            "APPLY_DAYUN_THEN_ANNUAL_WITHOUT_BACKFLOW_TO_NATAL",
-            "ASK_ONE_REALITY_QUESTION_THAT_CAN_REVERSE_THE_PRIMARY_CHOICE",
-        ),
-    }
-
-
 class AgentSupportSelection(BaseModel):
     """The model must acknowledge typed support facts without reclassifying them."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    root_status: Literal["NONE", "PRESENT"]
-    root_coordinates: tuple[str, ...]
-    peer_coordinates: tuple[str, ...]
-    resource_coordinates: tuple[str, ...]
+    root_status: Literal["NONE", "PRESENT"] = Field(
+        description=(
+            "仅表示 same_element_hidden_support 候选清单是否非空；"
+            "不表示候选已经成为有效根。"
+        )
+    )
+    root_coordinates: tuple[str, ...] = Field(
+        description="逐字复制 same_element_hidden_support。"
+    )
+    peer_coordinates: tuple[str, ...] = Field(
+        description="逐字复制 visible_peer_support。"
+    )
+    resource_coordinates: tuple[str, ...] = Field(
+        description="逐字复制 resource_support；印星不得写入根候选。"
+    )
 
 
 class AgentWorkPath(BaseModel):
@@ -703,6 +479,32 @@ class MingliAgentModelOutput(BaseModel):
         unknown = sorted(cited - allowed)
         if unknown:
             raise ValueError(f"mingli_agent_output_unknown_evidence:{','.join(unknown)}")
+
+
+def mingli_agent_generation_output_schema() -> dict[str, Any]:
+    """Require the current typed regime in generation while preserving legacy reads."""
+
+    schema = deepcopy(MingliAgentModelOutput.model_json_schema())
+    required = list(schema.get("required", ()))
+    if "regime_decision" not in required:
+        properties = tuple(schema.get("properties", ()))
+        regime_index = properties.index("regime_decision")
+        required.insert(regime_index, "regime_decision")
+    schema["required"] = required
+    regime = dict(schema["properties"]["regime_decision"])
+    non_null = tuple(
+        item for item in regime.get("anyOf", ()) if item.get("type") != "null"
+    )
+    if len(non_null) == 1:
+        schema["properties"]["regime_decision"] = {
+            **non_null[0],
+            "description": (
+                "当前生成必须返回完整的弱／从势 typed 裁决；UNRESOLVED 是合法结论，"
+                "但字段不得省略或为 null。"
+            ),
+            "title": regime.get("title", "Regime Decision"),
+        }
+    return schema
 
 
 def mingli_agent_generation_key(

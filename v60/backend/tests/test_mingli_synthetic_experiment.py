@@ -187,9 +187,16 @@ def _hidden_rank_readings(
     b_status: str,
     a_thesis: str = "",
     b_thesis: str = "",
+    a_raw_thesis: str | None = None,
+    b_raw_thesis: str | None = None,
 ) -> dict[str, Any]:
-    def reading(status: str, thesis: str) -> Any:
+    def reading(status: str, thesis: str, raw_thesis: str | None) -> Any:
         return SimpleNamespace(
+            normalization_receipt=(
+                None
+                if raw_thesis is None
+                else SimpleNamespace(raw_output={"whole_chart_thesis": raw_thesis})
+            ),
             output=SimpleNamespace(
                 regime_decision=SimpleNamespace(
                     classification="ORDINARY_WEAK",
@@ -202,7 +209,10 @@ def _hidden_rank_readings(
             )
         )
 
-    return {"A": reading(a_status, a_thesis), "B": reading(b_status, b_thesis)}
+    return {
+        "A": reading(a_status, a_thesis, a_raw_thesis),
+        "B": reading(b_status, b_thesis, b_raw_thesis),
+    }
 
 
 def test_public_definition_seals_full_inputs_and_inference_limit() -> None:
@@ -939,6 +949,113 @@ def test_hidden_rank_pairs_lock_rank_facts_without_inventing_rank_weights() -> N
         SyntheticExperimentEvaluation.model_validate(secondary_tertiary).dev_gold_version
         == "v60.mingli-synthetic-experiment-dev-gold.004"
     )
+
+
+@pytest.mark.parametrize(
+    ("experiment", "variant", "prose"),
+    (
+        (HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT, "B", "未中藏有微弱比肩乙木。"),
+        (HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT, "A", "卯中乙根系尚浅。"),
+        (HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT, "A", "辰中乙无力，可忽略。"),
+    ),
+)
+def test_hidden_rank_checker_catches_implicit_strength_shortcuts(
+    experiment: Any,
+    variant: str,
+    prose: str,
+) -> None:
+    packets = _seed_experiment_and_packets(experiment)
+    statuses = (
+        ("PRESENT", "UNRESOLVED")
+        if experiment is HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT
+        else ("UNRESOLVED", "UNRESOLVED")
+    )
+    raw_theses = {"a_raw_thesis": None, "b_raw_thesis": None}
+    raw_theses[f"{variant.lower()}_raw_thesis"] = prose
+    evaluation = evaluate_synthetic_experiment(
+        experiment=experiment,
+        readings=_hidden_rank_readings(
+            a_status=statuses[0],
+            b_status=statuses[1],
+            **raw_theses,
+        ),
+        packets=packets,
+    )
+    check = next(
+        item
+        for item in evaluation["checks"]
+        if item["check_ref"] == "HIDDEN_RANK_PROSE_WITHIN_SCOPE"
+    )
+
+    assert evaluation["outcome"] == "MODEL_FAIL"
+    assert check["status"] == "FAIL"
+
+
+def test_hidden_rank_checker_preserves_explicitly_unresolved_strength_language() -> None:
+    packets = _seed_experiment_and_packets(HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT)
+    evaluation = evaluate_synthetic_experiment(
+        experiment=HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT,
+        readings=_hidden_rank_readings(
+            a_status="UNRESOLVED",
+            b_status="UNRESOLVED",
+            b_thesis="日主整体偏弱，但辰中乙的根强弱尚未裁定。",
+        ),
+        packets=packets,
+    )
+
+    assert evaluation["outcome"] == "PASS"
+
+
+def test_hidden_rank_unresolved_regime_can_be_model_complete_without_server_repair() -> None:
+    packets = _seed_experiment_and_packets(HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT)
+    for packet in packets.values():
+        issues: set[str] = set()
+        normalized = normalize_regime_decision(
+            {
+                "method_asset_ref": "REGIME_WEAK_VS_FOLLOW_TREND_001",
+                "classification": "UNRESOLVED",
+                "effective_root_status": "UNRESOLVED",
+                "effective_root_coordinates": [],
+                "rooted_visible_support_status": "ABSENT",
+                "dominant_chain_status": "UNRESOLVED",
+                "competition_kinds": ["HIDDEN_RESOURCE"],
+                "evidence_ids": [packet.day_master_support.evidence_id],
+            },
+            packet=packet,
+            day_master_state="WEAK",
+            normalization_issues=issues,
+        )
+
+        assert normalized["effective_root_status"] == "UNRESOLVED"
+        assert normalized["rooted_visible_support_status"] == "ABSENT"
+        assert normalized["competition_kinds"] == ["HIDDEN_RESOURCE"]
+        assert issues == set()
+
+
+def test_hidden_rank_prompt_scaffolds_only_packet_legal_regime_and_method_slots() -> None:
+    packets = _seed_experiment_and_packets(HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT)
+    for packet in packets.values():
+        adjudication = packet.model_prompt_view()["professional_adjudication"]
+        regime = adjudication["output_field_contract"]["regime_decision"][
+            "packet_specific_allowed_projections"
+        ]
+        by_status = {item["effective_root_status"]: item for item in regime["options"]}
+        unresolved = by_status["UNRESOLVED"]
+        scaffold = adjudication["candidate_method_cards"]["hypothesis_output_scaffold"]
+
+        assert unresolved["effective_root_coordinates"] == ()
+        assert unresolved["classification"] == "UNRESOLVED"
+        assert unresolved["required_competition_kinds"] == ("HIDDEN_RESOURCE",)
+        assert unresolved["forbidden_competition_kinds"] == ("VISIBLE_PEER",)
+        assert unresolved["required_evidence_ids"] == (
+            packet.day_master_support.evidence_id,
+        )
+        assert scaffold["mode"] == "FIXED_SLOTS_COPY_EXACTLY"
+        for slot in scaffold["slots"]:
+            assert all(
+                ruling["method_card_ref"] == slot["method_card_ref"]
+                for ruling in slot["method_rulings_exact_order"]
+            )
 
 
 def test_model_trace_projects_bounded_field_deltas_and_honest_legacy_state() -> None:

@@ -29,11 +29,27 @@ class AgentRegimeDecision(BaseModel):
 
     method_asset_ref: Literal["REGIME_WEAK_VS_FOLLOW_TREND_001"]
     classification: RegimeClassification
-    effective_root_status: RegimeFactStatus
-    effective_root_coordinates: tuple[str, ...] = Field(max_length=8)
-    rooted_visible_support_status: RegimeFactStatus
+    effective_root_status: RegimeFactStatus = Field(
+        description=(
+            "整盘裁决后的有效根状态；它不是根候选清单是否为空。"
+            "有候选但尚未裁定时必须为 UNRESOLVED。"
+        )
+    )
+    effective_root_coordinates: tuple[str, ...] = Field(
+        max_length=8,
+        description="仅在 effective_root_status=PRESENT 时填写已裁定的根候选坐标。",
+    )
+    rooted_visible_support_status: RegimeFactStatus = Field(
+        description=(
+            "有效根与明干同类共同形成的有根明透支持；"
+            "visible_peer_support 为空时必须为 ABSENT，且不得改写有效根状态。"
+        )
+    )
     dominant_chain_status: RegimeChainStatus
-    competition_kinds: tuple[RegimeCompetitionKind, ...] = Field(max_length=3)
+    competition_kinds: tuple[RegimeCompetitionKind, ...] = Field(
+        max_length=3,
+        description="按明干同类、藏印与未决组合的实际存在逐项归槽。",
+    )
     evidence_ids: tuple[str, ...] = Field(min_length=1, max_length=10)
 
     @model_validator(mode="after")

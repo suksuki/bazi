@@ -276,15 +276,42 @@ B：effective_root = PRESENT [hour支藏甲]
 
 ## 当前能力与下一组矩阵
 
-本轮完成的是“系统能用候选绑定的批次脚本顺序运行多组合法成对命盘、聚合专业错误并
-封存差异”，不是完整断命资格。第一／第二／第三藏干位阶矩阵已经完成首轮 DEV 验证；
-当前最大问题不再是位阶事实缺失，而是模型在四个变体上都不能独立稳定完成日主／根气
-裁决，并在一个变体上出现工作路径归槽错误。
+本轮完成的是“系统能用候选绑定的批次脚本顺序运行多组合法成对命盘、聚合专业错误、
+用同一把评尺复跑并显示紧邻训练变化”，不是完整断命资格。第一／第二／第三藏干位阶
+矩阵已经完成三轮 `.006` DEV 复跑；当前最大问题不再是位阶事实缺失或正文直接把第二／
+第三藏干说成无力，而是模型能否稳定选择整盘主路径，并让 typed 派生投影与自己的有效根
+裁决一致。
+
+当前可直接比较的紧邻两轮为：
+
+```text
+previous  v60-mingli-synthetic-suite-run-7107e2e6ac01162f6064
+current   v60-mingli-synthetic-suite-run-63da38288080c7fa5c3a
+尺子      Evaluator .006 / DEV Gold .004 / 同一 Suite Definition
+
+模型独立课题          0/2 -> 0/2
+需校正课题            2   -> 2
+DAY_MASTER_REGIME      4   -> 2
+HIDDEN_RANK_PROSE      1   -> 0
+DAY_MASTER_CAPACITY_H1 1   -> 0
+WORK_PATH              2   -> 2
+```
+
+最早批次 `a72328...` 使用 Evaluator `.005`，它漏过“微弱比肩”等隐式位阶偷换，因此只
+作为历史证据，不能拿来宣称当前候选提升。Lab 只有在 Suite、每个实验 Definition、
+Evaluator、Gold Version 与 Gold Hash 全部相同时才显示箭头；评尺不同只能并列查看。
+当前候选身份同时显示 Model Digest、Agent Profile、Provider Profile、Prompt 与各自短
+Hash，避免 Ref 未变但实际内容已变。
+
+最新两次 `DAY_MASTER_REGIME` 都来自同一张 08:00 桥接盘。模型的有效根状态已经正确且
+稳定为 `UNRESOLVED`，服务端只把不一致的 `ORDINARY_WEAK` classification 收回
+`UNRESOLVED`。两个 `WORK_PATH` 分别暴露原局主线混入时序证据与 raw/final PRIMARY
+翻转。它们都继续令模型独立失败，不能因产品结果经修正后安全就省略。
 
 下一批按方法矩阵推进，不继续人工围绕某一真人命盘扩写：
 
-1. 以当前错误簇为靶点，减少 `DAY_MASTER_REGIME` 与 `WORK_PATH` 服务端修正，并要求
-   同一 Suite 在不放宽 Gold 的前提下复跑；
+1. 停止对当前四盘做第四次提示词追逐；扩大陌生合法合成盘，验证主路径选择与派生
+   classification 的跨盘一致性；
 2. 有六冲／六合成员关系但作用未决的保留未决组；
 3. 具备明确失效证据后才允许 `DOES_NOT_BLOCK / ABSENT` 的反例组；
 4. 多个根候选的合并与竞争组；
@@ -297,23 +324,23 @@ B：effective_root = PRESENT [hour支藏甲]
 ## 当前版本
 
 ```text
-Foundation                 v60.foundation.031
-Mingli Engine              v60.mingli-cognitive-engine.042
+Foundation                 v60.foundation.032
+Mingli Engine              v60.mingli-cognitive-engine.043
 Runtime Architecture       v60.runtime-architecture.069
-Agent Runtime              v60.mingli-agent-runtime.025
-Agent Profile              v60.mingli-agent.whole-chart-cognition.023
-Agent Prompt               v60.prompt.mingli-agent-whole-chart.020
+Agent Runtime              v60.mingli-agent-runtime.028
+Agent Profile              v60.mingli-agent.whole-chart-cognition.026
+Agent Prompt               v60.prompt.mingli-agent-whole-chart.023
 Provider Profile           v60.model-serving.gemma4-mingli-agent.003
-Agent Prompt View          v60.mingli-agent-prompt-view.011
+Agent Prompt View          v60.mingli-agent-prompt-view.014
 Agent Reading              v60.mingli-agent-reading.005
 Normalization Receipt      v60.mingli-agent-normalization-receipt.001
 Agent Adjudication         v60.mingli-agent-adjudication.009
-Method Distillation        v60.mingli-agent-method-distillation.003
+Method Distillation        v60.mingli-agent-method-distillation.004
 Effective-root Method      v60.mingli-effective-root-method.001
 Regime Decision            v60.mingli-agent-regime-decision.001
 Stage Projection           v60.mingli-stage-projection.004
 Synthetic Catalog          v60.mingli-synthetic-experiment-catalog.003
-Synthetic Evaluator        v60.mingli-synthetic-experiment-evaluator.005
+Synthetic Evaluator        v60.mingli-synthetic-experiment-evaluator.006
 Synthetic Run              v60.mingli-synthetic-experiment-run.001
 Synthetic Snapshot         v60.mingli-synthetic-experiment-snapshot.004
 Suite Catalog              v60.mingli-synthetic-suite-catalog.001
@@ -322,18 +349,18 @@ Suite Runner               v60.mingli-synthetic-suite-runner.002
 Suite Run                  v60.mingli-synthetic-suite-run.002
 Unit Mingli                v60.unit-mingli.032
 Unit Lab                   v60.unit-lab.028
-Migration                  0039_mingli_suite_contract
+Migration                  0040_mingli_model_field_contract
 ```
 
-Migrations 0038/0039 新增 Suite append-only 表并收紧候选／子 Run 谱系，不调用模型、
-不改写 sealed run。最新 Suite `a72328...` 绑定本地 Gemma4、Profile/Prompt
-`.023/.020` 与 Reading `.005`；历史 Reading、Evaluator、Gold 与 Suite 仍按各自明确
-版本语义重放，不能被“当前版本”常量静默改义。
+Migration 0040 绑定非空 typed regime、Prompt View `.014`、Method Distillation `.004`
+与 Evaluator `.006`，不改写任何 sealed run。最新 Suite `63da382...` 绑定本地 Gemma4、
+Profile/Prompt `.026/.023` 与 Reading `.005`；历史 Reading、Evaluator、Gold 与 Suite
+仍按各自明确版本语义重放，不能被“当前版本”常量静默改义。
 
 ## 验证
 
 ```text
-Backend tests              419 PASS
+Backend tests              429 PASS
 Ruff                       PASS
 TypeScript / Vite build    PASS
 Runtime Architecture       PASS
@@ -345,3 +372,7 @@ Real Desktop Chrome        PASS
 
 Vite 仍报告两个大于 500 kB 的既有异步图形 chunk；这是已记录性能债，不改变本轮方法
 Lab 的功能结论。
+
+真实 Desktop Chrome 已验证最新 Suite、紧邻上轮跳转、浏览器返回与刷新恢复；1512px
+视口无横向溢出、无控制台错误。可视证据保存在
+`.artifacts/synthetic-suite-training-compare/latest-suite-desktop.png`。

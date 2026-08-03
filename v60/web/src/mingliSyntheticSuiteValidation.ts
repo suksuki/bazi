@@ -24,6 +24,7 @@ const EVALUATOR_VERSIONS = [
   "v60.mingli-synthetic-experiment-evaluator.003",
   "v60.mingli-synthetic-experiment-evaluator.004",
   "v60.mingli-synthetic-experiment-evaluator.005",
+  "v60.mingli-synthetic-experiment-evaluator.006",
 ] as const;
 const GOLD_VERSIONS = [
   "v60.mingli-synthetic-experiment-dev-gold.001",

@@ -2,6 +2,39 @@
 
 ## 2026-08-03
 
+### Synthetic training now measures field judgment instead of hiding repair
+
+- Split hidden-stem candidates, effective roots and rooted visible support into
+  separate typed judgments. The generation Schema now requires a non-null
+  regime decision, while packet-specific legal projections and fixed H1/H2
+  candidate slots constrain shape without selecting the model's conclusion.
+- Made model independence strict: mixed timing evidence, duplicate work-path
+  transformations, raw/final PRIMARY flips and any server field repair retain
+  a visible `WORK_PATH` or professional correction instead of being washed
+  clean after normalization.
+- Advanced the synthetic evaluator to `.006`. It reviews both raw receipts and
+  product prose and catches candidate-specific shortcuts such as “微弱、根浅、
+  无力、可忽略” without globally banning a legitimate whole-chart weak
+  classification.
+- Re-ran the same two-experiment Suite three times with local Gemma4. Latest
+  Run `v60-mingli-synthetic-suite-run-63da38288080c7fa5c3a` seals both
+  experiments with 3/3 holds and 4/4 expected responses. Against the adjacent
+  `.006` Run, prose errors fall `1→0`, H1 capacity `1→0` and regime repairs
+  `4→2`; work-path repairs remain `2→2`. Both topics honestly remain
+  `PRODUCT_SAFE_MODEL_FAIL` and `0/2` model-independent.
+- Added a visible same-ruler Lab comparison. It refuses progress arrows when
+  Suite/experiment definitions, Evaluator or Gold differ, shows only changed
+  error clusters, links to the immediately preceding Run, and exposes model,
+  Profile, Provider Profile, Prompt and identity Hashes.
+- Added migration `0040_mingli_model_field_contract`; advanced Foundation and
+  Mingli Engine to `.032/.043`, Agent Runtime/Profile/Prompt to
+  `.028/.026/.023`, Prompt View to `.014`, Method Distillation to `.004` and
+  Evaluator to `.006`.
+- All 429 backend tests, Ruff, TypeScript/Vite build, Runtime Architecture,
+  source maintainability, shared Scene and synthetic Lab contracts pass. Real
+  Desktop Chrome verified the latest/previous Run link and browser back/reload
+  recovery at 1512px without horizontal overflow or console errors.
+
 ### Hidden-stem-rank DEV Suite becomes a repeatable training loop
 
 - Added two calendar-resolved experiments for first/second and second/third

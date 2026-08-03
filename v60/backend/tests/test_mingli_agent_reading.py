@@ -15,6 +15,7 @@ from abu_v60.mingli.agent_contracts import (
     MingliAgentModelOutput,
     MingliAgentReadingEnvelope,
     mingli_agent_generation_key,
+    mingli_agent_generation_output_schema,
 )
 from abu_v60.mingli.agent_method_cards import (
     FALLBACK_METHOD_CARD_REF,
@@ -610,6 +611,32 @@ def test_blind_and_reconciliation_modes_are_physically_distinct() -> None:
     assert packet.subject_kind not in serialized
 
 
+def test_generation_schema_requires_non_null_regime_without_breaking_legacy_model() -> None:
+    schema = mingli_agent_generation_output_schema()
+    regime = schema["properties"]["regime_decision"]
+
+    assert "regime_decision" in schema["required"]
+    assert regime.get("$ref", "").endswith("/$defs/AgentRegimeDecision")
+    assert "anyOf" not in regime
+    assert MingliAgentModelOutput.model_json_schema()["properties"]["regime_decision"][
+        "default"
+    ] is None
+
+
+def test_prompt_view_separates_candidate_acknowledgement_regime_and_timing_scope() -> None:
+    _, packet = _packet()
+    contract = packet.model_prompt_view()["professional_adjudication"][
+        "output_field_contract"
+    ]
+
+    assert contract["regime_decision"]["required_non_null"] is True
+    assert "NOT_EFFECTIVE_ROOT_RULING" in contract["support_selection"]["meaning"]
+    assert contract["work_path"]["evidence_ids_forbidden"]
+    assert set(contract["work_path"]["evidence_ids_forbidden"]).isdisjoint(
+        contract["work_path"]["evidence_ids_allowed"]
+    )
+
+
 def test_ollama_adapter_sends_one_locked_packet_and_validates_output() -> None:
     _, packet = _packet()
     calls: list[dict[str, Any]] = []
@@ -1113,7 +1140,32 @@ def test_adapter_preserves_reversed_single_candidate_and_fallback() -> None:
     assert output.hypotheses[0].name == "月令整盘替代解释"
     assert output.hypotheses[1].method_card_ref == candidate_ref
     assert output.hypotheses[1].name == "唯一机制条件解释"
-    assert output.server_issue_keys == ()
+    assert output.server_issue_keys == ("WORK_PATH",)
+
+
+def test_work_path_mixed_timing_evidence_is_not_silently_washed_clean() -> None:
+    _, packet = _packet()
+    raw = _valid_output(packet=packet).model_dump(mode="json")
+    natal_id = packet.pillars[0].evidence_id
+    timing_id = packet.timing_coordinates[0].evidence_id
+    raw["work_path"]["evidence_ids"] = [natal_id, timing_id]
+
+    output = _normalize_raw(packet=packet, raw=raw)
+
+    assert output.work_path.evidence_ids == (natal_id,)
+    assert "WORK_PATH" in output.server_issue_keys
+
+
+def test_work_path_timing_prose_is_withheld_even_with_natal_evidence() -> None:
+    _, packet = _packet()
+    raw = _valid_output(packet=packet).model_dump(mode="json")
+    raw["work_path"]["path_statement"] = (
+        "原局主线先承接月令压力，再由岁运推动表达并抵达目标。"
+    )
+
+    output = _normalize_raw(packet=packet, raw=raw)
+
+    assert "WORK_PATH" in output.server_issue_keys
 
 
 def test_duplicate_candidate_refs_are_neutralized_instead_of_silently_rebound() -> None:

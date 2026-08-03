@@ -1,9 +1,36 @@
 import type { MingliSyntheticLabRoute } from "./mingliSyntheticLabNavigation";
 import type {
   MingliSyntheticSuiteCatalog,
+  MingliSyntheticSuiteErrorCluster,
+  MingliSyntheticSuiteRun,
   MingliSyntheticSuiteRunItem,
   MingliSyntheticSuiteRunSelection,
 } from "./mingliSyntheticSuiteTypes";
+
+export interface MingliSyntheticSuiteMetricSnapshot {
+  modelIndependent: number;
+  reviewRequired: number;
+  sealed: number;
+  total: number;
+  suiteIndependent: boolean;
+}
+
+export interface MingliSyntheticSuiteClusterChange {
+  key: string;
+  label: string;
+  previous: number;
+  current: number;
+}
+
+export interface MingliSyntheticSuiteRunComparison {
+  status: "COMPARABLE" | "INCOMPARABLE";
+  reason: string;
+  current: MingliSyntheticSuiteRunSelection;
+  previous: MingliSyntheticSuiteRunSelection;
+  currentMetrics: MingliSyntheticSuiteMetricSnapshot;
+  previousMetrics: MingliSyntheticSuiteMetricSnapshot;
+  clusterChanges: MingliSyntheticSuiteClusterChange[];
+}
 
 export function findSyntheticSuiteRun(
   catalog: MingliSyntheticSuiteCatalog,
@@ -29,6 +56,135 @@ export function latestSyntheticSuiteRunSelection(
   return latest;
 }
 
+export function compareWithPreviousSyntheticSuiteRun(
+  history: MingliSyntheticSuiteCatalog,
+  current: MingliSyntheticSuiteRunSelection,
+): MingliSyntheticSuiteRunComparison | null {
+  const historicalSuite = history.suites.find(
+    (suite) => suite.suite_ref === current.suite.suite_ref,
+  );
+  if (!historicalSuite) return null;
+  const currentIndex = historicalSuite.runs.findIndex(
+    (run) => run.suite_run_ref === current.run.suite_run_ref,
+  );
+  const previousRun = currentIndex >= 0
+    ? historicalSuite.runs[currentIndex + 1]
+    : undefined;
+  if (!previousRun) return null;
+  const previous: MingliSyntheticSuiteRunSelection = {
+    suite: historicalSuite,
+    run: previousRun,
+    review: previousRun.current_review_projection,
+  };
+  const reason = comparisonBlockReason(current, previous);
+  return {
+    status: reason ? "INCOMPARABLE" : "COMPARABLE",
+    reason: reason ?? "同一 Suite、Evaluator 与 Gold，可直接比较候选表现。",
+    current,
+    previous,
+    currentMetrics: suiteMetricSnapshot(current.run),
+    previousMetrics: suiteMetricSnapshot(previous.run),
+    clusterChanges: reason
+      ? []
+      : changedClusters(
+          previous.review.error_clusters,
+          current.review.error_clusters,
+        ),
+  };
+}
+
+function comparisonBlockReason(
+  current: MingliSyntheticSuiteRunSelection,
+  previous: MingliSyntheticSuiteRunSelection,
+): string | null {
+  if (
+    current.run.suite_definition_hash !== previous.run.suite_definition_hash
+    || current.review.items.length !== previous.review.items.length
+  ) {
+    return "Suite 定义已经变化，本轮与上轮不可直接比较。";
+  }
+  for (let index = 0; index < current.review.items.length; index += 1) {
+    const currentItem = current.review.items[index];
+    const previousItem = previous.review.items[index];
+    if (
+      !currentItem
+      || !previousItem
+      || currentItem.experiment_ref !== previousItem.experiment_ref
+      || currentItem.definition_hash !== previousItem.definition_hash
+    ) {
+      return "合成课题或定义已经变化，本轮与上轮不可直接比较。";
+    }
+    if (
+      currentItem.execution_status !== "SEALED"
+      || previousItem.execution_status !== "SEALED"
+    ) {
+      return "至少一轮没有完整封存，不能计算模型能力变化。";
+    }
+    if (
+      currentItem.evaluator_version !== previousItem.evaluator_version
+      || currentItem.dev_gold_version !== previousItem.dev_gold_version
+      || currentItem.dev_gold_hash !== previousItem.dev_gold_hash
+    ) {
+      return "Evaluator 或 Gold 已变化，只能并列查看，不能声称错误减少。";
+    }
+    if (
+      currentItem.review_contract_status !== "CURRENT"
+      || previousItem.review_contract_status !== "CURRENT"
+    ) {
+      return "至少一轮已被当前审查口径替代，只能并列查看。";
+    }
+  }
+  return null;
+}
+
+function suiteMetricSnapshot(
+  run: MingliSyntheticSuiteRun,
+): MingliSyntheticSuiteMetricSnapshot {
+  const review = run.current_review_projection;
+  const allCurrent = review.items.every(
+    (item) => item.review_contract_status === "CURRENT",
+  );
+  const modelIndependent = review.items.filter(
+    (item) => item.model_independence === "PASS",
+  ).length;
+  return {
+    modelIndependent,
+    reviewRequired: review.counts.review_required,
+    sealed: review.counts.sealed,
+    total: review.counts.experiments,
+    suiteIndependent:
+      review.counts.sealed === review.counts.experiments
+      && review.counts.runner_errors === 0
+      && allCurrent
+      && modelIndependent === review.counts.experiments
+      && review.error_clusters.length === 0,
+  };
+}
+
+function changedClusters(
+  previous: MingliSyntheticSuiteErrorCluster[],
+  current: MingliSyntheticSuiteErrorCluster[],
+): MingliSyntheticSuiteClusterChange[] {
+  const previousByKey = new Map(previous.map((cluster) => [cluster.key, cluster]));
+  const currentByKey = new Map(current.map((cluster) => [cluster.key, cluster]));
+  return [...new Set([...previousByKey.keys(), ...currentByKey.keys()])]
+    .map((key) => {
+      const previousCluster = previousByKey.get(key);
+      const currentCluster = currentByKey.get(key);
+      return {
+        key,
+        label: currentCluster?.label ?? previousCluster?.label ?? key,
+        previous: previousCluster?.occurrence_count ?? 0,
+        current: currentCluster?.occurrence_count ?? 0,
+      };
+    })
+    .filter((change) => change.previous !== change.current)
+    .sort((left, right) =>
+      (right.previous - right.current) - (left.previous - left.current)
+      || left.key.localeCompare(right.key)
+    );
+}
+
 export function exactSyntheticSuiteItem(
   selection: MingliSyntheticSuiteRunSelection | null,
   route: MingliSyntheticLabRoute,
@@ -39,6 +195,22 @@ export function exactSyntheticSuiteItem(
       && item.experiment_ref === route.experimentRef
       && item.experiment_run_ref === route.runRef,
   ) ?? null;
+}
+
+export function firstSyntheticSuiteRoute(
+  selection: MingliSyntheticSuiteRunSelection,
+): MingliSyntheticLabRoute | null {
+  const first = selection.review.items.find(
+    (item) => item.execution_status === "SEALED" && item.experiment_run_ref,
+  );
+  if (!first?.experiment_run_ref) return null;
+  return {
+    mode: "synthetic",
+    suiteRunRef: selection.run.suite_run_ref,
+    experimentRef: first.experiment_ref,
+    runRef: first.experiment_run_ref,
+    variant: "A",
+  };
 }
 
 export type SyntheticSuiteRouteResolution =

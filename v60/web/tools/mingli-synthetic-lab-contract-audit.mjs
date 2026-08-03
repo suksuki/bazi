@@ -17,6 +17,7 @@ const [
   experienceNavigation,
   workspace,
   scene,
+  sceneFeedback,
   toolbar,
   inspector,
   suiteApi,
@@ -31,6 +32,7 @@ const [
   read("experienceNavigation.ts"),
   read("components", "MingliLabWorkspaceHost.tsx"),
   read("components", "MingliSyntheticExperimentScene.tsx"),
+  read("components", "MingliSyntheticExperimentFeedback.tsx"),
   read("components", "MingliSyntheticExperimentToolbar.tsx"),
   read("components", "MingliSyntheticExperimentInspector.tsx"),
   read("mingliSyntheticSuiteApi.ts"),
@@ -42,6 +44,10 @@ const [
 ]);
 const ordinarySubjectValidator =
   stageValidation.match(/function isStageSubjectId[\s\S]*?\n}/)?.[0] ?? "";
+const sceneSurface = `${scene}\n${sceneFeedback}`;
+const { compareWithPreviousSyntheticSuiteRun } = await import(
+  source("mingliSyntheticSuiteSelection.ts")
+);
 
 expect(
   occurrences(api, /request<unknown>/g) === 2 &&
@@ -79,11 +85,12 @@ expect(
 expect(
   occurrences(scene, /<MingliScenePlayer/g) === 1 &&
     !scene.includes("key={snapshot.stage.projection_ref}") &&
-    scene.includes("尚无封存实验结果，请通过离线 Lab runner 生成") &&
-    scene.includes("当前仍显示 {displayedVariant} 组") &&
-    scene.includes("当前链接的封存结果不可用") &&
-    occurrences(scene, /改读最新封存结果/g) === 2 &&
-    scene.includes("activeSnapshotError && experiment && latestRunRef") &&
+    sceneSurface.includes("尚无封存实验结果，请通过离线 Lab runner 生成") &&
+    sceneSurface.includes("当前仍显示 {displayedVariant} 组") &&
+    sceneSurface.includes("当前链接的封存结果不可用") &&
+    occurrences(sceneSurface, /改读最新封存结果/g) === 2 &&
+    scene.includes("canRestoreLatest={Boolean(experiment && latestRunRef)}") &&
+    sceneFeedback.includes("activeError && canRestoreLatest") &&
     scene.includes("<MingliSyntheticExperimentToolbar") &&
     scene.includes("<MingliSyntheticSuiteSummary") &&
     scene.includes("setSnapshot(null)") &&
@@ -104,6 +111,8 @@ expect(
 );
 expect(
   suiteSelection.includes("exactSyntheticSuiteItem") &&
+    suiteSelection.includes("compareWithPreviousSyntheticSuiteRun") &&
+    suiteSelection.includes("Evaluator 或 Gold 已变化") &&
     suiteSelection.includes("mingli_synthetic_suite_item_binding_mismatch") &&
     suiteSelection.includes("candidate.experiment_ref === route.experimentRef") &&
     suiteSelection.includes("candidate.experiment_run_ref === route.runRef"),
@@ -116,6 +125,100 @@ expect(
     suiteSummary.includes("review.error_clusters") &&
     !/MingliScenePlayer|Canvas/.test(suiteSummary),
   "synthetic-suite-summary:must-show-counts-topics-and-clusters-without-owning-scene",
+);
+
+const definitionHash = "d".repeat(64);
+const goldHash = "a".repeat(64);
+const evaluator = "v60.mingli-synthetic-experiment-evaluator.006";
+const goldVersion = "v60.mingli-synthetic-experiment-dev-gold.004";
+const cluster = (key, label, occurrence_count) => ({ key, label, occurrence_count });
+const reviewItem = (experiment_ref, itemDefinitionHash = definitionHash) => ({
+  experiment_ref,
+  definition_hash: itemDefinitionHash,
+  execution_status: "SEALED",
+  evaluator_version: evaluator,
+  dev_gold_version: goldVersion,
+  dev_gold_hash: goldHash,
+  review_contract_status: "CURRENT",
+  model_independence: "FAIL",
+});
+const suiteRun = (suite_run_ref, error_clusters) => ({
+  suite_run_ref,
+  suite_definition_hash: definitionHash,
+  current_review_projection: {
+    items: [reviewItem("first"), reviewItem("second")],
+    counts: { experiments: 2, sealed: 2, runner_errors: 0, review_required: 2 },
+    error_clusters,
+  },
+});
+const currentRun = suiteRun("current", [
+  cluster("SERVER_REPAIR:DAY_MASTER_REGIME", "日主判型", 2),
+  cluster("SERVER_REPAIR:WORK_PATH", "主路径", 2),
+]);
+const previousRun = suiteRun("previous", [
+  cluster("SERVER_REPAIR:DAY_MASTER_REGIME", "日主判型", 4),
+  cluster("SERVER_REPAIR:WORK_PATH", "主路径", 2),
+  cluster("CHECK_FAIL:HIDDEN_RANK_PROSE_WITHIN_SCOPE", "藏干正文位阶", 1),
+  cluster("SERVER_REPAIR:DAY_MASTER_CAPACITY_H1", "日主承载", 1),
+]);
+const suiteEntry = {
+  suite_ref: "hidden-rank-training",
+  suite_definition_hash: definitionHash,
+  runs: [currentRun, previousRun],
+};
+const historyCatalog = { suites: [suiteEntry] };
+const currentSelection = {
+  suite: suiteEntry,
+  run: currentRun,
+  review: currentRun.current_review_projection,
+};
+const comparison = compareWithPreviousSyntheticSuiteRun(
+  historyCatalog,
+  currentSelection,
+);
+const deltas = new Map(comparison?.clusterChanges.map((item) => [item.key, item]));
+expect(
+  comparison?.status === "COMPARABLE" &&
+    comparison.currentMetrics.modelIndependent === 0 &&
+    comparison.previousMetrics.modelIndependent === 0 &&
+    comparison.currentMetrics.reviewRequired === 2 &&
+    comparison.previousMetrics.reviewRequired === 2 &&
+    deltas.get("SERVER_REPAIR:DAY_MASTER_REGIME")?.previous === 4 &&
+    deltas.get("SERVER_REPAIR:DAY_MASTER_REGIME")?.current === 2 &&
+    deltas.get("CHECK_FAIL:HIDDEN_RANK_PROSE_WITHIN_SCOPE")?.current === 0 &&
+    deltas.get("SERVER_REPAIR:DAY_MASTER_CAPACITY_H1")?.current === 0 &&
+    !deltas.has("SERVER_REPAIR:WORK_PATH"),
+  "synthetic-suite-comparison:must-show-only-real-deltas-under-the-same-ruler",
+);
+
+const comparisonWith = (mutatePrevious) => {
+  const altered = structuredClone(previousRun);
+  mutatePrevious(altered);
+  const entry = { ...suiteEntry, runs: [currentRun, altered] };
+  return compareWithPreviousSyntheticSuiteRun(
+    { suites: [entry] },
+    { ...currentSelection, suite: entry },
+  );
+};
+expect(
+  comparisonWith((run) => {
+    run.current_review_projection.items[0].evaluator_version =
+      "v60.mingli-synthetic-experiment-evaluator.005";
+  })?.status === "INCOMPARABLE" &&
+    comparisonWith((run) => {
+      run.current_review_projection.items[0].dev_gold_hash = "b".repeat(64);
+    })?.status === "INCOMPARABLE" &&
+    comparisonWith((run) => {
+      run.suite_definition_hash = "c".repeat(64);
+    })?.status === "INCOMPARABLE" &&
+    comparisonWith((run) => {
+      run.current_review_projection.items[0].execution_status = "ERROR";
+    })?.status === "INCOMPARABLE" &&
+    compareWithPreviousSyntheticSuiteRun(
+      { suites: [{ ...suiteEntry, runs: [currentRun] }] },
+      currentSelection,
+    ) === null,
+  "synthetic-suite-comparison:must-block-changed-rulers-incomplete-runs-and-missing-history",
 );
 expect(
   suiteValidation.includes("run.items.length !== suite.experiment_refs.length") &&

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from typing import Any
 
 from abu_v60.mingli.agent_contracts import (
@@ -90,6 +90,10 @@ def evaluate_synthetic_experiment(
             packets=packets,
             a_output=a_output,
             b_output=b_output,
+            raw_outputs={
+                variant: _raw_provider_output(readings[variant])
+                for variant in ("A", "B")
+            },
         )
     else:
         raise ValueError("mingli_synthetic_experiment_evaluator_not_found")
@@ -364,6 +368,7 @@ def _add_hidden_rank_checks(
     packets: Mapping[str, MingliAgentCasePacket],
     a_output: Any,
     b_output: Any,
+    raw_outputs: Mapping[str, Any],
 ) -> None:
     assessments = {
         variant: packet_root_candidate_assessments(packets[variant]) for variant in ("A", "B")
@@ -451,14 +456,29 @@ def _add_hidden_rank_checks(
         regimes["B"].classification,
     )
     prose_violations = {
-        "A": _hidden_rank_prose_violations(a_output),
-        "B": _hidden_rank_prose_violations(b_output),
+        variant: tuple(
+            sorted(
+                {
+                    violation
+                    for output in (
+                        a_output if variant == "A" else b_output,
+                        raw_outputs.get(variant),
+                    )
+                    if output is not None
+                    for violation in _hidden_rank_prose_violations(
+                        output,
+                        packet=packets[variant],
+                    )
+                }
+            )
+        )
+        for variant in ("A", "B")
     }
     add(
         "HIDDEN_RANK_PROSE_WITHIN_SCOPE",
         "EXPECTED_CHANGE",
         not prose_violations["A"] and not prose_violations["B"],
-        "正文不得为第二／第三藏干编造固定权重，也不得仅凭位阶宣称无根、无效或不可用。",
+        "正文不得为藏干位阶编造固定强弱或权重，也不得仅凭位阶宣称无根、无效或不可用。",
         prose_violations["A"],
         prose_violations["B"],
     )
@@ -508,9 +528,14 @@ def _hour_fact(packet: MingliAgentCasePacket) -> tuple[object, ...]:
     )
 
 
-_RANK_MARKER = re.compile(r"第二藏干|第三藏干|第二藏气|第三藏气|余气|末气")
+_RANK_MARKER = re.compile(
+    r"第一藏干|第二藏干|第三藏干|主气位置|第二藏气|第三藏气|余气|末气"
+)
 _RANK_WEIGHT = re.compile(r"权重|占比|比例|百分|\d+(?:\.\d+)?\s*%")
 _RANK_INVALIDITY = re.compile(r"无根|无效|不可用|不成根|可忽略|忽略不计")
+_RANK_STRENGTH_SHORTCUT = re.compile(
+    r"微弱|极弱|薄弱|根系?尚浅|根浅|无力|力弱"
+)
 _SAFE_SCOPE_MARKERS = (
     "不等于",
     "不能判",
@@ -522,50 +547,75 @@ _SAFE_SCOPE_MARKERS = (
     "未必",
     "没有固定",
     "不设固定",
+    "强弱尚未裁定",
+    "强弱未定",
+    "不能仅凭",
+    "不可仅凭",
 )
 
 
-def _hidden_rank_prose_violations(output: Any) -> tuple[str, ...]:
+def _hidden_rank_prose_violations(
+    output: Any,
+    *,
+    packet: MingliAgentCasePacket,
+) -> tuple[str, ...]:
     violations: set[str] = set()
+    assessments = packet_root_candidate_assessments(packet)
+    if len(assessments) != 1:
+        return ()
+    assessment = assessments[0]
+    coordinate = str(assessment["coordinate"])
+    branch = str(assessment["branch"] or "")
+    stem = coordinate.rsplit("藏", maxsplit=1)[-1]
     for sentence in re.split(r"[。！？；;\n]", _hidden_rank_reasoning_text(output)):
-        if not _RANK_MARKER.search(sentence):
+        candidate_linked = (
+            bool(_RANK_MARKER.search(sentence))
+            or coordinate in sentence
+            or (
+                bool(branch)
+                and branch in sentence
+                and stem in sentence
+            )
+            or (
+                not packet.day_master_support.visible_peer_support
+                and any(marker in sentence for marker in ("比肩", "劫财"))
+                and bool(_RANK_STRENGTH_SHORTCUT.search(sentence))
+            )
+        )
+        if not candidate_linked:
             continue
         safe_scope = any(marker in sentence for marker in _SAFE_SCOPE_MARKERS)
         if _RANK_WEIGHT.search(sentence) and not safe_scope:
             violations.add("FIXED_HIDDEN_RANK_WEIGHT")
         if _RANK_INVALIDITY.search(sentence) and not safe_scope:
             violations.add("RANK_ONLY_ROOT_INVALIDATION")
+        if _RANK_STRENGTH_SHORTCUT.search(sentence) and not safe_scope:
+            violations.add("RANK_ONLY_STRENGTH_SHORTCUT")
     return tuple(sorted(violations))
 
 
 def _hidden_rank_reasoning_text(output: Any) -> str:
-    values = [
-        getattr(output, "first_look", ""),
-        getattr(output, "whole_chart_thesis", ""),
-        getattr(output, "day_master_rationale", ""),
-    ]
-    for hypothesis in getattr(output, "hypotheses", ()):
-        values.extend(
-            (
-                getattr(hypothesis, "thesis", ""),
-                getattr(hypothesis, "failure_condition", ""),
-            )
-        )
-        for ruling in getattr(hypothesis, "method_rulings", ()):
-            values.extend(
-                (
-                    getattr(ruling, "rationale", ""),
-                    getattr(ruling, "condition_or_falsifier", ""),
-                )
-            )
-    work_path = getattr(output, "work_path", None)
-    values.extend(
-        (
-            getattr(work_path, "path_statement", ""),
-            getattr(work_path, "condition", ""),
-        )
-    )
-    return "\n".join(str(value) for value in values if value)
+    if hasattr(output, "model_dump"):
+        output = output.model_dump(mode="json")
+    return "\n".join(_iter_text(output))
+
+
+def _iter_text(value: Any) -> Iterator[str]:
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, Mapping):
+        for item in value.values():
+            yield from _iter_text(item)
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            yield from _iter_text(item)
+    elif hasattr(value, "__dict__"):
+        yield from _iter_text(vars(value))
+
+
+def _raw_provider_output(reading: MingliAgentReadingEnvelope) -> Any:
+    receipt = getattr(reading, "normalization_receipt", None)
+    return None if receipt is None else receipt.raw_output
 
 
 def _finalize(

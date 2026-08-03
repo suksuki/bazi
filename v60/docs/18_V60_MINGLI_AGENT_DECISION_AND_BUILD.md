@@ -535,3 +535,49 @@ Provider、Profile、Prompt 与 Reading 版本，顺序执行第一／第二、�
 Suite 目前只开放 `DEV`。`QUALIFICATION / HOLDOUT` 保留为锁定模式，待方法冻结后再由
 陌生实验集执行。合成批次证明结构响应、一致性和边界控制，不证明真人应事命中率，因此
 系统段位仍是“具备可重复训练的结构化初断”，尚不是高级命理师。
+
+## 第七条已实施纵切：字段级认知合同与同尺训练对照
+
+第一次藏干位阶批次暴露出一个关键问题：系统给了候选事实，但生成 Schema 仍允许模型
+省略整个 `regime_decision`；同一个字段又同时混用了“存在候选”与“候选已成为有效根”两种
+语义。正文检测还漏过“微弱比肩”“根浅”这类不写位阶名称的强弱偷换。这样的合同会把
+模型错误藏进服务端修正，不能训练出高级命理师。
+
+当前合同把认知过程拆为三个不可互相替代的判断：
+
+```text
+support_selection.root_status
+= 是否存在同元素候选，不等于候选有效
+
+regime_decision.effective_root_status
+= 整盘裁决后的有效根状态
+
+regime_decision.rooted_visible_support_status
+= 是否存在有根明干同类；空集合为 ABSENT，但不得回写有效根
+```
+
+生成 Schema 现在要求 typed `regime_decision` 非空。Packet 同时给出本盘允许选择的状态、
+必须保留的竞争和禁止出现的捷径，但不替模型选择结论；固定 H1/H2 卡片来自系统已经准入的
+候选 Fabric，模型仍必须决定主判、替代解释、证据和未决条件。原局工作路径只允许使用
+原局证据，岁运证据不能混进原局主线；任何服务端删证据、换主卡或修正文案都留下
+`WORK_PATH`，不再在归一化后洗成“模型独立”。
+
+Evaluator `.006` 同时复核 raw Receipt 与产品正文，并识别候选坐标附近的“微弱、根浅、
+无力、可忽略”等无依据强弱捷径。它不全局禁用“弱”：整盘可以判断日主偏弱，但某个
+第二／第三藏干候选的强弱必须有已准入方法，否则保持未决。
+
+同一 Suite 连续复跑三次后，当前批次
+`v60-mingli-synthetic-suite-run-63da38288080c7fa5c3a` 仍是
+`PRODUCT_SAFE_MODEL_FAIL`，但在相同 Evaluator `.006`、Gold `.004` 与 Suite Definition
+下，相比紧邻批次 `7107e2...`：
+
+- `HIDDEN_RANK_PROSE_WITHIN_SCOPE` 从 1 降到 0；
+- `DAY_MASTER_CAPACITY_H1` 从 1 降到 0；
+- `DAY_MASTER_REGIME` 从 4 降到 2；
+- `WORK_PATH` 保持 2，没有被隐藏，也没有被描述成进步。
+
+剩余两次判型修正都落在同一张 08:00 桥接盘：模型已经稳定给出
+`effective_root_status=UNRESOLVED`，错误是把派生 classification 写成
+`ORDINARY_WEAK`；剩余两个工作路径修正则是原局主线混入时序证据或模型原始 PRIMARY 与
+最终 PRIMARY 不一致。因此下一批不再对同一四盘做第四次 Prompt 追逐，而是扩大陌生合法
+合成盘，优先验证主路径选择、派生投影一致性与跨盘保持。

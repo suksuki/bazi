@@ -33,7 +33,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="mingli",
                 kind=ModuleKind.ENGINE,
-                version="v60.mingli-cognitive-engine.042",
+                version="v60.mingli-cognitive-engine.043",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("mingli",),
                 reads_from=("identity",),

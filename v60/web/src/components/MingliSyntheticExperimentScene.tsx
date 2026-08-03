@@ -18,13 +18,21 @@ import type {
   MingliSyntheticSuiteRunSelection,
 } from "../mingliSyntheticSuiteTypes";
 import {
+  compareWithPreviousSyntheticSuiteRun,
   exactSyntheticSuiteItem,
   findSyntheticSuiteRun,
+  firstSyntheticSuiteRoute,
   latestSyntheticSuiteRunSelection,
   resolveSyntheticSuiteRoute,
 } from "../mingliSyntheticSuiteSelection";
 import type { MingliStageViewContext } from "../mingliStageTypes";
 import { MingliScenePlayer } from "./MingliScenePlayer";
+import {
+  MingliSyntheticEmptyState,
+  MingliSyntheticSceneHeader,
+  MingliSyntheticStageBoundary,
+  MingliSyntheticSwitchingFeedback,
+} from "./MingliSyntheticExperimentFeedback";
 import { MingliSyntheticExperimentInspector } from "./MingliSyntheticExperimentInspector";
 import { MingliSyntheticExperimentToolbar } from "./MingliSyntheticExperimentToolbar";
 import { MingliSyntheticSuiteSummary } from "./MingliSyntheticSuiteSummary";
@@ -50,6 +58,8 @@ export function MingliSyntheticExperimentScene({
   const [catalog, setCatalog] = useState<MingliSyntheticExperimentCatalog | null>(null);
   const [suiteCatalog, setSuiteCatalog] =
     useState<MingliSyntheticSuiteCatalog | null>(null);
+  const [suiteHistoryCatalog, setSuiteHistoryCatalog] =
+    useState<MingliSyntheticSuiteCatalog | null>(null);
   const [snapshot, setSnapshot] =
     useState<MingliSyntheticExperimentSnapshot | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
@@ -66,6 +76,15 @@ export function MingliSyntheticExperimentScene({
       ? findSyntheticSuiteRun(suiteCatalog, route.suiteRunRef)
       : null,
     [route.suiteRunRef, suiteCatalog],
+  );
+  const suiteComparison = useMemo(
+    () => suiteSelection && suiteHistoryCatalog
+      ? compareWithPreviousSyntheticSuiteRun(
+          suiteHistoryCatalog,
+          suiteSelection,
+        )
+      : null,
+    [suiteHistoryCatalog, suiteSelection],
   );
   const boundSuiteItem = useMemo(
     () => exactSyntheticSuiteItem(suiteSelection, route),
@@ -87,15 +106,22 @@ export function MingliSyntheticExperimentScene({
     const controller = new AbortController();
     setLoading(true);
     setCatalogError(null);
+    setSuiteCatalog(null);
     onContextChange({ subjectId: "current", status: "LOADING", projection: null });
+    const historyRequest = loadSyntheticSuiteCatalog(null, controller.signal);
+    const selectedRequest = route.suiteRunRef
+      ? loadSyntheticSuiteCatalog(route.suiteRunRef, controller.signal)
+      : historyRequest;
     void Promise.all([
       loadSyntheticExperimentCatalog(controller.signal),
-      loadSyntheticSuiteCatalog(route.suiteRunRef, controller.signal),
+      selectedRequest,
+      historyRequest,
     ])
-      .then(([experimentValue, suiteValue]) => {
+      .then(([experimentValue, suiteValue, historyValue]) => {
         if (controller.signal.aborted) return;
         setCatalog(experimentValue);
         setSuiteCatalog(suiteValue);
+        setSuiteHistoryCatalog(historyValue);
       })
       .catch((caught) => {
         if (!controller.signal.aborted) {
@@ -384,28 +410,40 @@ export function MingliSyntheticExperimentScene({
     });
   };
 
+  const selectSuiteRun = (selection: MingliSyntheticSuiteRunSelection) => {
+    const nextRoute = firstSyntheticSuiteRoute(selection);
+    if (!nextRoute) return;
+    setSnapshot(null);
+    setCatalogError(null);
+    setSnapshotError(null);
+    onRouteChange(nextRoute);
+  };
+
+  const suiteSummary = suiteSelection && catalog ? (
+    <MingliSyntheticSuiteSummary
+      comparison={suiteComparison}
+      currentExperimentRef={route.experimentRef}
+      experiments={catalog}
+      onSelect={selectSuiteItem}
+      onSelectRun={selectSuiteRun}
+      selection={suiteSelection}
+    />
+  ) : undefined;
+
   return (
     <div
       className="mingli-scene-host mingli-synthetic-host"
       data-lab-mode="synthetic"
       data-stage-loading={loading}
     >
-      <header className="mingli-scene-host-header">
-        <button className="mingli-scene-exit" onClick={onExit} type="button">
-          <span aria-hidden="true">←</span>
-          回到生命树
-        </button>
-        <div className="mingli-scene-title">
-          <p>阿布 Lab · 合成验证</p>
-          <h1>{experiment?.title ?? "正在读取封存实验"}</h1>
-          <span>{committedSnapshot ? `${committedSnapshot.selected_variant} 组 · 研究合成命盘` : "离线运行 · 浏览器只读"}</span>
-        </div>
-        <div className="mingli-scene-surfaces" role="group" aria-label="命理阅读与 Lab">
-          <button aria-pressed="false" onClick={onOpenReading} type="button">命理阅读</button>
-          <button aria-pressed="false" onClick={onBackToCurrent} type="button">当前命盘</button>
-          <button aria-pressed="true" type="button">合成验证</button>
-        </div>
-      </header>
+      <MingliSyntheticSceneHeader
+        hasSnapshot={Boolean(committedSnapshot)}
+        onBackToCurrent={onBackToCurrent}
+        onExit={onExit}
+        onOpenReading={onOpenReading}
+        title={experiment?.title ?? "正在读取封存实验"}
+        variant={committedSnapshot?.selected_variant ?? route.variant}
+      />
 
       <MingliSyntheticExperimentToolbar
         boundSuiteItem={boundSuiteItem}
@@ -429,71 +467,32 @@ export function MingliSyntheticExperimentScene({
           />
           <MingliSyntheticExperimentInspector
             snapshot={committedSnapshot}
-            suiteSummary={suiteSelection ? (
-              <MingliSyntheticSuiteSummary
-                currentExperimentRef={route.experimentRef}
-                experiments={catalog!}
-                onSelect={selectSuiteItem}
-                selection={suiteSelection}
-              />
-            ) : undefined}
+            suiteSummary={suiteSummary}
           />
-          {loading && (
-            <div className="mingli-synthetic-switching" role="status">
-              正在读取 {route.variant} 组；当前仍显示 {displayedVariant} 组
-            </div>
-          )}
-          {activeSnapshotError && (
-            <div className="mingli-synthetic-load-error" role="alert">
-              <strong>{route.variant} 组读取失败，当前仍显示 {displayedVariant} 组。</strong>
-              <span>没有补跑模型，也没有把旧舞台冒充成新变体。</span>
-              <div>
-                <button onClick={retryCurrent} type="button">重试 {route.variant} 组</button>
-                <button onClick={restoreLatest} type="button">改读最新封存结果</button>
-              </div>
-            </div>
-          )}
+          <MingliSyntheticSwitchingFeedback
+            activeError={activeSnapshotError}
+            displayedVariant={displayedVariant}
+            loading={loading}
+            onRestoreLatest={restoreLatest}
+            onRetry={retryCurrent}
+            requestedVariant={route.variant}
+          />
         </div>
       ) : (
-        <div className="mingli-synthetic-empty" role="status">
-          {suiteSelection && catalog && (
-            <MingliSyntheticSuiteSummary
-              currentExperimentRef={route.experimentRef}
-              experiments={catalog}
-              onSelect={selectSuiteItem}
-              selection={suiteSelection}
-            />
-          )}
-          {loading ? (
-            <p>正在读取离线封存的 A／B 实验……</p>
-          ) : catalogError || activeSnapshotError ? (
-            <>
-              <p>
-                {activeSnapshotError
-                  ? "当前链接的封存结果不可用；不会拿别的命盘顶替。"
-                  : catalogError?.startsWith("mingli_synthetic_suite")
-                    ? "当前批次链接与封存课题不一致；不会拿其他运行顶替。"
-                    : "封存实验暂时无法读取；不会在浏览器补跑模型。"}
-              </p>
-              <div>
-                <button onClick={retryCurrent} type="button">重新读取</button>
-                {activeSnapshotError && experiment && latestRunRef && (
-                  <button onClick={restoreLatest} type="button">
-                    改读最新封存结果
-                  </button>
-                )}
-              </div>
-            </>
-          ) : (
-            <p>尚无封存实验结果，请通过离线 Lab runner 生成。</p>
-          )}
-        </div>
+        <MingliSyntheticEmptyState
+          activeError={activeSnapshotError}
+          canRestoreLatest={Boolean(experiment && latestRunRef)}
+          catalogError={catalogError}
+          loading={loading}
+          onRestoreLatest={restoreLatest}
+          onRetry={retryCurrent}
+          suiteSummary={suiteSummary}
+        />
       )}
 
-      <footer className="mingli-stage-boundary">
-        <span>Owner 命盘只做回归；合成命盘负责控制变量、发现漂移和推动方法升级。</span>
-        <small>{experiment?.inference_limit ?? "只展示离线封存的开发证据。"}</small>
-      </footer>
+      <MingliSyntheticStageBoundary
+        inferenceLimit={experiment?.inference_limit ?? "只展示离线封存的开发证据。"}
+      />
     </div>
   );
 }

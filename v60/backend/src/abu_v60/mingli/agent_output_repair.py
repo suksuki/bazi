@@ -36,6 +36,7 @@ _TRANSFORMATIONS = {
     "CHANNELS",
     "COMPETES",
 }
+_WORK_PATH_TIMING_TERMS = ("大运", "流年", "岁运")
 _TOP_LEVEL_KEYS = {
     "first_look",
     "whole_chart_thesis",
@@ -72,6 +73,7 @@ def repair_local_output_fields(
         "DAY_MASTER_CAPACITY_H1",
         "DAY_MASTER_CAPACITY_H2",
         "DAY_MASTER_REGIME",
+        "WORK_PATH",
     }
     issues = {
         item
@@ -201,23 +203,31 @@ def _repair_work_path(
     closure = item.get("closure")
     if closure not in {"CLOSED", "CONDITIONAL", "BROKEN", "UNCERTAIN"}:
         closure = "UNCERTAIN"
-    malformed = (
-        not isinstance(raw, dict)
-        or path_bad
-        or condition_bad
-        or not transformations
-        or item.get("closure") != closure
-        or not evidence
-    )
-    if malformed:
-        issues.add("WORK_PATH")
-    result["work_path"] = {
+    normalized = {
         "path_statement": path,
         "transformation_codes": transformations or ["CHANNELS"],
         "closure": closure,
         "condition": condition,
         "evidence_ids": evidence,
     }
+    repaired = (
+        not isinstance(raw, dict)
+        or path_bad
+        or condition_bad
+        or item.get("path_statement") != normalized["path_statement"]
+        or item.get("transformation_codes") != normalized["transformation_codes"]
+        or item.get("closure") != normalized["closure"]
+        or item.get("condition") != normalized["condition"]
+        or item.get("evidence_ids") != normalized["evidence_ids"]
+        or not evidence
+        or any(
+            term in f"{normalized['path_statement']}\n{normalized['condition']}"
+            for term in _WORK_PATH_TIMING_TERMS
+        )
+    )
+    if repaired:
+        issues.add("WORK_PATH")
+    result["work_path"] = normalized
 
 
 def _repair_domains(
