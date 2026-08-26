@@ -53,3 +53,27 @@
 3. “共享正本 Preflight”是轻量动作：读取当前合同、适用的设计正本、canonical 数据／接口边界和已记录分歧，并确认本轮基线版本。它不是新增 Stage、Gate 或长报告，也不得被用来代替真实开发。
 4. Codex 对 P0 的权限是提出停止发布并给出证据，不取代 Owner 的最终裁决；在 Owner 裁决前，不得把存在 P0 的版本描述为可安全发布。
 5. “不得擅自改变命理结论”保护的是 Owner 裁决或专业审阅后进入 canonical 的正式结论。Codex 必须质疑、阻止或降级没有足够证据的展示，但不得无声改写已经批准的结论。
+
+## 剧本内容接口边界
+
+1. 当前剧本系统提供 Story Studio API v4（通用 REST，不是 MCP）：
+
+   - 读取正式剧本：`GET /api/story-studio`
+   - 读取机器上下文与 CAS 坐标：`GET /api/story-studio/codex`
+   - 读取编辑状态：`GET /api/story-content`
+   - 校验完整文档：`POST /api/story-studio/validate`
+   - 写入 CURRENT：`PUT /api/story-content`
+   - 应用服务器端有界变更集：`POST /api/story-studio/codex`
+   - 创建 SCRIPT 快照：`POST /api/story-content`
+   - 读取规范：`GET /api/story-studio/spec`
+   - 读取 Runtime Pack：`GET /api/narrative-content-pack?node=<NODE_ID>&mode=SCRIPT`
+
+2. 普通 CURRENT 更新有两条合法路径：
+   - 完整载荷：读取 CURRENT → 合并目标修改 → 校验 → 携带 `payload`、`baseRevision` 与 `expectedContentHash` 执行 PUT → GET 回读核对；
+   - 有界变更集：读取 `/api/story-studio/codex` → 携带同一组并发坐标与 `replace-node`／`replace-runtime-contract` 操作执行 POST → GET 回读核对。
+   两条路径都不得省略并发校验。HTTP 409 必须重新读取后再合并，不得盲目重试；HTTP 422 必须修复契约错误。
+3. 自动化用户读取或更新剧本内容时直接调用上述 HTTP 接口；不得把浏览器 UI 当作传输或保存手段。浏览器只供人类编剧编辑和 Owner 明确要求的视觉检查。
+4. 只有 Owner 明确要求发布新的 SCRIPT 快照时才可调用 POST 发布接口；普通内容更新不得创建 SCRIPT 版本。
+5. 当前 Owner 决策是剧本写入接口对所有请求开放，不依赖 Owner、Codex 身份或能力密钥；开放写入仍必须执行完整载荷校验、`baseRevision + contentHash` 并发保护与写后回读。若 API 返回 401/403，应报告部署与规范不一致，不得绕过。
+6. “更新剧本内容”只授权修改剧本数据，不授权修改剧本系统代码、配置或部署；只有 Owner 明确授权系统改造时才可改变 API 实现。
+7. Story Studio 拥有台词、顺序与演出提示；原型 Engine V2 拥有战斗、存档与事实提交。运行时不得实时读取可变 CURRENT，只能消费带 `sourceContentHash`／`contentPackHash` 的本地锁定 Runtime Pack。原型本地新增台词必须登记为扩展，不能无声成为第二套正本。
