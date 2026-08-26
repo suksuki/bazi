@@ -66,6 +66,7 @@
    - 应用服务器端有界变更集：`POST /api/story-studio/codex`
    - 创建 SCRIPT 快照：`POST /api/story-content`
    - 读取规范：`GET /api/story-studio/spec`
+   - 读取在线交接文档目录：`GET /api/story-studio/docs`
    - 读取 Runtime Pack：`GET /api/narrative-content-pack?node=<NODE_ID>&mode=SCRIPT`
 
 2. 普通 CURRENT 更新有两条合法路径：
