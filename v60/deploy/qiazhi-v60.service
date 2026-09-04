@@ -1,0 +1,23 @@
+[Unit]
+Description=Abu Knows V60 Mingli Product
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=hlsystem
+Group=hlsystem
+WorkingDirectory=/home/hlsystem/abu-v60/current/v60
+EnvironmentFile=/home/hlsystem/abu-v60/shared/v60.production.env
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/home/hlsystem/abu-v60/current/v60/.venv-production/bin/uvicorn abu_v60.main:app --host 127.0.0.1 --port 9050
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=30
+KillSignal=SIGINT
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

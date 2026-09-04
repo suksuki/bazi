@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: qiazhi-v60-postgres
+    restart: unless-stopped
+    env_file:
+      - /home/hlsystem/abu-v60/shared/postgres.env
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - qiazhi_v60_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+
+volumes:
+  qiazhi_v60_pgdata:
+    name: qiazhi_v60_pgdata
