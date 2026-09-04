@@ -81,6 +81,8 @@ export function syntheticFamilyLabel(
       return "判型与主路径";
     case "CONTROLLED_DECISION_DISCIPLINE_GENERALIZATION_PAIR":
       return "候选闭合与反证";
+    case "CONTROLLED_MONTH_COMMAND_REGIME_GENERALIZATION_PAIR":
+      return "月令坐标与判型";
   }
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import type { RuntimeMediaManifest } from "../api";
+import type { RuntimeMediaManifest } from "../publicRuntimeTypes";
 import { resolveHomeWorldLight } from "../homeWorldLight";
 import type { MingliSyntheticLabRoute } from "../mingliSyntheticLabNavigation";
 import type { MingliSyntheticExperimentCatalogEntry } from "../mingliSyntheticLabTypes";

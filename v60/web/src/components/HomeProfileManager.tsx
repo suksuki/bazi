@@ -3,13 +3,13 @@ import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from "react
 import {
   activateOwnerCase,
   createOwnerCase,
-  type HomeSnapshot,
   type OwnerCaseInput,
-} from "../homeApi";
+  type PublicLifeTreeHomeSnapshot,
+} from "../publicHomeApi";
 import type { HomeWorldLight } from "../homeWorldLight";
 import { HomeProfileCreateForm } from "./HomeProfileCreateForm";
 
-type CaseOption = HomeSnapshot["case_options"][number];
+type CaseOption = PublicLifeTreeHomeSnapshot["case_options"][number];
 
 const PILLAR_ORDER = ["year", "month", "day", "hour"] as const;
 const ELEMENT_BY_STEM: Record<string, string> = {
@@ -37,7 +37,7 @@ export function HomeProfileManager({
   onClose,
   onOpenMingli,
 }: {
-  home: HomeSnapshot;
+  home: PublicLifeTreeHomeSnapshot;
   light: HomeWorldLight;
   onChanged: () => Promise<void>;
   onClose: () => void;

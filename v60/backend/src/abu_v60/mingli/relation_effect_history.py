@@ -39,39 +39,21 @@ class MingliRelationEffectHistoricalPacketResolver:
         readings: MingliReadingStore | None = None,
         quant_vectors: MingliQuantVectorStore | None = None,
         source_review_vectors: MingliSourceReviewVectorStore | None = None,
-        source_usability: (
-            MingliSourceUsabilityPrerequisiteProjector | None
-        ) = None,
-        source_discussion: (
-            MingliSourceDiscussionAbstentionProjector | None
-        ) = None,
-        frontier: (
-            MingliRelationEffectResearchFrontierProjector | None
-        ) = None,
+        source_usability: (MingliSourceUsabilityPrerequisiteProjector | None) = None,
+        source_discussion: (MingliSourceDiscussionAbstentionProjector | None) = None,
+        frontier: (MingliRelationEffectResearchFrontierProjector | None) = None,
         admission: MingliRelationEffectAdmissionProjector | None = None,
         evidence: MingliRelationEffectEvidencePacketProjector | None = None,
     ) -> None:
         self._engine = engine
         self._readings = readings or MingliReadingStore(engine)
         self._quant_vectors = quant_vectors or MingliQuantVectorStore(engine)
-        self._source_review_vectors = (
-            source_review_vectors or MingliSourceReviewVectorStore(engine)
-        )
-        self._source_usability = (
-            source_usability or MingliSourceUsabilityPrerequisiteProjector()
-        )
-        self._source_discussion = (
-            source_discussion or MingliSourceDiscussionAbstentionProjector()
-        )
-        self._frontier = (
-            frontier or MingliRelationEffectResearchFrontierProjector()
-        )
-        self._admission = (
-            admission or MingliRelationEffectAdmissionProjector()
-        )
-        self._evidence = (
-            evidence or MingliRelationEffectEvidencePacketProjector()
-        )
+        self._source_review_vectors = source_review_vectors or MingliSourceReviewVectorStore(engine)
+        self._source_usability = source_usability or MingliSourceUsabilityPrerequisiteProjector()
+        self._source_discussion = source_discussion or MingliSourceDiscussionAbstentionProjector()
+        self._frontier = frontier or MingliRelationEffectResearchFrontierProjector()
+        self._admission = admission or MingliRelationEffectAdmissionProjector()
+        self._evidence = evidence or MingliRelationEffectEvidencePacketProjector()
 
     def resolve(
         self,
@@ -107,11 +89,9 @@ class MingliRelationEffectHistoricalPacketResolver:
             connection,
             vector_ref=reading.quant_vector_ref,
         )
-        source_review_vector = (
-            self._source_review_vectors.get_in_connection(
-                connection,
-                vector_ref=reading.source_review_vector_ref,
-            )
+        source_review_vector = self._source_review_vectors.get_in_connection(
+            connection,
+            vector_ref=reading.source_review_vector_ref,
         )
         if (
             quant_vector.vector_ref,

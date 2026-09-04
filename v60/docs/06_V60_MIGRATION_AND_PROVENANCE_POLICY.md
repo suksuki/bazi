@@ -36,7 +36,7 @@ V60 therefore:
 - recomputes the four pillars with the V60 calendar engine;
 - rejects the migration if recomputed and stored pillars differ;
 - records source row hashes and one migration batch manifest;
-- does not copy V50 assertions, strength values, Dream state or professional
+- does not copy V50 assertions, strength values, retired experience state or professional
   conclusions.
 
 ## Authority classes
@@ -49,7 +49,7 @@ V60 therefore:
 | Stem/branch/hidden-stem tables | Versioned bounded fact profile |
 | Strength, useful-god or effective-work claims | Unresolved until separately admitted |
 | V50 LifeCase conclusions | Rejected for this migration |
-| V50 Dream visits and fixtures | Rejected |
+| V50 retired experience visits and fixtures | Rejected |
 | Approved visual assets | Copied and hash-locked |
 
 ## Runtime boundary

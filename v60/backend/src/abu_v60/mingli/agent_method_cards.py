@@ -3,12 +3,13 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any, Protocol
 
+from abu_v60.mingli.agent_counterfactuals import decision_row_catalog
 from abu_v60.mingli.agent_method_distillation import (
     MINGLI_AGENT_METHOD_DISTILLATION_VERSION,
     distilled_check_guidance,
 )
 
-MINGLI_AGENT_ADJUDICATION_VERSION = "v60.mingli-agent-adjudication.011"
+MINGLI_AGENT_ADJUDICATION_VERSION = "v60.mingli-agent-adjudication.013"
 FALLBACK_METHOD_CARD_REF = "FALLBACK_WHOLE_CHART"
 
 _PATTERN_CHECKS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
@@ -106,6 +107,10 @@ def mechanism_method_card(
         "required_checks": required,
         "blocking_checks": blocking,
         "conditioning_checks": conditioning,
+        "counterfactual_rows": decision_row_catalog(
+            method_card_ref=item.evidence_id,
+            check_codes=required,
+        ),
         "fact_locks": {
             "role_manifestation": item.role_summary,
             "observed_blocker_codes": item.blocker_codes,
@@ -140,6 +145,10 @@ def fallback_hypothesis_method_card() -> dict[str, object]:
         "required_checks": required,
         "blocking_checks": _FALLBACK_BLOCKING_CHECKS,
         "conditioning_checks": _FALLBACK_CONDITIONING_CHECKS,
+        "counterfactual_rows": decision_row_catalog(
+            method_card_ref=FALLBACK_METHOD_CARD_REF,
+            check_codes=required,
+        ),
         "status": "PROFESSIONAL_RULING_REQUIRED",
     }
 

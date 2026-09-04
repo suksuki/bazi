@@ -1,8 +1,8 @@
 import { useState } from "react";
 
-import type { RuntimeMediaManifest } from "../api";
-import type { HomeSnapshot } from "../homeApi";
 import type { HomeWorldLight } from "../homeWorldLight";
+import type { PublicLifeTreeHomeSnapshot } from "../publicHomeApi";
+import type { PublicRuntimeMediaManifest } from "../publicRuntimeTypes";
 
 const PILLAR_ORDER = ["year", "month", "day", "hour"] as const;
 
@@ -12,14 +12,16 @@ export function HomeWorldHeader({
   light,
   media,
   onOpenCase,
+  onLogout,
   onOpenSettings,
   onToggleLight,
 }: {
   busyCaseRef: string | null;
-  home: HomeSnapshot;
+  home: PublicLifeTreeHomeSnapshot;
   light: HomeWorldLight;
-  media: RuntimeMediaManifest;
-  onOpenCase: (option: HomeSnapshot["case_options"][number], anchor: HTMLElement) => void;
+  media: PublicRuntimeMediaManifest;
+  onOpenCase: (option: PublicLifeTreeHomeSnapshot["case_options"][number], anchor: HTMLElement) => void;
+  onLogout: () => void;
   onOpenSettings: () => void;
   onToggleLight: () => void;
 }) {
@@ -115,6 +117,15 @@ export function HomeWorldHeader({
         </button>
         <button className="v108-locale-control" disabled title="本轮以中文为正式体验" type="button">
           中
+        </button>
+        <button
+          aria-label="退出账号"
+          className="v108-round-control"
+          onClick={onLogout}
+          title="退出账号"
+          type="button"
+        >
+          <span aria-hidden="true">退</span>
         </button>
       </nav>
     </header>

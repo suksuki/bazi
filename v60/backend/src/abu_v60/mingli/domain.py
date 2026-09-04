@@ -10,9 +10,7 @@ from abu_v60.mingli.mechanism_contracts import MingliMechanismEvidenceVector
 from abu_v60.mingli.timing_contracts import MingliTimingEvidenceVector
 from abu_v60.provenance import content_hash
 
-LIFE_DOMAIN_EVIDENCE_COMPILER_VERSION = (
-    "v60.mingli-life-domain-evidence-compiler.001"
-)
+LIFE_DOMAIN_EVIDENCE_COMPILER_VERSION = "v60.mingli-life-domain-evidence-compiler.001"
 LIFE_DOMAIN_EVIDENCE_POLICY_REF = "v60.life-domain-attention-policy.001"
 
 
@@ -37,12 +35,9 @@ _DOMAIN_DEFINITIONS = (
         ),
         timing_labels=("七杀", "伤官", "偏印", "正印", "正官", "食神"),
         statement=(
-            "当前证据适合观察职责、交付方式与评价标准是否出现变化；"
-            "它不等于职位或成败已经确定。"
+            "当前证据适合观察职责、交付方式与评价标准是否出现变化；它不等于职位或成败已经确定。"
         ),
-        observation_prompt=(
-            "这个观察窗口里，最先可核验的是职责、交付方式，还是评价标准的变化？"
-        ),
+        observation_prompt=("这个观察窗口里，最先可核验的是职责、交付方式，还是评价标准的变化？"),
     ),
     _DomainDefinition(
         domain="wealth",
@@ -52,13 +47,8 @@ _DOMAIN_DEFINITIONS = (
             "bazi.mechanism.wealth-to-pressure@1",
         ),
         timing_labels=("伤官", "偏财", "正财", "食神"),
-        statement=(
-            "当前证据适合观察成果是否形成可归因的交换或收入；"
-            "它不等于财务结果已经发生。"
-        ),
-        observation_prompt=(
-            "这个观察窗口里，成果会先形成可归因交换、改变外部要求，还是尚未落地？"
-        ),
+        statement=("当前证据适合观察成果是否形成可归因的交换或收入；它不等于财务结果已经发生。"),
+        observation_prompt=("这个观察窗口里，成果会先形成可归因交换、改变外部要求，还是尚未落地？"),
     ),
     _DomainDefinition(
         domain="relationship",
@@ -69,9 +59,7 @@ _DOMAIN_DEFINITIONS = (
             "当前只具备关系角色的时序标签证据，尚无获准的关系机制；"
             "不能由此直接推导伴侣、承诺或关系走向。"
         ),
-        observation_prompt=(
-            "这个观察窗口里，现实中最先变化的是互动频率、边界，还是承诺方式？"
-        ),
+        observation_prompt=("这个观察窗口里，现实中最先变化的是互动频率、边界，还是承诺方式？"),
     ),
 )
 
@@ -146,17 +134,13 @@ class MingliLifeDomainEvidenceCompiler:
             for candidate in mechanism_vector.candidates
             if candidate.pattern_ref in definition.mechanism_pattern_refs
         )
-        candidate_refs = tuple(
-            sorted(candidate.candidate_ref for candidate in candidates)
-        )
+        candidate_refs = tuple(sorted(candidate.candidate_ref for candidate in candidates))
         coordinates = tuple(
             coordinate
             for coordinate in timing_vector.coordinates
             if coordinate.ten_god_label in definition.timing_labels
         )
-        coordinate_refs = tuple(
-            sorted(coordinate.coordinate_ref for coordinate in coordinates)
-        )
+        coordinate_refs = tuple(sorted(coordinate.coordinate_ref for coordinate in coordinates))
         overlaps = tuple(
             overlap
             for overlap in timing_vector.candidate_overlaps

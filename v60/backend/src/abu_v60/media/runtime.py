@@ -8,8 +8,7 @@ from abu_v60.media.registry import load_verified_assets
 
 RUNTIME_ASSET_BINDINGS = {
     "brand_logo": "brand.abuknows-v60.logo.transparent.v1",
-    "grove_background": "dream.grove.clean.v1",
-    "life_world_background": "dream.v60.life-world.clean.v1",
+    "login_life_tree_background": "experience.v60.login-life-tree-background.v1",
     "home_day_background": "experience.v108.home.day-background.v1",
     "home_night_background": "experience.v108.home.night-background.v1",
     "home_day_logo": "experience.v108.home.day-logo.v1",
@@ -26,8 +25,7 @@ RUNTIME_ASSET_BINDINGS = {
     "mingli_lab_night_background": "experience.v131.mingli-lab.night-background.v1",
 }
 RUNTIME_CUE_BINDINGS = {
-    "abu_idle": "cue.dream.abu-idle.v1",
-    "abu_guide_left": "cue.dream.abu-guide-left.v1",
+    "abu_idle": "cue.mingli.abu-idle.v1",
     "dodo_idle": "cue.mingli.dodo-idle.v1",
 }
 
@@ -92,8 +90,41 @@ def runtime_media_manifest() -> dict[str, Any]:
         }
 
     return {
-        "registry_version": "v60.runtime-media-registry.006",
+        "registry_version": "v60.runtime-media-registry.009",
         "catalog_version": str(catalog["schema_version"]),
         "assets": runtime_assets,
         "cues": runtime_cues,
+    }
+
+
+def public_runtime_media_manifest() -> dict[str, Any]:
+    """Project only assets reachable from the public life-tree/Mingli shell."""
+
+    manifest = runtime_media_manifest()
+    return {
+        "registry_version": "v60.runtime-media-registry.009",
+        "catalog_version": manifest["catalog_version"],
+        "assets": {
+            "brand_logo": manifest["assets"]["brand_logo"],
+            "login_life_tree_background": manifest["assets"][
+                "login_life_tree_background"
+            ],
+            "home_day_background": manifest["assets"]["home_day_background"],
+            "home_night_background": manifest["assets"]["home_night_background"],
+            "home_day_logo": manifest["assets"]["home_day_logo"],
+            "home_night_logo": manifest["assets"]["home_night_logo"],
+            "home_profile_leaf": manifest["assets"]["home_profile_leaf"],
+            "mingli_growth_day_video": manifest["assets"]["mingli_growth_day_video"],
+            "mingli_growth_day_start": manifest["assets"]["mingli_growth_day_start"],
+            "mingli_growth_day_poster": manifest["assets"]["mingli_growth_day_poster"],
+            "mingli_growth_night_video": manifest["assets"]["mingli_growth_night_video"],
+            "mingli_growth_night_start": manifest["assets"]["mingli_growth_night_start"],
+            "mingli_growth_night_poster": manifest["assets"]["mingli_growth_night_poster"],
+            "mingli_lab_day_background": manifest["assets"]["mingli_lab_day_background"],
+            "mingli_lab_night_background": manifest["assets"]["mingli_lab_night_background"],
+        },
+        "cues": {
+            "abu_idle": manifest["cues"]["abu_idle"],
+            "dodo_idle": manifest["cues"]["dodo_idle"],
+        },
     }

@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from abu_v60.mingli.agent_adjudication import aggregate_method_rulings
 from abu_v60.mingli.agent_contracts import MingliAgentCasePacket, MingliAgentModelOutput
+from abu_v60.mingli.agent_counterfactuals import (
+    decision_row_is_valid,
+    reversal_row_ref,
+)
 from abu_v60.mingli.agent_method_cards import (
     FALLBACK_METHOD_CARD_REF,
     method_card_catalog,
@@ -37,6 +41,17 @@ def validate_adjudication_output(
             not set(item.evidence_ids).issubset(natal_ids) for item in hypothesis.method_rulings
         ):
             raise ValueError("mingli_agent_method_ruling_uses_non_natal_evidence")
+        if any(
+            item.decision_row is not None
+            and not decision_row_is_valid(
+                item.decision_row.model_dump(mode="json"),
+                method_card_ref=hypothesis.method_card_ref,
+                check_code=item.check_code,
+                current_ruling=item.ruling,
+            )
+            for item in hypothesis.method_rulings
+        ):
+            raise ValueError("mingli_agent_method_decision_row_mismatch")
         if hypothesis.method_card_ref == FALLBACK_METHOD_CARD_REF:
             if hypothesis.mechanism_evidence_ids:
                 raise ValueError("mingli_agent_fallback_card_has_mechanism_evidence")
@@ -99,6 +114,15 @@ def validate_adjudication_output(
         alternative.hypothesis_id,
     ):
         raise ValueError("mingli_agent_decision_role_conflict")
+    if (
+        decision.reversal.decision_row_ref is not None
+        and decision.reversal.decision_row_ref
+        != reversal_row_ref(
+            primary_method_card_ref=primary.method_card_ref,
+            alternative_method_card_ref=alternative.method_card_ref,
+        )
+    ):
+        raise ValueError("mingli_agent_reversal_decision_row_mismatch")
     for side, hypothesis in (
         (decision.winner, by_id[decision.winner_id]),
         (decision.loser, by_id[decision.loser_id]),

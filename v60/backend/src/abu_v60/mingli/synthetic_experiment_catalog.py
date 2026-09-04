@@ -7,12 +7,12 @@ from typing import Any, Final, Literal
 from abu_v60.mingli.calendar import BirthInput
 from abu_v60.provenance import content_hash, stable_ref
 
-SYNTHETIC_EXPERIMENT_CATALOG_VERSION: Final = "v60.mingli-synthetic-experiment-catalog.006"
+SYNTHETIC_EXPERIMENT_CATALOG_VERSION: Final = "v60.mingli-synthetic-experiment-catalog.007"
 SYNTHETIC_EXPERIMENT_DEFINITION_VERSION: Final = "v60.mingli-synthetic-experiment-catalog.001"
 SYNTHETIC_EXPERIMENT_DEFINITION_VERSION_V2: Final = "v60.mingli-synthetic-experiment-catalog.002"
 SYNTHETIC_RESEARCH_ACCOUNT_REF: Final = "v60-system-account-mingli-synthetic-lab-v1"
 SYNTHETIC_RESEARCH_BATCH_REF: Final = "v60-seed-batch-mingli-synthetic-lab-v1"
-SYNTHETIC_EXPERIMENT_EVALUATOR_VERSION: Final = "v60.mingli-synthetic-experiment-evaluator.008"
+SYNTHETIC_EXPERIMENT_EVALUATOR_VERSION: Final = "v60.mingli-synthetic-experiment-evaluator.010"
 
 
 @dataclass(frozen=True, slots=True)
@@ -386,6 +386,39 @@ CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT: Final = _experiment(
     legal_hour_pillar_change="壬午 → 甲申",
 )
 
+MONTH_COMMAND_REGIME_GENERALIZATION_EXPERIMENT: Final = _experiment(
+    definition_version=SYNTHETIC_EXPERIMENT_DEFINITION_VERSION_V2,
+    seed_id="v60.mingli-synthetic-lab.month-command-regime-generalization.001",
+    seed_batch_ref="v60-seed-batch-mingli-month-command-regime-generalization-v1",
+    analysis_date=date(2026, 8, 15),
+    family="CONTROLLED_MONTH_COMMAND_REGIME_GENERALIZATION_PAIR",
+    title="月令与月干分开后，判型和主路径还能保持自洽吗？",
+    question=(
+        "前三柱固定为庚午、己卯、壬午；合法时柱从丙午变为辛亥后，检查模型能否"
+        "始终把月支卯的月令坐标与月干己的十神坐标分开，并随完整时柱重做根气、"
+        "判型、候选比较和主路径，而不是把月干正官误称为月令。"
+    ),
+    inference_scope="MONTH_COMMAND_COORDINATE_AND_WHOLE_CHART_DISCIPLINE_WITH_FULL_HOUR_COLLATERAL",
+    inference_limit=(
+        "本实验只验证月令／月干坐标纪律及完整时柱变化后的整盘决策自洽；时干、"
+        "时支全部藏干、根与印载体、同支关系和起运边界同时改变，不能把判型、机制"
+        "或应事变化单独归因于亥中壬根，也不预选机制胜者。"
+    ),
+    known_collateral_deltas=(
+        "前三柱固定为庚午、己卯、壬午；两盘月令均为卯，月干均为己正官",
+        "时干由丙偏财变为辛正印，财富与印星的明透载体同时变化",
+        "时支藏干由午中丁己变为亥中壬甲，B 新增壬水第一藏干最低有效根",
+        "A 有三个午支同支成员，B 只保留年支午与日支午同支成员",
+        "机制候选集合与起运边界可能同时变化；Timing 保存但不参与本组评分",
+    ),
+    birth_date=date(1990, 3, 18),
+    member_a_time=time(12, 0),
+    member_b_time=time(22, 0),
+    member_a_pillars=("庚午", "己卯", "壬午", "丙午"),
+    member_b_pillars=("庚午", "己卯", "壬午", "辛亥"),
+    legal_hour_pillar_change="丙午 → 辛亥",
+)
+
 SYNTHETIC_EXPERIMENTS: Final = (
     FIRST_SYNTHETIC_EXPERIMENT,
     ROOT_IDENTITY_SYNTHETIC_EXPERIMENT,
@@ -394,6 +427,7 @@ SYNTHETIC_EXPERIMENTS: Final = (
     HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT,
     REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT,
     CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT,
+    MONTH_COMMAND_REGIME_GENERALIZATION_EXPERIMENT,
 )
 SYNTHETIC_EXPERIMENT_BY_REF: Final = {item.experiment_ref: item for item in SYNTHETIC_EXPERIMENTS}
 FIRST_SYNTHETIC_EXPERIMENT_REF: Final = FIRST_SYNTHETIC_EXPERIMENT.experiment_ref
@@ -414,6 +448,9 @@ REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT_REF: Final = (
 )
 CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT_REF: Final = (
     CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT.experiment_ref
+)
+MONTH_COMMAND_REGIME_GENERALIZATION_EXPERIMENT_REF: Final = (
+    MONTH_COMMAND_REGIME_GENERALIZATION_EXPERIMENT.experiment_ref
 )
 SYNTHETIC_MEMBER_BY_SUBJECT: Final = {
     item.subject_id: item for experiment in SYNTHETIC_EXPERIMENTS for item in experiment.members

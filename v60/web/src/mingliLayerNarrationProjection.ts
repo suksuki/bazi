@@ -5,23 +5,34 @@ import type {
 } from "./mingliClaimGraphTypes";
 import { claimStatusLabel } from "./mingliClaimPresentation";
 import type { MingliReadingLayer } from "./mingliStageNavigation";
-import type { MingliNarrationCue } from "./mingliStageTypes";
+import type {
+  MingliFocus,
+  MingliFocusedPassResult,
+  MingliNarrationCue,
+  MingliReadingSummaryProjection,
+} from "./mingliStageTypes";
+import { isPublicPassSafe } from "./publicReadingPresentation";
 
 export interface MingliLayerNarrationChapter {
   chapterId: string;
-  claimRef: string;
+  sourceItemRef: string;
+  claimRef: string | null;
   eyebrow: string;
   title: string;
   text: string;
   evidenceLine: string | null;
   condition: string | null;
+  reviewNote: string | null;
   statusLabel: string;
   semanticAction: MingliNarrationCue["semantic_action"];
 }
 
 export interface MingliLayerNarrationProjection {
-  graphRef: string;
-  graphHash: string;
+  sourceKind: "CLAIM_GRAPH" | "FOCUSED_PASSES";
+  sourceRef: string;
+  sourceHash: string;
+  graphRef: string | null;
+  graphHash: string | null;
   layer: MingliReadingLayer;
   layerLabel: string;
   notice: string | null;
@@ -90,6 +101,30 @@ const LAYER_KEYS: Record<
   timing: TIME_LAYER_STAGE_BOUND_KEYS,
 };
 
+const LAYER_FOCUSES: Record<MingliReadingLayer, readonly MingliFocus[]> = {
+  principle: ["STRUCTURE"],
+  image: ["LIFE_IMAGE_PERSONALITY"],
+  themes: ["CAREER_WEALTH", "RELATIONSHIP_FAMILY"],
+  timing: ["TIMING"],
+};
+
+const FOCUSED_PASS_LABELS: Record<
+  MingliFocus,
+  { eyebrow: string; title: string }
+> = {
+  STRUCTURE: { eyebrow: "原局结构", title: "命局主线" },
+  LIFE_IMAGE_PERSONALITY: {
+    eyebrow: "生命意象与性情",
+    title: "这份命局呈现出的生命气质",
+  },
+  CAREER_WEALTH: { eyebrow: "事业与财富", title: "事业与财富的发力方式" },
+  RELATIONSHIP_FAMILY: {
+    eyebrow: "关系与家庭",
+    title: "关系与家庭中的互动主题",
+  },
+  TIMING: { eyebrow: "当前大运与流年", title: "此刻的时间趋势" },
+};
+
 export function projectMingliLayerNarration({
   graph,
   layer,
@@ -99,6 +134,9 @@ export function projectMingliLayerNarration({
 }): MingliLayerNarrationProjection {
   const unique = selectMingliLayerClaims(graph, layer);
   return {
+    sourceKind: "CLAIM_GRAPH",
+    sourceRef: graph.graph_ref,
+    sourceHash: graph.graph_hash,
     graphRef: graph.graph_ref,
     graphHash: graph.graph_hash,
     layer,
@@ -108,6 +146,7 @@ export function projectMingliLayerNarration({
       : null,
     chapters: unique.map((item, index) => ({
       chapterId: `${layer}-${index + 1}`,
+      sourceItemRef: item.claim_ref,
       claimRef: item.claim_ref,
       eyebrow: claimEyebrow(item),
       title: claimTitle(item),
@@ -116,10 +155,41 @@ export function projectMingliLayerNarration({
         ? item.causal_chain.join(" → ")
         : null,
       condition: item.condition,
+      reviewNote: null,
       statusLabel: claimStatusLabel(item),
       semanticAction: "PILLARS_PRESENT",
     })),
   };
+}
+
+export function mingliLayerFocuses(
+  layer: MingliReadingLayer,
+): readonly MingliFocus[] {
+  return LAYER_FOCUSES[layer];
+}
+
+export function hasMingliSummaryLayerNarration(
+  summary: MingliReadingSummaryProjection,
+  layer: MingliReadingLayer,
+): boolean {
+  return projectMingliSummaryLayerNarration(summary, layer) !== null;
+}
+
+export function projectMingliSummaryLayerNarration(
+  summary: MingliReadingSummaryProjection,
+  layer: MingliReadingLayer,
+): MingliLayerNarrationProjection | null {
+  const passes = selectCompleteFocusedPasses(summary, layer);
+  if (passes !== null) {
+    return projectFocusedPassNarration(summary, layer, passes);
+  }
+  if (
+    summary.claim_graph !== null
+    && hasMingliLayerNarration(summary.claim_graph, layer)
+  ) {
+    return projectMingliLayerNarration({ graph: summary.claim_graph, layer });
+  }
+  return null;
 }
 
 export function hasMingliLayerNarration(
@@ -154,6 +224,67 @@ function isPresentAndAdmitted(
   item: MingliReadingClaim | undefined,
 ): item is MingliReadingClaim {
   return item !== undefined && item.status !== "WITHHELD";
+}
+
+function selectCompleteFocusedPasses(
+  summary: MingliReadingSummaryProjection,
+  layer: MingliReadingLayer,
+): MingliFocusedPassResult[] | null {
+  const byFocus = new Map<MingliFocus, MingliFocusedPassResult>();
+  for (const item of summary.focused_reading?.passes ?? []) {
+    byFocus.set(item.focus, item);
+  }
+  for (const record of summary.focused_pass_records) {
+    byFocus.set(record.focus, record.pass_result);
+  }
+  const selected = LAYER_FOCUSES[layer].map((focus) => byFocus.get(focus));
+  if (selected.some((item) => item === undefined || !isPublicPassSafe(item))) {
+    return null;
+  }
+  return selected.filter(
+    (item): item is MingliFocusedPassResult => item !== undefined,
+  );
+}
+
+function projectFocusedPassNarration(
+  summary: MingliReadingSummaryProjection,
+  layer: MingliReadingLayer,
+  passes: MingliFocusedPassResult[],
+): MingliLayerNarrationProjection {
+  return {
+    sourceKind: "FOCUSED_PASSES",
+    sourceRef: summary.summary_ref,
+    sourceHash: summary.summary_hash,
+    graphRef: null,
+    graphHash: null,
+    layer,
+    layerLabel: LAYER_LABELS[layer],
+    notice: layer === "timing"
+      ? "本段是当前岁运的分层初断；舞台只呈现时间坐标，画面上的靠近或远离不构成命理证据。"
+      : "这是本地模型形成的分层初断，已保留原文来源，仍可在研发期继续校准。",
+    chapters: passes.map((item, index) => {
+      const label = FOCUSED_PASS_LABELS[item.focus];
+      const needsReview = item.normalization_codes.length > 0;
+      return {
+        chapterId: `${layer}-${index + 1}`,
+        sourceItemRef: item.pass_ref,
+        claimRef: null,
+        eyebrow: label.eyebrow,
+        title: label.title,
+        text: item.normalized_text,
+        evidenceLine: null,
+        condition: null,
+        reviewNote: needsReview
+          ? "本段触发了本地边界标记，请把它视为待继续校准的初断。"
+          : null,
+        statusLabel: needsReview
+          ? "已标记边界 · 待校准"
+          : "本地模型初断 · 待校准",
+        // Focused timing prose has no typed binding to the selected visual year.
+        semanticAction: "PILLARS_PRESENT",
+      };
+    }),
+  };
 }
 
 function claimEyebrow(item: MingliReadingClaim): string {

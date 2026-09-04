@@ -6,11 +6,16 @@ import type {
 } from "../mingliClaimGraphTypes";
 import type {
   MingliAgentOutput,
+  MingliFocus,
   MingliReadingSummaryProjection,
   MingliStageProjection,
 } from "../mingliStageTypes";
 import { claimIsAdmitted, claimStatusLabel } from "../mingliClaimPresentation";
 import { ClaimReviewNotice } from "./MingliClaimPresentation";
+import {
+  MingliFocusedPendingLayer,
+  MingliFocusedReadingLayer,
+} from "./MingliFocusedReadingLayer";
 
 const LAYERS: Array<{
   id: MingliReadingLayer;
@@ -72,7 +77,7 @@ export function MingliReadingJourney({
   layer: MingliReadingLayer;
   onAskGuide: () => void;
   onExpandTime: () => void;
-  onGenerateAgent?: () => void;
+  onGenerateAgent?: (focus: MingliFocus) => void;
   onLayerChange: (layer: MingliReadingLayer) => void;
   agentError?: string | null;
   agentGenerating?: boolean;
@@ -140,6 +145,7 @@ export function summaryMatchesStage(
 }
 
 export function MingliReadingLayerContent({
+  actionsVisible = true,
   agentError = null,
   agentGenerating = false,
   hasFormalReading,
@@ -149,22 +155,44 @@ export function MingliReadingLayerContent({
   stage,
   summary,
 }: {
+  actionsVisible?: boolean;
   agentError?: string | null;
   agentGenerating?: boolean;
   hasFormalReading: boolean;
   layer: MingliReadingLayer;
   onExpandTime: () => void;
-  onGenerateAgent?: () => void;
+  onGenerateAgent?: (focus: MingliFocus) => void;
   stage: MingliStageProjection;
   summary: MingliReadingSummaryProjection | null;
 }) {
   const claimGraph = hasFormalReading ? summary?.claim_graph ?? null : null;
-  if (claimGraph === null) {
+  const focusedPasses = hasFormalReading
+    ? [
+        ...(summary?.focused_reading?.passes ?? []),
+        ...(summary?.focused_pass_records.map((record) => record.pass_result) ?? []),
+      ]
+    : [];
+  if (focusedPasses.length > 0) {
     return (
-      <AgentPendingLayer
+      <MingliFocusedReadingLayer
+        actionsVisible={actionsVisible}
         agentError={agentError}
         agentGenerating={agentGenerating}
-        generationAvailable={summary?.agent_generation_available ?? false}
+        generationAvailable={summary?.focused_generation_available ?? false}
+        layer={layer}
+        onExpandTime={onExpandTime}
+        onGenerateAgent={onGenerateAgent}
+        passes={focusedPasses}
+        stage={stage}
+      />
+    );
+  }
+  if (claimGraph === null) {
+    return (
+      <MingliFocusedPendingLayer
+        agentError={agentError}
+        agentGenerating={agentGenerating}
+        generationAvailable={summary?.focused_generation_available ?? false}
         layer={layer}
         onGenerateAgent={onGenerateAgent}
         stage={stage}
@@ -183,6 +211,7 @@ export function MingliReadingLayerContent({
       {layer === "themes" && <ThemeLayer claimGraph={claimGraph} />}
       {layer === "timing" && (
         <TimingLayer
+          actionsVisible={actionsVisible}
           claimGraph={claimGraph}
           onExpandTime={onExpandTime}
           stage={stage}
@@ -207,72 +236,6 @@ function LayerHeading({
       <h2>{title}</h2>
       <span>{status}</span>
     </header>
-  );
-}
-
-function AgentPendingLayer({
-  agentError,
-  agentGenerating,
-  generationAvailable,
-  layer,
-  onGenerateAgent,
-  stage,
-}: {
-  agentError: string | null;
-  agentGenerating: boolean;
-  generationAvailable: boolean;
-  layer: MingliReadingLayer;
-  onGenerateAgent?: () => void;
-  stage: MingliStageProjection;
-}) {
-  const selected = LAYERS.find((item) => item.id === layer) ?? LAYERS[0];
-  const pillars = stage.columns
-    .filter((column) => column.source_layer === "NATAL")
-    .map((column) => column.pillar)
-    .join(" · ");
-  const canGenerate = generationAvailable
-    && onGenerateAgent !== undefined
-    && stage.reading_ref !== null;
-  return (
-    <div className="mingli-reading-layer">
-      <LayerHeading
-        eyebrow={`${selected.professional}${selected.organ} · ${selected.product}`}
-        title={generationAvailable
-          ? `让阿布完整读一遍${stage.display_name}的命局`
-          : `${stage.display_name}的整盘初断尚未生成`}
-        status={agentGenerating ? "正在研判" : generationAvailable ? "等待你开始" : "推演服务未就绪"}
-      />
-      <div className="mingli-principle-lines">
-        <p>{pillars}</p>
-        <p>{generationAvailable
-          ? "阿布会把月令、透藏、根位、结构竞争、做功路径与岁运放回同一张命盘里判断。"
-          : "四柱与岁运已经排定；服务恢复后，阿布会从整盘主线开始判断，而不是填充栏目套话。"}</p>
-      </div>
-      <article className="mingli-reading-focus">
-        <small>一次整盘研判</small>
-        <strong>{agentGenerating
-          ? "阿布正在通读全盘……"
-          : generationAvailable ? "先给明确初断，再逐条校准" : "命盘已经保存，不需要重新录入"}</strong>
-        <p>{generationAvailable
-          ? "完成后，命局原理、生命意象、人生主题与时间趋势会一起长在这根命理枝上。"
-          : "推演服务恢复后，可以从当前档案直接继续。"}</p>
-      </article>
-      {canGenerate && (
-        <button
-          className="mingli-time-expand"
-          disabled={agentGenerating}
-          onClick={onGenerateAgent}
-          type="button"
-        >
-          {agentGenerating ? "正在形成整盘判断…" : "开始命理师研判"}
-        </button>
-      )}
-      {agentError && (
-        <p className="mingli-reading-boundary" role="alert">
-          本次研判没有完整完成，请稍后再试；已有命盘不会受到影响。
-        </p>
-      )}
-    </div>
   );
 }
 
@@ -401,10 +364,12 @@ function ThemeLayer({ claimGraph }: { claimGraph: MingliReadingClaimGraph }) {
 }
 
 function TimingLayer({
+  actionsVisible,
   claimGraph,
   onExpandTime,
   stage,
 }: {
+  actionsVisible: boolean;
   claimGraph: MingliReadingClaimGraph;
   onExpandTime: () => void;
   stage: MingliStageProjection;
@@ -445,7 +410,7 @@ function TimingLayer({
           ) : <ClaimReviewNotice item={annual} />}
         </article>
       </div>
-      {!expanded && (
+      {actionsVisible && !expanded && (
         <button className="mingli-time-expand" onClick={onExpandTime} type="button">
           展开大运与流年六柱
         </button>

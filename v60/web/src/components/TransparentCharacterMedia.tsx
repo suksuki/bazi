@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { useReducedMotion } from "../AbuIdle";
-import type { RuntimeAssetDelivery } from "../api";
+import type { RuntimeAssetDelivery } from "../publicRuntimeTypes";
 
 type CharacterMediaMode = "poster" | "webm" | "webp";
 

@@ -93,9 +93,7 @@ class MingliAgentCasePacketCompiler:
             mechanism_vector=mechanism_vector,
             timing_vector=timing_vector,
         )
-        foundation = FoundationRuntimeMaps.from_profile(
-            self._authority.active_foundation_profile()
-        )
+        foundation = FoundationRuntimeMaps.from_profile(self._authority.active_foundation_profile())
         builder = _EvidenceBuilder()
         pillars = self._pillars(
             pillar_values=workspace["chart"]["pillars"],
@@ -143,9 +141,7 @@ class MingliAgentCasePacketCompiler:
         return MingliAgentCasePacket.issue(
             case_ref=str(workspace["case"]["case_ref"]),
             chart_version_ref=str(workspace["chart"]["chart_version_ref"]),
-            life_case_revision_ref=str(
-                workspace["life_case"]["life_case_revision_ref"]
-            ),
+            life_case_revision_ref=str(workspace["life_case"]["life_case_revision_ref"]),
             reading_ref=reading.reading_ref,
             reading_hash=reading.reading_hash,
             subject_kind=str(workspace["case"]["subject_kind"]),
@@ -226,9 +222,7 @@ class MingliAgentCasePacketCompiler:
         builder: _EvidenceBuilder,
     ) -> tuple[AgentPillarContext, ...]:
         visible_by_slot = {
-            item.pillar_slot: item
-            for item in occurrences
-            if item.layer == "VISIBLE_STEM"
+            item.pillar_slot: item for item in occurrences if item.layer == "VISIBLE_STEM"
         }
         hidden_by_slot = {
             slot: tuple(
@@ -260,9 +254,7 @@ class MingliAgentCasePacketCompiler:
                     f"{_POLARITY_LABELS[foundation.stem_polarity[stem]]}"
                     f"{_ELEMENT_LABELS[foundation.stem_elements[stem]]}；"
                     f"{branch}藏"
-                    + "、".join(
-                        f"{item.stem}({item.label})" for item in hidden
-                    )
+                    + "、".join(f"{item.stem}({item.label})" for item in hidden)
                     + "。"
                 ),
                 source_refs=(
@@ -299,9 +291,7 @@ class MingliAgentCasePacketCompiler:
     ) -> AgentDayMasterSupportContext:
         hidden = tuple(item for item in occurrences if item.layer == "HIDDEN_STEM")
         same_identity = tuple(
-            f"{item.pillar_slot}支藏{item.stem}"
-            for item in hidden
-            if item.stem == day_master_stem
+            f"{item.pillar_slot}支藏{item.stem}" for item in hidden if item.stem == day_master_stem
         )
         same_element = tuple(
             f"{item.pillar_slot}支藏{item.stem}"
@@ -339,9 +329,7 @@ class MingliAgentCasePacketCompiler:
             same_element_hidden_support=same_element,
             visible_peer_support=visible_peers,
             resource_support=resources,
-            root_language_policy=(
-                "ONLY_SAME_ELEMENT_HIDDEN_STEMS_ARE_ROOT_CANDIDATES"
-            ),
+            root_language_policy=("ONLY_SAME_ELEMENT_HIDDEN_STEMS_ARE_ROOT_CANDIDATES"),
             evidence_id=evidence_id,
         )
 
@@ -385,7 +373,8 @@ class MingliAgentCasePacketCompiler:
             (
                 item
                 for item in facts
-                if item["fact_type"] in {
+                if item["fact_type"]
+                in {
                     "six_clash_membership",
                     "six_harmony_membership",
                 }

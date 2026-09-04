@@ -68,15 +68,11 @@ def upgrade() -> None:
     ).mappings()
     for row in rows:
         if row["question_ref"] not in metadata:
-            raise RuntimeError(
-                f"episode_runtime_metadata_missing:{row['question_ref']}"
-            )
+            raise RuntimeError(f"episode_runtime_metadata_missing:{row['question_ref']}")
         contract = dict(row["episode_contract_json"])
         contract["episode_version"] = 2
         contract["runtime_status"] = "ACTIVE"
-        contract["resolution_rule_hash"] = _content_hash(
-            row["resolution_rule_json"]
-        )
+        contract["resolution_rule_hash"] = _content_hash(row["resolution_rule_json"])
         contract["runtime_metadata"] = metadata[row["question_ref"]]
         connection.execute(
             sa.text(

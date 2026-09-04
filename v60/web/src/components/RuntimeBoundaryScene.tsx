@@ -1,4 +1,4 @@
-import type { RuntimeAssetDelivery } from "../api";
+import type { RuntimeAssetDelivery } from "../publicRuntimeTypes";
 import { BrandMark } from "./BrandMark";
 
 export function RuntimeBoundaryScene({
@@ -11,7 +11,7 @@ export function RuntimeBoundaryScene({
   status?: "loading" | "error";
 }) {
   return (
-    <main className="dream-root v60-shell loading-shell">
+    <main className="v60-root v60-shell loading-shell">
       <BrandMark asset={brand} />
       {status === "loading" && (
         <div className="loading-mark" aria-hidden="true">

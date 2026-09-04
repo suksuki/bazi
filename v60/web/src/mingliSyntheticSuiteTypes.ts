@@ -126,7 +126,7 @@ export interface MingliSyntheticSuiteCatalogEntry {
 }
 
 export interface MingliSyntheticSuiteCatalog {
-  catalog_version: "v60.mingli-synthetic-suite-catalog.004";
+  catalog_version: "v60.mingli-synthetic-suite-catalog.005";
   modes: MingliSyntheticSuiteModeEntry[];
   suites: MingliSyntheticSuiteCatalogEntry[];
   browser_generation_allowed: false;

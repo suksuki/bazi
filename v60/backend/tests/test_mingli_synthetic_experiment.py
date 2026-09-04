@@ -40,6 +40,8 @@ from abu_v60.mingli.synthetic_experiment_catalog import (
     HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
     HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT,
     HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF,
+    MONTH_COMMAND_REGIME_GENERALIZATION_EXPERIMENT,
+    MONTH_COMMAND_REGIME_GENERALIZATION_EXPERIMENT_REF,
     REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT,
     REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT_REF,
     ROOT_IDENTITY_SYNTHETIC_EXPERIMENT,
@@ -219,7 +221,7 @@ def _hidden_rank_readings(
                 day_master_state="WEAK",
                 whole_chart_thesis=thesis,
                 server_issue_keys=(),
-            )
+            ),
         )
 
     return {
@@ -241,9 +243,7 @@ def _regime_work_path_readings(
                 regime_decision=SimpleNamespace(
                     classification=("UNRESOLVED" if variant == "A" else "ORDINARY_WEAK"),
                     effective_root_status=("ABSENT" if variant == "A" else "PRESENT"),
-                    effective_root_coordinates=(
-                        () if variant == "A" else ("hour支藏戊",)
-                    ),
+                    effective_root_coordinates=(() if variant == "A" else ("hour支藏戊",)),
                 ),
                 day_master_state=("UNCERTAIN" if variant == "A" else "WEAK"),
                 hypotheses=(
@@ -255,9 +255,7 @@ def _regime_work_path_readings(
                     ),
                 ),
                 work_path=SimpleNamespace(
-                    selected_hypothesis_id=(
-                        "H2" if broken_binding_variant == variant else "H1"
-                    ),
+                    selected_hypothesis_id=("H2" if broken_binding_variant == variant else "H1"),
                     method_card_ref=primary_ref,
                     transformation_codes=("CHANNELS",),
                     closure="CONDITIONAL",
@@ -314,6 +312,53 @@ def _decision_discipline_readings(
     return result
 
 
+def _month_command_readings(
+    packets: dict[str, Any],
+    *,
+    raw_texts: dict[str, str] | None = None,
+    normalized_texts: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    raw_texts = raw_texts or {}
+    normalized_texts = normalized_texts or {}
+    result: dict[str, Any] = {}
+    for variant in ("A", "B"):
+        primary_ref = packets[variant].mechanism_observations[0].evidence_id
+        result[variant] = SimpleNamespace(
+            normalization_receipt=SimpleNamespace(
+                raw_output={"whole_chart_thesis": raw_texts.get(variant, "")}
+            ),
+            output=SimpleNamespace(
+                regime_decision=SimpleNamespace(
+                    classification=("UNRESOLVED" if variant == "A" else "ORDINARY_WEAK"),
+                    effective_root_status=("ABSENT" if variant == "A" else "PRESENT"),
+                    effective_root_coordinates=(() if variant == "A" else ("hour支藏壬",)),
+                    rooted_visible_support_status="ABSENT",
+                    dominant_chain_status="UNRESOLVED",
+                    competition_kinds=("HIDDEN_RESOURCE",),
+                ),
+                day_master_state=("UNCERTAIN" if variant == "A" else "WEAK"),
+                whole_chart_thesis=normalized_texts.get(variant, ""),
+                hypotheses=(
+                    SimpleNamespace(
+                        hypothesis_id="H1",
+                        role="PRIMARY",
+                        method_card_ref=primary_ref,
+                        adjudication="CONDITIONAL",
+                    ),
+                ),
+                work_path=SimpleNamespace(
+                    selected_hypothesis_id="H1",
+                    method_card_ref=primary_ref,
+                    transformation_codes=("CHANNELS",),
+                    closure="CONDITIONAL",
+                    evidence_ids=(packets[variant].pillars[0].evidence_id,),
+                ),
+                server_issue_keys=(),
+            ),
+        )
+    return result
+
+
 def _raw_decision_integrity_readings(
     packets: dict[str, Any],
     *,
@@ -334,6 +379,8 @@ def _raw_decision_integrity_readings(
                     "hypothesis_id": f"H{index + 1}",
                     "role": "PRIMARY" if index == 0 else "ALTERNATIVE",
                     "name": hypothesis_name,
+                    "judgment": "COMPETING",
+                    "adjudication": "UNRESOLVED",
                     "method_card_ref": method_card_ref,
                     "method_rulings": [
                         {
@@ -353,9 +400,7 @@ def _raw_decision_integrity_readings(
             "regime_decision": {
                 "classification": "UNRESOLVED" if variant == "A" else "ORDINARY_WEAK",
                 "effective_root_status": "ABSENT" if variant == "A" else "PRESENT",
-                "effective_root_coordinates": list(
-                    minimum_anti_follow_root_coordinates(packet)
-                ),
+                "effective_root_coordinates": list(minimum_anti_follow_root_coordinates(packet)),
                 "rooted_visible_support_status": "ABSENT",
                 "dominant_chain_status": "UNRESOLVED",
                 "competition_kinds": (
@@ -408,10 +453,10 @@ def test_public_definition_seals_full_inputs_and_inference_limit() -> None:
     assert content_hash(mutated) != definition["definition_hash"]
 
 
-def test_catalog_has_seven_unique_real_calendar_experiments() -> None:
+def test_catalog_has_eight_unique_real_calendar_experiments() -> None:
     definitions = synthetic_experiment_public_definitions()
-    assert len(definitions) == 7
-    assert len({item["experiment_ref"] for item in definitions}) == 7
+    assert len(definitions) == 8
+    assert len({item["experiment_ref"] for item in definitions}) == 8
     assert definitions[0]["experiment_ref"] == FIRST_SYNTHETIC_EXPERIMENT_REF
     assert definitions[1]["experiment_ref"] == ROOT_IDENTITY_SYNTHETIC_EXPERIMENT_REF
     assert definitions[1]["family"] == "CONTROLLED_ROOT_IDENTITY_PAIR"
@@ -443,6 +488,14 @@ def test_catalog_has_seven_unique_real_calendar_experiments() -> None:
         "B": ["乙亥", "壬午", "庚辰", "甲申"],
         "changed_slots": ["hour"],
         "legal_hour_pillar_change": "壬午 → 甲申",
+    }
+    assert definitions[7]["experiment_ref"] == (MONTH_COMMAND_REGIME_GENERALIZATION_EXPERIMENT_REF)
+    assert definitions[7]["family"] == ("CONTROLLED_MONTH_COMMAND_REGIME_GENERALIZATION_PAIR")
+    assert definitions[7]["full_pillar_delta"] == {
+        "A": ["庚午", "己卯", "壬午", "丙午"],
+        "B": ["庚午", "己卯", "壬午", "辛亥"],
+        "changed_slots": ["hour"],
+        "legal_hour_pillar_change": "丙午 → 辛亥",
     }
     assert "不证明卯中乙无根" in definitions[1]["inference_limit"]
     assert definitions[2]["experiment_ref"] == (HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF)
@@ -497,7 +550,7 @@ def test_schema_metadata_matches_synthetic_run_table() -> None:
 def test_catalog_routes_multiple_experiments_and_isolates_run_history() -> None:
     service = SyntheticExperimentService(engine)
     catalog = service.catalog()
-    assert catalog["catalog_version"] == ("v60.mingli-synthetic-experiment-catalog.006")
+    assert catalog["catalog_version"] == ("v60.mingli-synthetic-experiment-catalog.007")
     entries = {item["experiment_ref"]: item for item in catalog["experiments"]}
     assert set(entries) == {
         FIRST_SYNTHETIC_EXPERIMENT_REF,
@@ -507,6 +560,7 @@ def test_catalog_routes_multiple_experiments_and_isolates_run_history() -> None:
         HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF,
         REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT_REF,
         CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT_REF,
+        MONTH_COMMAND_REGIME_GENERALIZATION_EXPERIMENT_REF,
     }
     for experiment_ref, entry in entries.items():
         assert all(run["experiment_ref"] == experiment_ref for run in entry["runs"])
@@ -1190,18 +1244,19 @@ def test_regime_work_path_generalization_pair_locks_facts_without_fixing_winner(
         "壬戌",
     )
     assert packets["A"].day_master_support.same_element_hidden_support == ()
-    assert packets["B"].day_master_support.same_element_hidden_support == (
-        "hour支藏戊",
-    )
+    assert packets["B"].day_master_support.same_element_hidden_support == ("hour支藏戊",)
     assert passing["outcome"] == "PASS"
     assert passing["changed_pass_count"] == 5
     assert passing["hold_pass_count"] == 3
     assert broken_binding["outcome"] == "MODEL_FAIL"
-    assert next(
-        item
-        for item in broken_binding["checks"]
-        if item["check_ref"] == "REGIME_PATH_FINAL_WORK_PATH_BINDING"
-    )["status"] == "FAIL"
+    assert (
+        next(
+            item
+            for item in broken_binding["checks"]
+            if item["check_ref"] == "REGIME_PATH_FINAL_WORK_PATH_BINDING"
+        )["status"]
+        == "FAIL"
+    )
     assert SyntheticExperimentEvaluation.model_validate(passing).dev_gold_version == (
         "v60.mingli-synthetic-experiment-dev-gold.005"
     )
@@ -1284,6 +1339,74 @@ def test_decision_discipline_pair_closes_three_candidate_ledger_without_fixing_w
     )
 
 
+def test_month_command_pair_separates_coordinates_and_keeps_winner_open() -> None:
+    packets = _seed_experiment_and_packets(MONTH_COMMAND_REGIME_GENERALIZATION_EXPERIMENT)
+    safe_text = "月令卯木，本气乙为伤官；月干己土为正官。"
+    passing = evaluate_synthetic_experiment(
+        experiment=MONTH_COMMAND_REGIME_GENERALIZATION_EXPERIMENT,
+        readings=_month_command_readings(
+            packets,
+            raw_texts={"A": safe_text, "B": safe_text},
+            normalized_texts={"A": safe_text, "B": safe_text},
+        ),
+        packets=packets,
+    )
+    conflated = evaluate_synthetic_experiment(
+        experiment=MONTH_COMMAND_REGIME_GENERALIZATION_EXPERIMENT,
+        readings=_month_command_readings(
+            packets,
+            raw_texts={"A": "月令正官己土当令。", "B": safe_text},
+            normalized_texts={"A": safe_text, "B": safe_text},
+        ),
+        packets=packets,
+    )
+    explicitly_separated = evaluate_synthetic_experiment(
+        experiment=MONTH_COMMAND_REGIME_GENERALIZATION_EXPERIMENT,
+        readings=_month_command_readings(
+            packets,
+            raw_texts={"A": "月令不是己土，己土只是月干正官。", "B": safe_text},
+            normalized_texts={"A": safe_text, "B": safe_text},
+        ),
+        packets=packets,
+    )
+
+    assert tuple(item.pillar for item in packets["A"].pillars) == (
+        "庚午",
+        "己卯",
+        "壬午",
+        "丙午",
+    )
+    assert tuple(item.pillar for item in packets["B"].pillars) == (
+        "庚午",
+        "己卯",
+        "壬午",
+        "辛亥",
+    )
+    assert packets["A"].month_command_branch == packets["B"].month_command_branch == "卯"
+    assert packets["A"].pillars[1].visible_ten_god == "正官"
+    assert packets["A"].pillars[1].hidden_ten_gods == ("伤官",)
+    assert packets["A"].day_master_support.same_element_hidden_support == ()
+    assert packets["B"].day_master_support.same_element_hidden_support == ("hour支藏壬",)
+    assert len(packets["A"].mechanism_observations) == 3
+    assert len(packets["B"].mechanism_observations) == 2
+    assert passing["outcome"] == "PASS"
+    assert explicitly_separated["outcome"] == "PASS"
+    assert conflated["outcome"] == "MODEL_FAIL"
+    coordinate_check = next(
+        item
+        for item in conflated["checks"]
+        if item["check_ref"] == "MONTH_COMMAND_PROSE_COORDINATES_SEPARATED"
+    )
+    assert coordinate_check["status"] == "FAIL"
+    assert {item["code"] for item in coordinate_check["A"]["raw"]} == {
+        "MONTH_STEM_AS_MONTH_COMMAND",
+        "MONTH_VISIBLE_TEN_GOD_AS_MONTH_COMMAND",
+    }
+    assert SyntheticExperimentEvaluation.model_validate(passing).dev_gold_version == (
+        "v60.mingli-synthetic-experiment-dev-gold.006"
+    )
+
+
 def test_raw_integrity_accepts_two_distinct_cards_from_three_candidate_pool() -> None:
     packets = _seed_experiment_and_packets(REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT)
     readings = _raw_decision_integrity_readings(
@@ -1304,10 +1427,33 @@ def test_raw_integrity_accepts_two_distinct_cards_from_three_candidate_pool() ->
     assert checks["A_RAW_METHOD_CARD_H1_COMPLETE"] is True
     assert checks["A_RAW_METHOD_CARD_H2_COMPLETE"] is True
     assert checks["A_RAW_METHOD_FALSIFIERS_ACTIONABLE"] is True
+    assert checks["A_RAW_HYPOTHESIS_JUDGMENT_COHERENT"] is True
     assert checks["A_RAW_REVERSAL_ACTIONABLE"] is True
     assert checks["A_RAW_CANDIDATE_COVERAGE_COMPLETE"] is True
     assert checks["A_RAW_REGIME_PACKET_FACTS_BOUND"] is True
     assert checks["A_RAW_REPAIRS_RECEIPTED"] is True
+
+
+def test_raw_integrity_rejects_supported_judgment_for_conditional_method() -> None:
+    packets = _seed_experiment_and_packets(REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT)
+    readings = _raw_decision_integrity_readings(packets)
+    raw_hypothesis = readings["A"].normalization_receipt.raw_output["hypotheses"][0]
+    raw_hypothesis["method_rulings"][0]["ruling"] = "CONDITIONAL"
+    raw_hypothesis["adjudication"] = "CONDITIONAL"
+    raw_hypothesis["judgment"] = "SUPPORTED"
+    checks: dict[str, bool] = {}
+
+    def capture(check_ref: str, _track: str, passed: bool, *_: Any) -> None:
+        checks[check_ref] = passed
+
+    add_raw_decision_integrity_checks(
+        add=capture,
+        readings=readings,
+        packets=packets,
+    )
+
+    assert checks["A_RAW_HYPOTHESIS_JUDGMENT_COHERENT"] is False
+    assert checks["A_RAW_REPAIRS_RECEIPTED"] is False
 
 
 def test_raw_integrity_turns_malformed_values_into_checks_not_runner_errors() -> None:
@@ -1434,9 +1580,7 @@ def test_hidden_rank_prompt_scaffolds_only_packet_legal_regime_and_method_slots(
         assert unresolved["classification"] == "UNRESOLVED"
         assert unresolved["required_competition_kinds"] == ("HIDDEN_RESOURCE",)
         assert unresolved["forbidden_competition_kinds"] == ("VISIBLE_PEER",)
-        assert unresolved["required_evidence_ids"] == (
-            packet.day_master_support.evidence_id,
-        )
+        assert unresolved["required_evidence_ids"] == (packet.day_master_support.evidence_id,)
         assert scaffold["mode"] == "FIXED_SLOTS_COPY_EXACTLY"
         for slot in scaffold["slots"]:
             assert all(

@@ -44,6 +44,6 @@
     "imports_mock_data": false,
     "imports_prototype_state": false,
     "runtime_data_authority": "V60_CANONICAL",
-    "dream_scope": "FROZEN_EXCLUDED"
+    "product_scope": "MINGLI_INTERNAL_LAB_ONLY"
   }
 }

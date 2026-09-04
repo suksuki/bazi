@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import type { RuntimeMediaCue } from "./api";
+import type { RuntimeMediaCue } from "./publicRuntimeTypes";
 
 export function useReducedMotion() {
   const [reduced, setReduced] = useState(false);

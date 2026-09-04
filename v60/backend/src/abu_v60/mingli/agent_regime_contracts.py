@@ -55,9 +55,7 @@ class AgentRegimeDecision(BaseModel):
 
     @model_validator(mode="after")
     def typed_lists_are_consistent(self) -> AgentRegimeDecision:
-        if len(self.effective_root_coordinates) != len(
-            set(self.effective_root_coordinates)
-        ):
+        if len(self.effective_root_coordinates) != len(set(self.effective_root_coordinates)):
             raise ValueError("mingli_agent_regime_root_coordinates_not_unique")
         if self.effective_root_status != "PRESENT" and self.effective_root_coordinates:
             raise ValueError("mingli_agent_regime_nonpresent_root_has_coordinates")

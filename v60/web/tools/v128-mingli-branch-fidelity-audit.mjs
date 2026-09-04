@@ -38,7 +38,9 @@ expect(
 );
 expect(
   journey.includes("videoRef.current?.pause()") &&
-    journey.includes('onLayerChange("principle")') &&
+    journey.includes('setGrowthState("growing")') &&
+    journey.includes("setRevealedCount(0)") &&
+    journey.includes("setReplayNonce((current) => current + 1)") &&
     !journey.includes("if (!video) return"),
   "branch:replay-must-work-after-refresh-static-poster-recovery",
 );
@@ -49,7 +51,7 @@ expect(
 );
 expect(
   journey.includes('revealed ? "is-revealed" : ""') &&
-    journey.includes("disabled={!ready || !revealed}"),
+    journey.includes("disabled={!ready || !revealed || agentGenerating}"),
   "branch:unrevealed-organs-must-remain-hidden-and-inert",
 );
 expect(
@@ -86,8 +88,8 @@ expect(
 expect(
   manifest.boundaries.runtime_data_authority === "V60_CANONICAL" &&
     manifest.boundaries.imports_mock_data === false &&
-    manifest.boundaries.dream_scope === "FROZEN_EXCLUDED",
-  "manifest:v128-experience-import-crossed-domain-or-dream-boundary",
+    manifest.boundaries.product_scope === "MINGLI_ONLY",
+  "manifest:v128-experience-import-crossed-product-boundary",
 );
 
 const assets = Object.fromEntries(registry.assets.map((asset) => [asset.asset_ref, asset]));
@@ -117,7 +119,7 @@ console.log(
       dayGrowthAsset: "mingli-branch-growth-day-v7",
       sequentialRevealSeconds: manifest.experience_contract.layer_reveal_seconds,
       domainAuthority: manifest.boundaries.runtime_data_authority,
-      dreamScope: manifest.boundaries.dream_scope,
+      productScope: manifest.boundaries.product_scope,
       importedMockState: false,
       byteVerifiedAssetCount: Object.keys(expectedAssets).length,
       failures,

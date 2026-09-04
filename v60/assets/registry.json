@@ -8,24 +8,14 @@
   },
   "assets": [
     {
-      "asset_ref": "dream.grove.clean.v1",
-      "asset_version": "v1",
-      "runtime_path": "web/public/assets/dream/grove-clean-v1.png",
-      "sha256": "e97ec6b5f856e15371cad08c91609b4585d55eea112ec9b1176ebfb5bd6eca54",
-      "media_type": "image/png",
-      "source_manifest_ref": "v50/apps/product/static/l5/assets/dream/porch-v5/manifest.json",
-      "source_status": "OWNER_APPROVED",
-      "v60_role": "dream_foundation_background"
-    },
-    {
-      "asset_ref": "dream.v60.life-world.clean.v1",
+      "asset_ref": "experience.v60.login-life-tree-background.v1",
       "asset_version": "V60_LIFE_WORLD_BACKGROUND_CLEAN_V1",
-      "runtime_path": "web/public/assets/dream/v60-life-world-clean-v1.png",
+      "runtime_path": "web/public/assets/brand/v60-life-tree-login-background-v1.png",
       "sha256": "2b9c47ee05d0c6967ce5173e3fc353c64f9de82d09e13130797738d61b874df2",
       "media_type": "image/png",
-      "source_manifest_ref": "media/manifests/V60_LIFE_WORLD_BACKGROUND_CLEAN_V1.v1.json",
+      "source_manifest_ref": "media/manifests/V60_LIFE_TREE_LOGIN_BACKGROUND_V1.v1.json",
       "source_status": "OWNER_APPROVED",
-      "v60_role": "v60_primary_life_tree_world_background"
+      "v60_role": "v60_login_life_tree_background"
     },
     {
       "asset_ref": "brand.abuknows-v60.logo.transparent.v1",
@@ -38,36 +28,6 @@
       "v60_role": "v60_primary_brand_lockup"
     },
     {
-      "asset_ref": "abu.seated.idle.v1",
-      "asset_version": "ABU_01_SEATED_IDLE_LOOP_V3",
-      "runtime_path": "web/public/assets/abu/abu-seated-idle-v1.webm",
-      "sha256": "a63cfd680f27eae5f8fcbb317231d1a0e15ec37db52b854d9163777f769d2ec7",
-      "media_type": "video/webm",
-      "source_manifest_ref": "v50/apps/product/static/l5/assets/abu/v12-actor-pass/abu-01-seated-idle-loop-v3/manifest.json",
-      "source_status": "LIBRARY_READY",
-      "v60_role": "dream_quiet_companion"
-    },
-    {
-      "asset_ref": "abu.seated.idle.poster.v1",
-      "asset_version": "ABU_01_SEATED_IDLE_LOOP_V3",
-      "runtime_path": "web/public/assets/abu/abu-seated-idle-v1.png",
-      "sha256": "6aa0b95c6b7f325286087eb665c943f2aa49c2d43a0615b64102a3027b128702",
-      "media_type": "image/png",
-      "source_manifest_ref": "v50/apps/product/static/l5/assets/abu/v12-actor-pass/abu-01-seated-idle-loop-v3/manifest.json",
-      "source_status": "LIBRARY_READY",
-      "v60_role": "dream_reduced_motion_companion"
-    },
-    {
-      "asset_ref": "abu.seated.idle.webp.v1",
-      "asset_version": "ABU_01_SEATED_IDLE_LOOP_V3",
-      "runtime_path": "web/public/assets/abu/abu-seated-idle-v1.webp",
-      "sha256": "3b8adb105db8749ff6da57d015e80ec8c747fc96253e32ef4f0b078de2a2aed8",
-      "media_type": "image/webp",
-      "source_manifest_ref": "media/manifests/ABU_01_SEATED_IDLE_LOOP_V3.v1.imported.json",
-      "source_status": "LIBRARY_READY",
-      "v60_role": "dream_companion_animation_fallback"
-    },
-    {
       "asset_ref": "abu.v60.seated.poster.v1",
       "asset_version": "ABU_V60_SEATED_TRANSPARENT_V1",
       "runtime_path": "web/public/assets/abu/v60/abu-v60-seated-transparent-v1.png",
@@ -76,146 +36,6 @@
       "source_manifest_ref": "media/manifests/ABU_V60_SEATED_TRANSPARENT_V1.v1.json",
       "source_status": "OWNER_APPROVED",
       "v60_role": "abu_v60_primary_static_companion"
-    },
-    {
-      "asset_ref": "abu.follow.walk.v1",
-      "asset_version": "ABU_02_CALM_FOLLOW_WALK_LOOP_V1",
-      "runtime_path": "web/public/assets/abu/abu-02-calm-follow-walk-loop-v1/actor.webm",
-      "sha256": "576094e3c291180078a08f0246ee495071b0804b76e8d2fd4b7cfdc7a1034cfd",
-      "media_type": "video/webm",
-      "source_manifest_ref": "media/manifests/ABU_02_CALM_FOLLOW_WALK_LOOP_V1.v1.imported.json",
-      "source_status": "LIBRARY_READY",
-      "v60_role": "dream_delayed_follow_actor"
-    },
-    {
-      "asset_ref": "abu.follow.walk.webp.v1",
-      "asset_version": "ABU_02_CALM_FOLLOW_WALK_LOOP_V1",
-      "runtime_path": "web/public/assets/abu/abu-02-calm-follow-walk-loop-v1/actor.webp",
-      "sha256": "f2e8047d2dc59ea232578d0a4c63484f89b41d9d705037ecaa455075f154f218",
-      "media_type": "image/webp",
-      "source_manifest_ref": "media/manifests/ABU_02_CALM_FOLLOW_WALK_LOOP_V1.v1.imported.json",
-      "source_status": "LIBRARY_READY",
-      "v60_role": "dream_delayed_follow_animation_fallback"
-    },
-    {
-      "asset_ref": "abu.follow.walk.poster.v1",
-      "asset_version": "ABU_02_CALM_FOLLOW_WALK_LOOP_V1",
-      "runtime_path": "web/public/assets/abu/abu-02-calm-follow-walk-loop-v1/poster.png",
-      "sha256": "b8a3083f2534d6268a9e82e8b6f294ee019e4009f5e5895acae38f3d63b2d1d3",
-      "media_type": "image/png",
-      "source_manifest_ref": "media/manifests/ABU_02_CALM_FOLLOW_WALK_LOOP_V1.v1.imported.json",
-      "source_status": "LIBRARY_READY",
-      "v60_role": "dream_delayed_follow_reduced_motion"
-    },
-    {
-      "asset_ref": "audio.morning-glints.opening.mp3.v1",
-      "asset_version": "AUDIO_MORNING_GLINTS_IN_THE_GROVE_V1",
-      "runtime_path": "web/public/assets/audio/morning-glints-in-the-grove-v1/opening.mp3",
-      "sha256": "8b0e7699b53de587c6043b36fc947719c7bbd6337cc73ab34342f8f16d53c16d",
-      "media_type": "audio/mpeg",
-      "source_manifest_ref": "media/manifests/AUDIO_MORNING_GLINTS_IN_THE_GROVE_V1.v1.imported.json",
-      "source_status": "OWNER_APPROVED",
-      "v60_role": "dream_opening_music_mp3"
-    },
-    {
-      "asset_ref": "audio.morning-glints.opening.opus.v1",
-      "asset_version": "AUDIO_MORNING_GLINTS_IN_THE_GROVE_V1",
-      "runtime_path": "web/public/assets/audio/morning-glints-in-the-grove-v1/opening.opus",
-      "sha256": "c962fc87d045b579012e2e9bd1f400ac057aff79dce9948d50e9734a66db95ef",
-      "media_type": "audio/ogg; codecs=opus",
-      "source_manifest_ref": "media/manifests/AUDIO_MORNING_GLINTS_IN_THE_GROVE_V1.v1.imported.json",
-      "source_status": "OWNER_APPROVED",
-      "v60_role": "dream_opening_music_opus"
-    },
-    {
-      "asset_ref": "dream.semantic-tree.base.v1",
-      "asset_version": "SEMANTIC_TREE_VISIBLE_V1",
-      "runtime_path": "web/public/assets/tree/semantic-tree-v1/tree_base_clean.png",
-      "sha256": "dfd661d7e1b171a77afdf75224c453de2d7984ddfe2531df06f2ae11dd187be9",
-      "media_type": "image/png",
-      "source_manifest_ref": "SEMANTIC_TREE_VISIBLE_V1.zip#sha256:2bd3f4d277462eec9200622315e2124ddd8e9ed417f12603500dfc9adf777efc",
-      "source_status": "OWNER_APPROVED",
-      "v60_role": "life_tree_base"
-    },
-    {
-      "asset_ref": "dream.semantic-tree.leaf-world.v1",
-      "asset_version": "SEMANTIC_TREE_VISIBLE_V1",
-      "runtime_path": "web/public/assets/tree/semantic-tree-v1/leaf_basic_01.png",
-      "sha256": "e13b7640c3cbed3be6a185a550e0f4df39df7dedc37dbc5468d0c1b93a9288b8",
-      "media_type": "image/png",
-      "source_manifest_ref": "SEMANTIC_TREE_VISIBLE_V1.zip#sha256:2bd3f4d277462eec9200622315e2124ddd8e9ed417f12603500dfc9adf777efc",
-      "source_status": "OWNER_APPROVED",
-      "v60_role": "life_tree_evidence_leaf_world"
-    },
-    {
-      "asset_ref": "dream.semantic-tree.leaf-structure.v1",
-      "asset_version": "SEMANTIC_TREE_VISIBLE_V1",
-      "runtime_path": "web/public/assets/tree/semantic-tree-v1/leaf_basic_02.png",
-      "sha256": "f13312a1b25fd117208ea0cb67c932ed2af9b68d7f8a53cee7a218690a3837f8",
-      "media_type": "image/png",
-      "source_manifest_ref": "SEMANTIC_TREE_VISIBLE_V1.zip#sha256:2bd3f4d277462eec9200622315e2124ddd8e9ed417f12603500dfc9adf777efc",
-      "source_status": "OWNER_APPROVED",
-      "v60_role": "life_tree_evidence_leaf_structure"
-    },
-    {
-      "asset_ref": "dream.semantic-tree.branch.v1",
-      "asset_version": "SEMANTIC_TREE_VISIBLE_V1",
-      "runtime_path": "web/public/assets/tree/semantic-tree-v1/trunk_backbone_01.png",
-      "sha256": "cc594091d7ae29c91b54813817570d9aac2c49c531447e7d717604f7eb450837",
-      "media_type": "image/png",
-      "source_manifest_ref": "SEMANTIC_TREE_VISIBLE_V1.zip#sha256:2bd3f4d277462eec9200622315e2124ddd8e9ed417f12603500dfc9adf777efc",
-      "source_status": "OWNER_APPROVED",
-      "v60_role": "life_tree_structure_branch"
-    },
-    {
-      "asset_ref": "dream.semantic-tree.energy.v1",
-      "asset_version": "SEMANTIC_TREE_VISIBLE_V1",
-      "runtime_path": "web/public/assets/tree/semantic-tree-v1/energy_flow_mask.png",
-      "sha256": "f8c1a9f8453f29896cbbd170b48308a2a1f1a84df24badd2b7f2948e465b6e4f",
-      "media_type": "image/png",
-      "source_manifest_ref": "SEMANTIC_TREE_VISIBLE_V1.zip#sha256:2bd3f4d277462eec9200622315e2124ddd8e9ed417f12603500dfc9adf777efc",
-      "source_status": "OWNER_APPROVED",
-      "v60_role": "life_tree_energy_transition"
-    },
-    {
-      "asset_ref": "dream.semantic-tree.flower-bud.v1",
-      "asset_version": "SEMANTIC_TREE_VISIBLE_V1",
-      "runtime_path": "web/public/assets/tree/semantic-tree-v1/flower_bud_closed.png",
-      "sha256": "2e96823d2cb5ed3956db70afcda82800f65e0ba9f6c33a79f3f82c5e00a6b713",
-      "media_type": "image/png",
-      "source_manifest_ref": "SEMANTIC_TREE_VISIBLE_V1.zip#sha256:2bd3f4d277462eec9200622315e2124ddd8e9ed417f12603500dfc9adf777efc",
-      "source_status": "OWNER_APPROVED",
-      "v60_role": "life_tree_question_flower_bud"
-    },
-    {
-      "asset_ref": "dream.semantic-tree.flower-open.v1",
-      "asset_version": "SEMANTIC_TREE_VISIBLE_V1",
-      "runtime_path": "web/public/assets/tree/semantic-tree-v1/flower_open.png",
-      "sha256": "14a7d4f92b317542dbfb4e2036021b7225c730dafe0ed7aeff8bf3d2270b2f86",
-      "media_type": "image/png",
-      "source_manifest_ref": "SEMANTIC_TREE_VISIBLE_V1.zip#sha256:2bd3f4d277462eec9200622315e2124ddd8e9ed417f12603500dfc9adf777efc",
-      "source_status": "OWNER_APPROVED",
-      "v60_role": "life_tree_question_flower_open"
-    },
-    {
-      "asset_ref": "dream.semantic-tree.fruit.v1",
-      "asset_version": "SEMANTIC_TREE_VISIBLE_V1",
-      "runtime_path": "web/public/assets/tree/semantic-tree-v1/fruit_white.png",
-      "sha256": "7619465b06110857dff001edb31b3a00de11326765f8a7fe0d4b7721cac08452",
-      "media_type": "image/png",
-      "source_manifest_ref": "SEMANTIC_TREE_VISIBLE_V1.zip#sha256:2bd3f4d277462eec9200622315e2124ddd8e9ed417f12603500dfc9adf777efc",
-      "source_status": "OWNER_APPROVED",
-      "v60_role": "life_tree_outcome_fruit"
-    },
-    {
-      "asset_ref": "dream.semantic-tree.foreground.v1",
-      "asset_version": "SEMANTIC_TREE_VISIBLE_V1",
-      "runtime_path": "web/public/assets/tree/semantic-tree-v1/foreground_occlusion.png",
-      "sha256": "8fbce9ff56d7c2a107c3b04df87aa950031a7a8a6547ece9c6addabe6a3b59d2",
-      "media_type": "image/png",
-      "source_manifest_ref": "SEMANTIC_TREE_VISIBLE_V1.zip#sha256:2bd3f4d277462eec9200622315e2124ddd8e9ed417f12603500dfc9adf777efc",
-      "source_status": "OWNER_APPROVED",
-      "v60_role": "life_tree_foreground_occlusion"
     },
     {
       "asset_ref": "abu.v60.seated.idle.v1",
@@ -246,36 +66,6 @@
       "source_manifest_ref": "media/manifests/ABU_V60_SEATED_IDLE_LOOP_V1.v1.json",
       "source_status": "OWNER_APPROVED",
       "v60_role": "abu_v60_quiet_companion_reduced_motion"
-    },
-    {
-      "asset_ref": "abu.v60.guide-left.v1",
-      "asset_version": "ABU_V60_05_GUIDE_LEFT_ONCE_V1",
-      "runtime_path": "web/public/assets/abu/v60/abu-v60-guide-left-once-v1/actor.webm",
-      "sha256": "3452a67fef266dc3509d7d6db74fa9224349535e06ba29a3888419855a38aa67",
-      "media_type": "video/webm",
-      "source_manifest_ref": "media/manifests/ABU_V60_05_GUIDE_LEFT_ONCE_V1.v1.json",
-      "source_status": "OWNER_APPROVED",
-      "v60_role": "abu_v60_guide_left_once"
-    },
-    {
-      "asset_ref": "abu.v60.guide-left.webp.v1",
-      "asset_version": "ABU_V60_05_GUIDE_LEFT_ONCE_V1",
-      "runtime_path": "web/public/assets/abu/v60/abu-v60-guide-left-once-v1/actor.webp",
-      "sha256": "86530504c90e9e0f1ae0c13315bef4fefc1b4bdc80dc2bb5981b541ba8dec825",
-      "media_type": "image/webp",
-      "source_manifest_ref": "media/manifests/ABU_V60_05_GUIDE_LEFT_ONCE_V1.v1.json",
-      "source_status": "OWNER_APPROVED",
-      "v60_role": "abu_v60_guide_left_animation_fallback"
-    },
-    {
-      "asset_ref": "abu.v60.guide-left.poster.v1",
-      "asset_version": "ABU_V60_05_GUIDE_LEFT_ONCE_V1",
-      "runtime_path": "web/public/assets/abu/v60/abu-v60-guide-left-once-v1/poster.png",
-      "sha256": "27aa1cb501f2b86e8c141af42ad1b19a57d0ed46df3019b7957eda4e20356e82",
-      "media_type": "image/png",
-      "source_manifest_ref": "media/manifests/ABU_V60_05_GUIDE_LEFT_ONCE_V1.v1.json",
-      "source_status": "OWNER_APPROVED",
-      "v60_role": "abu_v60_guide_left_reduced_motion"
     },
     {
       "asset_ref": "dodo.v108.idle.v1",

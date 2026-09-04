@@ -56,10 +56,7 @@ class MingliStageService:
         readings: MingliReadingStore | None = None,
         current_date_provider: Callable[[str], date] | None = None,
         runtime_settings: Settings | None = None,
-        research_subject_resolver: Callable[
-            [str], MingliResearchStageBinding | None
-        ]
-        | None = None,
+        research_subject_resolver: Callable[[str], MingliResearchStageBinding | None] | None = None,
     ) -> None:
         self._engine = engine
         self._cases = cases or MingliCaseService(engine)
@@ -90,9 +87,7 @@ class MingliStageService:
                 "display_name": item["display_name"],
                 "subject_kind": item["subject_kind"],
                 "identity_badge": (
-                    "私密真实档案"
-                    if item["subject_kind"] == "HUMAN_OWNER"
-                    else "真实参考档案"
+                    "私密真实档案" if item["subject_kind"] == "HUMAN_OWNER" else "真实参考档案"
                 ),
                 "default_narrator_actor_id": "ABU_NARRATOR_V1",
             }

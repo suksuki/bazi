@@ -47,23 +47,13 @@ class RelationEffectProposalDimension(BaseModel):
         self,
     ) -> RelationEffectProposalDimension:
         if len(self.evidence_refs) != len(set(self.evidence_refs)):
-            raise ValueError(
-                "relation_effect_proposal_dimension_evidence_not_unique"
-            )
-        if self.status == "MISSING" and (
-            self.statement is not None or self.evidence_refs
-        ):
-            raise ValueError(
-                "relation_effect_missing_dimension_cannot_claim_evidence"
-            )
+            raise ValueError("relation_effect_proposal_dimension_evidence_not_unique")
+        if self.status == "MISSING" and (self.statement is not None or self.evidence_refs):
+            raise ValueError("relation_effect_missing_dimension_cannot_claim_evidence")
         if self.status != "MISSING" and not self.statement:
-            raise ValueError(
-                "relation_effect_non_missing_dimension_statement_required"
-            )
+            raise ValueError("relation_effect_non_missing_dimension_statement_required")
         if self.status == "VERIFIED" and not self.evidence_refs:
-            raise ValueError(
-                "relation_effect_verified_dimension_evidence_required"
-            )
+            raise ValueError("relation_effect_verified_dimension_evidence_required")
         return self
 
 
@@ -74,9 +64,7 @@ class BaziRelationEffectAdmissionPolicy(BaseModel):
 
     policy_ref: str = Field(min_length=1)
     policy_hash: str = Field(min_length=64, max_length=64)
-    policy_version: Literal[
-        "v60.knowledge-relation-effect-admission-policy.001"
-    ]
+    policy_version: Literal["v60.knowledge-relation-effect-admission-policy.001"]
     governance_status: Literal["OWNER_AUTHORIZED_ADMISSION_BOUNDARY"]
     runtime_scope: Literal["RELATION_EFFECT_RULE_PREFLIGHT"]
     professionally_reviewed: Literal[False]
@@ -103,20 +91,14 @@ class BaziRelationEffectAdmissionPolicy(BaseModel):
         self,
     ) -> BaziRelationEffectAdmissionPolicy:
         if self.required_dimensions != RELATION_EFFECT_RULE_DIMENSIONS:
-            raise ValueError(
-                "relation_effect_admission_policy_dimensions_invalid"
-            )
+            raise ValueError("relation_effect_admission_policy_dimensions_invalid")
         if self.forbidden_shortcuts != (
             "AUTOMATIC_RELATION_DAMAGE",
             "AUTOMATIC_SOURCE_UNUSABLE",
         ):
-            raise ValueError(
-                "relation_effect_admission_policy_shortcuts_invalid"
-            )
+            raise ValueError("relation_effect_admission_policy_shortcuts_invalid")
         if self.admitted_effect_rule_profile_refs:
-            raise ValueError(
-                "relation_effect_admission_policy_unreviewed_rule_profile"
-            )
+            raise ValueError("relation_effect_admission_policy_unreviewed_rule_profile")
         identity = self.model_dump(
             mode="json",
             exclude={"policy_ref", "policy_hash"},
@@ -137,9 +119,7 @@ class BaziRelationEffectAdmissionPolicy(BaseModel):
         source_refs: tuple[str, ...],
     ) -> BaziRelationEffectAdmissionPolicy:
         identity = {
-            "policy_version": (
-                "v60.knowledge-relation-effect-admission-policy.001"
-            ),
+            "policy_version": ("v60.knowledge-relation-effect-admission-policy.001"),
             "governance_status": "OWNER_AUTHORIZED_ADMISSION_BOUNDARY",
             "runtime_scope": "RELATION_EFFECT_RULE_PREFLIGHT",
             "professionally_reviewed": False,
@@ -172,9 +152,7 @@ class BaziRelationEffectRuleProposal(BaseModel):
 
     proposal_ref: str = Field(min_length=1)
     proposal_hash: str = Field(min_length=64, max_length=64)
-    proposal_version: Literal[
-        "v60.knowledge-relation-effect-rule-proposal.001"
-    ]
+    proposal_version: Literal["v60.knowledge-relation-effect-rule-proposal.001"]
     claim_code: Literal["AUTOMATIC_SOURCE_DAMAGE_FROM_SIX_CLASH"]
     claim: str = Field(min_length=1)
     relation_type: Literal["six_clash_membership"]
@@ -198,21 +176,15 @@ class BaziRelationEffectRuleProposal(BaseModel):
     ) -> BaziRelationEffectRuleProposal:
         if self.exact_branch_pair != ("子", "午"):
             raise ValueError("relation_effect_proposal_branch_pair_invalid")
-        if tuple(
-            item.dimension_id for item in self.dimension_submissions
-        ) != RELATION_EFFECT_RULE_DIMENSIONS:
+        if (
+            tuple(item.dimension_id for item in self.dimension_submissions)
+            != RELATION_EFFECT_RULE_DIMENSIONS
+        ):
             raise ValueError("relation_effect_proposal_dimensions_invalid")
         if self.professional_source_manifest:
-            raise ValueError(
-                "relation_effect_unreviewed_proposal_source_manifest_invalid"
-            )
-        if (
-            self.owner_review_receipt_ref is not None
-            or self.owner_review_receipt_hash is not None
-        ):
-            raise ValueError(
-                "relation_effect_unreviewed_proposal_receipt_invalid"
-            )
+            raise ValueError("relation_effect_unreviewed_proposal_source_manifest_invalid")
+        if self.owner_review_receipt_ref is not None or self.owner_review_receipt_hash is not None:
+            raise ValueError("relation_effect_unreviewed_proposal_receipt_invalid")
         identity = self.model_dump(
             mode="json",
             exclude={"proposal_ref", "proposal_hash"},
@@ -237,9 +209,7 @@ class BaziRelationEffectRuleProposal(BaseModel):
         ],
     ) -> BaziRelationEffectRuleProposal:
         identity: dict[str, Any] = {
-            "proposal_version": (
-                "v60.knowledge-relation-effect-rule-proposal.001"
-            ),
+            "proposal_version": ("v60.knowledge-relation-effect-rule-proposal.001"),
             "claim_code": "AUTOMATIC_SOURCE_DAMAGE_FROM_SIX_CLASH",
             "claim": claim,
             "relation_type": "six_clash_membership",
@@ -248,8 +218,7 @@ class BaziRelationEffectRuleProposal(BaseModel):
             "source_match_scope": "EXACT_IDENTITY_ONLY",
             "requested_effect_atom": "AUTOMATIC_SOURCE_DAMAGE",
             "dimension_submissions": tuple(
-                item.model_dump(mode="json")
-                for item in dimension_submissions
+                item.model_dump(mode="json") for item in dimension_submissions
             ),
             "professional_source_manifest": (),
             "owner_review_receipt_ref": None,

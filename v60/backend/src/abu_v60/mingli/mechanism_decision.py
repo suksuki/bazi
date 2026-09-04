@@ -101,9 +101,7 @@ class MingliMechanismComparisonService:
                 record=record,
                 request=request,
                 expected_context_hash=(
-                    reasoner_context.context_hash
-                    if reasoner_context is not None
-                    else None
+                    reasoner_context.context_hash if reasoner_context is not None else None
                 ),
             )
             selected = record["route"].get("selected_candidate_ref")
@@ -335,29 +333,19 @@ def _verified_decision_trace(
         },
     )
     if decision_ref != expected_decision_ref:
-        raise MechanismComparisonUnavailableError(
-            "mechanism_decision_identity_invalid"
-        )
+        raise MechanismComparisonUnavailableError("mechanism_decision_identity_invalid")
     if content_hash(record) != decision_hash:
-        raise MechanismComparisonUnavailableError(
-            "mechanism_decision_record_hash_invalid"
-        )
+        raise MechanismComparisonUnavailableError("mechanism_decision_record_hash_invalid")
     if record.get("kernel_version") != DECISION_KERNEL_VERSION:
-        raise MechanismComparisonUnavailableError(
-            "mechanism_decision_kernel_version_invalid"
-        )
+        raise MechanismComparisonUnavailableError("mechanism_decision_kernel_version_invalid")
     request_payload = request.model_dump(mode="json")
     if record.get("request") != request_payload:
-        raise MechanismComparisonUnavailableError(
-            "mechanism_decision_record_request_mismatch"
-        )
+        raise MechanismComparisonUnavailableError("mechanism_decision_record_request_mismatch")
     route = _mapping(record.get("route"), "mechanism_decision_route_invalid")
     try:
         route_contract = DecisionRoute.model_validate(route)
     except ValueError as exc:
-        raise MechanismComparisonUnavailableError(
-            "mechanism_decision_route_invalid"
-        ) from exc
+        raise MechanismComparisonUnavailableError("mechanism_decision_route_invalid") from exc
     if (
         route.get("request_id") != request.request_id
         or route.get("authority") != row_authority
@@ -365,29 +353,19 @@ def _verified_decision_trace(
         or row_status != "RESOLVED"
         or dict(route) != route_contract.model_dump(mode="json")
     ):
-        raise MechanismComparisonUnavailableError(
-            "mechanism_decision_route_identity_mismatch"
-        )
+        raise MechanismComparisonUnavailableError("mechanism_decision_route_identity_mismatch")
     kernel_route = CognitiveDecisionKernel().route(request)
     expected_record_keys = {
         "kernel_version",
         "request",
         "route",
-        *(
-            ("proposal", "gate_receipt")
-            if row_authority == "LLM_REASONER"
-            else ()
-        ),
+        *(("proposal", "gate_receipt") if row_authority == "LLM_REASONER" else ()),
     }
     if set(record) != expected_record_keys:
-        raise MechanismComparisonUnavailableError(
-            "mechanism_decision_record_shape_invalid"
-        )
+        raise MechanismComparisonUnavailableError("mechanism_decision_record_shape_invalid")
 
     attention_candidate_refs = tuple(
-        candidate.candidate_ref
-        for candidate in request.candidates
-        if candidate.qualified
+        candidate.candidate_ref for candidate in request.candidates if candidate.qualified
     )
     bound_evidence_refs = tuple(request.evidence_refs)
     selected_candidate_ref = route.get("selected_candidate_ref")
@@ -395,9 +373,7 @@ def _verified_decision_trace(
         not isinstance(selected_candidate_ref, str)
         or selected_candidate_ref not in attention_candidate_refs
     ):
-        raise MechanismComparisonUnavailableError(
-            "mechanism_decision_selected_candidate_invalid"
-        )
+        raise MechanismComparisonUnavailableError("mechanism_decision_selected_candidate_invalid")
     selected_candidate = next(
         candidate
         for candidate in request.candidates
@@ -430,9 +406,7 @@ def _verified_decision_trace(
             or kernel_route.authority is not DecisionAuthority.LLM_REASONER
             or route_contract != expected_recorded_route
         ):
-            raise MechanismComparisonUnavailableError(
-                "mechanism_decision_route_not_canonical"
-            )
+            raise MechanismComparisonUnavailableError("mechanism_decision_route_not_canonical")
         proposal = _mapping(
             record.get("proposal"),
             "mechanism_decision_proposal_missing",
@@ -448,10 +422,9 @@ def _verified_decision_trace(
             raise MechanismComparisonUnavailableError(
                 "mechanism_decision_proposal_gate_contract_invalid"
             ) from exc
-        if (
-            dict(proposal) != proposal_contract.model_dump(mode="json")
-            or dict(gate) != gate_contract.model_dump(mode="json")
-        ):
+        if dict(proposal) != proposal_contract.model_dump(mode="json") or dict(
+            gate
+        ) != gate_contract.model_dump(mode="json"):
             raise MechanismComparisonUnavailableError(
                 "mechanism_decision_proposal_gate_contract_invalid"
             )
@@ -461,9 +434,7 @@ def _verified_decision_trace(
             proposal=proposal_contract,
         )
         if gate_contract != canonical_gate:
-            raise MechanismComparisonUnavailableError(
-                "mechanism_decision_gate_not_canonical"
-            )
+            raise MechanismComparisonUnavailableError("mechanism_decision_gate_not_canonical")
         reviewed_candidate_refs = _unique_string_tuple(
             proposal.get("reviewed_candidate_refs"),
             "mechanism_decision_reviewed_candidates_invalid",
@@ -476,37 +447,29 @@ def _verified_decision_trace(
             proposal.get("counter_evidence_refs"),
             "mechanism_decision_counter_refs_invalid",
         )
-        candidate_coverage_semantics = (
-            "PROVIDER_REVIEWED_ATTENTION_CANDIDATES"
-        )
+        candidate_coverage_semantics = "PROVIDER_REVIEWED_ATTENTION_CANDIDATES"
         evidence_use_semantics = "PROVIDER_CITED_BOUND_EVIDENCE"
         if (
             set(reviewed_candidate_refs) != set(attention_candidate_refs)
             or not set(evidence_refs_used) <= set(bound_evidence_refs)
-            or not set(provider_counter_evidence_refs)
-            <= set(bound_evidence_refs)
-            or not set(selected_candidate.evidence_refs)
-            <= set(evidence_refs_used)
+            or not set(provider_counter_evidence_refs) <= set(bound_evidence_refs)
+            or not set(selected_candidate.evidence_refs) <= set(evidence_refs_used)
         ):
             raise MechanismComparisonUnavailableError(
                 "mechanism_decision_evidence_coverage_invalid"
             )
         if (
             proposal.get("request_id") != request.request_id
-            or proposal.get("selected_candidate_ref")
-            != selected_candidate_ref
+            or proposal.get("selected_candidate_ref") != selected_candidate_ref
             or gate.get("request_id") != request.request_id
             or gate.get("proposal_ref") != proposal.get("proposal_ref")
             or gate.get("proposal_hash") != content_hash(proposal)
-            or gate.get("selected_candidate_ref")
-            != selected_candidate_ref
+            or gate.get("selected_candidate_ref") != selected_candidate_ref
             or gate.get("disposition") != "ADMITTED"
             or gate.get("decision_record_allowed") is not True
             or gate.get("canonical_domain_write_allowed") is not False
         ):
-            raise MechanismComparisonUnavailableError(
-                "mechanism_decision_gate_identity_invalid"
-            )
+            raise MechanismComparisonUnavailableError("mechanism_decision_gate_identity_invalid")
         proposal_ref = _required_string(
             proposal.get("proposal_ref"),
             "mechanism_decision_proposal_ref_invalid",
@@ -568,9 +531,7 @@ def _verified_decision_trace(
             or not isinstance(confidence, (int, float))
             or not 0.0 <= confidence <= 1.0
         ):
-            raise MechanismComparisonUnavailableError(
-                "mechanism_decision_reasoner_context_invalid"
-            )
+            raise MechanismComparisonUnavailableError("mechanism_decision_reasoner_context_invalid")
         expected_proposal_ref = stable_ref(
             "v60-reasoner-proposal",
             {
@@ -587,9 +548,7 @@ def _verified_decision_trace(
                     "selected_candidate_ref": selected_candidate_ref,
                     "reviewed_candidate_refs": list(reviewed_candidate_refs),
                     "evidence_refs_used": list(evidence_refs_used),
-                    "counter_evidence_refs": list(
-                        provider_counter_evidence_refs
-                    ),
+                    "counter_evidence_refs": list(provider_counter_evidence_refs),
                     "confidence": confidence,
                     "rationale_summary": rationale_summary,
                 },
@@ -606,10 +565,7 @@ def _verified_decision_trace(
                 "reason": gate_reason,
             },
         )
-        if (
-            proposal_ref != expected_proposal_ref
-            or gate_receipt_ref != expected_gate_receipt_ref
-        ):
+        if proposal_ref != expected_proposal_ref or gate_receipt_ref != expected_gate_receipt_ref:
             raise MechanismComparisonUnavailableError(
                 "mechanism_decision_provenance_identity_invalid"
             )
@@ -619,21 +575,15 @@ def _verified_decision_trace(
             or kernel_route.authority is not DecisionAuthority.RULE_ENGINE
             or route_contract != kernel_route
         ):
-            raise MechanismComparisonUnavailableError(
-                "mechanism_decision_route_not_canonical"
-            )
+            raise MechanismComparisonUnavailableError("mechanism_decision_route_not_canonical")
         reviewed_candidate_refs = attention_candidate_refs
         evidence_refs_used = ()
-        candidate_coverage_semantics = (
-            "RULE_ENGINE_SINGLE_ATTENTION_CANDIDATE"
-        )
+        candidate_coverage_semantics = "RULE_ENGINE_SINGLE_ATTENTION_CANDIDATE"
         evidence_use_semantics = "REQUEST_BOUND_NOT_PROVIDER_USED"
         gate_disposition = "NOT_REQUIRED"
         gate_reason = "single_attention_candidate_selected_by_rule_engine"
     else:
-        raise MechanismComparisonUnavailableError(
-            "mechanism_decision_authority_invalid"
-        )
+        raise MechanismComparisonUnavailableError("mechanism_decision_authority_invalid")
 
     return {
         "trace_version": MECHANISM_DECISION_TRACE_VERSION,
@@ -666,9 +616,7 @@ def _verified_decision_trace(
             if row_authority == "LLM_REASONER"
             else "REQUEST_BOUND_RULE_NOT_PROVIDER_CITED"
         ),
-        "provider_counter_evidence_refs": list(
-            provider_counter_evidence_refs
-        ),
+        "provider_counter_evidence_refs": list(provider_counter_evidence_refs),
         "proposal_ref": proposal_ref,
         "gate_receipt_ref": gate_receipt_ref,
         "gate_version": gate_version,
@@ -684,9 +632,7 @@ def _verified_decision_trace(
         "prompt_ref": prompt_ref,
         "provider_response_ref": provider_response_ref,
         "context_hash": context_hash,
-        "attention_scope": (
-            "STATIC_NATAL_MECHANISM_CANDIDATE_PRIORITY_ONLY"
-        ),
+        "attention_scope": ("STATIC_NATAL_MECHANISM_CANDIDATE_PRIORITY_ONLY"),
         "admitted_input_scopes": ["MECHANISM_CANDIDATE_EVIDENCE"],
         "unbound_input_scopes": [
             "SOURCE_USABILITY",
@@ -695,9 +641,7 @@ def _verified_decision_trace(
             "PROFESSIONAL_ADMISSION",
             "CALIBRATION",
         ],
-        "counter_evidence_semantics": (
-            "BOUND_REF_ONLY_NOT_PROFESSIONALLY_ADMITTED"
-        ),
+        "counter_evidence_semantics": ("BOUND_REF_ONLY_NOT_PROFESSIONALLY_ADMITTED"),
         "selection_rationale_contract": (
             "FREE_TEXT_NO_DISTINCT_SELECTION_BASIS_FIELD"
             if row_authority == "LLM_REASONER"
@@ -731,9 +675,8 @@ def _unique_string_tuple(value: Any, error: str) -> tuple[str, ...]:
     if not isinstance(value, (list, tuple)):
         raise MechanismComparisonUnavailableError(error)
     result = tuple(value)
-    if (
-        any(not isinstance(item, str) or not item for item in result)
-        or len(result) != len(set(result))
+    if any(not isinstance(item, str) or not item for item in result) or len(result) != len(
+        set(result)
     ):
         raise MechanismComparisonUnavailableError(error)
     return result

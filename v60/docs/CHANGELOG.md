@@ -1,5 +1,205 @@
 # V60 Change Log
 
+## 2026-09-04
+
+- Restored all account-owned human reference charts to the public LifeTree
+  projection. The records had remained intact in PostgreSQL, but a public
+  projection filter exposed only the single `HUMAN_OWNER` chart. The corrected
+  boundary now returns both private owner and private reference charts while
+  continuing to exclude synthetic/internal cases; live Chrome verified all 20
+  real profiles and opened a reference chart's four-layer Mingli branch.
+- Owner authorized permanent removal of Dream from V60. Deleted its backend
+  packages, API, worker, frontend scenes/routes, content, tests, tools, media,
+  QA artifacts and dedicated documents. The login LifeTree artwork remains as
+  a neutral brand background under a new asset identity; it has no Dream state
+  or interaction contract.
+- Added irreversible migration `0053_remove_dream_runtime`: dropped the
+  `dream`, `story` and `world` schemas, removed dedicated accounts and records,
+  stripped retired manifest/media identities, and advanced Foundation to
+  `.045`. Verified that the real account, 20 human profiles/cases, Mingli data,
+  character media and synthetic training corpus remain present. A pre-removal
+  schema dump and source/media archive were created before deletion.
+- Retained the old Six-Pillar Lab's 3D particle-and-explanation capability as
+  an internal shared component without reopening LAB routes. Public Abu Says
+  now sequences exact persisted Focused Pass audio against the same six-column,
+  twelve-body Canvas. Real `audio.currentTime` drives particle breathing,
+  rotation, Cue progress, active chapter and Abu's speaking state; pause and
+  buffering freeze the complete presentation at one clock position.
+- Repaired the speech/stage contract that previously reconstructed only a
+  four-pillar Projection and returned 409 when public Abu Says displayed six
+  pillars. Speech requests now bind and server-verify the exact Stage mode and
+  selected year while old four-pillar callers retain compatible defaults. Real
+  Chrome verified HTTP 200, one persistent Canvas, advancing playback, an exact
+  800 ms paused hold, successful resume and no runtime errors.
+- Increased daylight Abu Says legibility without replacing the established UI:
+  the narration uses a bounded parchment halo, darker text, higher-contrast
+  column labels and daylight-specific Five-Element particles/glyphs. Public Abu
+  Says now opens the existing animated stage with six columns—natal four,
+  current Dayun and selected annual year—and upgrades old four-column rehearsal
+  links on refresh. The six-column camera now fits narrow portrait viewports;
+  the mobile parchment is opaque enough to read and remains independently
+  scrollable above the animation.
+- Corrected the public-shell interpretation after Owner review: restored the
+  established V108/V128/V131 LifeTree, profile leaf, Mingli branch growth,
+  branch/leaf/flower/fruit and character-stage UI. Simplification now applies
+  only to exposed functions and click depth; LAB remains unavailable publicly.
+- The restored stage opens directly from a Mingli organ, keeps deterministic
+  text visible while a missing Qwen focus is generated, and adds lazy speech
+  to the existing character performance. Public playback always uses Abu and
+  reuses the exact persisted, safety-gated Focused Pass.
+- Desktop and 390×844 responsive checks now cover the restored Home, branch and
+  Abu stage. The narrow layout keeps the Home heading inside the viewport and
+  compresses the complete branch composition so all four organs remain visible
+  and clickable instead of being clipped off-screen.
+- Cut the default V60 public functions to one path: original private LifeTree →
+  profile leaf → Mingli branch → Reading / Abu Says. The initial replacement
+  shell was superseded by the Owner-corrected presentation above.
+- Removed the retired product line from the server route graph and source tree.
+  The explicit internal-surface switch can register only Synthetic Mingli LAB.
+  Bootstrap exposes only media required by the restored LifeTree and Mingli
+  presentation.
+- Added the slim public Home projection and lazy Focused Pass speech endpoint.
+  Abu Says reuses the exact persisted reading and never makes a second destiny
+  model call; text remains readable if server or device speech is unavailable.
+- Advanced the public Qwen profile to
+  v60.model-serving.mingli-focused-text.008 and Normalizer .006. A browser-found
+  visible-stem error was deterministically repaired from “年、月、时三透比肩”
+  to “月干、时干两透比肩”; explicit unsafe or unresolved validation codes now
+  fail closed to the immediate local base copy.
+- Aligned backend/web package versions to 0.2.0 and recorded the complete
+  public boundary in 25_V60_MINIMAL_PUBLIC_RELEASE.md. This work remains local;
+  no production deployment was made.
+- Verified the current suite at 343 passed and 11 contract-defined skips, full
+  Python Ruff, TypeScript/build/public artifact audits, desktop/mobile Chrome
+  layouts, public-only case options, retired-route 404 boundaries, and real
+  Focused Speech playback. The live daylight stage showed an advancing shared
+  audio clock, frame-selected subtitles and the six-column particle scene.
+
+## 2026-08-27
+
+- Added the DEV-only three-pass Mingli distillation runtime. Qwen now answers
+  one bounded `REGIME`, one two-card `CANDIDATE_COMPARISON`, and one mechanical
+  `CERTAINTY` question. The server recomputes candidate partition, method-card
+  aggregates, role order and certainty ceilings; DEV Gold is evaluated only
+  after all model calls and is never included in prompts.
+- Added append-only `mingli.synthetic_distillation_runs`, migration
+  `0052_mingli_distillation_runs`, exact model/Prompt/packet lineage, per-stage
+  raw output and token/latency receipts, cache replay and UPDATE/DELETE database
+  rejection. Advanced Foundation to `.044`, Mingli Engine to `.051`, and
+  Runtime Architecture to `.080`; Unit Lab remains `.036` because no product
+  API or browser surface was added.
+- Ran the current `qwen3.8:27b` digest on both members of the month-command
+  experiment with Prompt Hash `bd5dfb…79ca`. Runs
+  `v60-mingli-distillation-run-544e86ed8e20b6fd7aa1` and
+  `v60-mingli-distillation-run-fc8da8a2364ea2a6c2ee` consumed 13,918 tokens and
+  141.994 seconds total, a 57.0% token and 63.6% latency reduction from the
+  strict whole-chart pair. Cached A/B replay completed in about 54ms/42ms.
+- Kept the result explicitly non-qualifying. Both runs pass the three-pass
+  structural contract and local certainty mapping, but A's candidate aggregate
+  changed across the prompt-size optimization. This is teacher-review evidence
+  of unresolved professional stability, not advanced-master qualification;
+  strict whole-chart QUALIFICATION/HOLDOUT, publication and canonical fact
+  writes remain locked.
+- Verified all 475 backend tests, full Python Ruff, database Foundation `.044`
+  and migration head `0052_mingli_distillation_runs`. No deployment was made.
+
+## 2026-08-15
+
+- Added the eighth legal synthetic A/B experiment and fifth DEV Suite on an
+  unseen 壬水 pair. It keeps 卯 as month command and 己 as the visible 正官 month
+  stem while the legal hour changes from 丙午 to 辛亥; Gold `.006` separately
+  locks month-command/month-stem coordinates, root/resource boundaries, full
+  hour collateral, regime exits, candidate recompilation and PRIMARY-bound work
+  path without preselecting a mechanism winner.
+- Added deterministic raw/normalized prose checks for month-coordinate
+  conflation. `月令正官己土` now fails while an explicit `月令卯木，月干己土正官`
+  separation passes. Advanced Synthetic Catalog/Evaluator/Gold/Suite Catalog to
+  `.007/.010/.006/.005`, Mingli Engine to `.050`, Runtime Architecture to `.079`,
+  Unit Lab to `.036`, and Foundation to `.043` through migrations
+  `0050_mingli_month_coordinates` and `0051_mingli_raw_judgment`.
+- Ran the new pair against real `qwen3.8:27b` with the existing Serving Profile
+  `.002`. The two strict calls consumed 32,327 total tokens and 389.875 seconds.
+  Qwen independently passed month coordinates, effective root, regime,
+  candidate partition, actionable reversal and primary-bound path checks.
+- Teacher review found that the initial Evaluator `.009` PASS was too optimistic:
+  all four raw hypotheses said `SUPPORTED` while their method rulings and raw
+  aggregate adjudications were `CONDITIONAL`. Evaluator `.010` now recomputes
+  raw judgment coherence and requires repair receipts. A 0.25-second replay of
+  the same sealed raw output, with no new model call or Prompt change, produced
+  Experiment Run `v60-mingli-synthetic-run-5eb1438b1dee74c3395e` and Suite Run
+  `v60-mingli-synthetic-suite-run-0ca2f52f7628e6987f7f`, honestly classified as
+  `PRODUCT_SAFE_MODEL_FAIL`. QUALIFICATION and HOLDOUT remain locked.
+- Split regime/month-command check orchestration into its own evaluator owner,
+  keeping the primary evaluator at 793 lines under the 850-line source budget.
+  Verified all 470 backend tests, full Ruff, database migration head `0051`,
+  TypeScript typecheck, production build, and the synthetic Lab contract audit.
+- Simplified the Owner-facing Mingli branch to one action: clicking branch,
+  leaf, flower or fruit now opens the matching Abu Says reading directly.
+  Removed the obstructing long Reading card, separate companion CTA, Lab entry,
+  stage buttons, generation buttons and chapter-by-chapter rail from this
+  surface. Closing returns to the branch; timing opens the six-pillar stage.
+- Added a summary-level narration projection that prefers complete Qwen3.8
+  Focused Passes, falls back immediately to admitted ClaimGraph chapters, and
+  generates missing short passes inside the same click only when no readable
+  source exists. Exact Source/Pass/Claim lineage and timing-coordinate safety
+  remain fail-closed. This local UX change has not been deployed.
+- Added public exposure policy `v60.public-product-exposure.001`. Under the
+  Owner decision, Abu Dream now has no tester entry or route until a later
+  explicit instruction, and the separate Abu Divine Tree Game is not merged.
+  Existing Dream implementation and internal research data remain retained.
+- Aligned the tester-facing V60 experience with frozen V128/V131: login enters
+  the private LifeTree, Home exposes Profile/Lab/Settings, Lab shows exactly
+  Six Pillars and Abu Says, and both deep demos continue into the V131
+  watercourt while using the single real V60 canonical Scene Player.
+- Added route-level fail-closed normalization for Dream, obsolete units,
+  synthetic catalog, experiments, Suite Runs and variants. Added a matching
+  backend Runtime Manifest contract and `audit:public-exposure`; internal
+  synthetic Lab components and APIs were preserved but removed from the public
+  Host. That superseded boundary note was removed with the retired product
+  documentation. This change was local only and was not deployed.
+- At the public-alignment checkpoint, verified all 467 then-current backend
+  tests, Ruff, production TypeScript/Vite build and
+  four public/shared/synthetic/fidelity audits. Signed-in Desktop browser
+  verified Dream and synthetic deep-link normalization, both public Lab demos,
+  refresh and back/forward recovery, and the 53.4-second Abu Says asset. No
+  console errors appeared; the existing Three.js Clock deprecation warning
+  remains graphics dependency debt.
+- Added `23_V60_QWEN38_MINGLI_INTEGRATION_AND_PRACTITIONER_REVIEW.md` as the
+  consolidated Markdown receipt for model discovery, official Qwen/Ollama
+  calibration, direct server checks, dual-runtime design, progressive product
+  integration, local method distillation, latency measurements and the bounded
+  practitioner comparison with Gemma4. Synced README and Mingli documents
+  17–22; historical sealed runs remain immutable.
+- Added the private Qwen3.8 progressive reading path. Migration
+  `0048_mingli_focused_readings` preserves the original five-pass DEV envelope;
+  `0049_mingli_focused_passes` adds independently generated append-only passes,
+  advances Foundation to `.041`, and advances Reading Summary to `.008` with
+  `NOT_GENERATED / PARTIAL / READY` state.
+- Switched the user-facing Mingli branch from five serial model calls to one
+  explicit focus per action. Structure is generated first; life image,
+  career/wealth, relationship/family and timing are requested only when opened.
+  The UI enters a visible busy state immediately, reloads persisted lineage, and
+  never receives raw teacher prose. The five-pass endpoint remains DEV-only.
+- Bound Qwen3.8 focused generation to the official non-thinking ChatML template
+  and recommended instruct sampling (`0.7 / 0.8 / 20 / min_p 0 /
+  presence 1.5 / repeat 1.0`), with product budgets `num_ctx=4096`,
+  `num_predict=320`, fixed seed and keep-alive. Real focused calls measured
+  8.0–16.2 seconds; replay of an identical persisted pass measured 9ms.
+- Added local Normalizer `.003` review codes for five-element causal conflicts,
+  hidden-stem and month-command coordinate conflicts, branch-count errors,
+  unsupported regime/biographical/psychological/disaster claims, scope leaks,
+  and relation effects that exceed admitted membership. Real Qwen output still
+  triggered several of these codes, so professional publication remains
+  blocked rather than being cosmetically promoted.
+- Added migration `0047_mingli_resolution_guard`; advanced Agent Runtime/Profile/Adjudication
+  to `.035/.033/.013`. The resolution guard now preserves support rulings when Chinese prose
+  explicitly says a competing path is weak, blocked, or has not formed a stronger competition;
+  active blockers remain fail-closed.
+- Added migration `0046_mingli_typed_rows`; advanced Foundation to `.038`
+  and bound Agent Runtime/Profile/Prompt/Prompt View/Adjudication to `.034/.032/.029/.019/.012`.
+  Qwen3.8 typed counterfactual row selection and named reversal receipts are now part of the
+  private Owner Review/DEV Lab contract; public publication and canonical fact writes remain off.
+
 ## 2026-08-03
 
 ### Whole-chart qualification now tests real counterfactual judgment
@@ -1775,8 +1975,7 @@
   process-restart recovery without resetting the Dream world.
 - Verified the desktop journey in the browser with no document scroll,
   console warning, failed request or canonical Home write.
-- Added the product and authority contract in
-  `docs/14_V60_PRIVATE_HOME_TREE_AND_DREAM_THRESHOLD.md`.
+- Added a product and authority contract that was later retired and removed.
 
 ### One Life Event across five product units
 

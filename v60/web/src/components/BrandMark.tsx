@@ -1,4 +1,4 @@
-import type { RuntimeAssetDelivery } from "../api";
+import type { RuntimeAssetDelivery } from "../publicRuntimeTypes";
 
 export function BrandMark({ asset }: { asset?: RuntimeAssetDelivery }) {
   return (

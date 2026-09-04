@@ -33,14 +33,10 @@ def test_home_materializes_one_append_only_profile_pinned_reading() -> None:
     expected = first["mingli"]["reading"]
 
     assert second["mingli"]["reading"] == expected
-    persisted = MingliReadingStore(engine).get(
-        reading_ref=str(expected["reading_ref"])
-    )
+    persisted = MingliReadingStore(engine).get(reading_ref=str(expected["reading_ref"]))
     assert persisted.model_dump(mode="json") == expected
     quant = first["mingli"]["quant_foundation"]
-    persisted_vector = MingliQuantVectorStore(engine).get(
-        vector_ref=str(quant["vector_ref"])
-    )
+    persisted_vector = MingliQuantVectorStore(engine).get(vector_ref=str(quant["vector_ref"]))
     assert persisted_vector.model_dump(mode="json") == quant
     with engine.connect() as connection:
         count = connection.execute(
@@ -57,9 +53,7 @@ def test_home_materializes_one_append_only_profile_pinned_reading() -> None:
 
 
 def test_quant_vector_is_append_only_and_idempotent() -> None:
-    snapshot = HomeExperienceService(engine).snapshot(
-        account_ref=_human_owner_account_ref()
-    )
+    snapshot = HomeExperienceService(engine).snapshot(account_ref=_human_owner_account_ref())
     quant = snapshot["mingli"]["quant_foundation"]
 
     with engine.connect() as connection:
@@ -92,9 +86,7 @@ def test_quant_vector_is_append_only_and_idempotent() -> None:
 
 
 def test_persisted_reading_rejects_rewrite_and_remains_replayable() -> None:
-    snapshot = HomeExperienceService(engine).snapshot(
-        account_ref=_human_owner_account_ref()
-    )
+    snapshot = HomeExperienceService(engine).snapshot(account_ref=_human_owner_account_ref())
     expected = snapshot["mingli"]["reading"]
 
     with (
@@ -112,7 +104,5 @@ def test_persisted_reading_rejects_rewrite_and_remains_replayable() -> None:
             {"reading_ref": expected["reading_ref"]},
         )
 
-    persisted = MingliReadingStore(engine).get(
-        reading_ref=str(expected["reading_ref"])
-    )
+    persisted = MingliReadingStore(engine).get(reading_ref=str(expected["reading_ref"]))
     assert persisted.model_dump(mode="json") == expected

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-import type { RuntimeMediaCue } from "../api";
+import type { RuntimeMediaCue } from "../publicRuntimeTypes";
 import { narrationCommandLabel } from "../mingliNarrationMachine";
 import type {
   MingliNarrationVisualClock,

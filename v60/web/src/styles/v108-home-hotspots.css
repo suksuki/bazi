@@ -7,7 +7,6 @@
 
 .v108-tree-entry,
 .v108-settings-fruit,
-.v108-dream-hollow button,
 .v108-profile-more {
   pointer-events: auto;
   -webkit-tap-highlight-color: transparent;
@@ -90,8 +89,7 @@
 }
 
 .v108-tree-entry:focus-visible,
-.v108-settings-fruit:focus-visible,
-.v108-dream-hollow button:focus-visible {
+.v108-settings-fruit:focus-visible {
   border-radius: 48%;
   outline: 1px solid rgba(240, 208, 137, 0.64);
   outline-offset: 3px;
@@ -229,146 +227,6 @@
   top: 86%;
 }
 
-.v108-dream-hollow {
-  position: absolute;
-  top: 79.2%;
-  left: 11.6%;
-  z-index: 8;
-  width: 10.8%;
-  min-width: 118px;
-  aspect-ratio: 1.22;
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-}
-
-.v108-dream-hollow button {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #f7e6bb;
-  cursor: pointer;
-}
-
-.v108-dream-vortex {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 70%;
-  aspect-ratio: 0.82;
-  overflow: visible;
-  border-radius: 47% 53% 58% 42% / 61% 45% 55% 39%;
-  background:
-    radial-gradient(circle at 51% 49%, rgba(255, 247, 206, 0.94) 0 0.7%, rgba(231, 189, 93, 0.72) 1.5%, transparent 4.2%),
-    radial-gradient(ellipse at 50% 50%, rgba(96, 151, 202, 0.11) 0 22%, rgba(48, 95, 154, 0.07) 36%, transparent 72%);
-  filter: drop-shadow(0 0 5px rgba(127, 180, 219, 0.24)) drop-shadow(0 0 13px rgba(60, 104, 157, 0.14));
-  mix-blend-mode: screen;
-  opacity: 0.72;
-  transform: translate(-50%, -50%) rotate(-7deg) scale(0.88);
-  transition: filter 320ms ease, opacity 320ms ease, transform 520ms ease;
-  mask-image: radial-gradient(ellipse, #000 0 52%, rgba(0, 0, 0, 0.72) 68%, transparent 88%);
-}
-
-.v108-dream-vortex::before,
-.v108-dream-vortex::after,
-.v108-dream-vortex > b {
-  position: absolute;
-  inset: -12%;
-  border-radius: inherit;
-  background:
-    radial-gradient(circle at 70% 18%, rgba(255, 245, 208, 0.9) 0 0.65px, transparent 1.45px),
-    radial-gradient(circle at 27% 69%, rgba(190, 226, 247, 0.82) 0 0.72px, transparent 1.55px),
-    conic-gradient(from 24deg, transparent 0 9%, rgba(143, 193, 229, 0.34) 13%, transparent 20% 42%, rgba(241, 214, 154, 0.24) 47%, transparent 56% 78%, rgba(112, 164, 215, 0.3) 83%, transparent 91%);
-  content: "";
-  opacity: 0.78;
-  animation: v108-dream-orbit 34s linear infinite;
-  mask-image: radial-gradient(ellipse, transparent 0 8%, #000 18% 64%, transparent 88%);
-}
-
-.v108-dream-vortex::after {
-  inset: 4%;
-  animation-direction: reverse;
-  animation-duration: 49s;
-}
-
-.v108-dream-vortex > b {
-  inset: -5%;
-  filter: blur(3px);
-  opacity: 0.45;
-  animation-duration: 58s;
-}
-
-.v108-dream-vortex > i {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 3;
-  width: 10%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 247, 206, 0.96) 0 7%, rgba(231, 189, 93, 0.9) 18%, rgba(220, 172, 72, 0.3) 42%, transparent 72%);
-  box-shadow: 0 0 8px rgba(246, 209, 118, 0.58), 0 0 20px rgba(222, 176, 77, 0.2);
-  transform: translate(-50%, -50%);
-  animation: v108-dream-core 4.6s ease-in-out infinite;
-}
-
-.v108-dream-label {
-  position: absolute;
-  top: 73%;
-  left: 59%;
-  display: grid;
-  min-width: max-content;
-  gap: 1px;
-  padding: 5px 9px;
-  border: 1px solid rgba(203, 220, 229, 0.1);
-  border-radius: 999px;
-  background: rgba(3, 21, 31, 0.4);
-  color: rgba(229, 232, 211, 0.62);
-  opacity: 0.32;
-  text-align: left;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.84);
-  transform: translateY(4px);
-  transition: opacity 240ms ease, transform 240ms ease;
-  backdrop-filter: blur(8px);
-}
-
-.v108-dream-label small {
-  color: rgba(239, 208, 137, 0.78);
-  font-size: 7px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-}
-
-.v108-dream-label strong {
-  font-size: 8px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.v108-dream-hollow button:hover .v108-dream-vortex,
-.v108-dream-hollow button:focus-visible .v108-dream-vortex {
-  filter: brightness(1.18) drop-shadow(0 0 8px rgba(139, 190, 225, 0.3)) drop-shadow(0 0 19px rgba(70, 116, 168, 0.18));
-  opacity: 0.96;
-  transform: translate(-50%, -50%) rotate(-3deg) scale(1.04);
-}
-
-.v108-dream-hollow button:hover .v108-dream-label,
-.v108-dream-hollow button:focus-visible .v108-dream-label {
-  opacity: 1;
-  transform: translateY(0);
-}
-
 @keyframes v108-profile-leaf-breathe {
   50% { filter: brightness(1.12) drop-shadow(0 0 16px rgba(244, 207, 112, 0.5)); transform: scale(1.025); }
-}
-
-@keyframes v108-dream-orbit {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes v108-dream-core {
-  50% { box-shadow: 0 0 14px rgba(250, 218, 135, 0.9), 0 0 30px rgba(226, 179, 80, 0.4); transform: translate(-50%, -50%) scale(1.14); }
 }

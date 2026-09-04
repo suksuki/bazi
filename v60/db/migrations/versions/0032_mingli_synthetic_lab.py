@@ -64,8 +64,7 @@ def upgrade() -> None:
         ),
         sa.UniqueConstraint("run_hash", name="uq_mingli_synthetic_experiment_run_hash"),
         sa.CheckConstraint(
-            "outcome IN ('PASS', 'PRODUCT_SAFE_MODEL_FAIL', 'MODEL_FAIL', "
-            "'INVALID_EXPERIMENT')",
+            "outcome IN ('PASS', 'PRODUCT_SAFE_MODEL_FAIL', 'MODEL_FAIL', 'INVALID_EXPERIMENT')",
             name="ck_mingli_synthetic_experiment_outcome",
         ),
         schema="mingli",

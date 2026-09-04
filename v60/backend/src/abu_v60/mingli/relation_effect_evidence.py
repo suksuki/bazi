@@ -45,9 +45,7 @@ class MingliRelationEffectEvidencePacketProjector:
         frontier: MingliRelationEffectResearchFrontierEnvelope,
         admission_review: MingliRelationEffectAdmissionReviewEnvelope,
     ) -> MingliRelationEffectEvidencePacketEnvelope:
-        reading = MingliReadingEnvelope.model_validate(
-            reading.model_dump(mode="python")
-        )
+        reading = MingliReadingEnvelope.model_validate(reading.model_dump(mode="python"))
         frontier = MingliRelationEffectResearchFrontierEnvelope.model_validate(
             frontier.model_dump(mode="python")
         )
@@ -66,13 +64,9 @@ class MingliRelationEffectEvidencePacketProjector:
             authority=self._authority
         ).project(frontier=frontier)
         if review != canonical_review:
-            raise ValueError(
-                "relation_effect_evidence_admission_review_not_canonical"
-            )
+            raise ValueError("relation_effect_evidence_admission_review_not_canonical")
 
-        demands_by_ref = {
-            item.demand_ref: item for item in frontier.demands
-        }
+        demands_by_ref = {item.demand_ref: item for item in frontier.demands}
         demand_packets = tuple(
             self._demand_packet(
                 assessment=assessment,
@@ -119,19 +113,10 @@ class MingliRelationEffectEvidencePacketProjector:
             proposal_version=expected_proposal.proposal_version,
             expected_hash=expected_proposal.proposal_hash,
         )
-        policy = BaziRelationEffectAdmissionPolicy.model_validate(
-            policy.model_dump(mode="python")
-        )
-        proposal = BaziRelationEffectRuleProposal.model_validate(
-            proposal.model_dump(mode="python")
-        )
-        if (
-            policy != expected_policy
-            or proposal != expected_proposal
-        ):
-            raise ValueError(
-                "relation_effect_evidence_authority_not_canonical"
-            )
+        policy = BaziRelationEffectAdmissionPolicy.model_validate(policy.model_dump(mode="python"))
+        proposal = BaziRelationEffectRuleProposal.model_validate(proposal.model_dump(mode="python"))
+        if policy != expected_policy or proposal != expected_proposal:
+            raise ValueError("relation_effect_evidence_authority_not_canonical")
         if (
             policy.professionally_reviewed
             or policy.admitted_effect_rule_profile_refs
@@ -139,14 +124,9 @@ class MingliRelationEffectEvidencePacketProjector:
             or proposal.professional_source_manifest
             or proposal.owner_review_receipt_ref is not None
             or proposal.owner_review_receipt_hash is not None
-            or any(
-                item.evidence_refs
-                for item in proposal.dimension_submissions
-            )
+            or any(item.evidence_refs for item in proposal.dimension_submissions)
         ):
-            raise ValueError(
-                "relation_effect_evidence_professional_material_not_admitted"
-            )
+            raise ValueError("relation_effect_evidence_professional_material_not_admitted")
         return policy, proposal
 
     @staticmethod
@@ -169,9 +149,7 @@ class MingliRelationEffectEvidencePacketProjector:
             reading.reading_ref,
             reading.reading_hash,
         ):
-            raise ValueError(
-                "relation_effect_evidence_frontier_reading_mismatch"
-            )
+            raise ValueError("relation_effect_evidence_frontier_reading_mismatch")
         if (
             frontier.source_review_vector_ref,
             frontier.source_review_vector_hash,
@@ -179,9 +157,7 @@ class MingliRelationEffectEvidencePacketProjector:
             reading.source_review_vector_ref,
             reading.source_review_vector_hash,
         ):
-            raise ValueError(
-                "relation_effect_evidence_source_review_reading_mismatch"
-            )
+            raise ValueError("relation_effect_evidence_source_review_reading_mismatch")
         if (
             review.case_ref,
             review.chart_version_ref,
@@ -197,9 +173,7 @@ class MingliRelationEffectEvidencePacketProjector:
             frontier.frontier_ref,
             frontier.frontier_hash,
         ):
-            raise ValueError(
-                "relation_effect_evidence_review_lineage_mismatch"
-            )
+            raise ValueError("relation_effect_evidence_review_lineage_mismatch")
         if (
             review.policy_ref,
             review.policy_hash,
@@ -211,9 +185,7 @@ class MingliRelationEffectEvidencePacketProjector:
             proposal.proposal_ref,
             proposal.proposal_hash,
         ):
-            raise ValueError(
-                "relation_effect_evidence_review_authority_mismatch"
-            )
+            raise ValueError("relation_effect_evidence_review_authority_mismatch")
 
     @staticmethod
     def _required_demand(
@@ -223,9 +195,7 @@ class MingliRelationEffectEvidencePacketProjector:
     ) -> RelationEffectRuleDemand:
         demand = demands_by_ref.get(demand_ref)
         if demand is None:
-            raise ValueError(
-                "relation_effect_evidence_assessment_demand_missing"
-            )
+            raise ValueError("relation_effect_evidence_assessment_demand_missing")
         return demand
 
     @staticmethod
@@ -236,22 +206,15 @@ class MingliRelationEffectEvidencePacketProjector:
         policy: BaziRelationEffectAdmissionPolicy,
         proposal: BaziRelationEffectRuleProposal,
     ) -> RelationEffectDemandEvidencePacket:
-        if _assessment_demand_identity(
-            assessment
-        ) != _frontier_demand_identity(demand):
-            raise ValueError(
-                "relation_effect_evidence_assessment_demand_mismatch"
-            )
+        if _assessment_demand_identity(assessment) != _frontier_demand_identity(demand):
+            raise ValueError("relation_effect_evidence_assessment_demand_mismatch")
         submissions_by_dimension = {
-            item.dimension_id: item
-            for item in proposal.dimension_submissions
+            item.dimension_id: item for item in proposal.dimension_submissions
         }
         dimension_slots = tuple(
             RelationEffectEvidenceDimensionSlot.issue(
                 dimension_id=item.dimension_id,
-                proposal_submission_status=(
-                    submissions_by_dimension[item.dimension_id].status
-                ),
+                proposal_submission_status=(submissions_by_dimension[item.dimension_id].status),
                 current_basis_refs=item.current_basis_refs,
             )
             for item in assessment.dimension_assessments

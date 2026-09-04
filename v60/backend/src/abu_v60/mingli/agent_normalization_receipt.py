@@ -8,9 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from abu_v60.provenance import content_hash, stable_ref
 
-MINGLI_AGENT_NORMALIZATION_RECEIPT_VERSION = (
-    "v60.mingli-agent-normalization-receipt.001"
-)
+MINGLI_AGENT_NORMALIZATION_RECEIPT_VERSION = "v60.mingli-agent-normalization-receipt.001"
 
 NormalizationStage = Literal[
     "EVIDENCE_ID_NORMALIZATION",
@@ -51,11 +49,7 @@ class MingliAgentNormalizationDelta(BaseModel):
             not self.after_present and self.after is not None
         ):
             raise ValueError("mingli_agent_normalization_delta_missing_value")
-        if (
-            self.before_present
-            and self.after_present
-            and self.before == self.after
-        ):
+        if self.before_present and self.after_present and self.before == self.after:
             raise ValueError("mingli_agent_normalization_delta_unchanged")
         return self
 
@@ -214,9 +208,7 @@ def _replay_normalization_deltas(
             raise ValueError("mingli_agent_normalization_stage_order_invalid")
         prior_stage = current_stage
         present, current = _read_pointer(replayed, delta.path)
-        if present != delta.before_present or (
-            present and current != delta.before
-        ):
+        if present != delta.before_present or (present and current != delta.before):
             raise ValueError("mingli_agent_normalization_delta_before_mismatch")
         replayed = _apply_pointer_delta(replayed, delta)
     if not isinstance(replayed, dict):
@@ -262,10 +254,7 @@ def _apply_pointer_delta(
 def _pointer_tokens(path: str) -> tuple[str, ...]:
     if not path.startswith("/") or path == "/":
         raise ValueError("mingli_agent_normalization_pointer_invalid")
-    return tuple(
-        token.replace("~1", "/").replace("~0", "~")
-        for token in path[1:].split("/")
-    )
+    return tuple(token.replace("~1", "/").replace("~0", "~") for token in path[1:].split("/"))
 
 
 def normalization_deltas(

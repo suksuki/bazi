@@ -146,15 +146,13 @@ def test_profile_activation_is_explicit_hash_locked_and_visible() -> None:
     foundation_v2 = foundation_v1.model_copy(
         update={
             "profile_version": "1.0.1-test",
-            "source_refs": foundation_v1.source_refs
-            + ("test-only:admitted-foundation-profile",),
+            "source_refs": foundation_v1.source_refs + ("test-only:admitted-foundation-profile",),
         }
     )
     candidate_v2 = candidate_v1.model_copy(
         update={
             "profile_version": "1.0.1-test",
-            "source_refs": candidate_v1.source_refs
-            + ("test-only:admitted-candidate-profile",),
+            "source_refs": candidate_v1.source_refs + ("test-only:admitted-candidate-profile",),
         }
     )
     selection = KnowledgeProfileSelection.from_profiles(
@@ -170,16 +168,12 @@ def test_profile_activation_is_explicit_hash_locked_and_visible() -> None:
 
     assert authority.active_foundation_profile() is foundation_v2
     assert authority.active_candidate_rule_profile() is candidate_v2
-    assert authority.selection_manifest()["selection_hash"] == (
-        selection.selection_hash
-    )
+    assert authority.selection_manifest()["selection_hash"] == (selection.selection_hash)
     assert [item["active"] for item in authority.public_manifest()] == [
         False,
         True,
     ]
-    assert [
-        item["active"] for item in authority.candidate_rule_manifest()
-    ] == [False, True]
+    assert [item["active"] for item in authority.candidate_rule_manifest()] == [False, True]
     assert authority.quant_foundation_manifest()[0]["active"] is True
 
 
@@ -229,8 +223,7 @@ def test_mingli_compiler_uses_the_explicit_active_profile_maps() -> None:
     foundation_v2 = foundation_v1.model_copy(
         update={
             "profile_version": "1.0.1-test",
-            "source_refs": foundation_v1.source_refs
-            + ("test-only:admitted-foundation-profile",),
+            "source_refs": foundation_v1.source_refs + ("test-only:admitted-foundation-profile",),
         }
     )
     authority = KnowledgeAuthority(
@@ -256,12 +249,8 @@ def test_mingli_compiler_uses_the_explicit_active_profile_maps() -> None:
         knowledge=authority,
     )
 
-    assert compiled.evidence_manifest["profile_source_ref"] == (
-        foundation_v2.source_ref
-    )
-    assert {fact["source_ref"] for fact in compiled.facts} == {
-        foundation_v2.source_ref
-    }
+    assert compiled.evidence_manifest["profile_source_ref"] == (foundation_v2.source_ref)
+    assert {fact["source_ref"] for fact in compiled.facts} == {foundation_v2.source_ref}
 
 
 def test_runtime_manifest_exposes_only_admitted_knowledge_profiles() -> None:
@@ -274,14 +263,8 @@ def test_runtime_manifest_exposes_only_admitted_knowledge_profiles() -> None:
     assert rule_profiles[0]["profile_hash"] == EXPECTED_CANDIDATE_RULE_PROFILE_HASH
     selection = runtime_manifest()["knowledge_profile_selection"]
     assert selection == KnowledgeAuthority().selection_manifest()
-    assert selection["foundation_profile_hash"] == (
-        EXPECTED_FOUNDATION_PROFILE_HASH
-    )
+    assert selection["foundation_profile_hash"] == (EXPECTED_FOUNDATION_PROFILE_HASH)
     quant_profiles = runtime_manifest()["quant_foundation_profiles"]
     assert quant_profiles == KnowledgeAuthority().quant_foundation_manifest()
-    assert quant_profiles[0]["profile_hash"] == (
-        EXPECTED_QUANT_FOUNDATION_PROFILE_HASH
-    )
-    assert selection["quant_foundation_profile_hash"] == (
-        EXPECTED_QUANT_FOUNDATION_PROFILE_HASH
-    )
+    assert quant_profiles[0]["profile_hash"] == (EXPECTED_QUANT_FOUNDATION_PROFILE_HASH)
+    assert selection["quant_foundation_profile_hash"] == (EXPECTED_QUANT_FOUNDATION_PROFILE_HASH)

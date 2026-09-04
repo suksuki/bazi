@@ -198,9 +198,7 @@ def _repair_work_path(
     )
     transformations = item.get("transformation_codes")
     transformations = transformations if isinstance(transformations, list) else []
-    admitted_transformations = [
-        code for code in transformations if code in _TRANSFORMATIONS
-    ]
+    admitted_transformations = [code for code in transformations if code in _TRANSFORMATIONS]
     unique_transformations = list(
         dict.fromkeys(code for code in transformations if code in _TRANSFORMATIONS)
     )[:4]
@@ -213,9 +211,7 @@ def _repair_work_path(
     closure = item.get("closure")
     if closure not in {"CLOSED", "CONDITIONAL", "BROKEN", "UNCERTAIN"}:
         closure = "UNCERTAIN"
-    timing_prose_mixed = any(
-        term in f"{path}\n{condition}" for term in _WORK_PATH_TIMING_TERMS
-    )
+    timing_prose_mixed = any(term in f"{path}\n{condition}" for term in _WORK_PATH_TIMING_TERMS)
     if timing_prose_mixed:
         path = "当前文本混入未绑定的时间层，本次仅保留原局路径待重新推演。"
         condition = "时间层完成独立绑定后重新生成"
@@ -229,10 +225,14 @@ def _repair_work_path(
         None,
     )
     normalized = {
-        **({
-            "selected_hypothesis_id": primary.get("hypothesis_id"),
-            "method_card_ref": primary.get("method_card_ref"),
-        } if isinstance(primary, dict) else {}),
+        **(
+            {
+                "selected_hypothesis_id": primary.get("hypothesis_id"),
+                "method_card_ref": primary.get("method_card_ref"),
+            }
+            if isinstance(primary, dict)
+            else {}
+        ),
         "path_statement": path,
         "transformation_codes": unique_transformations or ["CHANNELS"],
         "closure": closure,

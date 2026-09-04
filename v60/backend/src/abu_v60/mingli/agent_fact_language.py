@@ -12,6 +12,13 @@ _TEN_GOD_GROUPS = {
     "印星": {"正印", "偏印"},
     "比劫": {"比肩", "劫财"},
 }
+_RESOLUTION_SUPPORT_PATTERNS = (
+    re.compile(r"竞争路径(?:较弱|偏弱|弱)"),
+    re.compile(r"(?:未|没有|尚未)形成[^，。；;]{0,16}(?:竞争|阻断|主导|主轴)"),
+    re.compile(r"(?:不构成|不足以|不会形成)[^，。；;]{0,12}(?:竞争|阻断|主导)"),
+    re.compile(r"不改变[^，。；;]{0,12}(?:主导|主轴)"),
+    re.compile(r"竞争路径[^，。；;]{0,12}(?:被阻|受阻|被制|受制)"),
+)
 
 
 class PillarFact(Protocol):
@@ -28,9 +35,7 @@ def manifestation_claim_conflicts(
 ) -> bool:
     """Detect claims that promote hidden stems or ten gods to visible stems."""
 
-    visible_stems = {item.stem for item in pillars} | {
-        stem for stem, _ in additional_visible
-    }
+    visible_stems = {item.stem for item in pillars} | {stem for stem, _ in additional_visible}
     visible_ten_gods = {item.visible_ten_god for item in pillars} | {
         ten_god for _, ten_god in additional_visible
     }
@@ -94,6 +99,15 @@ def resolution_ruling_conflicts(
         "过度消耗",
         "激烈作用",
     )
-    return any(term in rationale for term in blocker_terms) and not any(
-        term in rationale for term in resolved_terms
-    )
+    # Keep Chinese comma-linked phrases together: a clause such as
+    # “竞争路径存在，但未形成更强竞争” qualifies the earlier noun with a
+    # later negation. Splitting on every comma would lose that scope.
+    clauses = re.split(r"[。；;\n]", rationale)
+    for clause in clauses:
+        if any(pattern.search(clause) for pattern in _RESOLUTION_SUPPORT_PATTERNS):
+            continue
+        if any(term in clause for term in resolved_terms):
+            continue
+        if any(term in clause for term in blocker_terms):
+            return True
+    return False

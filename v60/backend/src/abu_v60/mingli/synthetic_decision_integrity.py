@@ -9,6 +9,7 @@ from abu_v60.mingli.agent_contracts import (
     MingliAgentReadingEnvelope,
 )
 from abu_v60.mingli.agent_counterfactuals import (
+    decision_row_selection_is_valid,
     method_falsifier_is_actionable,
     reversal_is_actionable,
 )
@@ -46,11 +47,13 @@ def add_raw_decision_integrity_checks(
         )
         model_selects_cards = len(candidate_refs) > 2
         selected_cards_are_distinct = bool(
-            all(item is not None for item in raw_method_refs)
-            and len(set(raw_method_refs)) == 2
+            all(item is not None for item in raw_method_refs) and len(set(raw_method_refs)) == 2
         )
         method_integrity: list[bool] = []
         falsifier_integrity: list[bool] = []
+        decision_row_integrity: list[bool] = []
+        judgment_integrity: list[bool] = []
+        judgment_details: list[dict[str, object]] = []
         falsifier_details: list[dict[str, object]] = []
         for index in range(2):
             item = raw_hypotheses[index] if index < len(raw_hypotheses) else None
@@ -67,10 +70,7 @@ def add_raw_decision_integrity_checks(
                 expected_ref in cards
                 and (
                     not model_selects_cards
-                    or (
-                        expected_ref in candidate_refs
-                        and selected_cards_are_distinct
-                    )
+                    or (expected_ref in candidate_refs and selected_cards_are_distinct)
                 )
             )
             expected_identity = (
@@ -123,9 +123,7 @@ def add_raw_decision_integrity_checks(
                 if isinstance(ruling, Mapping)
             )
             falsifier_passed = bool(
-                passed
-                and len(ruling_results) == len(expected_identity)
-                and all(ruling_results)
+                passed and len(ruling_results) == len(expected_identity) and all(ruling_results)
             )
             falsifier_integrity.append(falsifier_passed)
             falsifier_details.append(
@@ -133,6 +131,35 @@ def add_raw_decision_integrity_checks(
                     "hypothesis_id": f"H{index + 1}",
                     "passed": falsifier_passed,
                     "ruling_results": ruling_results,
+                }
+            )
+            row_results = tuple(
+                decision_row_selection_is_valid(
+                    ruling.get("decision_row"),
+                    check_code=str(ruling.get("check_code")),
+                )
+                for ruling in raw_rulings
+                if isinstance(ruling, Mapping)
+            )
+            decision_row_integrity.append(
+                bool(
+                    not any(
+                        "decision_row" in ruling
+                        for ruling in raw_rulings
+                        if isinstance(ruling, Mapping)
+                    )
+                    or (len(row_results) == len(expected_identity) and all(row_results))
+                )
+            )
+            judgment_detail = _raw_hypothesis_judgment_coherence(
+                item,
+                card=(cards.get(str(expected_ref)) if expected_ref is not None else None),
+            )
+            judgment_integrity.append(bool(judgment_detail["valid"]))
+            judgment_details.append(
+                {
+                    "hypothesis_id": f"H{index + 1}",
+                    **judgment_detail,
                 }
             )
 
@@ -144,6 +171,23 @@ def add_raw_decision_integrity_checks(
             falsifier_details,
             None,
         )
+        add(
+            f"{variant}_RAW_DECISION_ROWS_BOUND",
+            "EXPECTED_CHANGE",
+            all(decision_row_integrity),
+            "模型原始方法卡必须选择与 check_code 和当前裁决一致的类型化反事实行。",
+            decision_row_integrity,
+            None,
+        )
+        add(
+            f"{variant}_RAW_HYPOTHESIS_JUDGMENT_COHERENT",
+            "EXPECTED_CHANGE",
+            all(judgment_integrity),
+            "模型原始 judgment 必须与方法卡逐项裁决汇总出的 adjudication 一致，"
+            "不能把有条件路径写成已充分成立。",
+            judgment_details,
+            None,
+        )
 
         raw_primary_items = [
             item
@@ -153,9 +197,7 @@ def add_raw_decision_integrity_checks(
         raw_primary = raw_primary_items[0] if len(raw_primary_items) == 1 else None
         decision = raw.get("hypothesis_decision") if isinstance(raw, Mapping) else None
         raw_primary_id = (
-            _string(raw_primary.get("hypothesis_id"))
-            if isinstance(raw_primary, Mapping)
-            else None
+            _string(raw_primary.get("hypothesis_id")) if isinstance(raw_primary, Mapping) else None
         )
         decision_winner_id = (
             _string(decision.get("winner_id")) if isinstance(decision, Mapping) else None
@@ -197,13 +239,25 @@ def add_raw_decision_integrity_checks(
             and reversal_is_actionable(
                 winner_signal=reversal.get("winner_signal"),
                 loser_signal=reversal.get("loser_signal"),
-                primary_name=(raw_primary.get("name") if isinstance(raw_primary, Mapping) else None),
+                primary_name=(
+                    raw_primary.get("name") if isinstance(raw_primary, Mapping) else None
+                ),
                 alternative_name=(
-                    raw_alternative.get("name")
-                    if isinstance(raw_alternative, Mapping)
-                    else None
+                    raw_alternative.get("name") if isinstance(raw_alternative, Mapping) else None
                 ),
             )
+        )
+        raw_reversal_row_ref = (
+            reversal.get("decision_row_ref") if isinstance(reversal, Mapping) else None
+        )
+        reversal_row_present = isinstance(raw_reversal_row_ref, str)
+        reversal_row_expected = (
+            f"REVERSAL:{raw_primary.get('method_card_ref') if isinstance(raw_primary, Mapping) else ''}>"
+            f"{raw_alternative.get('method_card_ref') if isinstance(raw_alternative, Mapping) else ''}:"
+            "MAINTAIN_PRIMARY>FLIP_TO_ALTERNATIVE"
+        )
+        reversal_row_bound = (
+            not reversal_row_present or raw_reversal_row_ref == reversal_row_expected
         )
         add(
             f"{variant}_RAW_REVERSAL_ACTIONABLE",
@@ -211,6 +265,17 @@ def add_raw_decision_integrity_checks(
             reversal_actionable,
             "主次回执必须用相反观察分别维持具名主解释、翻转为具名替代解释。",
             reversal,
+            None,
+        )
+        add(
+            f"{variant}_RAW_REVERSAL_ROW_BOUND",
+            "EXPECTED_CHANGE",
+            reversal_row_bound,
+            "模型原始 reversal 必须绑定两张方法卡，并明确维持主线与翻转替代线。",
+            {
+                "actual": raw_reversal_row_ref,
+                "expected": reversal_row_expected,
+            },
             None,
         )
 
@@ -223,11 +288,7 @@ def add_raw_decision_integrity_checks(
         expected_excluded = set(candidate_refs) - selected_refs
         excluded = raw.get("excluded_candidates") if isinstance(raw, Mapping) else None
         excluded_refs = (
-            [
-                _string(item.get("method_card_ref"))
-                for item in excluded
-                if isinstance(item, Mapping)
-            ]
+            [_string(item.get("method_card_ref")) for item in excluded if isinstance(item, Mapping)]
             if isinstance(excluded, list)
             else []
         )
@@ -319,6 +380,11 @@ def add_raw_decision_integrity_checks(
             for index, passed in enumerate(falsifier_integrity)
             if not passed
         )
+        expected_issues.update(
+            f"HYPOTHESIS_H{index + 1}"
+            for index, passed in enumerate(judgment_integrity)
+            if not passed
+        )
         if not primary_selection_valid:
             expected_issues.add("PRIMARY_SELECTION")
         if not primary_coherent:
@@ -361,9 +427,7 @@ def _raw_regime_is_coherent(raw: object) -> bool:
     if state in {"STRONG", "BALANCED", "SPECIALIZED_TENDENCY"}:
         return classification == "NON_WEAK_OUTSIDE_SCOPE"
     if classification == "ORDINARY_WEAK":
-        return state == "WEAK" and (
-            root == "PRESENT" or rooted_support == "PRESENT"
-        )
+        return state == "WEAK" and (root == "PRESENT" or rooted_support == "PRESENT")
     if classification == "FOLLOW_TREND":
         return bool(
             state == "FOLLOWING_TENDENCY"
@@ -380,6 +444,79 @@ def _raw_regime_is_coherent(raw: object) -> bool:
     return classification == "UNRESOLVED" and state in {"WEAK", "UNCERTAIN"}
 
 
+def _raw_hypothesis_judgment_coherence(
+    hypothesis: object,
+    *,
+    card: Mapping[str, object] | None,
+) -> dict[str, object]:
+    if not isinstance(hypothesis, Mapping) or card is None:
+        return {
+            "valid": False,
+            "expected_adjudication": None,
+            "expected_judgments": (),
+            "actual_adjudication": None,
+            "actual_judgment": None,
+        }
+    method_ref = _string(hypothesis.get("method_card_ref"))
+    required_checks = tuple(str(item) for item in card.get("required_checks", ()))
+    blocking_checks = {str(item) for item in card.get("blocking_checks", ())}
+    raw_rulings = hypothesis.get("method_rulings")
+    rulings = raw_rulings if isinstance(raw_rulings, list) else []
+    identity = tuple(
+        (
+            _string(item.get("method_card_ref")),
+            _string(item.get("check_code")),
+        )
+        for item in rulings
+        if isinstance(item, Mapping)
+    )
+    expected_identity = tuple((method_ref, check_code) for check_code in required_checks)
+    values = {
+        str(item.get("check_code")): _string(item.get("ruling"))
+        for item in rulings
+        if isinstance(item, Mapping)
+    }
+    legal_values = {"SUPPORTS", "CONDITIONAL", "OPPOSES", "UNRESOLVED"}
+    if (
+        method_ref is None
+        or not required_checks
+        or identity != expected_identity
+        or any(values.get(check_code) not in legal_values for check_code in required_checks)
+    ):
+        expected_adjudication = None
+        expected_judgments: tuple[str, ...] = ()
+    else:
+        blocking_values = tuple(values[check_code] for check_code in blocking_checks)
+        all_values = tuple(values[check_code] for check_code in required_checks)
+        if "OPPOSES" in blocking_values:
+            expected_adjudication = "BROKEN"
+        elif "UNRESOLVED" in blocking_values:
+            expected_adjudication = "UNRESOLVED"
+        elif any(value in {"UNRESOLVED", "CONDITIONAL", "OPPOSES"} for value in all_values):
+            expected_adjudication = "CONDITIONAL"
+        else:
+            expected_adjudication = "SUPPORTED"
+        expected_judgments = {
+            "BROKEN": ("BLOCKED",),
+            "UNRESOLVED": ("COMPETING",),
+            "CONDITIONAL": ("WORKS_IF", "PARTIAL"),
+            "SUPPORTED": ("SUPPORTED",),
+        }[expected_adjudication]
+    actual_adjudication = _string(hypothesis.get("adjudication"))
+    actual_judgment = _string(hypothesis.get("judgment"))
+    return {
+        "valid": bool(
+            expected_adjudication is not None
+            and actual_adjudication == expected_adjudication
+            and actual_judgment in expected_judgments
+        ),
+        "expected_adjudication": expected_adjudication,
+        "expected_judgments": expected_judgments,
+        "actual_adjudication": actual_adjudication,
+        "actual_judgment": actual_judgment,
+    }
+
+
 def _raw_regime_matches_packet(
     raw: object,
     *,
@@ -394,11 +531,7 @@ def _raw_regime_matches_packet(
     coordinates = tuple(raw_coordinates) if isinstance(raw_coordinates, list) else ()
     root_status = _string(regime.get("effective_root_status"))
     minimum_gate_repair_required = bool(
-        minimum_roots
-        and (
-            root_status != "PRESENT"
-            or not set(minimum_roots).issubset(coordinates)
-        )
+        minimum_roots and (root_status != "PRESENT" or not set(minimum_roots).issubset(coordinates))
     )
     if not candidates:
         root_bound = root_status == "ABSENT" and not coordinates
@@ -416,10 +549,15 @@ def _raw_regime_matches_packet(
         )
     peers = tuple(packet.day_master_support.visible_peer_support)
     rooted_support = _string(regime.get("rooted_visible_support_status"))
-    rooted_support_bound = rooted_support == "ABSENT" if not peers else rooted_support in {
-        "PRESENT",
-        "UNRESOLVED",
-    }
+    rooted_support_bound = (
+        rooted_support == "ABSENT"
+        if not peers
+        else rooted_support
+        in {
+            "PRESENT",
+            "UNRESOLVED",
+        }
+    )
     raw_competition = regime.get("competition_kinds")
     competition = set(raw_competition) if isinstance(raw_competition, list) else set()
     required_competition = set()

@@ -37,9 +37,7 @@ def upgrade() -> None:
         sa.Column(
             "life_case_revision_ref",
             sa.String(length=180),
-            sa.ForeignKey(
-                "mingli.life_case_revisions.life_case_revision_ref"
-            ),
+            sa.ForeignKey("mingli.life_case_revisions.life_case_revision_ref"),
             nullable=False,
         ),
         sa.Column(

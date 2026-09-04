@@ -1,0 +1,48 @@
+{
+  "schema_version": "v60.media-process-manifest.001",
+  "job_ref": "v60-life-tree-login-background-20260728",
+  "asset_id": "V60_LIFE_WORLD_BACKGROUND_CLEAN_V1",
+  "revision": "v1",
+  "character_version": null,
+  "source": {
+    "path": "media/sources/V60_LIFE_WORLD_BACKGROUND_CLEAN_V1/v1/source.png",
+    "sha256": "2b9c47ee05d0c6967ce5173e3fc353c64f9de82d09e13130797738d61b874df2",
+    "width": 1586,
+    "height": 992,
+    "alpha": false
+  },
+  "lineage": {
+    "reference_asset_id": "V60_LIFE_WORLD_BACKGROUND_REFERENCE_V1",
+    "reference_sha256": "1e7f5f82e20ad3817d67894f414fcddadfef50c89b5ed443b60d005298d45da4",
+    "prototype_project_ref": "appgprj_6a680dd8a8808191a03a0b72bfbdb5b7"
+  },
+  "operations": [
+    {
+      "type": "GENERATIVE_OBJECT_REMOVAL",
+      "scope": "REMOVE_FOREGROUND_GOLDEN_FRUIT",
+      "preserve": [
+        "TREE_SILHOUETTE",
+        "CAMERA",
+        "MOUNTAIN_GROVE",
+        "PAPER_TEXTURE",
+        "COLOR_LANGUAGE"
+      ],
+      "reason": "Keep the sign-in background quiet and leave foreground content unobstructed."
+    }
+  ],
+  "deliveries": [
+    {
+      "role": "V60_LOGIN_LIFE_TREE_BACKGROUND",
+      "path": "web/public/assets/brand/v60-life-tree-login-background-v1.png",
+      "sha256": "2b9c47ee05d0c6967ce5173e3fc353c64f9de82d09e13130797738d61b874df2",
+      "width": 1586,
+      "height": 992,
+      "alpha": false,
+      "anchor": "FULL_BLEED_CENTER"
+    }
+  ],
+  "owner_decision": {
+    "status": "APPROVED_FOR_V60_LOGIN_BACKGROUND",
+    "decided_at": "2026-07-28"
+  }
+}

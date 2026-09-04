@@ -78,9 +78,7 @@ def test_copy_repair_preserves_excluded_candidate_status_enum() -> None:
     )
 
     assert repaired["excluded_candidates"][0]["status"] == "UNRESOLVED"
-    assert repaired["excluded_candidates"][0]["rationale"] == (
-        "这条候选还需要整盘比较。"
-    )
+    assert repaired["excluded_candidates"][0]["rationale"] == ("这条候选还需要整盘比较。")
 
 
 def _base_reading_fixture() -> dict[str, str]:
@@ -181,9 +179,7 @@ def _valid_output(*, suffix: str = "", packet: Any | None = None) -> MingliAgent
                 pillar.hidden_ten_gods,
                 strict=True,
             ):
-                occurrences.setdefault(ten_god, []).append(
-                    f"{pillar.slot}支藏{hidden_stem}"
-                )
+                occurrences.setdefault(ten_god, []).append(f"{pillar.slot}支藏{hidden_stem}")
         paths = exact_role_paths(observation.pattern_ref, occurrences)
         if not paths:
             name = observation.label.removesuffix("候选")[:48]
@@ -205,9 +201,7 @@ def _valid_output(*, suffix: str = "", packet: Any | None = None) -> MingliAgent
                 "check_code": check_code,
                 "ruling": "CONDITIONAL",
                 "rationale": "当前命盘位置支持这条路径，但仍要结合整盘承载判断。",
-                "condition_or_falsifier": (
-                    "若本检查出现相反证据，则本项由有条件改判为反对。"
-                ),
+                "condition_or_falsifier": ("若本检查出现相反证据，则本项由有条件改判为反对。"),
                 "evidence_ids": [evidence_id],
             }
             for check_code in cards[card_ref]["required_checks"]
@@ -543,6 +537,18 @@ def _normalize_raw(*, packet: Any, raw: dict[str, Any]) -> MingliAgentModelOutpu
     return provider.generate(packet=packet).output
 
 
+def test_counterfactual_manifestation_does_not_repair_current_method_ruling() -> None:
+    _, packet = _packet()
+    raw = _valid_output(packet=packet).model_dump(mode="json")
+    raw["hypotheses"][0]["method_rulings"][0]["condition_or_falsifier"] = (
+        "若比劫透干并形成有效承载，则本项由SUPPORTS改判为CONDITIONAL。"
+    )
+
+    output = _normalize_raw(packet=packet, raw=raw)
+
+    assert "HYPOTHESIS_H1" not in output.server_issue_keys
+
+
 class _MemoryStore:
     def __init__(self) -> None:
         self.values: dict[str, MingliAgentReadingEnvelope] = {}
@@ -608,9 +614,12 @@ def test_blind_and_reconciliation_modes_are_physically_distinct() -> None:
     assert prompt_view["reasoning_contract"]["profile_context_allowed"] is False
     assert prompt_view["reasoning_contract"]["life_case_observations_allowed"] is False
     serialized = canonical_json(prompt_view)
-    assert prompt_view["professional_adjudication"]["domain_method_assets"][
-        "relationship"
-    ]["gender_fact"] == packet.gender
+    assert (
+        prompt_view["professional_adjudication"]["domain_method_assets"]["relationship"][
+            "gender_fact"
+        ]
+        == packet.gender
+    )
     assert packet.birth_timezone not in serialized
     assert packet.subject_kind not in serialized
 
@@ -623,20 +632,17 @@ def test_generation_schema_requires_non_null_regime_without_breaking_legacy_mode
     assert "regime_decision" in schema["required"]
     assert regime.get("$ref", "").endswith("/$defs/AgentRegimeDecision")
     assert "anyOf" not in regime
-    assert {"selected_hypothesis_id", "method_card_ref"}.issubset(
-        work_path["required"]
-    )
+    assert {"selected_hypothesis_id", "method_card_ref"}.issubset(work_path["required"])
     assert work_path["properties"]["transformation_codes"]["uniqueItems"] is True
-    assert MingliAgentModelOutput.model_json_schema()["properties"]["regime_decision"][
-        "default"
-    ] is None
+    assert (
+        MingliAgentModelOutput.model_json_schema()["properties"]["regime_decision"]["default"]
+        is None
+    )
 
 
 def test_prompt_view_separates_candidate_acknowledgement_regime_and_timing_scope() -> None:
     _, packet = _packet()
-    contract = packet.model_prompt_view()["professional_adjudication"][
-        "output_field_contract"
-    ]
+    contract = packet.model_prompt_view()["professional_adjudication"]["output_field_contract"]
 
     assert contract["regime_decision"]["required_non_null"] is True
     assert "NOT_EFFECTIVE_ROOT_RULING" in contract["support_selection"]["meaning"]
@@ -687,8 +693,7 @@ def test_ollama_adapter_sends_one_locked_packet_and_validates_output() -> None:
     assert calls[0]["payload"]["stream"] is False
     assert calls[0]["payload"]["think"] is False
     assert (
-        len(canonical_json(calls[0]["payload"]["format"]))
-        <= MINGLI_AGENT_OUTPUT_SCHEMA_MAX_CHARS
+        len(canonical_json(calls[0]["payload"]["format"])) <= MINGLI_AGENT_OUTPUT_SCHEMA_MAX_CHARS
     )
     assert result.total_tokens == 360
     assert result.output.day_master_evidence_ids[0] == "E001"
@@ -707,19 +712,12 @@ def test_ollama_adapter_sends_one_locked_packet_and_validates_output() -> None:
     assert result.output.regime_decision is not None
     assert result.output.regime_decision.classification == "NON_WEAK_OUTSIDE_SCOPE"
     receipt = result.normalization_receipt
-    assert receipt.raw_output["support_selection"]["peer_coordinates"] == [
-        "错误坐标"
-    ]
+    assert receipt.raw_output["support_selection"]["peer_coordinates"] == ["错误坐标"]
     assert receipt.raw_output_hash == content_hash(receipt.raw_output)
-    assert receipt.normalized_output_hash == content_hash(
-        result.output.model_dump(mode="json")
-    )
+    assert receipt.normalized_output_hash == content_hash(result.output.model_dump(mode="json"))
     assert receipt.hidden_reasoning_stored is False
     assert receipt.stored_scope == "STRUCTURED_PROVIDER_OUTPUT_ONLY"
-    assert {
-        (item.stage, item.path)
-        for item in receipt.changes
-    }.issuperset(
+    assert {(item.stage, item.path) for item in receipt.changes}.issuperset(
         {
             ("EVIDENCE_ID_NORMALIZATION", "/day_master_evidence_ids"),
             ("PACKET_FACT_BINDING", "/support_selection/peer_coordinates"),
@@ -826,9 +824,7 @@ def test_ollama_adapter_repairs_partial_rulings_and_timing_scope() -> None:
     assert result.output.work_path.selected_hypothesis_id == "H1"
     assert result.output.work_path.method_card_ref == repaired.method_card_ref
     assert result.output.work_path.closure == "UNCERTAIN"
-    assert {"HYPOTHESIS_H1", "HYPOTHESIS_DECISION"}.issubset(
-        result.output.server_issue_keys
-    )
+    assert {"HYPOTHESIS_H1", "HYPOTHESIS_DECISION"}.issubset(result.output.server_issue_keys)
     assert result.output.timing.dayun.coordinate_evidence_id == (
         packet.timing_coordinates[0].evidence_id
     )
@@ -843,9 +839,7 @@ def test_ollama_adapter_repairs_partial_rulings_and_timing_scope() -> None:
 def test_ollama_adapter_preserves_reversed_valid_candidate_identity() -> None:
     fixture, packet = _packet()
     raw = _valid_output(packet=packet).model_dump(mode="json")
-    pressure_ref, wealth_ref = (
-        item.evidence_id for item in packet.mechanism_observations[:2]
-    )
+    pressure_ref, wealth_ref = (item.evidence_id for item in packet.mechanism_observations[:2])
     pressure, wealth = raw["hypotheses"]
     raw["hypotheses"] = [wealth, pressure]
     wealth.update(
@@ -876,9 +870,7 @@ def test_ollama_adapter_preserves_reversed_valid_candidate_identity() -> None:
         {
             "ruling": "OPPOSES",
             "rationale": "官杀全部藏而未透，不能证明食伤已经直接制到压力目标。",
-            "condition_or_falsifier": (
-                "若官杀路径重新出现可达证据，则本项由反对改判为有条件。"
-            ),
+            "condition_or_falsifier": ("若官杀路径重新出现可达证据，则本项由反对改判为有条件。"),
         }
     )
     raw["hypothesis_decision"].update(
@@ -893,8 +885,7 @@ def test_ollama_adapter_preserves_reversed_valid_candidate_identity() -> None:
         }
     )
     raw["work_path"]["evidence_ids"] = [
-        wealth_ref if item == pressure_ref else item
-        for item in raw["work_path"]["evidence_ids"]
+        wealth_ref if item == pressure_ref else item for item in raw["work_path"]["evidence_ids"]
     ]
     for domain in raw["domains"].values():
         domain["evidence_ids"] = [
@@ -962,15 +953,11 @@ def test_no_root_weak_regime_caps_mechanism_capacity_at_conditional() -> None:
 
     for hypothesis in output.hypotheses:
         capacity = next(
-            item
-            for item in hypothesis.method_rulings
-            if item.check_code == "DAY_MASTER_CAPACITY"
+            item for item in hypothesis.method_rulings if item.check_code == "DAY_MASTER_CAPACITY"
         )
         assert capacity.ruling == "CONDITIONAL"
         assert "日主无根" in capacity.rationale
-    assert {"DAY_MASTER_CAPACITY_H1", "DAY_MASTER_CAPACITY_H2"}.issubset(
-        output.server_issue_keys
-    )
+    assert {"DAY_MASTER_CAPACITY_H1", "DAY_MASTER_CAPACITY_H2"}.issubset(output.server_issue_keys)
 
 
 def test_server_preserves_valid_model_primary_instead_of_counting_card_checks() -> None:
@@ -1008,8 +995,7 @@ def test_server_preserves_valid_model_primary_instead_of_counting_card_checks() 
 def test_following_tendency_retreats_when_peer_or_resource_competition_exists() -> None:
     _, packet = _packet()
     assert (
-        packet.day_master_support.visible_peer_support
-        or packet.day_master_support.resource_support
+        packet.day_master_support.visible_peer_support or packet.day_master_support.resource_support
     )
     raw = _valid_output(packet=packet).model_dump(mode="json")
     raw["day_master_state"] = "FOLLOWING_TENDENCY"
@@ -1105,9 +1091,7 @@ def test_open_dominant_chain_cannot_be_normalized_to_follow_trend() -> None:
 def test_candidate_allocator_reserves_later_valid_ref_before_repairing_invalid_first() -> None:
     _, packet = _packet()
     raw = _valid_output(packet=packet).model_dump(mode="json")
-    pressure_ref, wealth_ref = (
-        item.evidence_id for item in packet.mechanism_observations[:2]
-    )
+    pressure_ref, wealth_ref = (item.evidence_id for item in packet.mechanism_observations[:2])
     pressure, wealth = raw["hypotheses"]
     raw["hypotheses"] = [wealth, pressure]
     raw["hypotheses"][0].update(
@@ -1178,9 +1162,7 @@ def test_work_path_mixed_timing_evidence_is_not_silently_washed_clean() -> None:
 def test_work_path_timing_prose_is_withheld_even_with_natal_evidence() -> None:
     _, packet = _packet()
     raw = _valid_output(packet=packet).model_dump(mode="json")
-    raw["work_path"]["path_statement"] = (
-        "原局主线先承接月令压力，再由岁运推动表达并抵达目标。"
-    )
+    raw["work_path"]["path_statement"] = "原局主线先承接月令压力，再由岁运推动表达并抵达目标。"
 
     output = _normalize_raw(packet=packet, raw=raw)
 
@@ -1239,9 +1221,7 @@ def test_all_broken_fallback_slots_emit_semantic_repair_receipts() -> None:
     output = _normalize_raw(packet=zero_packet, raw=raw)
 
     assert output.hypotheses[0].adjudication == "UNRESOLVED"
-    assert {"HYPOTHESIS_H1", "PRIMARY_SELECTION", "WORK_PATH"}.issubset(
-        output.server_issue_keys
-    )
+    assert {"HYPOTHESIS_H1", "PRIMARY_SELECTION", "WORK_PATH"}.issubset(output.server_issue_keys)
 
 
 def test_localized_day_master_state_is_normalized_before_regime_projection() -> None:
@@ -1260,9 +1240,7 @@ def test_localized_day_master_state_is_normalized_before_regime_projection() -> 
 def test_duplicate_candidate_refs_are_neutralized_instead_of_silently_rebound() -> None:
     _, packet = _packet()
     raw = _valid_output(packet=packet).model_dump(mode="json")
-    pressure_ref, wealth_ref = (
-        item.evidence_id for item in packet.mechanism_observations[:2]
-    )
+    pressure_ref, wealth_ref = (item.evidence_id for item in packet.mechanism_observations[:2])
     raw["hypotheses"][1]["method_card_ref"] = pressure_ref
     raw["hypotheses"][1]["mechanism_evidence_ids"] = [pressure_ref]
 
@@ -1591,9 +1569,7 @@ def test_valid_model_primary_and_reversal_copy_survive_server_repairs() -> None:
     raw = _valid_output(packet=packet).model_dump(mode="json")
     for ruling in raw["hypotheses"][0]["method_rulings"][:3]:
         ruling["ruling"] = "UNRESOLVED"
-        ruling["condition_or_falsifier"] = (
-            "若本检查出现明确支持证据，则本项由未决改判为有条件。"
-        )
+        ruling["condition_or_falsifier"] = "若本检查出现明确支持证据，则本项由未决改判为有条件。"
     next(
         item
         for item in raw["hypotheses"][0]["method_rulings"]
@@ -1601,17 +1577,13 @@ def test_valid_model_primary_and_reversal_copy_survive_server_repairs() -> None:
     ).update(
         {
             "ruling": "UNRESOLVED",
-            "condition_or_falsifier": (
-                "若可达条件出现明确支持证据，则本项由未决改判为有条件。"
-            ),
+            "condition_or_falsifier": ("若可达条件出现明确支持证据，则本项由未决改判为有条件。"),
         }
     )
     raw["hypotheses"][1]["method_rulings"][0].update(
         {
             "ruling": "UNRESOLVED",
-            "condition_or_falsifier": (
-                "若本检查出现明确支持证据，则本项由未决改判为有条件。"
-            ),
+            "condition_or_falsifier": ("若本检查出现明确支持证据，则本项由未决改判为有条件。"),
         }
     )
     raw["hypothesis_decision"]["reversal"].update(
@@ -1629,9 +1601,7 @@ def test_valid_model_primary_and_reversal_copy_survive_server_repairs() -> None:
         {
             "ruling": "SUPPORTS",
             "rationale": "双比肩意味着同辈竞争，会争夺财星的承接空间。",
-            "condition_or_falsifier": (
-                "若竞争重新形成明确阻断，则本项由支持改判为有条件。"
-            ),
+            "condition_or_falsifier": ("若竞争重新形成明确阻断，则本项由支持改判为有条件。"),
         }
     )
     provider = OllamaMingliAgentProvider(
@@ -1667,12 +1637,8 @@ def test_valid_model_primary_and_reversal_copy_survive_server_repairs() -> None:
     assert "主解释对月令、透藏和整盘承接的覆盖更完整" in (
         output.hypothesis_decision.winner.rationale
     )
-    assert "维持食神到七杀路径为主解释" in (
-        output.hypothesis_decision.reversal.winner_signal
-    )
-    assert "翻转为食神到正财路径" in (
-        output.hypothesis_decision.reversal.loser_signal
-    )
+    assert "维持食神到七杀路径为主解释" in (output.hypothesis_decision.reversal.winner_signal)
+    assert "翻转为食神到正财路径" in (output.hypothesis_decision.reversal.loser_signal)
     assert output.server_issue_keys == ("HYPOTHESIS_H2",)
 
 
@@ -1896,9 +1862,7 @@ def test_unqualified_candidate_can_generate_private_review_without_publication()
     assert mingli_agent_runtime_status(enabled_settings).value == "READY_FOR_OWNER_REVIEW"
     assert configured_mingli_agent_runtime(enabled_settings).ready is True
     manifest = mingli_agent_runtime_manifest(enabled_settings)
-    assert manifest["model_qualification_status"] == (
-        "GEMMA4_PRODUCT_CANDIDATE_REQUIRES_OWNER_REVIEW"
-    )
+    assert manifest["model_qualification_status"] == ("LOCAL_MODEL_CANDIDATE_REQUIRES_OWNER_REVIEW")
     assert manifest["reasoning_mode"] == "BLIND_READING"
     assert manifest["owner_review_allowed"] is True
     assert manifest["publication_allowed"] is False
@@ -2186,9 +2150,7 @@ def test_legacy_reading_005_replays_without_injecting_work_path_binding() -> Non
         prompt_hash=payload["prompt_hash"],
         agent_reading_version="v60.mingli-agent-reading.005",
     )
-    prior_receipt = MingliAgentNormalizationReceipt.model_validate(
-        payload["normalization_receipt"]
-    )
+    prior_receipt = MingliAgentNormalizationReceipt.model_validate(payload["normalization_receipt"])
     legacy_output = payload["output"]
     legacy_receipt = MingliAgentNormalizationReceipt.issue(
         provider_response_ref=prior_receipt.provider_response_ref,
@@ -2289,9 +2251,7 @@ def test_agent_reading_projects_one_deterministic_shared_claim_graph() -> None:
     by_key = {item.semantic_key: item for item in first.claims}
     primary = next(item for item in reading.output.hypotheses if item.role == "PRIMARY")
     assert by_key["WHOLE_CHART"].headline == primary.name
-    assert by_key["WHOLE_CHART"].statement.startswith(
-        f"暂以{primary.name}作为整盘工作主线"
-    )
+    assert by_key["WHOLE_CHART"].statement.startswith(f"暂以{primary.name}作为整盘工作主线")
     assert primary.method_rulings[0].rationale.rstrip("。").replace("此项通过", "") in (
         by_key["WHOLE_CHART"].statement
     )
@@ -2392,8 +2352,7 @@ def test_relationship_and_family_keywords_cannot_bypass_missing_positive_method(
         {
             "headline": "当前家庭先校准责任边界",
             "conclusion": (
-                "当前家庭先看日支所承载的现实责任，再结合整盘主路径判断资源与"
-                "照料如何分配。"
+                "当前家庭先看日支所承载的现实责任，再结合整盘主路径判断资源与照料如何分配。"
             ),
             "causal_chain": ["当前家庭范围结合日支宫位与整盘主路径形成责任分配"],
         }
@@ -2434,9 +2393,7 @@ def test_domain_method_keywords_cannot_launder_unadmitted_life_story(
     ).run(requester_account_ref=fixture["owner_account_ref"], packet=packet)
 
     graph = MingliReadingClaimGraphProjector().project(reading, packet=packet)
-    relationship = next(
-        item for item in graph.claims if item.semantic_key == "DOMAIN_RELATIONSHIP"
-    )
+    relationship = next(item for item in graph.claims if item.semantic_key == "DOMAIN_RELATIONSHIP")
 
     assert relationship.status == "WITHHELD"
     assert "DOMAIN_METHOD_POSITIVE_RULE_NOT_ADMITTED" in relationship.assessment_codes
@@ -2460,9 +2417,7 @@ def test_spouse_palace_axis_rejects_ten_god_from_another_branch() -> None:
     ).run(requester_account_ref=fixture["owner_account_ref"], packet=packet)
 
     graph = MingliReadingClaimGraphProjector().project(reading, packet=packet)
-    relationship = next(
-        item for item in graph.claims if item.semantic_key == "DOMAIN_RELATIONSHIP"
-    )
+    relationship = next(item for item in graph.claims if item.semantic_key == "DOMAIN_RELATIONSHIP")
 
     assert relationship.status == "WITHHELD"
     assert "NAMED_COORDINATE_CONFLICTS_WITH_PACKET" in relationship.assessment_codes
@@ -2475,9 +2430,7 @@ def test_named_coordinate_check_stops_before_the_next_clause() -> None:
         {
             "headline": "先核对夫妻宫里的真实成员",
             "conclusion": "财星与日支夫妻宫必须分别核对，不能把其他柱的十神移入日支。",
-            "causal_chain": [
-                "日支丑土藏干中偏财（己）与偏印（癸）同在，年干食神（丁）明透。"
-            ],
+            "causal_chain": ["日支丑土藏干中偏财（己）与偏印（癸）同在，年干食神（丁）明透。"],
         }
     )
     reading = MingliAgentRuntime(
@@ -2486,9 +2439,7 @@ def test_named_coordinate_check_stops_before_the_next_clause() -> None:
     ).run(requester_account_ref=fixture["owner_account_ref"], packet=packet)
 
     graph = MingliReadingClaimGraphProjector().project(reading, packet=packet)
-    relationship = next(
-        item for item in graph.claims if item.semantic_key == "DOMAIN_RELATIONSHIP"
-    )
+    relationship = next(item for item in graph.claims if item.semantic_key == "DOMAIN_RELATIONSHIP")
 
     assert "NAMED_COORDINATE_CONFLICTS_WITH_PACKET" not in relationship.assessment_codes
     assert "DOMAIN_METHOD_POSITIVE_RULE_NOT_ADMITTED" in relationship.assessment_codes
@@ -2514,7 +2465,9 @@ def test_generic_mechanism_group_name_cannot_replace_exact_ten_god_path() -> Non
 
     graph = MingliReadingClaimGraphProjector().project(reading, packet=packet)
     hypothesis = next(
-        item for item in graph.claims if item.semantic_key == f"HYPOTHESIS_{primary['hypothesis_id']}"
+        item
+        for item in graph.claims
+        if item.semantic_key == f"HYPOTHESIS_{primary['hypothesis_id']}"
     )
 
     assert hypothesis.status == "WITHHELD"
@@ -2617,9 +2570,7 @@ def test_selected_timing_stem_can_be_described_as_visible_in_its_own_layer() -> 
     assert "极大" not in annual_claim.statement
     assert "顶峰" not in annual_claim.statement
     assert "这不等于结果已经发生" in annual_claim.statement
-    assert "TEN_GOD_MANIFESTATION_CONFLICTS_WITH_PACKET" not in (
-        annual_claim.assessment_codes
-    )
+    assert "TEN_GOD_MANIFESTATION_CONFLICTS_WITH_PACKET" not in (annual_claim.assessment_codes)
 
 
 def test_timing_natal_uses_selected_primary_instead_of_model_timing_rewrite() -> None:
@@ -2663,9 +2614,7 @@ def test_owner_gemma4_reading_has_exact_evidence_and_dependency_admission() -> N
     upgraded_output["hypothesis_decision"]["reversal"]["question"] = frozen_output[
         "discriminating_question"
     ]
-    selected = next(
-        item for item in upgraded_output["hypotheses"] if item["role"] == "PRIMARY"
-    )
+    selected = next(item for item in upgraded_output["hypotheses"] if item["role"] == "PRIMARY")
     upgraded_output["work_path"]["selected_hypothesis_id"] = selected["hypothesis_id"]
     upgraded_output["work_path"]["method_card_ref"] = selected["method_card_ref"]
     reading = MingliAgentRuntime(

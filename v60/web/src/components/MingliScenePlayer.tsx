@@ -10,10 +10,12 @@ import { MingliPillarStage } from "./MingliPillarStage";
 const MingliSceneCanvas = lazy(() => import("./MingliSceneCanvas"));
 
 export function MingliScenePlayer({
+  daylight = false,
   fallbackClock,
   frame,
   stage,
 }: {
+  daylight?: boolean;
   fallbackClock: MingliNarrationVisualClock;
   frame: MingliSceneFrame;
   stage: MingliStageProjection;
@@ -31,6 +33,7 @@ export function MingliScenePlayer({
   return (
     <section
       className="mingli-scene-player"
+      data-active-column-refs={frame.activeColumnRefs.join(",")}
       data-column-count={stage.columns.length}
       data-cue-progress={frame.cueProgress.toFixed(6)}
       data-projection-hash={stage.projection_hash}
@@ -55,6 +58,7 @@ export function MingliScenePlayer({
             }
           >
             <MingliSceneCanvas
+              daylight={daylight}
               frame={frame}
               onContextLost={handleContextLost}
               stage={stage}
@@ -64,7 +68,15 @@ export function MingliScenePlayer({
         <div className="mingli-scene-vignette" aria-hidden="true" />
         <div className="mingli-scene-column-labels" aria-label="命理柱位">
           {stage.columns.map((column) => (
-            <span data-source-layer={column.source_layer} key={column.column_ref}>
+            <span
+              data-column-ref={column.column_ref}
+              data-column-role={column.slot}
+              data-narrated={frame.activeColumnRefs.includes(column.column_ref)
+                ? "true"
+                : undefined}
+              data-source-layer={column.source_layer}
+              key={column.column_ref}
+            >
               <strong>{column.label}</strong>
               <small>
                 {column.slot === "DAYUN"

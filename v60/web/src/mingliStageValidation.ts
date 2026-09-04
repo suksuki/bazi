@@ -9,6 +9,10 @@ import type {
   MingliStageSubjectId,
 } from "./mingliStageTypes";
 import { validateReadingClaimGraph } from "./mingliClaimGraphValidation";
+import {
+  focusedSummaryState,
+  validateFocusedSummary,
+} from "./mingliFocusedValidation";
 
 const HASH = /^[0-9a-f]{64}$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -142,8 +146,10 @@ export function validateReadingSummary(
   const summary = value as unknown as MingliReadingSummaryProjection;
   const lineage = summary.reading_brief.lineage;
   const agentReady = summary.agent_status === "READY";
+  const records = summary.focused_pass_records;
+  const focused = focusedSummaryState(summary);
   if (
-    summary.summary_version !== "v60.mingli-reading-summary.006" ||
+    summary.summary_version !== "v60.mingli-reading-summary.008" ||
     !summary.summary_ref ||
     !HASH.test(summary.summary_hash) ||
     summary.case_ref !== stage.case_ref ||
@@ -152,6 +158,17 @@ export function validateReadingSummary(
     summary.reading_ref !== stage.reading_ref ||
     summary.reading_hash !== stage.reading_hash ||
     summary.subject_kind !== stage.subject_kind ||
+    !["READY_FOR_OWNER_REVIEW", "DISABLED"].includes(
+      summary.focused_runtime_status,
+    ) ||
+    summary.focused_generation_available !== (
+      summary.focused_runtime_status === "READY_FOR_OWNER_REVIEW"
+    ) ||
+    !Array.isArray(records) ||
+    summary.focused_status !== focused.status ||
+    summary.focused_projection_scope !== (
+      focused.hasFocused ? "OWNER_REVIEW" : "NOT_GENERATED"
+    ) ||
     !["READY", "READY_FOR_OWNER_REVIEW", "DISABLED", "MISCONFIGURED"].includes(
       summary.agent_runtime_status,
     ) ||
@@ -164,7 +181,7 @@ export function validateReadingSummary(
       agentReady ? "OWNER_REVIEW" : "NOT_GENERATED"
     ) ||
     summary.image_projection_status !== (
-      agentReady ? "AGENT_INTERPRETATION" : "NOT_GENERATED"
+      agentReady || focused.hasFocused ? "AGENT_INTERPRETATION" : "NOT_GENERATED"
     ) ||
     summary.professional_verdict_allowed !== false ||
     summary.canonical_write_allowed !== false ||
@@ -175,6 +192,7 @@ export function validateReadingSummary(
   ) {
     throw new Error("mingli_reading_summary_shape_invalid");
   }
+  validateFocusedSummary(summary, stage);
   if (agentReady) {
     const reading = validateAgentReading(summary.agent_reading, stage);
     validateReadingClaimGraph(summary.claim_graph, stage, reading);

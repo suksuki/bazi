@@ -76,9 +76,7 @@ def test_source_review_distinguishes_clear_clash_and_harmony_coordinates() -> No
     )
 
     assert first == second
-    assert first.source_evidence_count == len(
-        quant.source_manifestation_evidence
-    )
+    assert first.source_evidence_count == len(quant.source_manifestation_evidence)
     assert first.review_required_count > 0
     assert first.six_clash_intersection_count > 0
     assert first.six_harmony_intersection_count > 0
@@ -86,8 +84,7 @@ def test_source_review_distinguishes_clear_clash_and_harmony_coordinates() -> No
     assert first.probability_claim_allowed is False
     assert first.canonical_write_allowed is False
     assert all(
-        item.relation_effect_status == "UNRESOLVED"
-        and item.root_usability_status == "UNRESOLVED"
+        item.relation_effect_status == "UNRESOLVED" and item.root_usability_status == "UNRESOLVED"
         for item in first.reviews
     )
     serialized = canonical_json(first.model_dump(mode="json"))
@@ -129,9 +126,7 @@ def test_source_review_fails_closed_on_unadmitted_relation_claims() -> None:
             hour="辛卯",
         )
     )
-    relation = next(
-        item for item in facts if item["fact_type"] == "six_clash_membership"
-    )
+    relation = next(item for item in facts if item["fact_type"] == "six_clash_membership")
     malformed = {
         **relation,
         "fact_json": {
@@ -140,8 +135,7 @@ def test_source_review_fails_closed_on_unadmitted_relation_claims() -> None:
         },
     }
     mutated = tuple(
-        malformed if item["fact_ref"] == relation["fact_ref"] else item
-        for item in facts
+        malformed if item["fact_ref"] == relation["fact_ref"] else item for item in facts
     )
 
     with pytest.raises(
@@ -163,9 +157,7 @@ def test_source_review_fails_closed_on_cross_case_or_misaligned_relation() -> No
             hour="辛卯",
         )
     )
-    relation = next(
-        item for item in facts if item["fact_type"] == "six_clash_membership"
-    )
+    relation = next(item for item in facts if item["fact_type"] == "six_clash_membership")
     cross_case = {
         **relation,
         "case_ref": "different-case",
@@ -174,8 +166,7 @@ def test_source_review_fails_closed_on_cross_case_or_misaligned_relation() -> No
         MingliSourceCoordinateReviewCompiler().compile(
             quant_vector=quant,
             facts=tuple(
-                cross_case if item["fact_ref"] == relation["fact_ref"] else item
-                for item in facts
+                cross_case if item["fact_ref"] == relation["fact_ref"] else item for item in facts
             ),
         )
 
@@ -193,8 +184,7 @@ def test_source_review_fails_closed_on_cross_case_or_misaligned_relation() -> No
         MingliSourceCoordinateReviewCompiler().compile(
             quant_vector=quant,
             facts=tuple(
-                misaligned if item["fact_ref"] == relation["fact_ref"] else item
-                for item in facts
+                misaligned if item["fact_ref"] == relation["fact_ref"] else item for item in facts
             ),
         )
 
@@ -234,18 +224,15 @@ def test_source_review_store_is_idempotent_and_append_only() -> None:
     assert lab["source_coordinate_reviews"] == expected["reviews"]
     assert prerequisite["source_review_vector_ref"] == expected["vector_ref"]
     assert prerequisite["source_review_vector_hash"] == expected["vector_hash"]
-    assert lab["source_usability_prerequisite_ref"] == (
-        prerequisite["prerequisite_ref"]
+    assert lab["source_usability_prerequisite_ref"] == (prerequisite["prerequisite_ref"])
+    assert lab["source_usability_prerequisite_hash"] == (prerequisite["prerequisite_hash"])
+    assert lab["source_usability_prerequisite_carriers"] == (prerequisite["carriers"])
+    assert (
+        prerequisite
+        == HomeExperienceService(engine).snapshot(
+            account_ref=account_ref,
+        )["mingli"]["source_usability_prerequisite"]
     )
-    assert lab["source_usability_prerequisite_hash"] == (
-        prerequisite["prerequisite_hash"]
-    )
-    assert lab["source_usability_prerequisite_carriers"] == (
-        prerequisite["carriers"]
-    )
-    assert prerequisite == HomeExperienceService(engine).snapshot(
-        account_ref=account_ref,
-    )["mingli"]["source_usability_prerequisite"]
     assert persisted.model_dump(mode="json") == expected
     with engine.connect() as connection:
         count = connection.execute(

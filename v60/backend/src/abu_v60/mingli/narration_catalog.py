@@ -90,12 +90,10 @@ def script_for_projection(projection: MingliStageProjection) -> NarrationScript:
     pillar_line = "、".join(f"{column.label}{column.pillar}" for column in projection.columns[:4])
     relation_counts = {
         "six_clash_membership": sum(
-            relation.relation_type == "six_clash_membership"
-            for relation in projection.relations
+            relation.relation_type == "six_clash_membership" for relation in projection.relations
         ),
         "six_harmony_membership": sum(
-            relation.relation_type == "six_harmony_membership"
-            for relation in projection.relations
+            relation.relation_type == "six_harmony_membership" for relation in projection.relations
         ),
     }
     if sum(relation_counts.values()):

@@ -4,8 +4,10 @@
 
 日期：2026-08-02
 
-适用范围：V60 命理测算、Lab、阿布说、阿布梦境、八字剧场、题库、知识库、
-规则库、518K／命运奇点研究、合成命盘验证与 LifeCase。
+最后同步：2026-09-04
+
+适用范围：V60 命理测算、内部 Lab、阿布说、知识库、规则库、
+518K／命运奇点研究、合成命盘验证与 LifeCase。
 
 ## 1. 产品命题
 
@@ -20,7 +22,7 @@
 通用 LLM 可以写一篇听起来像算命的文章，但它不天然拥有：
 
 - 本产品唯一、版本化且可恢复的 Case／Chart／Reading；
-- 同一判断在命理枝、Lab、阿布说、Dream 和剧场中的一致引用；
+- 同一判断在命理枝、内部 Lab 和阿布说中的一致引用；
 - 事实、解释、应事、应期和用户反馈之间不可混淆的边界；
 - 合成单变量对照、反证、稳定性复测和长期 LifeCase；
 - 每次判断采用了什么知识、规则、Prompt、模型和证据的谱系；
@@ -61,7 +63,7 @@ Claim 隔离必须具有依赖语义：`WITHHELD` Claim 不得继续通过 `SUPP
 当前最佳初断展示，但必须降为 `NEEDS_RECONCILIATION`，不能伪装成普通已准入判断。条件字段
 也不能替另一段无条件作用断言“洗白”。
 
-命理测算、Lab、阿布说、Dream、剧场和题库只能引用同一 `claim_ref`，不得复制后
+命理测算、内部 Lab 和阿布说只能引用同一 `claim_ref`，不得复制后
 各自重新断命，也不得形成第二套真相。
 
 ### 2.2 Life Thread：体验中心
@@ -87,9 +89,9 @@ Reading。
 | 事实平面 | Case、Chart、四柱、十神、藏干、排运、时间坐标、准入关系 | canonical 计算与准入服务 |
 | 认知平面 | 专业卷宗、竞争解释、Claim Graph、资格评测、反证与研究批注 | Mingli Agent、Lab 审阅流程 |
 | 实践平面 | 当前正式 Reading、Concern Thread、追问、Observation Ledger | 命理师流程与唯一 Admission |
-| 体验平面 | 命理枝、六柱舞台、字幕、TTS、Dream、剧场、角色与恢复状态 | Projection／Scene／Narration |
+| 体验平面 | 命理枝、六柱舞台、字幕、TTS、角色与恢复状态 | Projection／Scene／Narration |
 
-上层可以引用下层，不能反向改写下层。一次 Dream 选择不是命盘事实，一段剧场剧情
+上层可以引用下层，不能反向改写下层。一次互动选择不是命盘事实，一段演示内容
 不是现实应事，一条 LLM 解释也不能改写四柱。
 
 ## 4. 命理师 Agent 的正式职责
@@ -123,7 +125,7 @@ Reading。
 ### 5.1 `BLIND_READING`
 
 盲断只允许读取命盘事实、时间坐标、准入知识与规则、专业卷宗和明确的研究候选。
-姓名、性别刻板推断、真实经历、画像标签、Dream 选择、历史问答和旧断语均不得进入
+姓名、性别刻板推断、真实经历、画像标签、互动选择、历史问答和旧断语均不得进入
 模型 Prompt。
 
 它回答：“只看这张盘，专业上能推到哪里？”
@@ -149,16 +151,18 @@ Reading。
 Mingli Agent Host 必须保持 provider／model 可替换。模型只是推理器官，不是产品
 正本。
 
-Owner 已确认，既有产品模型方向是 `gemma4:latest`；Qwen 在既有合同中属于
-Research／Teacher 对照。上一轮整盘 Agent 错误地把 Qwen 试验配置延续为默认候选，
-本轮纠正为：
+2026-08-15 当前模型政策为：
 
-- `gemma4:latest` 恢复为整盘 Agent 的首个产品资格候选；
-- Qwen 输出保留为不可变对照证据，不再占据产品默认；
-- Gemma4 仍须通过同一事实、内容和稳定性资格赛，不能因历史偏好直接发布；
-- 当前 Gemma4 结果只允许进入私密 `OWNER_REVIEW_REQUIRED` 初断，
-  `publication_allowed=false`；不具备公开专业资格不等于拒绝完成整盘判断；
+- `qwen3.8:27b` 是本地 Focused Reading 与严格 DEV Agent 的首选候选；
+- `gemma4:latest` 保留为显式同尺比较与低延迟回退，不做静默混用；
+- Qwen 的用户路径一次只问一个具体主题；严格整盘 JSON Agent 保留给资格与方法研究；
+- 两个模型都必须通过同一事实、内容、反证和稳定性资格赛，不能因版本更新直接发布；
+- 当前结果只允许进入私密 Owner Review，`publication_allowed=false`，canonical fact
+  write 关闭；不具备公开专业资格不等于拒绝完成初断；
 - 模型替换不得改变 Case、Reading、Claim Graph 和 Experience Projection 合同。
+
+2026-08-02 恢复 Gemma4 为首个候选的决定及其 sealed run 保留为历史证据，未被删除或
+改义；“Qwen3.8 尚未接入”已经被当前 Runtime Manifest 和 2026-08-15 同尺结果取代。
 
 Qwen3-TTS 是独立的声音引擎，不等于命理推理模型。
 
@@ -174,8 +178,9 @@ Reading、Knowledge、Rule、Prompt 或 Gold Reading。
 
 每次教师研究必须锁定并缓存模型精确版本、Case Packet Hash、Prompt／Schema 版本、
 参数、输入输出 token、耗时和成本。前沿 API 只用于建立基线和里程碑盲检，不进入普通
-用户一次主推理路径。`gemma4:latest` 仍是当前本地产品资格候选；Qwen3.8 只是未来
-候选，必须通过同一合同和资格流程，不能因价格或 token 方案直接获得产品地位。
+用户 Runtime。当前产品每个明确 Focus 最多调用一次本地 Qwen，命中 append-only 记录
+时零调用；严格整盘 Agent 只在 DEV／Owner Review 明确触发。完整迁移与比较凭证见
+[`23_V60_QWEN38_MINGLI_INTEGRATION_AND_PRACTITIONER_REVIEW.md`](23_V60_QWEN38_MINGLI_INTEGRATION_AND_PRACTITIONER_REVIEW.md)。
 
 ## 7. 各模块在同一网络中的职责
 
@@ -184,8 +189,6 @@ Reading、Knowledge、Rule、Prompt 或 Gold Reading。
 | 命理测算 | 给出当前整盘专业判断 | Reading revision | 栏目各自重算 |
 | Lab | 展开证据、因果链、竞争解释与反证 | 研究批注、比较记录 | 静默覆盖正式 Reading |
 | 阿布说 | 随处讲述、总结、追问和导演演出 | Script、Cue、播放状态 | 另造命理结论 |
-| Dream | 把命理主题变成可经历、可选择的情境 | 场景状态、选择观察 | 把选择直接写成命盘事实 |
-| 剧场 | 表演关系、冲突和可能情境 | 明示虚构的剧情事件 | 把剧情当预测 |
 | 题库 | 区分竞争解释并收集观察 | Question、Answer、Observation | 用答案后验改写盲断 |
 | 518K／奇点 | 发现候选、反例和局部结构 | 研究候选、实验记录 | 自称已经证明人生结论 |
 | 合成命盘 | 单变量翻转、保持与稳定性验证 | 合成 Case、差分结果 | 用规则自产自证高级能力 |
@@ -207,7 +210,7 @@ Case / Chart / TimeContext
         ↓
 确定性 Reading Claim Graph
         ↓
-命理枝 / Lab / 阿布说 / Dream / 剧场 / 题库
+命理枝 / 内部 Lab / 阿布说
 ```
 
 页面 GET、刷新、切四层、四柱／六柱切换、播放／暂停、进入 Lab 均只读同一代际
@@ -243,6 +246,8 @@ Case / Chart / TimeContext
 - [x] Claim Graph 保留机制／岁运坐标／关系证据角色，并阻断 `WITHHELD` 依赖边；
 - [x] 切 Case 时废弃旧生成请求，Reading 与 Lab 只消费当前完整谱系；
 - [x] 恢复 Gemma4 产品候选并完成一次同合同内容资格审读；
+- [x] 在同一合同下接入 Qwen3.8，保留 Gemma4 历史与比较身份，并将产品路径拆为逐主题
+  append-only Focused Pass；
 - [x] 将候选方法卡升级为逐项判法，并由服务端重算机制成立／受限／破坏／未决；
 - [x] 强制主判、备选、胜负理由、翻盘条件和全部候选覆盖；
 - [x] 把透藏、根气、关系和时间层等局部语义错误隔离到对应 Claim；
@@ -262,10 +267,10 @@ Case / Chart / TimeContext
 - [ ] 将固定命盘套件扩展为流年保持、稳定性、对抗、陌生资格与保留盘；
 - [x] 保留事实向量级根气、显藏可达、财富目标、比劫竞争与性别通道 flip／hold 回归，
   并让第一组方法进入真实 Case／Reading／Agent 链路；
-- [ ] 以同一 Packet／Prompt／Schema 对照 Gemma4、未来 Qwen 候选与至少一个版本锁定的
-  前沿教师模型；
-- [ ] 把教师差异提炼为候选方法卡、规则、Prompt、反例和测试，并经过 Owner／专业准入；
-- [ ] 把事实错误、主线漂移、模板化、方法身份、耗时／token／成本写入资格记录；
+- [x] 以同一 Packet／Prompt／Schema 对照 Gemma4、Qwen3.8 与一个版本锁定的前沿教师；
+- [x] 把已确认的教师／候选差异提炼为候选方法卡、规则、Prompt、反例、Normalizer 与
+  回归；正式命理结论仍等待 Owner／专业准入；
+- [x] 把事实错误、主线漂移、模板化、方法身份、耗时／token／成本写入资格或运行记录；
 - [ ] 只在基线和里程碑调用付费教师，命中缓存时不得重复调用；
 - [ ] 只有专业资格与结果发布两个开关同时通过才进入正式 Reading。
 
@@ -280,7 +285,6 @@ Case / Chart / TimeContext
 
 - [ ] 阿布说以 Claim Graph 生成 Script／Cue，不再依附单一 Lab 面板；
 - [ ] 与命理枝和 Lab 共用同一个四／六柱 Scene Player；
-- [ ] Dream、剧场和题库通过 `claim_ref` 与 Concern Thread 接入；
 - [ ] 角色、字幕、TTS、粒子和关系线只表现同一判断语义。
 
 ## 11. 不可破坏原则
@@ -411,3 +415,20 @@ Gemma4、经过类型化裁决并写入同一个 append-only 实验 Run。当前
 Suite Ref/Hash 并拥有自己的 Hash。只有候选身份完全相同且子 Run 谱系、顺序和定义 Hash
 全部匹配时才允许复用。这使未来 Gemma、Qwen 或教师模型可以在同一方法矩阵上公平比较，
 但任何模型更换都不能跳过资格流程。
+
+## 17. 2026-08-27 三段式 DEV 蒸馏的宪法位置
+
+认知系统新增一种训练执行方式，但没有新增第三种正式产品推理模式。三段式探针只属于
+DEV 方法发现：`REGIME` 负责一个判型问题，`CANDIDATE_COMPARISON` 负责两张方法卡，
+`CERTAINTY` 只把本地 aggregate 映射为结论强度。它不能替代私密产品 Focused Reading，
+也不能替代严格整盘 BLIND_READING 资格考试。
+
+这条链进一步落实“LLM 提案、本地系统拥有稳定算法”的原则：候选全集、检查顺序、证据
+范围、排除集合、aggregate、强度上限和 append-only 谱系均由系统控制；模型保留真正需要
+语义判断的逐项 ruling。DEV Gold 后置，不进入 Prompt。开发期教师可以据原文提出差异和
+方法候选，但差异不会自动写成规则、Gold 或 canonical 事实，仍须 Owner／专业准入。
+
+当前实测证明拆分显著降低成本，却也证明局部 Schema 通过不等于高级能力：A 的候选强度
+对提示词压缩敏感。因此系统必须同时保留 `DEV contract pass`、专业审阅和最终整盘资格三种
+证据，不得用其中任何一项覆盖另外两项。QUALIFICATION、HOLDOUT、publication 与
+canonical fact write 继续锁定。

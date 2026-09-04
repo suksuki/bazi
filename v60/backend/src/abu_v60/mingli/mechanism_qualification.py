@@ -76,23 +76,29 @@ class MingliMechanismQualificationProjector:
         mechanism_vector: MingliMechanismEvidenceVector,
         timing_vector: MingliTimingEvidenceVector,
     ) -> None:
-        if len(
-            {
-                reading.case_ref,
-                quant_vector.case_ref,
-                mechanism_vector.case_ref,
-                timing_vector.case_ref,
-            }
-        ) != 1:
+        if (
+            len(
+                {
+                    reading.case_ref,
+                    quant_vector.case_ref,
+                    mechanism_vector.case_ref,
+                    timing_vector.case_ref,
+                }
+            )
+            != 1
+        ):
             raise ValueError("mechanism_qualification_case_lineage_mismatch")
-        if len(
-            {
-                reading.chart_version_ref,
-                quant_vector.chart_version_ref,
-                mechanism_vector.chart_version_ref,
-                timing_vector.chart_version_ref,
-            }
-        ) != 1:
+        if (
+            len(
+                {
+                    reading.chart_version_ref,
+                    quant_vector.chart_version_ref,
+                    mechanism_vector.chart_version_ref,
+                    timing_vector.chart_version_ref,
+                }
+            )
+            != 1
+        ):
             raise ValueError("mechanism_qualification_chart_lineage_mismatch")
         expected_refs = (
             (reading.quant_vector_ref, quant_vector.vector_ref),

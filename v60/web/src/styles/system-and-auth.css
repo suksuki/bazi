@@ -88,15 +88,15 @@
   position: relative;
 }
 
-.dream-canvas,
-.dream-canvas canvas {
+.life-tree-backdrop,
+.life-tree-backdrop canvas {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
 }
 
-.dream-canvas canvas {
+.life-tree-backdrop canvas {
   display: block;
   filter: saturate(0.94) brightness(1.01) contrast(0.98);
 }

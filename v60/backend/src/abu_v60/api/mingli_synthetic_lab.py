@@ -163,7 +163,8 @@ def synthetic_experiment_snapshot(
         reason = str(exc)
         code = (
             status.HTTP_404_NOT_FOUND
-            if reason in {
+            if reason
+            in {
                 "mingli_synthetic_experiment_not_found",
                 "mingli_synthetic_experiment_not_run",
             }

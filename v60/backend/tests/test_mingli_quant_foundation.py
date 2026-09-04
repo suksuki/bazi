@@ -53,10 +53,10 @@ def _liu_jin_vector(
 
 def test_ten_god_mapping_exhaustively_matches_the_frozen_matrix() -> None:
     for day_stem, expected_row in EXPECTED_TEN_GOD_MATRIX.items():
-        assert tuple(
-            resolve_ten_god(day_stem=day_stem, other_stem=other)
-            for other in STEMS
-        ) == expected_row
+        assert (
+            tuple(resolve_ten_god(day_stem=day_stem, other_stem=other) for other in STEMS)
+            == expected_row
+        )
 
 
 @pytest.mark.parametrize("invalid", ("", "A", "子"))
@@ -111,9 +111,7 @@ def test_liujin_ten_god_and_source_evidence_are_coordinate_bound() -> None:
         for item in vector.ten_god_occurrences
         if item.layer == "VISIBLE_STEM"
     ]
-    hidden_counts = {
-        item.label: item.hidden_membership_count for item in vector.ten_god_counts
-    }
+    hidden_counts = {item.label: item.hidden_membership_count for item in vector.ten_god_counts}
 
     assert visible == [
         ("year", "丁", "食神"),
@@ -134,16 +132,14 @@ def test_liujin_ten_god_and_source_evidence_are_coordinate_bound() -> None:
         "正印": 0,
     }
     assert len(vector.source_manifestation_evidence) == 2
-    assert {
-        item.source_match_kind for item in vector.source_manifestation_evidence
-    } == {"SAME_ELEMENT_DIFFERENT_IDENTITY"}
+    assert {item.source_match_kind for item in vector.source_manifestation_evidence} == {
+        "SAME_ELEMENT_DIFFERENT_IDENTITY"
+    }
     assert all(
-        item.effect_status == "EFFECT_UNRESOLVED"
-        for item in vector.source_manifestation_evidence
+        item.effect_status == "EFFECT_UNRESOLVED" for item in vector.source_manifestation_evidence
     )
     assert all(
-        "rooted" not in item.evidence_states
-        for item in vector.source_manifestation_evidence
+        "rooted" not in item.evidence_states for item in vector.source_manifestation_evidence
     )
 
 

@@ -20,18 +20,18 @@ The screenshot is retained as a design reference. It is not a production
 background, Runtime delivery or permission to copy the prototype's
 implementation into V60.
 
-## Approved Scene Asset Reuse
+## Approved Login LifeTree Asset Reuse
 
 The Owner separately approved reuse of the prototype's LifeTree world image:
 
 ```yaml
 reference_media_ref: media.v60.life-world.reference.v1
 reference_sha256: 1e7f5f82e20ad3817d67894f414fcddadfef50c89b5ed443b60d005298d45da4
-runtime_media_ref: media.v60.life-world.clean.v1
-runtime_asset_ref: dream.v60.life-world.clean.v1
+runtime_media_ref: media.v60.login-life-tree-background.v1
+runtime_asset_ref: experience.v60.login-life-tree-background.v1
 runtime_sha256: 2b9c47ee05d0c6967ce5173e3fc353c64f9de82d09e13130797738d61b874df2
 authorized_change: REMOVE_PRE_SEAL_BAKED_FRUIT_ONLY
 ```
 
-This authorization applies to the named image and registered derivative, not
-to the prototype's implementation code.
+This authorization applies only to the neutral login background and registered
+derivative, not to the prototype's implementation code or any retired runtime.

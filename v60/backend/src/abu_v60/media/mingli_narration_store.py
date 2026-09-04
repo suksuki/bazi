@@ -226,13 +226,9 @@ class MingliNarrationStore:
                 provider_profile_hash,
                 provider_deployment_ref,
             ):
-                raise MingliNarrationStoreError(
-                    "mingli_narration_persisted_provider_mismatch"
-                )
+                raise MingliNarrationStoreError("mingli_narration_persisted_provider_mismatch")
         elif asset.narration_version != LEGACY_MINGLI_NARRATION_VERSION:
-            raise MingliNarrationStoreError(
-                "mingli_narration_persisted_version_unsupported"
-            )
+            raise MingliNarrationStoreError("mingli_narration_persisted_version_unsupported")
         expected_generation_key = narration_generation_key(
             narration_version=asset.narration_version,
             requester_account_ref=asset.requester_account_ref,
@@ -248,9 +244,7 @@ class MingliNarrationStore:
             provider_deployment_ref=provider_deployment_ref,
         )
         if row["generation_key"] != expected_generation_key:
-            raise MingliNarrationStoreError(
-                "mingli_narration_persisted_generation_key_mismatch"
-            )
+            raise MingliNarrationStoreError("mingli_narration_persisted_generation_key_mismatch")
         audio_bytes = bytes(row["audio_bytes"])
         if len(audio_bytes) != asset.audio_byte_length:
             raise MingliNarrationStoreError("mingli_narration_persisted_audio_length_mismatch")

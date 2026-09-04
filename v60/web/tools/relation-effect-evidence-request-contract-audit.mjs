@@ -407,11 +407,16 @@ try {
   ]) {
     assertIncludes("styles", styles, expected);
   }
-  const rail = await readFile(
-    path.join(webRoot, "src/components/HomeCompanionRail.tsx"),
+  const reviewStack = await readFile(
+    path.join(webRoot, "src/components/RelationEffectReviewStack.tsx"),
     "utf8",
   );
-  assertEqual("rail-line-budget", rail.split("\n").length - 1 <= 500, true);
+  assertIncludes("review-stack-packet", reviewStack, "RelationEffectEvidencePacket");
+  assertEqual(
+    "review-stack-line-budget",
+    reviewStack.split("\n").length - 1 <= 100,
+    true,
+  );
 } finally {
   await vite.close();
 }

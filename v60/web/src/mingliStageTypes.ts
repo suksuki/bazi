@@ -112,7 +112,7 @@ export interface MingliStageProjection {
 export interface MingliReadingSummaryProjection {
   summary_ref: string;
   summary_hash: string;
-  summary_version: "v60.mingli-reading-summary.006";
+  summary_version: "v60.mingli-reading-summary.008";
   case_ref: string;
   chart_version_ref: string;
   life_case_revision_ref: string;
@@ -120,6 +120,12 @@ export interface MingliReadingSummaryProjection {
   reading_hash: string;
   subject_kind: "HUMAN_OWNER" | "HUMAN_REFERENCE" | "CANONICAL_SYNTHETIC";
   reading_brief: import("./homeReadingTypes").HomeReadingBrief;
+  focused_runtime_status: "READY_FOR_OWNER_REVIEW" | "DISABLED";
+  focused_generation_available: boolean;
+  focused_status: "READY" | "PARTIAL" | "NOT_GENERATED";
+  focused_reading: MingliFocusedReading | null;
+  focused_pass_records: MingliFocusedPassRecord[];
+  focused_projection_scope: "OWNER_REVIEW" | "NOT_GENERATED";
   agent_runtime_status:
     | "READY"
     | "READY_FOR_OWNER_REVIEW"
@@ -133,6 +139,93 @@ export interface MingliReadingSummaryProjection {
   image_projection_status: "AGENT_INTERPRETATION" | "NOT_GENERATED";
   professional_verdict_allowed: false;
   canonical_write_allowed: false;
+  read_only: true;
+}
+
+export type MingliFocus =
+  | "STRUCTURE"
+  | "LIFE_IMAGE_PERSONALITY"
+  | "CAREER_WEALTH"
+  | "RELATIONSHIP_FAMILY"
+  | "TIMING";
+
+export interface MingliFocusedPassResult {
+  pass_ref: string;
+  pass_hash: string;
+  pass_version: "v60.mingli-focused-pass.001";
+  focus: MingliFocus;
+  question: string;
+  context_hash: string;
+  provider_response_ref: string;
+  normalized_text: string;
+  normalization_codes: string[];
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  duration_ms: number;
+}
+
+export interface MingliFocusedReading {
+  focused_reading_ref: string;
+  focused_reading_hash: string;
+  focused_reading_version: "v60.mingli-focused-reading.001";
+  generation_key: string;
+  requester_account_ref: string;
+  case_ref: string;
+  chart_version_ref: string;
+  life_case_revision_ref: string;
+  reading_ref: string;
+  reading_hash: string;
+  packet_ref: string;
+  packet_hash: string;
+  runtime_ref: "v60.mingli-focused-runtime.001";
+  provider_id: string;
+  model_ref: string;
+  model_digest: string;
+  provider_profile_ref: string;
+  provider_profile_hash: string;
+  prompt_version: "v60.prompt.mingli-focused-reading.001";
+  prompt_hash: string;
+  passes: MingliFocusedPassResult[];
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  duration_ms: number;
+  interpretation_status: "FOCUSED_AGENT_INTERPRETATION";
+  owner_review_status: "NOT_REVIEWED";
+  publication_allowed: false;
+  canonical_fact_write_allowed: false;
+  read_only: true;
+}
+
+export interface MingliFocusedPassRecord {
+  record_ref: string;
+  record_hash: string;
+  record_version: "v60.mingli-focused-pass-record.001";
+  generation_key: string;
+  requester_account_ref: string;
+  case_ref: string;
+  chart_version_ref: string;
+  life_case_revision_ref: string;
+  reading_ref: string;
+  reading_hash: string;
+  packet_ref: string;
+  packet_hash: string;
+  runtime_ref: "v60.mingli-focused-runtime.001";
+  provider_id: string;
+  model_ref: string;
+  model_digest: string;
+  provider_profile_ref: string;
+  provider_profile_hash: string;
+  prompt_version: "v60.prompt.mingli-focused-reading.001";
+  prompt_hash: string;
+  focus: MingliFocus;
+  structure_pass_hash: string | null;
+  pass_result: MingliFocusedPassResult;
+  interpretation_status: "FOCUSED_AGENT_INTERPRETATION";
+  owner_review_status: "NOT_REVIEWED";
+  publication_allowed: false;
+  canonical_fact_write_allowed: false;
   read_only: true;
 }
 
@@ -373,6 +466,7 @@ export interface MingliNarrationVisualClock {
   activeCueId: MingliNarrationCue["cue_id"] | null;
   cueProgress: number;
   semanticAction: MingliNarrationCue["semantic_action"] | null;
+  activeColumnRefs?: string[];
 }
 
 export type MingliStageViewContext =

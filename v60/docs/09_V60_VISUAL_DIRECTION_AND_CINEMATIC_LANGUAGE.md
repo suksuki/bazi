@@ -1,304 +1,87 @@
-# V60 Visual Direction and Cinematic Language
+# V60 视觉方向与动态语言
 
-## 1. Decision
+状态：当前体验正本
+同步日期：2026-09-04
 
-V60 adopts **Eastern fairy-tale picture-book** as its primary visual
-direction.
+## 1. 核心方向
 
-The accepted reference is the Owner's `AbuKnows V60 Unified Prototype`,
-Sites version 4:
-
-```text
-https://abuknows-v60-prototype.liujin.chatgpt.site
-```
-
-Exact reference provenance is retained in
-`design/references/README.md`. The prototype is a visual and interaction
-reference, not a codebase or Runtime authority.
-
-## 2. Core Composition
-
-V60 has two complementary visual layers:
+V60 使用同一套东方绘本视觉语言贯穿生命树、命理枝、断命和阿布说：大幅手绘空间提供
+情绪与连续性，宣纸白、墨绿和克制古金提供阅读秩序。简化产品不等于把它改成通用白色
+后台，也不等于重做已经确认的 UI。
 
 ```text
-White product ground
-└── clarity, trust, reading, navigation and professional work
-
-Living illustrated world
-└── LifeTree, Dream, Abu, Theater, time and emotional movement
+生命树 Home
+→ 档案叶进入命理枝
+→ 枝叶花果表达四类阅读层
+→ 同一命理舞台承载四柱／六柱、断语和阿布说
 ```
 
-White is the base, but V60 must not feel like a generic white SaaS dashboard.
-The illustrated world provides depth and warmth; the white shell gives the
-Mingli system precision and calm.
+## 2. 色彩与材质
 
-The reference succeeds because it combines:
-
-- a large hand-painted LifeTree as the first visual fact;
-- off-white negative space rather than beige parchment;
-- deep ink green for authority and legibility;
-- muted antique gold for sparse, meaningful feedback;
-- soft fog gray and moss green for atmosphere;
-- restrained cards and controls that do not compete with the tree;
-- Abu as a nearby companion, not a floating mascot badge.
-
-## 3. LifeTree Art Direction
-
-The LifeTree is V60's principal visual identity.
-
-It must read as:
-
-- old, alive and structurally credible;
-- asymmetrical, with a memorable silhouette;
-- rooted into its environment rather than pasted above it;
-- capable of localized response through bark, leaves, dew and light;
-- visually distinct by LifeCase phenotype without changing into unrelated
-  art styles;
-- large enough to remain the dominant object when questions or evidence are
-  present.
-
-Avoid:
-
-- icon-like or vector-flat tree anatomy;
-- floating semantic badges that do not grow from real geometry;
-- roots detached from the ground;
-- uniform glow around every clickable object;
-- color swaps as the only LifeCase difference;
-- tree-to-chart morphs that impersonate Mingli proof.
-
-## 3.1 Abu Character Identity
-
-`ABU_CHARACTER_V60_V1` is the primary V60 Abu: watercolor-and-gouache texture,
-large warm eyes, stable black/tan/cream markings and a rust-red scarf. The
-transparent seated poster is the current Runtime fallback.
-
-The earlier `ABU_CHARACTER_V1` cartoon actor remains in the media library for
-historical compatibility. It is not deleted, but it does not define future
-V60 motion generation.
-
-## 4. Color and Material Language
-
-| Role | Direction |
+| 角色 | 方向 |
 | --- | --- |
-| Product ground | clean off-white, cool white, very light mist gray |
-| Authority | deep ink green |
-| Living structure | bark brown, moss and desaturated leaf greens |
-| Meaningful response | muted antique gold in small amounts |
-| Dream depth | fog gray, water reflection, cool shadow green |
-| Warning | restrained neutral contrast, never theatrical red disaster cues |
+| 阅读底色 | 宣纸白、冷白、浅雾灰 |
+| 权威与正文 | 深墨绿 |
+| 生命结构 | 树皮棕、苔绿、低饱和叶色 |
+| 时间与响应 | 少量古金、暖橙 |
+| 粒子舞台 | 五行色，但必须满足文字对比 |
+| 风险提示 | 中性高对比，不使用灾祸式红色表演 |
 
-Gold is an event material, not a permanent theme color. It may mark a moment
-of recognition, sealing, dissolution or transfer, but it must not turn every
-successful action into a reward animation.
+材质应当有手绘、纤维、湿润、矿物与雾光感。霓虹、廉价玻璃拟态、过度塑料 3D 和
+层层圆角卡片不属于这一方向。
 
-Materials should feel painted, fibrous, moist or mineral. Glassmorphism,
-neon bloom and glossy 3D plastic are outside this direction.
+## 3. 排版与可读性
 
-## 5. Typography and Interface
+- 中文展示标题可使用稳重宋／明体；正文和控件使用高可读无衬线体。
+- 标题只有在它是当前场景真正命题时才放大。
+- 命理正文必须有局部宣纸或低透明实底承托，不能直接压在亮天空、树叶或粒子高光上。
+- 白天六柱使用深色字形、柱名和五行粒子；夜间可反转，但对比度不能依赖发光描边。
+- 技术 ID、规则码和 Provenance 只在内部研究面出现。
+- 桌面和 390 px 手机都不得横向溢出；长断语允许自身区域纵向滚动。
 
-- Display Chinese uses a confident Song/Ming-inspired serif where available.
-- Body, metadata and controls use a highly legible sans serif.
-- Headings may be large only when they are the scene's true proposition.
-- Technical IDs, rule codes and provenance remain in Lab, not in Dream.
-- Functional cards use restrained radii; large rounded framing is reserved
-  for a scene canvas, not nested card stacks.
-- Commands remain live interface elements. Gemini video never contains
-  readable labels, options or buttons.
+## 4. 动态层级
 
-On desktop, the reference pattern is valid:
+### 场景视频
 
-```text
-LifeTree scene / proposition
-+ nearby Abu interpretation and next action
-+ compact persistent navigation
-```
+场景视频用于命理枝生长、光线迁移和一次性空间转换。视频不能包含可点击按钮、可读
+文字或 Canonical 状态；交互和可访问性仍由 HTML／React 层拥有。
 
-It must remain one product composition rather than five unrelated portals.
+### 透明角色
 
-## 6. One Visual System Across Five Units
+阿布与多多使用透明 VP9 WebM，并提供 animated WebP 与静态 Poster。角色动作只表达
+陪伴、说话或等待状态，不承担命理判断。`prefers-reduced-motion` 下使用 Poster。
 
-| Unit | Expression |
-| --- | --- |
-| Abu Dream | immersive illustrated world, minimal interface, cinematic thresholds |
-| Abu Mingli | white editorial ground, exact facts, tree as living case overview |
-| Abu Says | quiet companion panel or in-scene utterance, never a chatbot takeover |
-| Abu Theater | authored scene beats and time/path transitions |
-| Mingli Lab | precise white/ink-green workspace using the same LifeCase and visual tokens |
+### 六柱粒子
 
-Dream is not the only colorful section while the others become unrelated
-admin tools. The five units share typography, color, evidence identity,
-motion language and selected semantic object.
+六柱舞台以年、月、日、时、大运和流年为六个稳定坐标。粒子位置不因字幕切换而重排；
+讲述只改变呼吸、旋转、亮度和局部聚焦。没有明确柱位词时保持环境态，不能用视觉靠近
+冒充命理关系。
 
-## 7. Video-First, State-Safe Motion
+### 字幕同步
 
-V60 is **cinematic where movement carries emotion or spatial continuity**.
-It is not a video player pretending to be an interactive world.
+专属音频的 `currentTime` 是字幕、角色和粒子唯一时钟。暂停时全部冻结，继续后从同一
+Cue 恢复。字幕以句／分句为粒度，始终显示在高对比承托层上，不遮挡柱位和返回控件。
 
-### 7.1 Cinematic video
+## 5. 响应式边界
 
-Use generated and postprocessed scene video for:
+- 桌面保留画面横向呼吸和六柱完整构图。
+- 手机把阅读与舞台按视觉优先级垂直排列，但六柱和十二个字形球仍需完整入镜。
+- 触控目标不得小于常规移动端可点击尺寸。
+- 窄屏不以缩小正文到不可读来维持构图。
+- Canvas 卸载时释放 WebGL；切换字幕不得重建 Canvas 身份。
 
-- entering or leaving Dream;
-- crossing fog, water or a tree boundary;
-- tree growth and major seasonal change;
-- a flower opening or a fruit revealing when the shot is stable;
-- Theater beats;
-- text or symbolic matter dissolving into gold dust;
-- one-time emotional responses that benefit from authored timing.
+## 6. 资产与权威
 
-### 7.2 Transparent actor motion
+V108 Home、V128 命理枝和 V131 水庭只提供已经冻结的 Experience Canonical。命盘、
+断语、关系、岁运和字幕坐标仍只来自 V60 Domain Canonical。原型 mock 数据、本地状态
+和演示断语不得进入正式 Runtime。
 
-Use alpha actor animation for:
-
-- Abu idle, listening, acknowledging and guiding;
-- walking while the Runtime moves the actor container;
-- small one-shot reactions;
-- reusable foreground actions across multiple scenes.
-
-### 7.3 Runtime scene layers
-
-PixiJS/React retain:
-
-- canonical world and encounter state;
-- click geometry and hit masks;
-- tree phenotypes and semantic node placement;
-- text, answer options and accessibility;
-- loading, interruption and recovery;
-- live OneCanvas and Lab data;
-- any fact that can vary per LifeCase or viewer.
-
-### 7.4 Interface motion
-
-CSS or Runtime animation handles:
-
-- focus, hover, panel transitions and reduced-motion fades;
-- state changes that must respond immediately;
-- small geometry-preserving feedback.
-
-## 8. Video Handoff Contract
-
-Every cinematic clip must declare:
-
-```yaml
-source_scene_ref:
-target_scene_ref:
-first_frame_reference:
-last_frame_reference:
-camera_and_crop:
-subject_anchor:
-interactive_handoff_ms:
-audio_cue_ref:
-skippable:
-interrupt_policy:
-reduced_motion_asset_ref:
-failure_fallback:
-```
-
-The Runtime:
-
-1. commits or obtains the next allowed state;
-2. plays the approved clip;
-3. crossfades into an interactive scene with matching composition;
-4. resumes interaction only after the handoff;
-5. restores the committed target state after refresh or interruption.
-
-A video cannot commit a world event, answer, Seal, Reveal or Mingli fact.
-Failure to load a clip falls back to the same target state through a declared
-static transition; it does not roll back canonical state.
-
-## 9. Reference Interaction: Gold-Text Dissolution
-
-The prototype's post-answer beat is accepted as a useful language:
+当前登录生命树背景注册为：
 
 ```text
-user chooses
--> live UI commits the choice
--> selected words fracture
--> fragments become fine gold dust
--> dust disperses into the LifeTree world
--> the next committed story state remains
+experience.v60.login-life-tree-background.v1
+→ web/public/assets/brand/v60-life-tree-login-background-v1.png
 ```
 
-The animation communicates that a choice has entered the world's memory. It
-must not imply correctness, reward value or a favorable outcome.
-
-Implementation rule:
-
-- option selection and persistence happen outside the video;
-- the video receives only a non-semantic transition cue;
-- answer text itself stays accessible until commit succeeds;
-- reduced motion uses a short fade and localized gold settling;
-- a failed commit never plays the irreversible dissolution.
-
-## 10. Gemini Production Rule
-
-All new visual prompts begin with
-`media/prompts/V60_EASTERN_FAIRY_TALE_STYLE_LOCK.md`, followed by:
-
-1. scene purpose;
-2. exact first-frame reference;
-3. exact last-frame reference;
-4. one primary action;
-5. camera and subject lock;
-6. forbidden semantic implications;
-7. technical delivery request.
-
-Gemini creates source footage. Codex performs source QA, audio separation,
-watermark-safe processing, alpha extraction, continuity repair, delivery
-encoding and catalogue registration under the V60 Media Pipeline.
-
-## 11. Accessibility and Performance
-
-- No essential information exists only inside video.
-- Captions and ARIA text come from approved Runtime content.
-- Audible media requires a user gesture.
-- Reduced motion replaces travel and particle dispersion with spatially
-  coherent fades.
-- Low-performance mode may use a poster plus short opacity transition.
-- Scene video is preloaded only when the next legal state is known.
-- Large media never blocks the first usable screen.
-
-## 12. Implemented Visual Baseline
-
-The first V60 vertical slice now uses the accepted visual language end to end:
-
-- white product shell, ink-green authority text and restrained antique gold;
-- the approved prototype LifeTree world as the scene reference;
-- a clean pre-fruit Runtime derivative with the baked fruit removed;
-- `ABU_CHARACTER_V60_V1` as the visible companion;
-- tree-attached semantic marks instead of the former detached organ stickers;
-- the question, sealed, matured, reveal, Abu, Theater and Lab projections in
-  one shared composition;
-- fixed desktop scene geometry with no document scrolling;
-- reduced-motion and 390 px guardrails without a separate mobile product.
-
-Runtime asset lineage:
-
-```text
-V60_LIFE_WORLD_BACKGROUND_REFERENCE_V1
-sha256 1e7f5f82e20ad3817d67894f414fcddadfef50c89b5ed443b60d005298d45da4
--> remove only the pre-seal baked fruit
--> V60_LIFE_WORLD_BACKGROUND_CLEAN_V1
-sha256 2b9c47ee05d0c6967ce5173e3fc353c64f9de82d09e13130797738d61b874df2
--> dream.v60.life-world.clean.v1
-```
-
-The source, derivative, operation and delivery are registered in
-`media/catalog.json` and `assets/registry.json`. The previous semantic-tree
-images remain archived for lineage but are no longer rendered by the current
-LifeTree scene.
-
-## 13. Remaining Production Media
-
-The current slice is complete with static Runtime-safe presentation. Its next
-media upgrades require approved sources rather than code-generated substitutes:
-
-1. V60 Abu transparent motions: `IDLE`, `LISTEN`, `ACKNOWLEDGE`, `WAITING` and
-   `GUIDE`, all locked to `ABU_CHARACTER_V60_V1`.
-2. One tree-local cinematic set with identical camera and branch anchor:
-   `FLOWER_BUD -> FLOWER_OPEN -> SEALED_FRUIT -> MATURE_FRUIT`.
-3. A short question-seal transition using the accepted gold-dust language.
-4. Separate subtle foliage, branch resonance and fruit-open audio stems.
-
-These assets may improve motion and material fidelity. They may not own or
-change AnswerSeal, WorldEvent, Fruit, Reveal or LifeCase state.
+资产来源、处理和 Hash 规则见
+[`08_V60_MEDIA_LIBRARY_AND_PRODUCTION_PIPELINE.md`](08_V60_MEDIA_LIBRARY_AND_PRODUCTION_PIPELINE.md)。

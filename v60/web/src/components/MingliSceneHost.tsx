@@ -2,13 +2,10 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
-  type CSSProperties,
 } from "react";
-import type { RuntimeMediaManifest } from "../api";
+import type { RuntimeMediaManifest } from "../publicRuntimeTypes";
 import {
-  generateMingliAgentReading,
   loadMingliReadingSummary,
   loadMingliStage,
   loadMingliStageSubjects,
@@ -22,14 +19,15 @@ import {
   writeMingliStageRoute,
 } from "../mingliStageNavigation";
 import {
-  hasMingliLayerNarration,
-  projectMingliLayerNarration,
+  hasMingliSummaryLayerNarration,
+  projectMingliSummaryLayerNarration,
 } from "../mingliLayerNarrationProjection";
 import {
   directMingliScene,
   INITIAL_MINGLI_CLOCK,
   type MingliSceneSurface,
 } from "../mingliSceneDirector";
+import { buildMingliSceneHostStyle } from "../mingliSceneVisualStyle";
 import type {
   MingliNarrationVisualClock,
   MingliReadingSummaryProjection,
@@ -37,17 +35,18 @@ import type {
   MingliStageSubject,
   MingliStageViewContext,
 } from "../mingliStageTypes";
+import {
+  selectMingliRehearsalSpeechRecords,
+  useMingliFocusedPassGeneration,
+  usePublicMingliAutoGeneration,
+} from "../useMingliFocusedPassGeneration";
 import { MingliLabSceneInspector } from "./MingliLabSceneInspector";
 import { MingliLayerRehearsal } from "./MingliLayerRehearsal";
 import { MingliNarrationDirector } from "./MingliNarrationDirector";
-import {
-  MingliReadingJourney,
-  summaryMatchesStage,
-} from "./MingliReadingJourney";
+import { MingliReadingJourney, summaryMatchesStage } from "./MingliReadingJourney";
 import { MingliSceneBoundary } from "./MingliSceneBoundary";
 import { MingliSceneControls } from "./MingliSceneControls";
 import { MingliScenePlayer } from "./MingliScenePlayer";
-
 export function MingliSceneHost({
   autoOpenNarration = false,
   exitLabel,
@@ -56,8 +55,9 @@ export function MingliSceneHost({
   onContextChange,
   onExit,
   onNarrationStateChange,
-  onOpenSyntheticLab,
+  onReturnToBranch,
   onSurfaceChange,
+  publicMode = false,
   surface,
 }: {
   autoOpenNarration?: boolean;
@@ -67,20 +67,27 @@ export function MingliSceneHost({
   onContextChange: (context: MingliStageViewContext) => void;
   onExit: () => void;
   onNarrationStateChange?: (open: boolean) => void;
-  onOpenSyntheticLab?: () => void;
+  onReturnToBranch?: () => void;
   onSurfaceChange: (surface: MingliSceneSurface) => void;
+  publicMode?: boolean;
   surface: MingliSceneSurface;
 }) {
-  const [route, setRoute] = useState<MingliStageRoute>(readMingliStageRoute);
+  const [route, setRoute] = useState<MingliStageRoute>(() =>
+    readMingliSceneRoute(publicMode),
+  );
   const [subjects, setSubjects] = useState<MingliStageSubject[]>([]);
   const [stage, setStage] = useState<MingliStageProjection | null>(null);
-  const stageRef = useRef<MingliStageProjection | null>(null);
-  const generationRequestRef = useRef(0);
-  const generationControllerRef = useRef<AbortController | null>(null);
   const [readingSummary, setReadingSummary] =
     useState<MingliReadingSummaryProjection | null>(null);
-  const [agentGenerating, setAgentGenerating] = useState(false);
-  const [agentError, setAgentError] = useState<string | null>(null);
+  const {
+    agentError,
+    agentGenerating,
+    generateAgentReading,
+    resetAgentGeneration,
+  } = useMingliFocusedPassGeneration({
+    onSummary: setReadingSummary,
+    stage,
+  });
   const [clock, setClock] = useState<MingliNarrationVisualClock>(
     INITIAL_MINGLI_CLOCK,
   );
@@ -101,16 +108,17 @@ export function MingliSceneHost({
     setClock(next);
   }, []);
 
-  useEffect(() => () => {
-    generationRequestRef.current += 1;
-    generationControllerRef.current?.abort();
-  }, []);
-
   useEffect(() => {
     if (autoOpenNarration) setNarrationOpen(true);
   }, [autoOpenNarration]);
 
   useEffect(() => {
+    if (publicMode) {
+      setSubjects([]);
+      setSubjectsLoading(false);
+      setSubjectsError(null);
+      return;
+    }
     const controller = new AbortController();
     setSubjects([]);
     setSubjectsLoading(true);
@@ -128,44 +136,35 @@ export function MingliSceneHost({
         if (!controller.signal.aborted) setSubjectsLoading(false);
       });
     return () => controller.abort();
-  }, [subjectsRetry]);
+  }, [publicMode, subjectsRetry]);
 
   useEffect(() => {
     const restore = () => {
-      const restored = readMingliStageRoute();
+      const restored = readMingliSceneRoute(publicMode);
       onContextChange({
         subjectId: restored.subjectId,
         status: "LOADING",
         projection: null,
       });
       setStage(null);
-      stageRef.current = null;
-      generationRequestRef.current += 1;
-      generationControllerRef.current?.abort();
+      resetAgentGeneration();
       setReadingSummary(null);
-      setAgentGenerating(false);
-      setAgentError(null);
       setNarrationOpen(autoOpenNarration);
       setRehearsalOpen(readMingliStageEntryMode() === "rehearsal");
       setRoute(restored);
     };
     window.addEventListener("popstate", restore);
     return () => window.removeEventListener("popstate", restore);
-  }, [autoOpenNarration, onContextChange]);
+  }, [autoOpenNarration, onContextChange, publicMode, resetAgentGeneration]);
 
   useEffect(() => {
     const controller = new AbortController();
     const requestedYear =
       route.mode === "NATAL_DAYUN_YEAR_6" ? route.year : null;
-    generationRequestRef.current += 1;
-    generationControllerRef.current?.abort();
-    generationControllerRef.current = null;
-    stageRef.current = null;
+    resetAgentGeneration();
     setStageLoading(true);
     setStageError(null);
     setReadingSummary(null);
-    setAgentGenerating(false);
-    setAgentError(null);
     setNarrationOpen(autoOpenNarration);
     setRehearsalOpen(readMingliStageEntryMode() === "rehearsal");
     setClock(INITIAL_MINGLI_CLOCK);
@@ -189,11 +188,10 @@ export function MingliSceneHost({
       }))
       .then(({ projection, summary }) => {
         if (controller.signal.aborted) return;
-        stageRef.current = projection;
         setStage(projection);
         setReadingSummary(summary);
-        const canOpenRehearsal = summary?.claim_graph != null
-          && hasMingliLayerNarration(summary.claim_graph, route.layer);
+        const canOpenRehearsal = summary !== null
+          && hasMingliSummaryLayerNarration(summary, route.layer);
         setRehearsalOpen(
           readMingliStageEntryMode() === "rehearsal"
           && canOpenRehearsal,
@@ -228,7 +226,6 @@ export function MingliSceneHost({
       .catch((caught) => {
         if (!controller.signal.aborted) {
           setStage(null);
-          stageRef.current = null;
           setReadingSummary(null);
           setNarrationOpen(false);
           setRehearsalOpen(false);
@@ -248,14 +245,12 @@ export function MingliSceneHost({
     route.mode,
     route.subjectId,
     route.year,
+    resetAgentGeneration,
     stageRetry,
   ]);
 
   const navigate = (next: MingliStageRoute) => {
-    generationRequestRef.current += 1;
-    generationControllerRef.current?.abort();
-    generationControllerRef.current = null;
-    stageRef.current = null;
+    resetAgentGeneration();
     onContextChange({
       subjectId: next.subjectId,
       status: "LOADING",
@@ -282,67 +277,40 @@ export function MingliSceneHost({
       surface === "LAB" ? "lab" : "mingli",
     );
   };
-  const generateAgentReading = () => {
-    if (stage === null || agentGenerating) return;
-    const requestedStage = stage;
-    const requestId = generationRequestRef.current + 1;
-    generationRequestRef.current = requestId;
-    generationControllerRef.current?.abort();
-    const controller = new AbortController();
-    generationControllerRef.current = controller;
-    setAgentGenerating(true);
-    setAgentError(null);
-    void generateMingliAgentReading(requestedStage, controller.signal)
-      .then(() => loadMingliReadingSummary(requestedStage, controller.signal))
-      .then((summary) => {
-        const activeStage = stageRef.current;
-        if (
-          !controller.signal.aborted
-          && generationRequestRef.current === requestId
-          && activeStage !== null
-          && summaryMatchesStage(summary, activeStage)
-        ) {
-          setReadingSummary(summary);
-        }
-      })
-      .catch((caught) => {
-        if (!controller.signal.aborted && generationRequestRef.current === requestId) {
-          setAgentError(caught instanceof Error ? caught.message : String(caught));
-        }
-      })
-      .finally(() => {
-        if (generationRequestRef.current === requestId) {
-          setAgentGenerating(false);
-          generationControllerRef.current = null;
-        }
-      });
-  };
   const currentSummary = stage !== null && summaryMatchesStage(readingSummary, stage)
-    ? readingSummary
-    : null;
+    ? readingSummary : null;
+  usePublicMingliAutoGeneration({
+    agentGenerating,
+    currentSummary,
+    generateAgentReading,
+    layer: route.layer,
+    publicMode,
+    rehearsalOpen,
+    stage,
+  });
   const currentClaimGraph = currentSummary?.claim_graph ?? null;
   const currentWholeClaim = currentClaimGraph?.claims.find(
     (item) => item.semantic_key === "WHOLE_CHART",
   );
-  const wholeChartNeedsReconciliation =
-    currentWholeClaim?.status === "NEEDS_RECONCILIATION";
+  const wholeChartNeedsReconciliation = currentWholeClaim?.status === "NEEDS_RECONCILIATION";
   useEffect(() => {
     if (
       !rehearsalOpen
-      || currentClaimGraph === null
-      || hasMingliLayerNarration(currentClaimGraph, route.layer)
+      || currentSummary === null
+      || hasMingliSummaryLayerNarration(currentSummary, route.layer)
     ) return;
     setRehearsalOpen(false);
     writeMingliStageExperience("stage", "observe", "replace");
-  }, [currentClaimGraph, rehearsalOpen, route.layer]);
+  }, [currentSummary, rehearsalOpen, route.layer]);
   const layerNarration = useMemo(
-    () => stage !== null && currentClaimGraph !== null
-      ? projectMingliLayerNarration({
-          graph: currentClaimGraph,
-          layer: route.layer,
-        })
+    () => stage !== null && currentSummary !== null
+      ? projectMingliSummaryLayerNarration(currentSummary, route.layer)
       : null,
-    [currentClaimGraph, route.layer, stage],
+    [currentSummary, route.layer, stage],
+  );
+  const rehearsalSpeechRecords = useMemo(
+    () => selectMingliRehearsalSpeechRecords(currentSummary, layerNarration),
+    [currentSummary, layerNarration],
   );
   const rehearsalVisible = rehearsalOpen
     && layerNarration !== null
@@ -353,14 +321,20 @@ export function MingliSceneHost({
   const rehearsalPoster = worldLight === "night"
     ? media.assets.mingli_growth_night_poster
     : media.assets.mingli_growth_day_poster;
-  const rehearsalActorRef = worldLight === "day"
+  const labStagePoster = worldLight === "night"
+    ? media.assets.mingli_lab_night_background
+    : media.assets.mingli_lab_day_background;
+  const rehearsalActorRef = publicMode
+    ? "ABU_NARRATOR_V1" as const
+    : worldLight === "day"
     ? "DUODUO_NARRATOR_V1" as const
     : "ABU_NARRATOR_V1" as const;
-  const hostStyle = rehearsalVisible
-    ? ({
-        "--mingli-rehearsal-art": `url("${rehearsalPoster.url}")`,
-      } as CSSProperties)
-    : undefined;
+  const hostStyle = buildMingliSceneHostStyle({
+    labStageUrl: labStagePoster.url,
+    rehearsalArtUrl: rehearsalPoster.url,
+    rehearsalVisible,
+    surface,
+  });
   const frame = useMemo(
     () =>
       stage
@@ -384,6 +358,7 @@ export function MingliSceneHost({
     setRehearsalOpen(false);
     setClock(INITIAL_MINGLI_CLOCK);
     writeMingliStageExperience("stage", "observe", "replace");
+    if (surface === "READING") onReturnToBranch?.();
   };
 
   return (
@@ -400,9 +375,9 @@ export function MingliSceneHost({
         exitLabel={exitLabel}
         onExit={onExit}
         onNavigate={navigate}
-        onOpenSyntheticLab={onOpenSyntheticLab}
         onRetrySubjects={() => setSubjectsRetry((value) => value + 1)}
         onSurfaceChange={onSurfaceChange}
+        publicMode={publicMode}
         route={route}
         stage={stage}
         subjects={subjects}
@@ -431,7 +406,12 @@ export function MingliSceneHost({
           className="mingli-scene-composition"
           data-overlay={rehearsalVisible ? "REHEARSAL" : narrationOpen ? "NARRATION" : surface}
         >
-          <MingliScenePlayer fallbackClock={clock} frame={frame} stage={stage} />
+          <MingliScenePlayer
+            daylight={rehearsalVisible && worldLight === "day"}
+            fallbackClock={clock}
+            frame={frame}
+            stage={stage}
+          />
           {rehearsalVisible && layerNarration ? (
             <MingliLayerRehearsal
               actorCue={rehearsalActorRef === "DUODUO_NARRATOR_V1"
@@ -441,6 +421,8 @@ export function MingliSceneHost({
               onClock={onClock}
               onClose={closeRehearsal}
               projection={layerNarration}
+              returnLabel={surface === "READING" ? "回到命理枝" : "回到 Lab 观察"}
+              speechRecords={rehearsalSpeechRecords}
               stage={stage}
             />
           ) : narrationOpen ? (
@@ -486,10 +468,11 @@ export function MingliSceneHost({
           )}
         </div>
       )}
-
       {stage && (
         <MingliSceneBoundary
           claimGraphReady={currentClaimGraph !== null}
+          focusedReadingReady={Boolean(currentSummary?.focused_reading
+            || currentSummary?.focused_pass_records.length)}
           stage={stage}
           surface={surface}
           wholeChartNeedsReconciliation={wholeChartNeedsReconciliation}
@@ -497,4 +480,14 @@ export function MingliSceneHost({
       )}
     </div>
   );
+}
+
+function readMingliSceneRoute(publicMode: boolean): MingliStageRoute {
+  const route = readMingliStageRoute();
+  if (!publicMode || readMingliStageEntryMode() !== "rehearsal") return route;
+  return {
+    ...route,
+    mode: "NATAL_DAYUN_YEAR_6",
+    year: route.mode === "NATAL_DAYUN_YEAR_6" ? route.year : null,
+  };
 }

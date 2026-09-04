@@ -1,47 +1,35 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from abu_v60.api.dream import router as dream_router
-from abu_v60.api.experience import router as experience_router
 from abu_v60.api.identity import router as identity_router
 from abu_v60.api.mingli import router as mingli_router
 from abu_v60.api.mingli_narration import router as mingli_narration_router
 from abu_v60.api.mingli_stage import router as mingli_stage_router
-from abu_v60.api.mingli_synthetic_lab import router as mingli_synthetic_lab_router
+from abu_v60.api.public_experience import router as public_experience_router
 from abu_v60.api.system import router as system_router
-from abu_v60.runtime import world_runtime_worker
+from abu_v60.settings import settings
 from abu_v60.system_manifest import PRODUCT_VERSION
-
-
-@asynccontextmanager
-async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    await world_runtime_worker.start()
-    try:
-        yield
-    finally:
-        await world_runtime_worker.stop()
-
 
 app = FastAPI(
     title="Abu Knows V60",
     version=PRODUCT_VERSION,
-    lifespan=lifespan,
 )
 app.include_router(system_router)
 app.include_router(identity_router)
 app.include_router(mingli_router)
 app.include_router(mingli_narration_router)
 app.include_router(mingli_stage_router)
-app.include_router(mingli_synthetic_lab_router)
-app.include_router(experience_router)
-app.include_router(dream_router)
+app.include_router(public_experience_router)
+
+if settings.internal_surfaces_enabled:
+    from abu_v60.api.mingli_synthetic_lab import router as mingli_synthetic_lab_router
+
+    app.include_router(mingli_synthetic_lab_router)
 
 
 def _web_cache_control(path: str) -> str | None:
@@ -59,6 +47,7 @@ async def apply_web_cache_policy(request: Request, call_next):
     if cache_control is not None and response.status_code < 400:
         response.headers["Cache-Control"] = cache_control
     return response
+
 
 _repo_root = Path(__file__).resolve().parents[3]
 _web_dist = _repo_root / "web" / "dist"

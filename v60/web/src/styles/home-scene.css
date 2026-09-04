@@ -104,35 +104,6 @@
   backdrop-filter: blur(7px);
 }
 
-.home-dream-command,
-.rail-primary-command {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 48px;
-  margin-top: 24px;
-  padding: 10px 16px;
-  color: #fffdf5;
-  border: 1px solid #176343;
-  border-radius: 6px;
-  background: #176343;
-  cursor: pointer;
-  font-weight: 650;
-}
-
-.home-dream-command {
-  min-width: 210px;
-}
-
-.home-dream-command:hover,
-.home-dream-command:focus-visible,
-.rail-primary-command:hover,
-.rail-primary-command:focus-visible {
-  border-color: #0f5236;
-  background: #0f5236;
-  outline: none;
-}
-
 .home-phenotype-key {
   position: absolute;
   z-index: 3;

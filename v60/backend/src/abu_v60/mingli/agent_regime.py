@@ -60,14 +60,8 @@ def normalize_regime_decision(
                 )
             )
         )
-        gate_repaired = (
-            root_status != "PRESENT"
-            or list(merged_coordinates) != raw_coordinates
-        )
-        changed = (
-            changed
-            or gate_repaired
-        )
+        gate_repaired = root_status != "PRESENT" or list(merged_coordinates) != raw_coordinates
+        changed = changed or gate_repaired
         root_status = "PRESENT"
         coordinates = merged_coordinates
         if gate_repaired:
@@ -209,10 +203,7 @@ def _repair_minimum_root_rationale(
     if not minimum_roots:
         return
     current = str(value.get("day_master_rationale") or "")
-    if (
-        "DAY_MASTER_EFFECTIVE_ROOT_GATE" not in normalization_issues
-        and "余气" not in current
-    ):
+    if "DAY_MASTER_EFFECTIVE_ROOT_GATE" not in normalization_issues and "余气" not in current:
         return
     coordinate = minimum_roots[0]
     slot = coordinate.split("支藏", maxsplit=1)[0]

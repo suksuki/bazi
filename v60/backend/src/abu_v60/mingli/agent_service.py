@@ -4,7 +4,10 @@ from threading import Lock
 
 from sqlalchemy.engine import Engine
 
-from abu_v60.mingli.agent_contracts import MingliAgentReadingEnvelope
+from abu_v60.mingli.agent_contracts import (
+    MingliAgentCasePacket,
+    MingliAgentReadingEnvelope,
+)
 from abu_v60.mingli.agent_packet import MingliAgentCasePacketCompiler
 from abu_v60.mingli.agent_runtime import (
     MingliAgentRuntime,
@@ -27,9 +30,7 @@ from abu_v60.mingli.synthetic_experiment_catalog import (
 from abu_v60.mingli.timing_store import MingliTimingVectorStore
 
 MINGLI_AGENT_REQUEST_VERSION = "v60.mingli-agent-request.001"
-SUPPORTED_SUBJECT_KINDS = frozenset(
-    {"HUMAN_OWNER", "HUMAN_REFERENCE", "CANONICAL_SYNTHETIC"}
-)
+SUPPORTED_SUBJECT_KINDS = frozenset({"HUMAN_OWNER", "HUMAN_REFERENCE", "CANONICAL_SYNTHETIC"})
 SHOWCASE_CASE_REFS = frozenset(item.case_ref for item in SHOWCASE_BY_SUBJECT.values())
 
 
@@ -69,6 +70,53 @@ class MingliAgentService:
         expected_reading_ref: str,
         expected_reading_hash: str,
     ) -> MingliAgentReadingEnvelope:
+        packet = self.compile_packet(
+            requester_account_ref=requester_account_ref,
+            case_ref=case_ref,
+            expected_reading_ref=expected_reading_ref,
+            expected_reading_hash=expected_reading_hash,
+        )
+
+        try:
+            generation_key = self._runtime.generation_key(
+                requester_account_ref=requester_account_ref,
+                packet=packet,
+            )
+        except MingliAgentRuntimeError as exc:
+            raise MingliAgentServiceError(str(exc)) from exc
+        cached = self._store.find_generation(
+            requester_account_ref=requester_account_ref,
+            generation_key=generation_key,
+        )
+        if cached is not None:
+            return cached
+
+        with self._generation_lock:
+            cached = self._store.find_generation(
+                requester_account_ref=requester_account_ref,
+                generation_key=generation_key,
+            )
+            if cached is not None:
+                return cached
+            try:
+                generated = self._runtime.run(
+                    requester_account_ref=requester_account_ref,
+                    packet=packet,
+                )
+            except MingliAgentRuntimeError as exc:
+                raise MingliAgentServiceError(str(exc)) from exc
+            return self._store.ensure(generated)
+
+    def compile_packet(
+        self,
+        *,
+        requester_account_ref: str,
+        case_ref: str,
+        expected_reading_ref: str,
+        expected_reading_hash: str,
+    ) -> MingliAgentCasePacket:
+        """Compile the shared fact packet without choosing an LLM call shape."""
+
         workspace = self._authorized_workspace(
             requester_account_ref=requester_account_ref,
             case_ref=case_ref,
@@ -101,7 +149,7 @@ class MingliAgentService:
         mechanism = self._mechanism.get(vector_ref=reading.mechanism_vector_ref)
         timing = self._timing.get(vector_ref=reading.timing_vector_ref)
         try:
-            packet = self._packet_compiler.compile(
+            return self._packet_compiler.compile(
                 workspace=workspace,
                 reading=reading,
                 quant_vector=quant,
@@ -110,36 +158,6 @@ class MingliAgentService:
             )
         except ValueError as exc:
             raise MingliAgentServiceError(f"mingli_agent_packet_invalid:{exc}") from exc
-
-        try:
-            generation_key = self._runtime.generation_key(
-                requester_account_ref=requester_account_ref,
-                packet=packet,
-            )
-        except MingliAgentRuntimeError as exc:
-            raise MingliAgentServiceError(str(exc)) from exc
-        cached = self._store.find_generation(
-            requester_account_ref=requester_account_ref,
-            generation_key=generation_key,
-        )
-        if cached is not None:
-            return cached
-
-        with self._generation_lock:
-            cached = self._store.find_generation(
-                requester_account_ref=requester_account_ref,
-                generation_key=generation_key,
-            )
-            if cached is not None:
-                return cached
-            try:
-                generated = self._runtime.run(
-                    requester_account_ref=requester_account_ref,
-                    packet=packet,
-                )
-            except MingliAgentRuntimeError as exc:
-                raise MingliAgentServiceError(str(exc)) from exc
-            return self._store.ensure(generated)
 
     def _authorized_workspace(
         self,

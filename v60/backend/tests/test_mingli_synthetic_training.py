@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import abu_v60.mingli.synthetic_training_service as synthetic_training_module
 import pytest
 from abu_v60.db import engine
 from abu_v60.db.schema import mingli_synthetic_suite_run_requests
@@ -7,16 +8,17 @@ from abu_v60.mingli.agent_root_gate import packet_root_candidate_assessments
 from abu_v60.mingli.synthetic_experiment_catalog import (
     HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT,
 )
+from abu_v60.mingli.synthetic_experiment_gold import synthetic_experiment_dev_gold
 from abu_v60.mingli.synthetic_experiment_seed import seed_synthetic_experiment
 from abu_v60.mingli.synthetic_experiment_service import SyntheticExperimentService
 from abu_v60.mingli.synthetic_suite_catalog import (
-    CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_DEV_SUITE,
     HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_SUITE,
     HIDDEN_RANK_DEV_SUITE,
+    MONTH_COMMAND_REGIME_GENERALIZATION_DEV_SUITE,
     REGIME_WORK_PATH_GENERALIZATION_DEV_SUITE,
+    SYNTHETIC_SUITE_RUNNER_VERSION,
 )
 from abu_v60.mingli.synthetic_suite_contracts import SyntheticSuiteCandidateIdentity
-from abu_v60.mingli.synthetic_suite_service import SyntheticSuiteService
 from abu_v60.mingli.synthetic_training_contracts import SyntheticSuiteRunRequestInput
 from abu_v60.mingli.synthetic_training_service import (
     SyntheticTrainingService,
@@ -91,13 +93,47 @@ def test_cross_day_master_pair_is_real_calendar_bound_and_method_narrow() -> Non
         assert assessments[0]["relation_competition_evidence_ids"] == ()
 
 
-def test_training_status_reopens_runs_when_the_evaluation_contract_changes() -> None:
-    catalog = SyntheticSuiteService(engine).catalog()
-    old = next(
-        item for item in catalog["suites"] if item["suite_ref"] == HIDDEN_RANK_DEV_SUITE.suite_ref
-    )
-    current_candidate = SyntheticSuiteCandidateIdentity.model_validate(
-        old["runs"][0]["candidate_identity"]
+def test_training_status_reopens_runs_when_the_evaluation_contract_changes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    current_candidate = _candidate("0")
+    historical_items = []
+    for experiment_ref in HIDDEN_RANK_DEV_SUITE.experiment_refs:
+        gold, gold_hash = synthetic_experiment_dev_gold(experiment_ref)
+        historical_items.append(
+            {
+                "experiment_ref": experiment_ref,
+                "execution_status": "SEALED",
+                "evaluator_version": "v60.mingli-synthetic-experiment-evaluator.007",
+                "dev_gold_version": gold["gold_version"],
+                "dev_gold_hash": gold_hash,
+            }
+        )
+    historical_run = {
+        "suite_definition_hash": HIDDEN_RANK_DEV_SUITE.public_definition()["suite_definition_hash"],
+        "runner_version": SYNTHETIC_SUITE_RUNNER_VERSION,
+        "candidate_identity": current_candidate.model_dump(mode="json"),
+        "items": historical_items,
+    }
+
+    class _HistoricalCatalog:
+        def __init__(self, _engine: object) -> None:
+            pass
+
+        def catalog(self) -> dict[str, object]:
+            return {
+                "suites": [
+                    {
+                        "suite_ref": HIDDEN_RANK_DEV_SUITE.suite_ref,
+                        "runs": [historical_run],
+                    }
+                ]
+            }
+
+    monkeypatch.setattr(
+        synthetic_training_module,
+        "SyntheticSuiteService",
+        _HistoricalCatalog,
     )
     service = SyntheticTrainingService(engine, runtime=_Runtime(current_candidate))  # type: ignore[arg-type]
 
@@ -110,7 +146,7 @@ def test_training_status_reopens_runs_when_the_evaluation_contract_changes() -> 
         == "READY_FOR_DEV_RUN"
     )
     assert status["recommended_suite_ref"] == (
-        CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_DEV_SUITE.suite_ref
+        MONTH_COMMAND_REGIME_GENERALIZATION_DEV_SUITE.suite_ref
     )
     assert status["browser_direct_model_call_allowed"] is False
 

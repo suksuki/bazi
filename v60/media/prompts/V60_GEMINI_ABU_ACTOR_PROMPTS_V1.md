@@ -106,23 +106,6 @@ LOOP CONTRACT: Return to the exact initial gaze, breathing phase, ear angle,
 scarf, tail, bounding box and anchor at the final frame without crossfade.
 ```
 
-## ABU_V60_05_GUIDE_LEFT_ONCE_V1
-
-Append:
-
-```text
-ACTION: Abu is seated in the approved pose and is positioned by Runtime on the
-right companion rail. Abu notices a destination at screen-left, turns the eyes
-and head 10 to 14 degrees toward it, then makes one small open-paw invitation
-with the nearer front paw. The paw rises only slightly and returns to the same
-grounded seated pose. Do not stand, walk, slide or point sharply. Hold neutral
-after returning.
-
-SEMANTIC BOUNDARY: The gesture quietly offers a direction in the world. It
-must not imitate a UI tutorial mascot, repeat a page CTA, celebrate or command
-the user. No arrows, light beams, generated icons or text.
-```
-
 ## Source acceptance
 
 ```yaml

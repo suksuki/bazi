@@ -6,243 +6,144 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const source = (...parts) => path.resolve(here, "../src", ...parts);
 const read = (...parts) => readFile(source(...parts), "utf8");
 const failures = [];
-
-const [
-  storyCanvas,
-  sceneHost,
-  scenePlayer,
-  narrationDirector,
-  labInspector,
-  sceneDirector,
-  sceneCanvas,
-  stageTypes,
-  experienceUnits,
-  app,
-  audioPlayer,
-  characterMedia,
-  canonicalDrawer,
-  homeSceneCompanion,
-  readingJourney,
-  branchJourney,
-  stageNavigation,
-  profileManager,
-  branchSceneHost,
-  labWorkspaceHost,
-  syntheticScene,
-  syntheticInspector,
-  layerNarrationProjection,
-  layerRehearsal,
-  claimPresentation,
-] = await Promise.all([
-  read("components", "ExperienceStoryCanvas.tsx"),
-  read("components", "MingliSceneHost.tsx"),
-  read("components", "MingliScenePlayer.tsx"),
-  read("components", "MingliNarrationDirector.tsx"),
-  read("components", "MingliLabSceneInspector.tsx"),
-  read("mingliSceneDirector.ts"),
-  read("components", "MingliSceneCanvas.tsx"),
-  read("mingliStageTypes.ts"),
-  read("experienceUnits.ts"),
-  read("App.tsx"),
-  read("components", "MingliAudioPlayer.tsx"),
-  read("components", "TransparentCharacterMedia.tsx"),
-  read("components", "MingliCanonicalDrawer.tsx"),
-  read("components", "HomeSceneCompanion.tsx"),
-  read("components", "MingliReadingJourney.tsx"),
-  read("components", "MingliBranchJourney.tsx"),
-  read("mingliStageNavigation.ts"),
-  read("components", "HomeProfileManager.tsx"),
-  read("components", "MingliBranchSceneHost.tsx"),
-  read("components", "MingliLabWorkspaceHost.tsx"),
-  read("components", "MingliSyntheticExperimentScene.tsx"),
-  read("components", "MingliSyntheticExperimentInspector.tsx"),
-  read("mingliLayerNarrationProjection.ts"),
-  read("components", "MingliLayerRehearsal.tsx"),
-  read("mingliClaimPresentation.ts"),
-]);
-
 const expect = (condition, message) => {
   if (!condition) failures.push(message);
 };
 const occurrences = (value, pattern) => value.match(pattern)?.length ?? 0;
-const timeStageBoundKeys = layerNarrationProjection.match(
-  /export const TIME_LAYER_STAGE_BOUND_KEYS = \[([\s\S]*?)\] as const/,
-)?.[1] ?? "";
+
+const [
+  app,
+  sceneHost,
+  scenePlayer,
+  sceneCanvas,
+  sceneDirector,
+  stageTypes,
+  branchJourney,
+  branchHost,
+  labHost,
+  narrationDirector,
+  labInspector,
+  syntheticScene,
+  syntheticInspector,
+  layerProjection,
+  layerRehearsal,
+  focusedSpeechDirector,
+  focusedSpeechTimeline,
+  speechApi,
+  focusedPassGeneration,
+  stageNavigation,
+  characterMedia,
+  profileManager,
+] = await Promise.all([
+  read("App.tsx"),
+  read("components", "MingliSceneHost.tsx"),
+  read("components", "MingliScenePlayer.tsx"),
+  read("components", "MingliSceneCanvas.tsx"),
+  read("mingliSceneDirector.ts"),
+  read("mingliStageTypes.ts"),
+  read("components", "MingliBranchJourney.tsx"),
+  read("components", "MingliBranchSceneHost.tsx"),
+  read("components", "MingliLabWorkspaceHost.tsx"),
+  read("components", "MingliNarrationDirector.tsx"),
+  read("components", "MingliLabSceneInspector.tsx"),
+  read("components", "MingliSyntheticExperimentScene.tsx"),
+  read("components", "MingliSyntheticExperimentInspector.tsx"),
+  read("mingliLayerNarrationProjection.ts"),
+  read("components", "MingliLayerRehearsal.tsx"),
+  read("useMingliFocusedSpeechDirector.ts"),
+  read("mingliFocusedSpeechTimeline.ts"),
+  read("publicSpeechApi.ts"),
+  read("useMingliFocusedPassGeneration.ts"),
+  read("mingliStageNavigation.ts"),
+  read("components", "TransparentCharacterMedia.tsx"),
+  read("components", "HomeProfileManager.tsx"),
+]);
 
 expect(
-  storyCanvas.includes('activeUnit === "mingli" || activeUnit === "lab"'),
-  "story-canvas:reading-and-lab-do-not-share-host-condition",
+  app.includes("<HomeLifeTreeScene") &&
+    app.includes("<MingliBranchSceneHost") &&
+    app.includes("<MingliSceneHost") &&
+    !app.includes("MingliLabWorkspaceHost") &&
+    !app.includes("AbuSaysUnit"),
+  "public-shell:must-use-one-home-branch-stage-path",
 );
+
 expect(
-  occurrences(storyCanvas, /<MingliLabWorkspaceHost/g) === 1 &&
-    occurrences(labWorkspaceHost, /<MingliSceneHost/g) === 1,
-  "story-canvas:lab-workspace-must-own-current-scene-host",
+  occurrences(sceneHost, /<MingliScenePlayer/g) === 1 &&
+    scenePlayer.includes('lazy(() => import("./MingliSceneCanvas"))') &&
+    scenePlayer.includes("data-scene-instance-id"),
+  "shared-stage:must-mount-one-lazy-persistent-player",
 );
+
 expect(
-  occurrences(sceneHost, /<MingliScenePlayer/g) === 1,
-  "scene-host:scene-player-must-mount-once",
+  !/MingliScenePlayer|Canvas/.test(narrationDirector) &&
+    !/MingliScenePlayer|Canvas/.test(labInspector) &&
+    !/MingliScenePlayer|Canvas/.test(syntheticInspector),
+  "secondary-panels:must-not-own-a-renderer",
 );
-expect(
-  !/MingliScenePlayer|Canvas/.test(narrationDirector),
-  "narration-director:must-not-own-scene-player-or-canvas",
-);
-expect(
-  !/MingliScenePlayer|Canvas/.test(labInspector),
-  "lab-inspector:must-not-own-scene-player-or-canvas",
-);
+
 expect(
   occurrences(syntheticScene, /<MingliScenePlayer/g) === 1 &&
     !/key=\{.*projection/.test(syntheticScene) &&
-    !/MingliScenePlayer|Canvas/.test(syntheticInspector),
-  "synthetic-lab:must-reuse-one-keyless-player-and-inspector-must-not-own-canvas",
+    occurrences(labHost, /<MingliSceneHost/g) === 1 &&
+    !labHost.includes("<MingliSyntheticExperimentScene"),
+  "internal-lab:must-keep-bounded-shared-player-topology",
 );
+
 expect(
-  labWorkspaceHost.includes('route.mode === "synthetic"') &&
-    labWorkspaceHost.indexOf("<MingliSyntheticExperimentScene") <
-      labWorkspaceHost.indexOf("<MingliSceneHost"),
-  "lab-workspace:current-and-synthetic-scenes-must-be-mutually-exclusive",
+  branchJourney.includes("onActivateLayer(item.id)") &&
+    !branchJourney.includes("onOpenLab") &&
+    branchHost.includes("openLayerRehearsal(layer)") &&
+    branchHost.includes("missingFocuses") &&
+    branchHost.includes('layer === "timing"') &&
+    branchHost.includes('writeMingliStageExperience("stage", "rehearsal", "push")'),
+  "branch:each-organ-must-open-the-existing-reading-stage-directly",
 );
+
 expect(
-  scenePlayer.includes('lazy(() => import("./MingliSceneCanvas"))'),
-  "scene-player:three-renderer-must-remain-lazy",
+  sceneHost.includes("useMingliFocusedPassGeneration") &&
+    focusedPassGeneration.includes("requestRef.current === requestId") &&
+    focusedPassGeneration.includes("summaryMatchesStage(summary, activeStage)") &&
+    sceneHost.includes("summaryMatchesStage(readingSummary, stage)"),
+  "focused-generation:stale-case-results-must-not-commit",
 );
+
 expect(
-  scenePlayer.includes("data-scene-instance-id"),
-  "scene-player:missing-persistent-instance-evidence",
+  layerProjection.includes('sourceKind: "CLAIM_GRAPH"') &&
+    layerProjection.includes('sourceKind: "FOCUSED_PASSES"') &&
+    layerProjection.includes('item.status !== "WITHHELD"') &&
+    layerRehearsal.includes("data-source-item-ref={chapter.sourceItemRef}") &&
+    layerRehearsal.includes("data-source-ref={projection.sourceRef}"),
+  "rehearsal:must-render-only-lineage-bound-reading material",
 );
+
 expect(
-  sceneCanvas.includes("const semanticAmount = frame.cueProgress"),
-  "scene-canvas:paused-and-buffering-must-retain-frozen-semantic-progress",
+  layerRehearsal.includes("useMingliFocusedSpeechDirector") &&
+    layerRehearsal.includes('performanceMode="AUDIO"') &&
+    layerRehearsal.includes('className="mingli-rehearsal-subtitle"') &&
+    !layerRehearsal.includes("上一段") &&
+    !layerRehearsal.includes("下一段"),
+  "abu-says:must-use-one continuous subtitle presentation",
 );
+
 expect(
-  !sceneCanvas.includes("frame.semanticRunning ? frame.cueProgress : 0"),
-  "scene-canvas:frozen-semantic-progress-must-not-reset-to-zero",
+  focusedSpeechDirector.includes("audio.currentTime") &&
+    focusedSpeechDirector.includes("window.requestAnimationFrame(sample)") &&
+    focusedSpeechDirector.includes('setSpeechState("BUFFERING")') &&
+    focusedSpeechDirector.includes("focusedSubtitle") &&
+    focusedSpeechDirector.includes("subtitle.activeColumnRefs") &&
+    focusedSpeechTimeline.includes("focusedCueAtTime") &&
+    focusedSpeechTimeline.includes("focusedColumnRefs") &&
+    speechApi.includes("X-Abu-Focused-Speech-Timeline"),
+  "abu-says:audio-subtitle-and-pillar-focus-must-share-one-clock",
 );
+
 expect(
-  !experienceUnits.match(/key:\s*"abu"/),
-  "experience-units:abu-says-must-not-be-an-independent-dock-unit",
-);
-expect(
-  app.includes("<HomeSceneCompanion") &&
-    homeSceneCompanion.includes("<MingliCanonicalDrawer") &&
-    canonicalDrawer.includes('className="mingli-canonical-drawer"') &&
-    canonicalDrawer.includes("<HomeCompanionRail"),
-  "app:canonical-reading-and-lab-capabilities-must-remain-reachable",
-);
-expect(
-  audioPlayer.includes('audio.removeAttribute("src")') &&
-    audioPlayer.includes("audio.load()"),
-  "audio-player:must-release-media-on-unmount",
-);
-expect(
-  characterMedia.includes("useReducedMotion") &&
-    characterMedia.includes('mode === "poster"'),
-  "character-media:reduced-motion-must-use-poster",
-);
-expect(
-  readingJourney.includes("summaryMatchesStage") &&
-    readingJourney.includes("summary?.claim_graph") &&
-    !readingJourney.includes("reading.output"),
-  "reading-journey:must-consume-validated-shared-claim-graph",
-);
-expect(
-  readingJourney.includes("dayMasterAdmitted") &&
-    readingJourney.includes('"日主状态待校准"') &&
-    readingJourney.includes("natalAdmitted ? natal.statement") &&
-    readingJourney.includes('context="原局基线"'),
-  "reading-journey:withheld-day-master-or-natal-must-not-leak",
-);
-expect(
-  labInspector.includes("claimGraph: MingliReadingClaimGraph | null") &&
-    labInspector.includes("data-claim-graph-ref={claimGraph.graph_ref}") &&
-    sceneHost.includes("claimGraph={currentClaimGraph}") &&
-    sceneHost.includes("summaryMatchesStage(readingSummary, stage)") &&
-    !sceneHost.includes("claimGraph={readingSummary?.claim_graph ?? null}"),
-  "lab-inspector:must-consume-the-same-summary-claim-graph",
-);
-expect(
-  sceneHost.includes("generationRequestRef.current === requestId") &&
-    sceneHost.includes("summaryMatchesStage(summary, activeStage)") &&
-    branchSceneHost.includes("generationRequestRef.current === requestId") &&
-    branchSceneHost.includes("summaryMatchesStage(nextSummary, activeStage)"),
-  "agent-generation:stale-case-response-must-not-commit",
-);
-expect(
-  !readingJourney.includes("讲这一层"),
-  "reading-journey:must-not-claim-layer-bound-narration-before-contract-exists",
-);
-expect(
-  stageNavigation.includes('url.searchParams.set("mingli_layer"') &&
-    stageNavigation.includes('url.searchParams.get("mingli_layer")'),
-  "stage-navigation:reading-layer-must-be-refresh-recoverable",
-);
-expect(
-  stageNavigation.includes('url.searchParams.set("mingli_stage", "1")') &&
-    stageNavigation.includes('params.get("mingli_stage") === "1"') &&
-    stageNavigation.includes('params.get("mingli_rehearsal") === "1"') &&
-    storyCanvas.includes('mingliExperience === "stage"') &&
-    storyCanvas.includes('surface="READING"'),
-  "stage-navigation:branch-reading-stage-and-rehearsal-must-be-recoverable",
-);
-expect(
-  branchSceneHost.includes('"rehearsal"') &&
-    branchSceneHost.includes('"observe"') &&
-    branchSceneHost.includes('onOpenLab={onOpenLab}') &&
-    branchSceneHost.includes(
-      'writeMingliStageExperience("stage", entryMode, "push")',
-    ) &&
-    branchSceneHost.includes('route.layer === "timing"') &&
-    storyCanvas.includes("onOpenLab={() =>"),
-  "branch-actions:reading-rehearsal-and-lab-intents-must-not-collapse",
-);
-expect(
-  layerNarrationProjection.includes('item.status !== "WITHHELD"') &&
-    layerNarrationProjection.includes("graphRef: graph.graph_ref") &&
-    layerNarrationProjection.includes("graphHash: graph.graph_hash") &&
-    layerNarrationProjection.includes("DAY_MASTER_LABELS") &&
-    layerNarrationProjection.includes("WORK_PATH_LABELS") &&
-    layerNarrationProjection.includes("做功路径有条件成立") &&
-    layerNarrationProjection.includes("claimStatusLabel(item)") &&
-    claimPresentation.includes("MECHANISM_CANDIDATE_REQUIRES_ADJUDICATION") &&
-    layerNarrationProjection.includes("title: claimTitle(item)") &&
-    layerRehearsal.includes("data-claim-ref={chapter.claimRef}") &&
-    layerRehearsal.includes("data-graph-ref={projection.graphRef}"),
-  "layer-rehearsal:must-project-only-admitted-claims-with-exact-graph-lineage",
-);
-expect(
-  branchJourney.includes("hasMingliLayerNarration(summary.claim_graph, layer)") &&
-    branchJourney.includes("disabled={!hasLayerRehearsal}") &&
-    sceneHost.includes("hasMingliLayerNarration(summary.claim_graph, route.layer)") &&
-    sceneHost.includes("data-rehearsal-open={rehearsalVisible}") &&
-    sceneHost.includes("const hostStyle = rehearsalVisible"),
-  "layer-rehearsal:empty-layer-must-not-open-or-hide-scene-controls",
-);
-expect(
-  timeStageBoundKeys.includes('"TIMING_NATAL"') &&
-    timeStageBoundKeys.includes('"DISCRIMINATING_QUESTION"') &&
-    !timeStageBoundKeys.includes('"TIMING_DAYUN"') &&
-    !timeStageBoundKeys.includes('"TIMING_ANNUAL"') &&
-    !layerNarrationProjection.includes('semanticAction: "TIME_COORDINATES_PRESENT"'),
-  "layer-rehearsal:unbound-dayun-or-annual-prose-must-not-attach-to-selected-stage",
-);
-expect(
-  !/MingliAudioPlayer|prepareMingliNarration|useMingliNarrationDirector/.test(
-    layerRehearsal,
-  ) &&
-    layerRehearsal.includes('performanceMode="REHEARSAL"') &&
-    sceneHost.includes("<MingliLayerRehearsal") &&
-    sceneHost.includes('data-overlay={rehearsalVisible ? "REHEARSAL"'),
-  "layer-rehearsal:must-not-generate-audio-or-own-another-scene-player",
-);
-expect(
-  profileManager.includes("<dialog") && profileManager.includes("showModal()"),
-  "profile-manager:must-remain-a-focus-isolating-modal",
-);
-expect(
-  profileManager.includes("pendingCaseRef") &&
-    profileManager.includes("if (working) return") &&
-    profileManager.includes("setPendingCaseRef(created.case_ref)"),
-  "profile-manager:committed-case-must-survive-stale-home-refresh",
+  sceneDirector.includes("activeColumnRefs: clock.activeColumnRefs ?? []") &&
+    sceneCanvas.includes("const semanticAmount = frame.cueProgress") &&
+    sceneCanvas.includes("narratedColumnRefs.size > 0") &&
+    !sceneCanvas.includes("frame.semanticRunning ? frame.cueProgress : 0"),
+  "particles:paused-cue-progress-and-explicit-column-focus-must-be-stable",
 );
 
 for (const action of [
@@ -263,41 +164,35 @@ for (const forbidden of [
   "WANGSHUAI_PRESENT",
   "WORK_CONFIRMED",
 ]) {
-  expect(!sceneDirector.includes(forbidden), `scene-director:forbidden-action:${forbidden}`);
+  expect(
+    !sceneDirector.includes(forbidden),
+    `scene-director:forbidden-action:${forbidden}`,
+  );
 }
 
-if (failures.length) throw new Error(failures.join("\n"));
-console.log(
-  JSON.stringify(
-    {
-      sharedHost: "PASS",
-      currentScenePlayerMounts: 1,
-      syntheticScenePlayerMounts: 1,
-      narratorOwnsCanvas: false,
-      labOwnsCanvas: false,
-      independentAbuDockUnit: false,
-      canonicalDetailsReachable: true,
-      audioReleaseOnUnmount: true,
-      reducedMotionPoster: true,
-      exactReadingLineageGuard: true,
-      staleAgentGenerationCommitBlocked: true,
-      sharedClaimGraphConsumers: ["MingliReadingJourney", "MingliLabSceneInspector"],
-      readingLayerRecovery: true,
-      branchReadingStageRecovery: true,
-      branchStageHistoryNode: true,
-      timingRehearsalUsesSixPillars: true,
-      layerRehearsalUsesAudio: false,
-      layerRehearsalClaimAuthority: "SHARED_CLAIM_GRAPH",
-      internalDayMasterCodeVisible: false,
-      internalWorkPathCodeVisible: false,
-      emptyLayerRehearsalBlocked: true,
-      unboundTimingProseAttachedToStage: false,
-      profileFocusIsolation: true,
-      profileMutationRecovery: true,
-      semanticBoundary: "COORDINATES_AND_MEMBERSHIP_ONLY",
-      failures,
-    },
-    null,
-    2,
-  ),
+expect(
+  stageNavigation.includes('url.searchParams.set("mingli_layer"') &&
+    stageNavigation.includes('url.searchParams.set("mingli_stage", "1")') &&
+    stageNavigation.includes('params.get("mingli_rehearsal") === "1"'),
+  "navigation:stage-layer-and-rehearsal-must-survive-refresh",
 );
+
+expect(
+  characterMedia.includes("useReducedMotion") &&
+    characterMedia.includes('mode === "poster"') &&
+    profileManager.includes("<dialog") &&
+    profileManager.includes("showModal()"),
+  "accessibility:must-keep-poster-fallback-and-modal-focus-isolation",
+);
+
+if (failures.length) throw new Error(failures.join("\n"));
+console.log(JSON.stringify({
+  sharedHost: "PASS",
+  currentScenePlayerMounts: 1,
+  publicPath: ["HOME", "MINGLI_BRANCH", "READING_STAGE", "ABU_SAYS"],
+  focusedSpeechClockSource: "HTML_AUDIO_CURRENT_TIME",
+  focusedSpeechSubtitleSync: "FRAME_EXACT_SENTENCE_CUES",
+  focusedSpeechPillarFocus: "EXPLICIT_COORDINATE_TERMS_ONLY",
+  semanticBoundary: "COORDINATES_AND_MEMBERSHIP_ONLY",
+  failures,
+}, null, 2));

@@ -73,13 +73,9 @@ class CandidateMechanismQualification(BaseModel):
 
     @model_validator(mode="after")
     def check_shape_is_valid(self) -> CandidateMechanismQualification:
-        if tuple(item.dimension for item in self.checks) != (
-            MECHANISM_QUALIFICATION_DIMENSIONS
-        ):
+        if tuple(item.dimension for item in self.checks) != (MECHANISM_QUALIFICATION_DIMENSIONS):
             raise ValueError("mechanism_qualification_dimension_order_invalid")
-        evidence_present_count = sum(
-            item.status in {"PRESENT", "PARTIAL"} for item in self.checks
-        )
+        evidence_present_count = sum(item.status in {"PRESENT", "PARTIAL"} for item in self.checks)
         if self.evidence_present_count != evidence_present_count:
             raise ValueError("mechanism_qualification_present_count_mismatch")
         if self.unresolved_or_unadmitted_count != len(self.checks) - evidence_present_count:

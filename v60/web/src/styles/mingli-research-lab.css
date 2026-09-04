@@ -207,10 +207,10 @@
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-areas: "six synthesis voice" "shared shared shared";
-  grid-template-columns: minmax(230px, 1fr) minmax(310px, 1.3fr) minmax(210px, 0.9fr);
+  grid-template-areas: "six voice" "shared shared";
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
   align-items: end;
-  width: min(1090px, calc(100% - 64px));
+  width: min(820px, calc(100% - 64px));
   gap: 12px clamp(14px, 2.4vw, 34px);
   margin: clamp(22px, 3.7vh, 42px) auto 0;
 }
@@ -243,7 +243,6 @@
   text-align: center;
 }
 
-.mingli-lab-project.is-synthesis { grid-area: synthesis; min-height: 322px; }
 .mingli-lab-project.is-six { grid-area: six; }
 .mingli-lab-project.is-voice { grid-area: voice; }
 
@@ -452,7 +451,7 @@
 @keyframes mingli-lab-mist-near { to { transform: translate3d(-13%, -2%, 0); } }
 
 @media (max-width: 1180px) {
-  .mingli-lab-project-field { grid-template-columns: minmax(210px, 1fr) minmax(280px, 1.2fr) minmax(190px, 0.9fr); width: calc(100% - 34px); gap: 10px 14px; }
+  .mingli-lab-project-field { grid-template-columns: repeat(2, minmax(220px, 1fr)); width: min(760px, calc(100% - 34px)); gap: 10px 28px; }
   .mingli-lab-synthesis-instrument { width: 220px; }
   .mingli-lab-synthesis-ring i { transform: translate(-50%, -50%) rotate(var(--angle)) translateY(-89px); }
   .mingli-lab-project-copy { padding-inline: 10px; }

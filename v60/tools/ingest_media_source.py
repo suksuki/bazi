@@ -62,9 +62,7 @@ def main() -> None:
     if "OWNER_APPROVED" not in args.authorization:
         raise SystemExit("source ingest requires explicit OWNER_APPROVED authorization")
 
-    destination_directory = (
-        PROJECT_ROOT / "media" / "sources" / args.media_id / args.revision
-    )
+    destination_directory = PROJECT_ROOT / "media" / "sources" / args.media_id / args.revision
     destination_directory.mkdir(parents=True, exist_ok=True)
     destination = destination_directory / f"source{source.suffix.lower()}"
     source_hash = sha256_file(source)

@@ -493,12 +493,52 @@ def _hypothesis_output_scaffold(
                 "只写条件而不写如何改判",
                 "使用与本检查无关的通用兜底条件",
             ),
+            "decision_row": {
+                "required_fields": (
+                    "row_ref",
+                    "trigger_axis",
+                    "current_ruling",
+                    "target_ruling",
+                    "action",
+                ),
+                "model_owned_fields": ("trigger_axis", "action"),
+                "server_derived_fields": (
+                    "row_ref",
+                    "current_ruling",
+                    "target_ruling",
+                ),
+                "selection_rule": (
+                    "从所在 method_card 的 counterfactual_rows 逐字选择与 check_code、"
+                    "trigger_axis 匹配的一项；target_ruling 与 row_ref 不得自造。"
+                ),
+                "counterfactual_row_entry": "<CHECK_CODE>:<TRIGGER_AXIS>",
+                "row_ref_format": (
+                    "<METHOD_CARD_REF>:<CHECK_CODE>:<CURRENT_RULING>><TARGET_RULING>"
+                ),
+                "target_by_current_ruling": {
+                    "SUPPORTS": "CONDITIONAL",
+                    "CONDITIONAL": "OPPOSES",
+                    "OPPOSES": "UNRESOLVED",
+                    "UNRESOLVED": "CONDITIONAL",
+                },
+                "action": "RECLASSIFY",
+            },
         },
         "reversal_contract": {
             "question": "只问一个能区分两条机制的双极现实问题",
             "winner_signal": "若观察A成立，维持PRIMARY",
             "loser_signal": "若相反观察B成立，翻转为ALTERNATIVE",
             "signals_must_be_observably_opposite": True,
+            "decision_row_ref": (
+                "REVERSAL:<PRIMARY_METHOD_CARD_REF>"
+                ">"
+                "<ALTERNATIVE_METHOD_CARD_REF>:MAINTAIN_PRIMARY>FLIP_TO_ALTERNATIVE"
+            ),
+            "name_binding": (
+                "winner_signal 必须包含 PRIMARY hypothesis 的 name 原文，"
+                "loser_signal 必须包含 ALTERNATIVE hypothesis 的 name 原文；"
+                "不得只写 PRIMARY 或 ALTERNATIVE 标签。"
+            ),
         },
     }
     if len(mechanism_cards) > 2:

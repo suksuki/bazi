@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 
-import type { RuntimeMediaManifest } from "../api";
-import type { HomeSnapshot } from "../homeApi";
 import { writeMingliLeafRoute } from "../mingliStageNavigation";
+import type { PublicLifeTreeHomeSnapshot } from "../publicHomeApi";
+import type { PublicRuntimeMediaManifest } from "../publicRuntimeTypes";
 import {
   rememberHomeWorldLight,
   resolveHomeWorldLight,
@@ -13,29 +13,23 @@ import { HomeWorldHotspots } from "./HomeWorldHotspots";
 import { HomeProfileManager } from "./HomeProfileManager";
 import { TransparentCharacterMedia } from "./TransparentCharacterMedia";
 
-type HomePassage = "lab" | "dream";
-
 export function HomeLifeTreeScene({
   busy,
   home,
   media,
-  onEnterDream,
   onHomeRefresh,
-  onOpenLab,
+  onLogout = () => undefined,
   onOpenMingli,
 }: {
   busy: boolean;
-  home: HomeSnapshot;
-  media: RuntimeMediaManifest;
-  onEnterDream: () => void;
+  home: PublicLifeTreeHomeSnapshot;
+  media: PublicRuntimeMediaManifest;
   onHomeRefresh: () => Promise<void>;
-  onOpenLab: () => void;
+  onLogout?: () => void;
   onOpenMingli: () => void;
 }) {
   const [light, setLight] = useState<HomeWorldLight>(resolveHomeWorldLight);
   const [profileManagerOpen, setProfileManagerOpen] = useState(false);
-  const [passage, setPassage] = useState<HomePassage | null>(null);
-  const timers = useRef<number[]>([]);
   const worldRef = useRef<HTMLDivElement>(null);
   const planeRef = useRef<HTMLDivElement>(null);
   const phenotype = home.tree.phenotype;
@@ -46,30 +40,17 @@ export function HomeLifeTreeScene({
     "--v108-home-lift": phenotype.branch_lift,
   } as CSSProperties;
 
-  useEffect(
-    () => () => timers.current.forEach((timer) => window.clearTimeout(timer)),
-    [],
-  );
-
   const toggleLight = () => {
     const next = light === "day" ? "night" : "day";
     setLight(next);
     rememberHomeWorldLight(next);
   };
 
-  const enterThrough = (next: HomePassage, action: () => void) => {
-    if (passage || busy) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    setPassage(next);
-    timers.current.push(window.setTimeout(action, reduced ? 0 : 520));
-    timers.current.push(window.setTimeout(() => setPassage(null), reduced ? 80 : 1500));
-  };
-
   const openMingliCase = (
-    option: HomeSnapshot["case_options"][number],
+    option: PublicLifeTreeHomeSnapshot["case_options"][number],
     anchor: HTMLElement,
   ) => {
-    if (passage || busy) return;
+    if (busy) return;
     const stableAnchor = anchor.closest(".profile-manager")
       ? worldRef.current?.querySelector<HTMLElement>(".v108-profile-more")
         ?? worldRef.current?.querySelector<HTMLElement>(".v108-settings-fruit")
@@ -97,15 +78,6 @@ export function HomeLifeTreeScene({
     onOpenMingli();
   };
 
-  const openLab = () => {
-    setProfileManagerOpen(false);
-    enterThrough("lab", onOpenLab);
-  };
-  const enterDream = () => {
-    setProfileManagerOpen(false);
-    enterThrough("dream", onEnterDream);
-  };
-
   return (
     <div
       className="v108-home-world"
@@ -123,6 +95,7 @@ export function HomeLifeTreeScene({
         light={light}
         media={media}
         onOpenCase={openMingliCase}
+        onLogout={onLogout}
         onOpenSettings={() => setProfileManagerOpen(true)}
         onToggleLight={toggleLight}
       />
@@ -144,12 +117,10 @@ export function HomeLifeTreeScene({
           <div className="v108-home-scene-wash" aria-hidden="true" />
           <div className="v108-life-current" aria-hidden="true"><i /><b /><span /></div>
           <HomeWorldHotspots
-            busy={busy || passage !== null}
+            busy={busy}
             busyCaseRef={null}
             home={home}
             media={media}
-            onEnterDream={enterDream}
-            onOpenLab={openLab}
             onOpenMingli={openMingliCase}
             onOpenSettings={() => setProfileManagerOpen(true)}
           />
@@ -170,7 +141,7 @@ export function HomeLifeTreeScene({
 
       <div className="v108-home-context">
         <h1>跟着光，看见自己的生命树。</h1>
-        <span><i aria-hidden="true" />档案叶、Lab 花与梦境树洞都在原位</span>
+        <span><i aria-hidden="true" />轻触档案叶开始断命 · 设置果管理档案</span>
       </div>
 
       <TransparentCharacterMedia
@@ -192,15 +163,6 @@ export function HomeLifeTreeScene({
           onClose={() => setProfileManagerOpen(false)}
           onOpenMingli={openMingliCase}
         />
-      )}
-      {passage && (
-        <div className={`v108-world-passage to-${passage}`} aria-live="polite">
-          <i aria-hidden="true" /><b aria-hidden="true" />
-          <p>
-            <small>{passage === "dream" ? "阿布梦境 · 账号旅程" : passage === "lab" ? "命理 Lab" : "命理测算"}</small>
-            <strong>{passage === "dream" ? "穿过树洞，进入阿布梦境" : "循着水光，进入阿布 LAB"}</strong>
-          </p>
-        </div>
       )}
     </div>
   );

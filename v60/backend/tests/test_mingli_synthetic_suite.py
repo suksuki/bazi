@@ -11,12 +11,14 @@ from abu_v60.mingli.synthetic_experiment_catalog import (
     CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT_REF,
     HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
     HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF,
+    MONTH_COMMAND_REGIME_GENERALIZATION_EXPERIMENT_REF,
     resolve_synthetic_experiment,
 )
 from abu_v60.mingli.synthetic_suite_catalog import (
     CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_DEV_SUITE,
     HIDDEN_RANK_DEV_SUITE,
     HIDDEN_RANK_DEV_SUITE_REF,
+    MONTH_COMMAND_REGIME_GENERALIZATION_DEV_SUITE,
     SYNTHETIC_SUITE_MODE_CATALOG,
     SyntheticSuiteDefinition,
 )
@@ -143,6 +145,19 @@ def test_decision_discipline_suite_is_one_unseen_pair_without_fixed_winner() -> 
         CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_EXPERIMENT_REF,
     )
     assert "Gold 不指定机制胜者" in definition["inference_limit"]
+    assert definition["suite_definition_hash"] == content_hash(
+        {key: value for key, value in definition.items() if key != "suite_definition_hash"}
+    )
+
+
+def test_month_command_suite_is_dev_only_and_does_not_fix_a_winner() -> None:
+    definition = MONTH_COMMAND_REGIME_GENERALIZATION_DEV_SUITE.public_definition()
+
+    assert definition["experiment_refs"] == (MONTH_COMMAND_REGIME_GENERALIZATION_EXPERIMENT_REF,)
+    assert definition["mode"] == "DEV"
+    assert definition["availability"] == "ACTIVE"
+    assert "不指定机制胜者" in definition["inference_limit"]
+    assert "不解锁 Qualification" in definition["inference_limit"]
     assert definition["suite_definition_hash"] == content_hash(
         {key: value for key, value in definition.items() if key != "suite_definition_hash"}
     )

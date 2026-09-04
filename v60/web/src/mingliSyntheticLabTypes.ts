@@ -27,7 +27,8 @@ export interface MingliSyntheticExperimentDefinition {
     | "CONTROLLED_HIDDEN_RANK_SECONDARY_TERTIARY_PAIR"
     | "CONTROLLED_HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_PAIR"
     | "CONTROLLED_REGIME_WORK_PATH_GENERALIZATION_PAIR"
-    | "CONTROLLED_DECISION_DISCIPLINE_GENERALIZATION_PAIR";
+    | "CONTROLLED_DECISION_DISCIPLINE_GENERALIZATION_PAIR"
+    | "CONTROLLED_MONTH_COMMAND_REGIME_GENERALIZATION_PAIR";
   title: string;
   question: string;
   analysis_date: string;
@@ -37,7 +38,8 @@ export interface MingliSyntheticExperimentDefinition {
     | "NATAL_ROOT_GATE_ONLY_WITH_FULL_HOUR_COLLATERAL"
     | "NATAL_HIDDEN_RANK_GATE_ONLY_WITH_FULL_HOUR_COLLATERAL"
     | "NATAL_HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION"
-    | "WHOLE_CHART_DECISION_DISCIPLINE_WITH_FULL_HOUR_COLLATERAL";
+    | "WHOLE_CHART_DECISION_DISCIPLINE_WITH_FULL_HOUR_COLLATERAL"
+    | "MONTH_COMMAND_COORDINATE_AND_WHOLE_CHART_DISCIPLINE_WITH_FULL_HOUR_COLLATERAL";
   inference_limit: string;
   known_collateral_deltas: string[];
   changed_input: {
@@ -76,7 +78,7 @@ export interface MingliSyntheticExperimentRunSummary {
 }
 
 export interface MingliSyntheticExperimentCatalog {
-  catalog_version: "v60.mingli-synthetic-experiment-catalog.006";
+  catalog_version: "v60.mingli-synthetic-experiment-catalog.007";
   experiments: MingliSyntheticExperimentCatalogEntry[];
   browser_generation_allowed: false;
   read_only: true;
@@ -100,17 +102,21 @@ export interface MingliSyntheticExperimentEvaluation {
     | "v60.mingli-synthetic-experiment-evaluator.005"
     | "v60.mingli-synthetic-experiment-evaluator.006"
     | "v60.mingli-synthetic-experiment-evaluator.007"
-    | "v60.mingli-synthetic-experiment-evaluator.008";
+    | "v60.mingli-synthetic-experiment-evaluator.008"
+    | "v60.mingli-synthetic-experiment-evaluator.009"
+    | "v60.mingli-synthetic-experiment-evaluator.010";
   dev_gold_version:
     | "v60.mingli-synthetic-experiment-dev-gold.001"
     | "v60.mingli-synthetic-experiment-dev-gold.002"
     | "v60.mingli-synthetic-experiment-dev-gold.003"
     | "v60.mingli-synthetic-experiment-dev-gold.004"
-    | "v60.mingli-synthetic-experiment-dev-gold.005";
+    | "v60.mingli-synthetic-experiment-dev-gold.005"
+    | "v60.mingli-synthetic-experiment-dev-gold.006";
   dev_gold_hash: string;
   outcome: MingliSyntheticOutcome;
   checks: MingliSyntheticExperimentCheck[];
   server_issue_keys: { A: string[]; B: string[] };
+  raw_judgment_repair_variants?: MingliSyntheticVariant[];
   changed_pass_count: number;
   hold_pass_count: number;
   drift_checks: string[];

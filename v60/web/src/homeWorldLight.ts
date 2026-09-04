@@ -21,6 +21,6 @@ export function rememberHomeWorldLight(light: HomeWorldLight) {
   try {
     window.localStorage.setItem(STORAGE_KEY, light);
   } catch {
-    // Presentation memory never owns Case, Reading, or Dream state.
+    // Presentation memory never owns Case, Reading, or canonical state.
   }
 }

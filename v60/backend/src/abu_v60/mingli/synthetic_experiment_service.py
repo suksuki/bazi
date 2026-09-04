@@ -140,12 +140,8 @@ class SyntheticExperimentService:
                 {
                     **definition,
                     "run_status": "SEALED" if latest is not None else "NOT_RUN",
-                    "latest_run_ref": (
-                        latest["run_ref"] if latest is not None else None
-                    ),
-                    "latest_outcome": (
-                        latest["outcome"] if latest is not None else None
-                    ),
+                    "latest_run_ref": (latest["run_ref"] if latest is not None else None),
+                    "latest_outcome": (latest["outcome"] if latest is not None else None),
                     "runs": [self._run_summary(item) for item in history],
                 }
             )
@@ -195,11 +191,7 @@ class SyntheticExperimentService:
         }
         sealed_stages = {
             member_variant: MingliStageProjection.model_validate(
-                run[
-                    "member_a_stage_json"
-                    if member_variant == "A"
-                    else "member_b_stage_json"
-                ]
+                run["member_a_stage_json" if member_variant == "A" else "member_b_stage_json"]
             )
             for member_variant in ("A", "B")
         }
@@ -259,31 +251,25 @@ class SyntheticExperimentService:
                 or stage.reading_ref != reading.reading_ref
                 or stage.reading_hash != reading.reading_hash
             ):
-                raise SyntheticExperimentError(
-                    "mingli_synthetic_experiment_sealed_stage_mismatch"
-                )
+                raise SyntheticExperimentError("mingli_synthetic_experiment_sealed_stage_mismatch")
 
     @staticmethod
     def _run_summary(run: Mapping[str, Any]) -> dict[str, Any]:
         evaluation = run["evaluation_json"]
-        current_gold, current_gold_hash = synthetic_experiment_dev_gold(
-            run["experiment_ref"]
-        )
+        current_gold, current_gold_hash = synthetic_experiment_dev_gold(run["experiment_ref"])
         checks = tuple(evaluation["checks"])
         issue_keys = evaluation["server_issue_keys"]
         model_independence = (
             "NOT_EVALUABLE"
             if any(
-                item["group"] in {"EXPERIMENT_VALIDITY", "MUST_HOLD"}
-                and item["status"] == "FAIL"
+                item["group"] in {"EXPERIMENT_VALIDITY", "MUST_HOLD"} and item["status"] == "FAIL"
                 for item in checks
             )
             else "FAIL"
             if issue_keys["A"]
             or issue_keys["B"]
             or any(
-                item["group"] == "EXPECTED_CHANGE" and item["status"] == "FAIL"
-                for item in checks
+                item["group"] == "EXPECTED_CHANGE" and item["status"] == "FAIL" for item in checks
             )
             else "PASS"
         )
@@ -297,8 +283,7 @@ class SyntheticExperimentService:
             "dev_gold_version": evaluation["dev_gold_version"],
             "review_contract_status": (
                 "CURRENT"
-                if evaluation["evaluator_version"]
-                == SYNTHETIC_EXPERIMENT_EVALUATOR_VERSION
+                if evaluation["evaluator_version"] == SYNTHETIC_EXPERIMENT_EVALUATOR_VERSION
                 and evaluation["dev_gold_version"] == current_gold["gold_version"]
                 and evaluation["dev_gold_hash"] == current_gold_hash
                 else "SUPERSEDED"
@@ -315,21 +300,17 @@ class SyntheticExperimentService:
     ) -> dict[str, Any]:
         checks = tuple(evaluation["checks"])
         validity_failed = any(
-            item["status"] == "FAIL"
-            and item["group"] in {"EXPERIMENT_VALIDITY", "MUST_HOLD"}
+            item["status"] == "FAIL" and item["group"] in {"EXPERIMENT_VALIDITY", "MUST_HOLD"}
             for item in checks
         )
         expected_failed = any(
-            item["status"] == "FAIL" and item["group"] == "EXPECTED_CHANGE"
-            for item in checks
+            item["status"] == "FAIL" and item["group"] == "EXPECTED_CHANGE" for item in checks
         )
         issue_keys = {
-            variant: tuple(evaluation["server_issue_keys"][variant])
-            for variant in ("A", "B")
+            variant: tuple(evaluation["server_issue_keys"][variant]) for variant in ("A", "B")
         }
         trace_count = sum(
-            readings[variant].normalization_receipt is not None
-            for variant in ("A", "B")
+            readings[variant].normalization_receipt is not None for variant in ("A", "B")
         )
         trace_coverage = (
             "FIELD_LEVEL"
@@ -386,9 +367,7 @@ class SyntheticExperimentService:
                 "receipt_ref": None,
                 "receipt_hash": None,
                 "raw_output_hash": None,
-                "normalized_output_hash": content_hash(
-                    reading.output.model_dump(mode="json")
-                ),
+                "normalized_output_hash": content_hash(reading.output.model_dump(mode="json")),
                 "change_count": None,
                 "stage_counts": [],
                 "key_deltas": [],
@@ -398,11 +377,9 @@ class SyntheticExperimentService:
                     "系统不会补造字段级差异。"
                 ),
             }
-        key_deltas = tuple(
-            item
-            for item in receipt.changes
-            if _is_professional_trace_delta(item)
-        )[:16]
+        key_deltas = tuple(item for item in receipt.changes if _is_professional_trace_delta(item))[
+            :16
+        ]
         stage_counts = tuple(
             {
                 "stage": stage,
@@ -435,6 +412,16 @@ class SyntheticExperimentService:
                 "字段差异证明系统改了什么，不自动证明专业 Gold 正确。"
             ),
         }
+
+    def compile_packet(
+        self,
+        *,
+        case_ref: str,
+        reading_ref: str,
+    ) -> MingliAgentCasePacket:
+        """Compile a seeded synthetic member through the shared canonical boundary."""
+
+        return self._packet(case_ref=case_ref, reading_ref=reading_ref)
 
     def _packet(self, *, case_ref: str, reading_ref: str) -> MingliAgentCasePacket:
         workspace = self._cases.workspace(
@@ -498,7 +485,4 @@ _PROFESSIONAL_TRACE_PREFIXES = (
 def _is_professional_trace_delta(
     delta: MingliAgentNormalizationDelta,
 ) -> bool:
-    return (
-        delta.path != "/hypotheses"
-        and delta.path.startswith(_PROFESSIONAL_TRACE_PREFIXES)
-    )
+    return delta.path != "/hypotheses" and delta.path.startswith(_PROFESSIONAL_TRACE_PREFIXES)

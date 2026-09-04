@@ -38,10 +38,7 @@ class MingliSourceCoordinateReviewCompiler:
         if len(fact_index) != len(facts):
             raise ValueError("source_review_fact_identity_not_unique")
         if any(
-            (
-                item.get("case_ref") is not None
-                and item.get("case_ref") != quant_vector.case_ref
-            )
+            (item.get("case_ref") is not None and item.get("case_ref") != quant_vector.case_ref)
             or (
                 item.get("chart_version_ref") is not None
                 and item.get("chart_version_ref") != quant_vector.chart_version_ref

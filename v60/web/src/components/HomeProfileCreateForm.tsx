@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 
-import type { OwnerCaseInput } from "../homeApi";
+import type { OwnerCaseInput } from "../publicHomeApi";
 
 const INITIAL_INPUT: OwnerCaseInput = {
   display_name: "",

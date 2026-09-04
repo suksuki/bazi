@@ -137,9 +137,7 @@ class MingliReadingClaimGraphProjector:
                     fallback=hypothesis.thesis,
                 ),
                 statement=(
-                    primary_working_thesis
-                    if hypothesis.role == "PRIMARY"
-                    else hypothesis.thesis
+                    primary_working_thesis if hypothesis.role == "PRIMARY" else hypothesis.thesis
                 ),
                 causal_chain=(),
                 condition=hypothesis.failure_condition,

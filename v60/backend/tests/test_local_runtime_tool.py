@@ -12,9 +12,9 @@ local_runtime = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(local_runtime)
 
 
-def test_runtime_guard_rejects_stale_game_engine(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_runtime_guard_rejects_stale_mingli_engine(monkeypatch: pytest.MonkeyPatch) -> None:
     engines = dict(local_runtime.EXPECTED_ENGINES)
-    engines["game"] = "v60.dream-game-engine.stale"
+    engines["mingli"] = "v60.mingli-cognitive-engine.stale"
     monkeypatch.setattr(
         local_runtime,
         "_runtime_probe",

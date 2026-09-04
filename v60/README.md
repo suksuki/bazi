@@ -1,157 +1,56 @@
-# Abu Knows V60
+# 阿布知命 V60
 
-V60 has two product outcomes: Mingli Calculation must reach
-advanced-practitioner-grade destiny reading, and Abu Dream World must become
-a complete Mingli story game with a real question system, mature game engine
-and controlled AI NPC participation. Lab, Abu Says and Theater support these
-two outcomes rather than forming separate product roadmaps.
+V60 是当前唯一实施目标。公开产品只保留私密命盘、分层断命和“阿布说”；
+生命树首页、命理枝、枝叶花果动画以及六柱 3D 粒子舞台继续沿用既有视觉语言。
 
-## Product spine
+## 公开路径
 
 ```text
-Chart facts
--> LifeCase
--> Canonical Scene
--> Case Workspace
-   -> Mingli Calculation
-   -> Dream World
-   -> Mingli Lab / OneCanvas
-   -> Abu Says
-
-Approved source package
--> Abu Theater Studio
-   -> in-product scene / YouTube / Douyin / other channel
+登录 / 私密档案
+→ 生命树档案叶
+→ 命理枝
+→ 枝、叶、花、果对应的分层断命
+→ 阿布说：同一份已落库断语、字幕、声音与六柱粒子同步
 ```
 
-## Authority spine
+公开地址为 `/experience`，本地默认地址是
+`http://127.0.0.1:8060/experience`。
+
+公开 Runtime 只注册 System、Identity、Mingli、Stage、Focused Reading、
+Focused Speech 和 Public Experience。合成命盘、实验、Suite、训练与蒸馏能力保留在
+Mingli 内部研究边界，默认 `V60_INTERNAL_SURFACES_ENABLED=false`，没有公开入口。
+
+## 事实与表达边界
 
 ```text
-Fact Authority
--> Knowledge and Rule Authority
--> Candidate Fabric
--> LLM Cognitive Reasoner when allowed
--> Epistemic Gate
--> Decision Ledger
+确定性本地算法
+→ Canonical 命盘事实与岁运坐标
+→ 本地 Qwen 按一个具体主题生成文字
+→ 本地规范化、坐标校验和公开安全门
+→ 落库 Focused Pass
+→ 断命正文与阿布说共同读取
 ```
 
-The system owns facts, permissions, state transitions and commits. The LLM is
-a bounded reasoning organ; it never writes canonical facts or world outcomes.
-The Proposal/Gate contract and provider-neutral Reasoner Host are executable.
-The managed local Runtime uses the dblife-hosted `gemma4:latest` expression
-candidate through an explicit, hash-locked structured-decision profile. The
-Host sends only admitted candidate/evidence projections, requires strict
-structured output, records provider/model/profile/prompt/context identity and
-never grants a model a domain write. Partial or unsupported provider
-configuration remains fail-closed.
+- Qwen 不重算四柱，不直接写 Canonical Fact。
+- 每次产品请求只处理一个主题，默认 `qwen3.8:27b`、非思考模式、
+  `num_ctx=4096`、`num_predict=320`。
+- 未生成的主题按需请求；已有结果直接复用。
+- 阿布说不会再次调用断命模型，只为同一份文字按需准备声音。
+- 专属声音使用音频时间轴驱动逐句字幕、角色状态和六柱粒子强调；设备语音降级不伪造
+  精确语义同步。
+- 当前结果仍是 Owner 审阅候选，不宣称已经获得高级命理师专业资格。
 
-Knowledge Authority is also executable rather than implied by imports. Mingli
-resolves an exact profile ID, version and SHA-256 from a read-only registry.
-The current foundation profile preserves its Owner-bounded source identity and
-explicitly remains `professionally_reviewed=false`; a missing or mismatched
-profile fails closed.
+## 代码与数据边界
 
-Candidate qualification is a separate executable boundary. The first admitted
-rule profile can prove only that a typed relation-membership fact is valid
-structure evidence. Its immutable receipt explicitly forbids conclusions about
-effect, root usability, capacity, timing, professional admission or effective
-work. Lab can show this proof; the Decision Kernel still receives the candidate
-as unqualified.
+- `backend/src/abu_v60/mingli/`：命盘、证据、判断、Focused Reading 与内部训练。
+- `backend/src/abu_v60/media/`：阿布说、TTS、字幕时间轴和媒体注册。
+- `backend/src/abu_v60/experience/`：私密生命树 Home 投影。
+- `web/src/`：生命树、命理枝、共享四／六柱舞台和阿布说。
+- `db/migrations/`：独立 PostgreSQL 迁移历史；当前数据库只保留
+  `identity`、`mingli`、`cognition`、`media` 和 `platform` 业务 schema。
+- `v50/` 仅是迁移来源，不是 V60 Runtime 依赖。
 
-Every product projection is built from one immutable
-`ExperienceContextEnvelope`. Before Reveal, its cutoff guard rejects
-post-cutoff evidence, sealed outcomes and hidden NPC choices. After Reveal,
-Context v3 admits only committed post-cutoff World evidence through a
-separate `revealed_evidence` channel. Theater therefore stages the actual
-outcome without reusing baseline clues or weakening the pre-Reveal boundary.
-
-Each playable Episode also owns one versioned `EpisodeNarrativeContract`.
-Its six phase-specific moments provide the shared title, status, Theater beat
-and Abu line for the current scene. The Experience Context validates the
-corresponding disclosure class, so a committed world outcome can remain
-hidden until Reveal without relying on frontend convention.
-
-Playable content has one write path:
-`StoryEpisodeAdmissionService`. It recompiles the full Episode definition,
-binds the exact LifeCase revision, structure fact, WorldEvent, cutoff and
-outcome Hash, then persists a deterministic admission manifest. Exact replay
-is idempotent; changed content under an existing Question identity is a hard
-conflict. Dream Runtime has no unadmitted-content fallback.
-
-Episode authoring now starts from the hash-locked packages under
-`content/dream/episodes/`. Each package binds one complete Episode to its
-authored WorldEvent definitions, while the Registry binds the explicit
-Episode transition graph. The compiler permits only declared authority
-bindings and fails closed on path escape, file drift, missing bindings, event
-drift or transition drift. Seed only coordinates these compiled contracts
-through the existing World and Story owners. The files are admission inputs,
-not live content: the running game still reads only admitted PostgreSQL
-contracts.
-
-Episode order has a separate append-only Story owner.
-`StoryEpisodeTransitionAdmissionService` persists versioned transitions
-between immutable Question/Episode identities. Adding a later chapter does
-not rewrite the preceding Episode contract. Runtime requires the admitted
-transition graph and never reconstructs it from legacy continuation fields.
-
-The current canonical source registry contains five authored Episodes and
-four explicit transitions. The third chapter tests an Actor promise and later
-public action; the fourth binds the same LifeCase's frozen Dayun, annual and
-monthly coordinates beside an already-committed world fact without allowing
-those coordinates to decide the Actor's action. The fifth grows from the
-fourth chapter's committed public record and asks which bounded career-duty
-effect appears next. Its answer remains independent from the player and is
-resolved only by the later WorldEvent. Legacy
-`first_slice.py` and `return_slice.py` modules are read-only compatibility
-views over the Registry; they no longer author content. Source verification is
-read-only through `tools/audit_episode_source_packages.py`.
-
-Playable interaction also has one API write path. Every action is a strict
-`DreamCommandEnvelope` binding the Encounter, expected version, idempotency
-identity and exact target. The Game Engine validates phase and organ role
-before the Dream owner writes. Every accepted command atomically creates an
-immutable `DreamCommandReceipt`; stale fresh commands fail closed, exact
-receipt-backed replays return the already-committed state, and reuse of an
-idempotency key with changed content is rejected.
-
-Waiting is not a client command. After an AnswerSeal, the canonical Dream
-surface exposes no world-advance action. PostgreSQL wall time and the World
-Runtime settle due events; the browser only polls the read model until the
-Dream projection becomes revealable.
-
-Public snapshots are Episode-scoped rather than copies of the latest mutable
-Actor and LifeTree rows. Later timeline events, Actor state and tree chapters
-remain hidden until the current Episode disclosure contract permits them.
-
-Authored WorldEvents follow the same rule through
-`WorldEventAdmissionService`. The World owner binds Actor/Case/branch,
-immutable event payload, sealed outcome and each initial evidence
-Ref/Tick/Hash before an event can be scheduled or committed. World settlement
-revalidates that receipt and fails closed on drift; player input and
-presentation still cannot own an outcome.
-
-Bootstrap and migration code are coordinators, not database owners. Seed and
-V50 import call typed admission ports owned by Platform, Identity, Mingli,
-World, Story and Dream. Actor and LifeTree admission manifests bind stable
-identity without resetting an evolved timeline or tree. Static architecture
-tests reject direct cross-schema writes from coordinators.
-
-## Repository boundary
-
-- `v60/` is a new system with its own runtime, database and migrations.
-- `v50/` is a read-only migration source. V60 runtime code must not import it.
-- V128 commit `9a073a46438c29d1aa048241611249a761b08648` is the frozen
-  Mingli-branch Experience Canonical. V131 commit
-  `ea2db274ba55b8f9d323881c096d3a3a1ceba66c` is the frozen Lab Experience
-  Canonical. V60 remains the Domain Canonical; prototype mock readings,
-  experiments and local state never cross that boundary.
-- Abu Dream World is excluded from the V128 integration until the Owner and
-  product analysis freeze its new game direction.
-- Only assets and domain behavior admitted by an explicit migration manifest
-  may cross the boundary.
-- Old Dream visits, synthetic Forest Factory populations, preview routes and
-  fixture product data are not V60 runtime inputs.
-
-## Local baseline
+## 本地启动
 
 ```bash
 cd /Users/liujin/DEV/AIProjects/bazi/v60
@@ -163,161 +62,37 @@ createdb qiazhi_v60
 .venv/bin/alembic upgrade head
 .venv/bin/python tools/sync_asset_registry.py
 npm --prefix web run build
-.venv/bin/python tools/audit_source_maintainability.py
 .venv/bin/python tools/local_runtime.py start
 ```
 
-Open `http://127.0.0.1:8060/experience`.
-
-After login, V60 opens the viewer's private LifeTree. Entering Abu Dream World
-is an explicit action from that scene; returning Home does not reset the
-continuing Dream world.
-
-Use `tools/local_runtime.py check|status|restart|stop` for subsequent local
-service operations. The manager refuses stale engine versions and does not
-terminate unowned processes.
-
-The managed local product uses the existing dblife-hosted Ollama service:
+运行管理：
 
 ```bash
-V60_REASONER_PROVIDER=ollama-generate
-V60_REASONER_MODEL=gemma4:latest
-V60_REASONER_PROFILE_REF=v60.model-serving.gemma4-structured-decision.001
-V60_REASONER_BASE_URL=http://dblife.com:11888
-V60_REASONER_THINK=false
-V60_REASONER_TEMPERATURE=0
-V60_REASONER_TOP_P=0.95
-V60_REASONER_TOP_K=64
-V60_REASONER_NUM_CTX=32768
-V60_REASONER_NUM_PREDICT=1200
-V60_REASONER_KEEP_ALIVE=30m
+.venv/bin/python tools/local_runtime.py check
+.venv/bin/python tools/local_runtime.py status
+.venv/bin/python tools/local_runtime.py restart
+.venv/bin/python tools/local_runtime.py stop
 ```
 
-`tools/local_runtime.py` supplies these defaults to the child Runtime. Explicit
-environment values can override them. The adapter reuses the proven V50
-Ollama protocol without importing V50 code or data at Runtime. Partial or
-unsupported configuration remains fail-closed, and provider credentials are
-never included in the public system manifest.
+本地管理器默认把命理 Agent 指向 `http://dblife.com:11888` 的
+`qwen3.8:27b`，并保持模型 30 分钟。显式环境变量仍可覆盖开发参数。
 
-This is a bounded product-decision profile rather than Gemma's unrestricted
-creative default: `temperature=0` keeps JSON-Schema comparison deterministic,
-while the selected model's `top_p=0.95` and `top_k=64` remain explicit. Qwen
-models retain their historical Research/Teacher role; the earlier
-`qwen3.5:35b` DecisionRecord remains append-only trial evidence and is not the
-active V60 product model.
+## 验证
 
-Model roles are deliberately separate. `gemma4:latest` is the current local
-student/product qualification candidate. Version-locked frontier models and
-Codex/Sol are development-only teachers and reviewers: their differences may
-be distilled into candidate method cards, rules, prompts, schemas and tests,
-but their prose never becomes canonical truth or a normal user call. A future
-Qwen3.8 integration is only a candidate until it passes the same synthetic
-mutation, stability, adversarial and professional qualification contract; it
-is not currently integrated, qualified or the default.
+```bash
+.venv/bin/ruff check backend/src backend/tests tools
+.venv/bin/pytest
+npm --prefix web run build
+npm --prefix web run audit:public-exposure
+npm --prefix web run audit:mingli-shared-scene-contract
+npm --prefix web run audit:mingli-synthetic-lab-contract
+.venv/bin/python tools/verify_media_library.py
+.venv/bin/python tools/audit_runtime_architecture.py
+```
 
-The active local Mingli serving profile is
-`v60.model-serving.gemma4-mingli-agent.003`: one structured whole-chart call,
-temperature `0`, context `32768`, output budget `5200`. The larger output
-budget covers two fully adjudicated method cards; it does not add another
-model call. The current distilled method set is
-`v60.mingli-agent-method-distillation.006`, including the narrow
-`v60.mingli-effective-root-method.001`; its readings remain private
-Owner-review candidates with publication disabled.
+当前发布与交互正本见：
 
-The latest sealed Owner-chart qualification Reading is a historical
-Profile/Prompt `.016/.015` result,
-`v60-mingli-agent-reading-d0aab120f2ffd51cc377`: local `gemma4:latest` judges
-the Day Master weak, selects exact 食神→财 as a conditional working primary and
-keeps exact 食神→七杀 unresolved as the alternative. Both paths inherit only
-conditional Day-Master capacity. This is a reproducible structured first
-reading, not an advanced-master qualification; relationship/family positive
-methods and real timing adjudication remain missing.
-
-Seven legal synthetic A/B experiments and four DEV Suites are now visible in
-Mingli Lab. The first repeatable Suite covers the two hidden-stem-rank
-experiments; the second changes to an unseen 丙火 Day Master; the third asks an
-unseen 戊土 pair to recompute whole-chart regime, candidate coverage, primary
-selection and the primary-bound work path. The fourth changes again to an
-unseen 庚金 pair with the same three mechanism candidates and tests exact
-candidate partition, packet-bound root facts, actionable method falsifiers and
-opposite primary/alternative reversal signals. Runs use the version-locked
-local candidate and never need a chat turn or a browser model call.
-
-The previous hidden-rank Suite Run is
-`v60-mingli-synthetic-suite-run-63da38288080c7fa5c3a`: 2/2 experiments sealed,
-0 runner errors and 2 results requiring review. Each experiment passes 3/3
-hold checks and 4/4 method-response checks. Under the same Evaluator `.006`
-and Gold `.004`, the preceding candidate's hidden-rank prose, H1-capacity and
-two regime errors were removed; two regime corrections and two work-path
-corrections remain. The Lab now shows this adjacent-run comparison and the
-complete model/Profile/Provider/Prompt identity instead of presenting a
-server-corrected result as model ability.
-
-The current 戊土 regression Suite Run is
-`v60-mingli-synthetic-suite-run-fc14464db3d5993bb0d3`, binding Experiment Run
-`v60-mingli-synthetic-run-78c5bdda338c851c1fa3`, Evaluator `.008`, Gold `.005`,
-Profile `.030`, Prompt `.027` and Reading `.006`. All 3 hold checks and 21
-response checks pass, but the honest result remains
-`PRODUCT_SAFE_MODEL_FAIL`: the rootless A chart still needs one regime repair,
-and A/B both fail the executable falsifier and reversal tests. The current 庚金
-Suite Run is `v60-mingli-synthetic-suite-run-edd6aacfc3e4f9e8786c`, binding
-Experiment Run `v60-mingli-synthetic-run-634f46b6061cbdb57713`. Its 4 hold and
-18 response checks pass; both variants now bind their raw regime to packet facts
-without a regime repair, but A still misses candidate closure, B leaves its
-second card incomplete, and neither variant independently writes actionable
-falsifiers or an opposite named reversal. This is measurable progress in
-whole-chart regime judgment, not advanced-master qualification. Owner charts
-stay regressions while method discovery runs in DEV; QUALIFICATION and HOLDOUT
-remain locked until the method is frozen.
-
-The engine and framework choices are recorded in
-[`docs/05_V60_ENGINE_AND_TECHNOLOGY_SELECTION.md`](docs/05_V60_ENGINE_AND_TECHNOLOGY_SELECTION.md).
-
-Migration decisions and source-lineage rules are recorded in
-[`docs/06_V60_MIGRATION_AND_PROVENANCE_POLICY.md`](docs/06_V60_MIGRATION_AND_PROVENANCE_POLICY.md).
-The reproducible evidence for the first playable slice is recorded in
-[`docs/07_V60_FIRST_SLICE_EVIDENCE.md`](docs/07_V60_FIRST_SLICE_EVIDENCE.md).
-The versioned Gemini-to-Runtime media workflow is recorded in
-[`docs/08_V60_MEDIA_LIBRARY_AND_PRODUCTION_PIPELINE.md`](docs/08_V60_MEDIA_LIBRARY_AND_PRODUCTION_PIPELINE.md).
-The accepted Eastern fairy-tale picture-book direction and cinematic handoff
-rules are recorded in
-[`docs/09_V60_VISUAL_DIRECTION_AND_CINEMATIC_LANGUAGE.md`](docs/09_V60_VISUAL_DIRECTION_AND_CINEMATIC_LANGUAGE.md).
-The same-world second-visit product and runtime contract is recorded in
-[`docs/10_V60_RETURN_ENCOUNTER_SLICE.md`](docs/10_V60_RETURN_ENCOUNTER_SLICE.md).
-The frozen history of previously delivered product slices is preserved in
-[`docs/11_V60_ACTIVE_PRODUCT_DELIVERY.md`](docs/11_V60_ACTIVE_PRODUCT_DELIVERY.md).
-The executable module graph, unique write owners, game-engine split and five
-product-unit boundaries are recorded in
-[`docs/12_V60_EXECUTABLE_PRODUCT_ARCHITECTURE.md`](docs/12_V60_EXECUTABLE_PRODUCT_ARCHITECTURE.md).
-The gameplay package, Episode contract, Director, story-authoring and replay
-rules are recorded in
-[`docs/13_V60_GAMEPLAY_STORY_FOUNDATION.md`](docs/13_V60_GAMEPLAY_STORY_FOUNDATION.md).
-The private Home LifeTree, explicit Dream threshold and cross-scope authority
-rules are recorded in
-[`docs/14_V60_PRIVATE_HOME_TREE_AND_DREAM_THRESHOLD.md`](docs/14_V60_PRIVATE_HOME_TREE_AND_DREAM_THRESHOLD.md).
-The authoritative two-line direction, honest Mingli and Dream reviews,
-explicit stop list and pre-merge product work are recorded in
-[`docs/15_V60_TWO_PRODUCT_LINES_AND_PRE_MERGE_PLAN.md`](docs/15_V60_TWO_PRODUCT_LINES_AND_PRE_MERGE_PLAN.md).
-The Mingli capability inventory, central decision hierarchy, V50 reuse
-boundary and quantitative/statistical model are recorded in
-[`docs/16_V60_MINGLI_CORE_AND_QUANTITATIVE_MODEL.md`](docs/16_V60_MINGLI_CORE_AND_QUANTITATIVE_MODEL.md).
-The implemented four/six-pillar stage, synthetic character fixtures, Dylan
-narration authority, audio-clock state machine and real Desktop/in-app iPad
-viewport evidence are recorded in
-[`docs/17_V60_MINGLI_STAGE_AND_SYNCHRONIZED_NARRATION.md`](docs/17_V60_MINGLI_STAGE_AND_SYNCHRONIZED_NARRATION.md).
-The Owner-approved specialist Mingli Agent decision, implemented one-call
-Reading path, typed semantic guards and current local-model qualification
-failure are recorded in
-[`docs/18_V60_MINGLI_AGENT_DECISION_AND_BUILD.md`](docs/18_V60_MINGLI_AGENT_DECISION_AND_BUILD.md).
-The Owner-approved cognitive-system constitution, shared Reading Claim Graph,
-blind/reconciliation boundary and functional delivery sequence are recorded in
-[`docs/19_V60_MINGLI_COGNITIVE_SYSTEM_CONSTITUTION_V1.md`](docs/19_V60_MINGLI_COGNITIVE_SYSTEM_CONSTITUTION_V1.md).
-The legal paired-chart method Lab, minimum anti-follow root rule, whole-chart
-regime, raw decision integrity, PRIMARY-bound work path, append-only
-experiment/Suite history and next synthetic qualification matrix are recorded in
-[`docs/20_V60_SYNTHETIC_MINGLI_METHOD_LAB.md`](docs/20_V60_SYNTHETIC_MINGLI_METHOD_LAB.md).
-The consolidated prototype request for blind review, three-track adjudication,
-method candidates, Abu guidance and Desktop Chrome states is recorded in
-[`docs/21_V60_SYNTHETIC_MINGLI_TRAINING_DESIGN_BRIEF.md`](docs/21_V60_SYNTHETIC_MINGLI_TRAINING_DESIGN_BRIEF.md).
-The running implementation history is kept in
-[`docs/CHANGELOG.md`](docs/CHANGELOG.md).
+- [`docs/25_V60_MINIMAL_PUBLIC_RELEASE.md`](docs/25_V60_MINIMAL_PUBLIC_RELEASE.md)
+- [`docs/17_V60_MINGLI_STAGE_AND_SYNCHRONIZED_NARRATION.md`](docs/17_V60_MINGLI_STAGE_AND_SYNCHRONIZED_NARRATION.md)
+- [`docs/23_V60_QWEN38_MINGLI_INTEGRATION_AND_PRACTITIONER_REVIEW.md`](docs/23_V60_QWEN38_MINGLI_INTEGRATION_AND_PRACTITIONER_REVIEW.md)
+- [`docs/20_V60_SYNTHETIC_MINGLI_METHOD_LAB.md`](docs/20_V60_SYNTHETIC_MINGLI_METHOD_LAB.md)

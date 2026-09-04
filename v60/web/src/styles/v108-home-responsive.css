@@ -101,7 +101,6 @@
   .v108-profile-leaf-2 { width: 6.7%; }
   .v108-lab-flower { width: 6.4%; }
   .v108-settings-fruit { width: 5.8%; }
-  .v108-dream-hollow { min-width: 126px; }
 }
 
 @media (max-height: 720px) and (orientation: landscape) {
@@ -124,6 +123,57 @@
   }
 }
 
+@media (max-width: 520px) and (orientation: portrait) {
+  .v108-home-header {
+    height: 68px;
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .v108-home-brand > span:first-child {
+    width: 38px;
+    height: 38px;
+  }
+
+  .v108-home-brand > span:last-child,
+  .v108-home-controls > button:disabled,
+  .v108-locale-control {
+    display: none;
+  }
+
+  .v108-home-controls {
+    gap: 4px;
+  }
+
+  .v108-profile-chip {
+    min-width: 92px;
+  }
+
+  .v108-home-context {
+    top: 88px;
+    right: 18px;
+    left: 18px;
+    width: auto;
+  }
+
+  .v108-home-context h1 {
+    max-width: 290px;
+    font-size: clamp(24px, 8vw, 30px);
+  }
+
+  .v108-home-guide {
+    right: -6px;
+    bottom: 24px;
+    width: 188px;
+    height: 226px;
+  }
+
+  .v108-profile-identity {
+    bottom: 26px;
+    left: 14px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .v108-home-art,
   .v108-tree-entry img,
@@ -135,10 +185,6 @@
 
   .v108-life-current::before,
   .v108-profile-leaf[data-active="true"] img,
-  .v108-dream-vortex::before,
-  .v108-dream-vortex::after,
-  .v108-dream-vortex > b,
-  .v108-dream-vortex > i,
   .v108-world-passage,
   .v108-world-passage::before,
   .v108-world-passage::after,

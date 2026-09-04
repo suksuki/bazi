@@ -39,25 +39,12 @@ _INTERPRETATION_TEMPLATES = (
     ),
 )
 _DIMENSION_GAPS = {
-    "APPLICABILITY_CONTEXT": (
-        "只有本盘坐标与严格同干来源；仍缺支关系向藏干、明干传播的"
-        "适用谓词。"
-    ),
-    "EFFECT_DIRECTION": (
-        "扰动、打开或暴露、损伤或移除仍是竞争解释，不能选择方向。"
-    ),
-    "COMPLETION_CONDITIONS": (
-        "成员关系出现不等于作用完成；没有可执行的完成条件。"
-    ),
-    "BLOCKING_CONDITIONS": (
-        "没有精确到该作用原子的合、会、距离、时令或其他阻断谓词。"
-    ),
-    "COUNTER_EVIDENCE": (
-        "没有逐项对应本候选规则的反例证据类型与撤销条件。"
-    ),
-    "PROFESSIONAL_PROVENANCE": (
-        "没有命题级来源清单、版本章节定位及专业审阅回执。"
-    ),
+    "APPLICABILITY_CONTEXT": ("只有本盘坐标与严格同干来源；仍缺支关系向藏干、明干传播的适用谓词。"),
+    "EFFECT_DIRECTION": ("扰动、打开或暴露、损伤或移除仍是竞争解释，不能选择方向。"),
+    "COMPLETION_CONDITIONS": ("成员关系出现不等于作用完成；没有可执行的完成条件。"),
+    "BLOCKING_CONDITIONS": ("没有精确到该作用原子的合、会、距离、时令或其他阻断谓词。"),
+    "COUNTER_EVIDENCE": ("没有逐项对应本候选规则的反例证据类型与撤销条件。"),
+    "PROFESSIONAL_PROVENANCE": ("没有命题级来源清单、版本章节定位及专业审阅回执。"),
 }
 
 
@@ -91,22 +78,15 @@ class MingliRelationEffectAdmissionProjector:
             proposal_version=expected_proposal.proposal_version,
             expected_hash=expected_proposal.proposal_hash,
         )
-        if (
-            frontier.frontier_version
-            != RELATION_EFFECT_RESEARCH_FRONTIER_VERSION
-        ):
-            raise ValueError(
-                "relation_effect_admission_frontier_version_not_supported"
-            )
+        if frontier.frontier_version != RELATION_EFFECT_RESEARCH_FRONTIER_VERSION:
+            raise ValueError("relation_effect_admission_frontier_version_not_supported")
         self._validate_policy_and_proposal(
             policy=policy,
             proposal=proposal,
         )
 
         eligible = tuple(
-            demand
-            for demand in frontier.demands
-            if is_zi_wu_automatic_damage_target(demand)
+            demand for demand in frontier.demands if is_zi_wu_automatic_damage_target(demand)
         )
         assessments = tuple(
             sorted(
@@ -141,22 +121,15 @@ class MingliRelationEffectAdmissionProjector:
             or policy.source_usability_conclusion_allowed
             or policy.admitted_effect_rule_profile_refs
         ):
-            raise ValueError(
-                "relation_effect_admission_policy_authority_invalid"
-            )
+            raise ValueError("relation_effect_admission_policy_authority_invalid")
         if (
             proposal.professionally_reviewed
             or proposal.professional_source_manifest
             or proposal.owner_review_receipt_ref is not None
             or proposal.owner_review_receipt_hash is not None
-            or all(
-                item.status == "VERIFIED"
-                for item in proposal.dimension_submissions
-            )
+            or all(item.status == "VERIFIED" for item in proposal.dimension_submissions)
         ):
-            raise ValueError(
-                "relation_effect_admission_proposal_must_remain_unadmitted"
-            )
+            raise ValueError("relation_effect_admission_proposal_must_remain_unadmitted")
 
     @classmethod
     def _assessment(
@@ -195,9 +168,7 @@ class MingliRelationEffectAdmissionProjector:
             RelationEffectDimensionAssessment(
                 dimension_id=submission.dimension_id,
                 submission_status=submission.status,
-                current_basis_refs=basis_by_dimension[
-                    submission.dimension_id
-                ],
+                current_basis_refs=basis_by_dimension[submission.dimension_id],
                 gap=_DIMENSION_GAPS[submission.dimension_id],
                 satisfied=False,
             )
@@ -208,12 +179,8 @@ class MingliRelationEffectAdmissionProjector:
                 interpretation_id=interpretation_id,
                 summary=summary,
             )
-            for interpretation_id, summary_template in (
-                _INTERPRETATION_TEMPLATES
-            )
-            for summary in (
-                summary_template.format(identity=demand.visible_stem),
-            )
+            for interpretation_id, summary_template in (_INTERPRETATION_TEMPLATES)
+            for summary in (summary_template.format(identity=demand.visible_stem),)
         )
         return RelationEffectRuleAdmissionAssessment.issue(
             demand_ref=demand.demand_ref,

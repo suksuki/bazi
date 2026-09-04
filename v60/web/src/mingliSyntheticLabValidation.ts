@@ -32,7 +32,7 @@ export function validateSyntheticExperimentCatalog(
   }
   const catalog = value as unknown as MingliSyntheticExperimentCatalog;
   if (
-    catalog.catalog_version !== "v60.mingli-synthetic-experiment-catalog.006" ||
+    catalog.catalog_version !== "v60.mingli-synthetic-experiment-catalog.007" ||
     catalog.browser_generation_allowed !== false ||
     catalog.read_only !== true ||
     catalog.experiments.length < 1
@@ -267,6 +267,8 @@ function validateCatalogEntry(value: unknown): void {
           "v60.mingli-synthetic-experiment-evaluator.006",
           "v60.mingli-synthetic-experiment-evaluator.007",
           "v60.mingli-synthetic-experiment-evaluator.008",
+          "v60.mingli-synthetic-experiment-evaluator.009",
+          "v60.mingli-synthetic-experiment-evaluator.010",
         ].includes(item.evaluator_version) ||
         ![
           "v60.mingli-synthetic-experiment-dev-gold.001",
@@ -274,6 +276,7 @@ function validateCatalogEntry(value: unknown): void {
           "v60.mingli-synthetic-experiment-dev-gold.003",
           "v60.mingli-synthetic-experiment-dev-gold.004",
           "v60.mingli-synthetic-experiment-dev-gold.005",
+          "v60.mingli-synthetic-experiment-dev-gold.006",
         ].includes(item.dev_gold_version) ||
         !["CURRENT", "SUPERSEDED"].includes(item.review_contract_status) ||
         !Number.isInteger(item.changed_pass_count) ||
@@ -314,6 +317,7 @@ function validateDefinition(value: MingliSyntheticExperimentDefinition): void {
       "CONTROLLED_HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_PAIR",
       "CONTROLLED_REGIME_WORK_PATH_GENERALIZATION_PAIR",
       "CONTROLLED_DECISION_DISCIPLINE_GENERALIZATION_PAIR",
+      "CONTROLLED_MONTH_COMMAND_REGIME_GENERALIZATION_PAIR",
     ].includes(value.family) ||
     !value.title ||
     !value.question ||
@@ -324,6 +328,7 @@ function validateDefinition(value: MingliSyntheticExperimentDefinition): void {
       "NATAL_HIDDEN_RANK_GATE_ONLY_WITH_FULL_HOUR_COLLATERAL",
       "NATAL_HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION",
       "WHOLE_CHART_DECISION_DISCIPLINE_WITH_FULL_HOUR_COLLATERAL",
+      "MONTH_COMMAND_COORDINATE_AND_WHOLE_CHART_DISCIPLINE_WITH_FULL_HOUR_COLLATERAL",
     ].includes(value.inference_scope) ||
     !value.inference_limit ||
     !Array.isArray(value.known_collateral_deltas) ||
@@ -369,6 +374,8 @@ function validateEvaluation(
       "v60.mingli-synthetic-experiment-evaluator.006",
       "v60.mingli-synthetic-experiment-evaluator.007",
       "v60.mingli-synthetic-experiment-evaluator.008",
+      "v60.mingli-synthetic-experiment-evaluator.009",
+      "v60.mingli-synthetic-experiment-evaluator.010",
     ].includes(value.evaluator_version) ||
     ![
       "v60.mingli-synthetic-experiment-dev-gold.001",
@@ -376,6 +383,7 @@ function validateEvaluation(
       "v60.mingli-synthetic-experiment-dev-gold.003",
       "v60.mingli-synthetic-experiment-dev-gold.004",
       "v60.mingli-synthetic-experiment-dev-gold.005",
+      "v60.mingli-synthetic-experiment-dev-gold.006",
     ].includes(value.dev_gold_version) ||
     !HASH.test(value.dev_gold_hash) ||
     !OUTCOMES.includes(value.outcome) ||
@@ -393,6 +401,17 @@ function validateEvaluation(
     !Array.isArray(value.server_issue_keys.B) ||
     value.server_issue_keys.A.some((item) => typeof item !== "string") ||
     value.server_issue_keys.B.some((item) => typeof item !== "string") ||
+    (
+      value.raw_judgment_repair_variants !== undefined
+      && (
+        !Array.isArray(value.raw_judgment_repair_variants)
+        || value.raw_judgment_repair_variants.some(
+          (variant) => !["A", "B"].includes(variant),
+        )
+        || value.raw_judgment_repair_variants.join("")
+          !== [...new Set(value.raw_judgment_repair_variants)].sort().join("")
+      )
+    ) ||
     value.qualification_effect !== "DEV_EVIDENCE_ONLY_NOT_METHOD_QUALIFICATION" ||
     !value.summary
   ) {

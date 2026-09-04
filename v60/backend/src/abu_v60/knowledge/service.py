@@ -49,9 +49,7 @@ class KnowledgeAuthority:
         relation_effect_admission_policies: (
             tuple[BaziRelationEffectAdmissionPolicy, ...] | None
         ) = None,
-        relation_effect_rule_proposals: (
-            tuple[BaziRelationEffectRuleProposal, ...] | None
-        ) = None,
+        relation_effect_rule_proposals: (tuple[BaziRelationEffectRuleProposal, ...] | None) = None,
         active_selection: KnowledgeProfileSelection | None = None,
     ) -> None:
         admitted = profiles or (bazi_foundation_profile(),)
@@ -107,42 +105,30 @@ class KnowledgeAuthority:
             else relation_effect_admission_policies
         )
         admitted_relation_effect_policies = tuple(
-            BaziRelationEffectAdmissionPolicy.model_validate(
-                policy.model_dump(mode="python")
-            )
+            BaziRelationEffectAdmissionPolicy.model_validate(policy.model_dump(mode="python"))
             for policy in requested_relation_effect_policies
         )
         self._relation_effect_admission_policies = {
             (policy.policy_ref, policy.policy_version): policy
             for policy in admitted_relation_effect_policies
         }
-        if len(self._relation_effect_admission_policies) != len(
-            admitted_relation_effect_policies
-        ):
-            raise KnowledgeAuthorityError(
-                "relation_effect_admission_policy_identity_not_unique"
-            )
+        if len(self._relation_effect_admission_policies) != len(admitted_relation_effect_policies):
+            raise KnowledgeAuthorityError("relation_effect_admission_policy_identity_not_unique")
         requested_relation_effect_proposals = (
             (bazi_zi_wu_automatic_damage_proposal(),)
             if relation_effect_rule_proposals is None
             else relation_effect_rule_proposals
         )
         admitted_relation_effect_proposals = tuple(
-            BaziRelationEffectRuleProposal.model_validate(
-                proposal.model_dump(mode="python")
-            )
+            BaziRelationEffectRuleProposal.model_validate(proposal.model_dump(mode="python"))
             for proposal in requested_relation_effect_proposals
         )
         self._relation_effect_rule_proposals = {
             (proposal.proposal_ref, proposal.proposal_version): proposal
             for proposal in admitted_relation_effect_proposals
         }
-        if len(self._relation_effect_rule_proposals) != len(
-            admitted_relation_effect_proposals
-        ):
-            raise KnowledgeAuthorityError(
-                "relation_effect_rule_proposal_identity_not_unique"
-            )
+        if len(self._relation_effect_rule_proposals) != len(admitted_relation_effect_proposals):
+            raise KnowledgeAuthorityError("relation_effect_rule_proposal_identity_not_unique")
         self._active_selection = active_selection or KnowledgeProfileSelection.from_profiles(
             foundation=bazi_foundation_profile(),
             candidate_rules=bazi_candidate_qualification_profile(),
@@ -455,20 +441,12 @@ class KnowledgeAuthority:
         policy_version: str,
         expected_hash: str | None = None,
     ) -> BaziRelationEffectAdmissionPolicy:
-        policy = self._relation_effect_admission_policies.get(
-            (policy_ref, policy_version)
-        )
+        policy = self._relation_effect_admission_policies.get((policy_ref, policy_version))
         if policy is None:
-            raise KnowledgeAuthorityError(
-                "relation_effect_admission_policy_not_registered"
-            )
-        policy = BaziRelationEffectAdmissionPolicy.model_validate(
-            policy.model_dump(mode="python")
-        )
+            raise KnowledgeAuthorityError("relation_effect_admission_policy_not_registered")
+        policy = BaziRelationEffectAdmissionPolicy.model_validate(policy.model_dump(mode="python"))
         if expected_hash is not None and policy.policy_hash != expected_hash:
-            raise KnowledgeAuthorityError(
-                "relation_effect_admission_policy_hash_mismatch"
-            )
+            raise KnowledgeAuthorityError("relation_effect_admission_policy_hash_mismatch")
         return policy
 
     def resolve_relation_effect_rule_proposal(
@@ -478,23 +456,12 @@ class KnowledgeAuthority:
         proposal_version: str,
         expected_hash: str | None = None,
     ) -> BaziRelationEffectRuleProposal:
-        proposal = self._relation_effect_rule_proposals.get(
-            (proposal_ref, proposal_version)
-        )
+        proposal = self._relation_effect_rule_proposals.get((proposal_ref, proposal_version))
         if proposal is None:
-            raise KnowledgeAuthorityError(
-                "relation_effect_rule_proposal_not_registered"
-            )
-        proposal = BaziRelationEffectRuleProposal.model_validate(
-            proposal.model_dump(mode="python")
-        )
-        if (
-            expected_hash is not None
-            and proposal.proposal_hash != expected_hash
-        ):
-            raise KnowledgeAuthorityError(
-                "relation_effect_rule_proposal_hash_mismatch"
-            )
+            raise KnowledgeAuthorityError("relation_effect_rule_proposal_not_registered")
+        proposal = BaziRelationEffectRuleProposal.model_validate(proposal.model_dump(mode="python"))
+        if expected_hash is not None and proposal.proposal_hash != expected_hash:
+            raise KnowledgeAuthorityError("relation_effect_rule_proposal_hash_mismatch")
         return proposal
 
     def selection_manifest(self) -> dict[str, object]:

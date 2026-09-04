@@ -111,11 +111,7 @@ class SyntheticTrainingService:
                 }
             )
         recommended = next(
-            (
-                item
-                for item in reversed(suites)
-                if item["candidate_state"] == "READY_FOR_DEV_RUN"
-            ),
+            (item for item in reversed(suites) if item["candidate_state"] == "READY_FOR_DEV_RUN"),
             suites[-1] if suites else None,
         )
         latest = self._store.latest(requester_account_ref=requester_account_ref)
@@ -222,9 +218,7 @@ class SyntheticTrainingService:
                     stored["candidate_identity_hash"] != candidate_hash
                     or stored["execution_fingerprint"] != current_execution_fingerprint
                 ):
-                    raise SyntheticTrainingServiceError(
-                        "mingli_synthetic_training_execution_drift"
-                    )
+                    raise SyntheticTrainingServiceError("mingli_synthetic_training_execution_drift")
                 experiment_service = SyntheticExperimentService(
                     self._engine,
                     runtime=self._runtime,

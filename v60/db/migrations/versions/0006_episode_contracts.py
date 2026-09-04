@@ -91,9 +91,7 @@ def _episode_contracts() -> dict[str, dict[str, Any]]:
                 ],
                 "actor_state_delta": {
                     "activity": "observing-wet-bank-after-stone-loosened",
-                    "last_committed_event_ref": (
-                        "v60-world-event-yanzhou-stone-loosened-v1"
-                    ),
+                    "last_committed_event_ref": ("v60-world-event-yanzhou-stone-loosened-v1"),
                 },
             },
             "tree_state_on_entry": "RETURN_BASELINE_COMMITTED",

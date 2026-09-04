@@ -1,4 +1,4 @@
-import type { RuntimeMediaCue } from "../api";
+import type { RuntimeMediaCue } from "../publicRuntimeTypes";
 import type {
   MingliNarrationCue,
   MingliNarrationPhase,

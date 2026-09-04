@@ -48,9 +48,7 @@ def upgrade() -> None:
         sa.Column(
             "request_receipt_ref",
             sa.String(length=180),
-            sa.ForeignKey(
-                "mingli.relation_effect_evidence_request_receipts.receipt_ref"
-            ),
+            sa.ForeignKey("mingli.relation_effect_evidence_request_receipts.receipt_ref"),
             nullable=False,
         ),
         sa.Column(

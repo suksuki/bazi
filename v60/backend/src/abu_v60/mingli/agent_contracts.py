@@ -8,8 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_vali
 from abu_v60.mingli.agent_adjudication import (
     AgentExcludedCandidate,
     AgentHypothesis,
-    AgentHypothesisDecision,
 )
+from abu_v60.mingli.agent_hypothesis_decision import AgentHypothesisDecision
 from abu_v60.mingli.agent_normalization_receipt import (
     MingliAgentNormalizationReceipt,
 )
@@ -18,7 +18,7 @@ from abu_v60.mingli.agent_regime_contracts import AgentRegimeDecision
 from abu_v60.provenance import content_hash, stable_ref
 
 MINGLI_AGENT_PACKET_VERSION = "v60.mingli-agent-case-packet.003"
-MINGLI_AGENT_PROMPT_VIEW_VERSION = "v60.mingli-agent-prompt-view.018"
+MINGLI_AGENT_PROMPT_VIEW_VERSION = "v60.mingli-agent-prompt-view.019"
 MINGLI_AGENT_READING_VERSION = "v60.mingli-agent-reading.006"
 MINGLI_AGENT_READING_REGIME_VERSIONS = frozenset(
     {
@@ -318,16 +318,11 @@ class AgentSupportSelection(BaseModel):
 
     root_status: Literal["NONE", "PRESENT"] = Field(
         description=(
-            "仅表示 same_element_hidden_support 候选清单是否非空；"
-            "不表示候选已经成为有效根。"
+            "仅表示 same_element_hidden_support 候选清单是否非空；不表示候选已经成为有效根。"
         )
     )
-    root_coordinates: tuple[str, ...] = Field(
-        description="逐字复制 same_element_hidden_support。"
-    )
-    peer_coordinates: tuple[str, ...] = Field(
-        description="逐字复制 visible_peer_support。"
-    )
+    root_coordinates: tuple[str, ...] = Field(description="逐字复制 same_element_hidden_support。")
+    peer_coordinates: tuple[str, ...] = Field(description="逐字复制 visible_peer_support。")
     resource_coordinates: tuple[str, ...] = Field(
         description="逐字复制 resource_support；印星不得写入根候选。"
     )
@@ -516,9 +511,7 @@ def mingli_agent_generation_output_schema() -> dict[str, Any]:
         required.insert(regime_index, "regime_decision")
     schema["required"] = required
     regime = dict(schema["properties"]["regime_decision"])
-    non_null = tuple(
-        item for item in regime.get("anyOf", ()) if item.get("type") != "null"
-    )
+    non_null = tuple(item for item in regime.get("anyOf", ()) if item.get("type") != "null")
     if len(non_null) == 1:
         schema["properties"]["regime_decision"] = {
             **non_null[0],
@@ -531,14 +524,27 @@ def mingli_agent_generation_output_schema() -> dict[str, Any]:
     work_path = schema["$defs"]["AgentWorkPath"]
     for field_name in ("selected_hypothesis_id", "method_card_ref"):
         field = dict(work_path["properties"][field_name])
-        non_null = tuple(
-            item for item in field.get("anyOf", ()) if item.get("type") != "null"
-        )
+        non_null = tuple(item for item in field.get("anyOf", ()) if item.get("type") != "null")
         if len(non_null) == 1:
             work_path["properties"][field_name] = non_null[0]
         if field_name not in work_path["required"]:
             work_path["required"].append(field_name)
     work_path["properties"]["transformation_codes"]["uniqueItems"] = True
+    for definition_name, field_name in (
+        ("AgentMethodRuling", "decision_row"),
+        ("AgentReversalTest", "decision_row_ref"),
+    ):
+        definition = schema["$defs"][definition_name]
+        field = dict(definition["properties"][field_name])
+        non_null = tuple(item for item in field.get("anyOf", ()) if item.get("type") != "null")
+        if len(non_null) == 1:
+            definition["properties"][field_name] = non_null[0]
+        if field_name not in definition["required"]:
+            definition["required"].append(field_name)
+    schema["$defs"]["AgentDecisionRowSelection"]["required"] = [
+        "trigger_axis",
+        "action",
+    ]
     return schema
 
 
@@ -689,9 +695,9 @@ class MingliAgentReadingEnvelope(BaseModel):
         if isinstance(identity["output"], BaseModel):
             identity["output"] = identity["output"].model_dump(mode="json")
         if isinstance(identity.get("normalization_receipt"), BaseModel):
-            identity["normalization_receipt"] = identity[
-                "normalization_receipt"
-            ].model_dump(mode="json")
+            identity["normalization_receipt"] = identity["normalization_receipt"].model_dump(
+                mode="json"
+            )
         return cls(
             agent_reading_ref=stable_ref("v60-mingli-agent-reading", identity),
             agent_reading_hash=content_hash(identity),

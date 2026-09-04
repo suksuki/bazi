@@ -1,4 +1,4 @@
-import { request } from "./api";
+import { request } from "./http";
 import type { HomeAbuExpression, HomeMingliExplanation } from "./homeExplanationTypes";
 import type {
   HomeCandidateMechanismEvidenceDepth,
@@ -407,13 +407,11 @@ export interface HomeSnapshot {
     canonical_write_allowed: false;
   };
   units: {
-    dream: { status: "THRESHOLD_AVAILABLE"; line: string };
     abu: {
       status: "MINGLI_BOUND_EXPRESSION";
       reading_ref: string;
       line: string;
     };
-    theater: { status: "NO_ADMITTED_HOME_SCENE"; line: string };
   };
   lineage: {
     case_ref: string;
@@ -424,7 +422,6 @@ export interface HomeSnapshot {
   };
   boundaries: {
     private_to_account: true;
-    dream_encounter_subject: false;
     canonical_write_allowed: false;
     visual_semantics: "VISUAL_METAPHOR_ONLY";
   };

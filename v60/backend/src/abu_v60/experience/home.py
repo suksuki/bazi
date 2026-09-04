@@ -68,21 +68,11 @@ class HomeExperienceService:
         source_review_store: MingliSourceReviewVectorStore | None = None,
         source_usability: MingliSourceUsabilityPrerequisiteProjector | None = None,
         source_discussion: MingliSourceDiscussionAbstentionProjector | None = None,
-        relation_effect_frontier: (
-            MingliRelationEffectResearchFrontierProjector | None
-        ) = None,
-        relation_effect_admission: (
-            MingliRelationEffectAdmissionProjector | None
-        ) = None,
-        relation_effect_evidence: (
-            MingliRelationEffectEvidencePacketProjector | None
-        ) = None,
-        relation_effect_requests: (
-            RelationEffectEvidenceRequestStore | None
-        ) = None,
-        relation_effect_materials: (
-            RelationEffectEvidenceMaterialStore | None
-        ) = None,
+        relation_effect_frontier: (MingliRelationEffectResearchFrontierProjector | None) = None,
+        relation_effect_admission: (MingliRelationEffectAdmissionProjector | None) = None,
+        relation_effect_evidence: (MingliRelationEffectEvidencePacketProjector | None) = None,
+        relation_effect_requests: (RelationEffectEvidenceRequestStore | None) = None,
+        relation_effect_materials: (RelationEffectEvidenceMaterialStore | None) = None,
         mechanism_compiler: MingliMechanismEvidenceCompiler | None = None,
         mechanism_store: MingliMechanismVectorStore | None = None,
         mechanism_comparison: MingliMechanismComparisonService | None = None,
@@ -107,27 +97,19 @@ class HomeExperienceService:
             source_review_compiler or MingliSourceCoordinateReviewCompiler()
         )
         self._source_review_store = source_review_store or MingliSourceReviewVectorStore(engine)
-        self._source_usability = (
-            source_usability or MingliSourceUsabilityPrerequisiteProjector()
-        )
-        self._source_discussion = (
-            source_discussion or MingliSourceDiscussionAbstentionProjector()
-        )
+        self._source_usability = source_usability or MingliSourceUsabilityPrerequisiteProjector()
+        self._source_discussion = source_discussion or MingliSourceDiscussionAbstentionProjector()
         self._relation_effect_frontier = (
-            relation_effect_frontier
-            or MingliRelationEffectResearchFrontierProjector()
+            relation_effect_frontier or MingliRelationEffectResearchFrontierProjector()
         )
         self._relation_effect_admission = (
-            relation_effect_admission
-            or MingliRelationEffectAdmissionProjector()
+            relation_effect_admission or MingliRelationEffectAdmissionProjector()
         )
         self._relation_effect_evidence = (
-            relation_effect_evidence
-            or MingliRelationEffectEvidencePacketProjector()
+            relation_effect_evidence or MingliRelationEffectEvidencePacketProjector()
         )
         self._relation_effect_requests = (
-            relation_effect_requests
-            or RelationEffectEvidenceRequestStore(engine)
+            relation_effect_requests or RelationEffectEvidenceRequestStore(engine)
         )
         self._relation_effect_materials = (
             relation_effect_materials
@@ -162,9 +144,7 @@ class HomeExperienceService:
             for item in self._cases.list_cases(account_ref=account_ref)
             if item["subject_kind"] in {"HUMAN_OWNER", "HUMAN_REFERENCE"}
         ]
-        owner_cases = [
-            item for item in account_cases if item["subject_kind"] == "HUMAN_OWNER"
-        ]
+        owner_cases = [item for item in account_cases if item["subject_kind"] == "HUMAN_OWNER"]
         home_cases = [item for item in owner_cases if item["status"] == "ACTIVE"]
         if not home_cases:
             raise HomeExperienceUnavailableError("home_case_not_found")
@@ -257,23 +237,17 @@ class HomeExperienceService:
             prerequisite=source_usability_prerequisite,
             refusal=source_discussion_receipt,
         )
-        relation_effect_admission_review = (
-            self._relation_effect_admission.project(
-                frontier=relation_effect_frontier,
-            )
+        relation_effect_admission_review = self._relation_effect_admission.project(
+            frontier=relation_effect_frontier,
         )
-        relation_effect_evidence_packet = (
-            self._relation_effect_evidence.project(
-                reading=reading,
-                frontier=relation_effect_frontier,
-                admission_review=relation_effect_admission_review,
-            )
+        relation_effect_evidence_packet = self._relation_effect_evidence.project(
+            reading=reading,
+            frontier=relation_effect_frontier,
+            admission_review=relation_effect_admission_review,
         )
-        relation_effect_evidence_request_receipt = (
-            self._relation_effect_requests.for_packet(
-                account_ref=account_ref,
-                packet=relation_effect_evidence_packet,
-            )
+        relation_effect_evidence_request_receipt = self._relation_effect_requests.for_packet(
+            account_ref=account_ref,
+            packet=relation_effect_evidence_packet,
         )
         relation_effect_evidence_materials = (
             self._relation_effect_materials.for_receipt(
@@ -358,17 +332,13 @@ class HomeExperienceService:
                     "birth_time": item["birth_time"].isoformat(timespec="minutes"),
                     "birth_location": item["birth_location"],
                     "timezone": item["timezone"],
-                    "lunar_leap_month": bool(
-                        item["input_json"].get("lunar_leap_month", False)
-                    ),
+                    "lunar_leap_month": bool(item["input_json"].get("lunar_leap_month", False)),
                     "status": item["status"],
                     "pillars": item["pillars_json"],
                     "active": item["case_ref"] == workspace["case"]["case_ref"],
                     "subject_kind": item["subject_kind"],
                     "identity_badge": (
-                        "私密真实档案"
-                        if item["subject_kind"] == "HUMAN_OWNER"
-                        else "真实参考档案"
+                        "私密真实档案" if item["subject_kind"] == "HUMAN_OWNER" else "真实参考档案"
                     ),
                     "stage_subject_id": (
                         "current"
@@ -413,12 +383,8 @@ class HomeExperienceService:
                 "source_usability_prerequisite": (
                     source_usability_prerequisite.model_dump(mode="json")
                 ),
-                "source_discussion_receipt": (
-                    source_discussion_receipt.model_dump(mode="json")
-                ),
-                "relation_effect_frontier": (
-                    relation_effect_frontier.model_dump(mode="json")
-                ),
+                "source_discussion_receipt": (source_discussion_receipt.model_dump(mode="json")),
+                "relation_effect_frontier": (relation_effect_frontier.model_dump(mode="json")),
                 "relation_effect_admission_review": (
                     relation_effect_admission_review.model_dump(mode="json")
                 ),
@@ -426,11 +392,8 @@ class HomeExperienceService:
                     relation_effect_evidence_packet.model_dump(mode="json")
                 ),
                 "relation_effect_evidence_request_receipt": (
-                    relation_effect_evidence_request_receipt.model_dump(
-                        mode="json"
-                    )
-                    if relation_effect_evidence_request_receipt
-                    is not None
+                    relation_effect_evidence_request_receipt.model_dump(mode="json")
+                    if relation_effect_evidence_request_receipt is not None
                     else None
                 ),
                 "relation_effect_evidence_materials": [
@@ -499,56 +462,39 @@ class HomeExperienceService:
                 "source_usability_prerequisite_hash": (
                     source_usability_prerequisite.prerequisite_hash
                 ),
-                "source_discussion_receipt_ref": (
-                    source_discussion_receipt.receipt_ref
-                ),
-                "source_discussion_receipt_hash": (
-                    source_discussion_receipt.receipt_hash
-                ),
-                "relation_effect_frontier_ref": (
-                    relation_effect_frontier.frontier_ref
-                ),
-                "relation_effect_frontier_hash": (
-                    relation_effect_frontier.frontier_hash
-                ),
+                "source_discussion_receipt_ref": (source_discussion_receipt.receipt_ref),
+                "source_discussion_receipt_hash": (source_discussion_receipt.receipt_hash),
+                "relation_effect_frontier_ref": (relation_effect_frontier.frontier_ref),
+                "relation_effect_frontier_hash": (relation_effect_frontier.frontier_hash),
                 "relation_effect_admission_review_ref": (
                     relation_effect_admission_review.review_ref
                 ),
                 "relation_effect_admission_review_hash": (
                     relation_effect_admission_review.review_hash
                 ),
-                "relation_effect_evidence_packet_ref": (
-                    relation_effect_evidence_packet.packet_ref
-                ),
+                "relation_effect_evidence_packet_ref": (relation_effect_evidence_packet.packet_ref),
                 "relation_effect_evidence_packet_hash": (
                     relation_effect_evidence_packet.packet_hash
                 ),
                 "relation_effect_evidence_request_receipt_ref": (
                     relation_effect_evidence_request_receipt.receipt_ref
-                    if relation_effect_evidence_request_receipt
-                    is not None
+                    if relation_effect_evidence_request_receipt is not None
                     else None
                 ),
                 "relation_effect_evidence_request_receipt_hash": (
                     relation_effect_evidence_request_receipt.receipt_hash
-                    if relation_effect_evidence_request_receipt
-                    is not None
+                    if relation_effect_evidence_request_receipt is not None
                     else None
                 ),
                 "relation_effect_evidence_material_refs": [
-                    material.material_ref
-                    for material in relation_effect_evidence_materials
+                    material.material_ref for material in relation_effect_evidence_materials
                 ],
                 "relation_effect_evidence_material_hashes": [
-                    material.material_hash
-                    for material in relation_effect_evidence_materials
+                    material.material_hash for material in relation_effect_evidence_materials
                 ],
-                "relation_effect_evidence_material_count": len(
-                    relation_effect_evidence_materials
-                ),
+                "relation_effect_evidence_material_count": len(relation_effect_evidence_materials),
                 "source_usability_prerequisite_carriers": [
-                    item.model_dump(mode="json")
-                    for item in source_usability_prerequisite.carriers
+                    item.model_dump(mode="json") for item in source_usability_prerequisite.carriers
                 ],
                 "candidate_paths": [
                     candidate.model_dump(mode="json") for candidate in candidate_paths
@@ -580,24 +526,15 @@ class HomeExperienceService:
                 "canonical_write_allowed": False,
             },
             "units": {
-                "dream": {
-                    "status": "THRESHOLD_AVAILABLE",
-                    "line": "阿布仍守着通往梦境的雾径。",
-                },
                 "abu": {
                     "status": "MINGLI_BOUND_EXPRESSION",
                     "reading_ref": reading.reading_ref,
                     "line": abu_expression.summary,
                 },
-                "theater": {
-                    "status": "NO_ADMITTED_HOME_SCENE",
-                    "line": "你的正式生命片段尚未进入小剧场。",
-                },
             },
             "lineage": lineage,
             "boundaries": {
                 "private_to_account": True,
-                "dream_encounter_subject": False,
                 "canonical_write_allowed": False,
                 "visual_semantics": "VISUAL_METAPHOR_ONLY",
             },
@@ -611,9 +548,7 @@ class HomeExperienceService:
             )
             snapshot = self.snapshot(account_ref=account_ref)
             vector = self._mechanism_store.get(
-                vector_ref=str(
-                    snapshot["lab"]["mechanism_vector_ref"]
-                )
+                vector_ref=str(snapshot["lab"]["mechanism_vector_ref"])
             )
             return self._mechanism_comparison.compare_in_connection(
                 connection,
@@ -633,12 +568,8 @@ class HomeExperienceService:
                 account_ref=account_ref,
             )
             snapshot = self.snapshot(account_ref=account_ref)
-            packet = (
-                MingliRelationEffectEvidencePacketEnvelope.model_validate(
-                    snapshot["mingli"][
-                        "relation_effect_evidence_packet"
-                    ]
-                )
+            packet = MingliRelationEffectEvidencePacketEnvelope.model_validate(
+                snapshot["mingli"]["relation_effect_evidence_packet"]
             )
             return self._relation_effect_requests.request_in_connection(
                 connection,
@@ -659,25 +590,15 @@ class HomeExperienceService:
                 account_ref=account_ref,
             )
             snapshot = self.snapshot(account_ref=account_ref)
-            packet = (
-                MingliRelationEffectEvidencePacketEnvelope.model_validate(
-                    snapshot["mingli"][
-                        "relation_effect_evidence_packet"
-                    ]
-                )
+            packet = MingliRelationEffectEvidencePacketEnvelope.model_validate(
+                snapshot["mingli"]["relation_effect_evidence_packet"]
             )
-            receipt_payload = snapshot["mingli"][
-                "relation_effect_evidence_request_receipt"
-            ]
+            receipt_payload = snapshot["mingli"]["relation_effect_evidence_request_receipt"]
             if receipt_payload is None:
                 raise RelationEffectEvidenceMaterialConflictError(
                     "relation_effect_evidence_material_request_receipt_missing"
                 )
-            receipt = (
-                RelationEffectEvidenceRequestReceipt.model_validate(
-                    receipt_payload
-                )
-            )
+            receipt = RelationEffectEvidenceRequestReceipt.model_validate(receipt_payload)
             return self._relation_effect_materials.register_in_connection(
                 connection,
                 account_ref=account_ref,

@@ -4,9 +4,9 @@ Status: `EVIDENCE_PREPARATION_REQUEST_V1_IMPLEMENTED_AND_REAL_BROWSER_AUDITED_LO
 
 ## Product decision
 
-Mingli Calculation is the permanent core of Abu Knows. Dream, Lab, Abu Says
-and Theater consume its versioned outputs; none of them may create a second
-chart, fact chain or verdict.
+Mingli Calculation is the permanent core of Abu Knows. The public Reading,
+Abu Says and the internal Lab consume its versioned outputs; none of them may
+create a second chart, fact chain or verdict.
 
 The current system is a trustworthy fact and research foundation, not yet an
 advanced practitioner capable of a complete destiny reading. The assessed
@@ -21,7 +21,7 @@ professionally reviewed, end-to-end real Reading from full chart boundary
 through seasonal capacity, root/strength, one complete relation-effect family,
 mechanism competition, current timing and one direct life-domain answer. The
 full review and acceptance definition are maintained in
-`docs/15_V60_TWO_PRODUCT_LINES_AND_PRE_MERGE_PLAN.md`.
+`docs/25_V60_MINIMAL_PUBLIC_RELEASE.md`.
 
 The product objective is not to make traditional terms look numerical. It is
 to improve decision quality through:
@@ -66,7 +66,6 @@ must not be reported as real-world accuracy.
 | Cognitive Decision Kernel | Executable | Routes authority and records immutable decisions |
 | Network LLM Reasoner | Executable | dblife Ollama `gemma4:latest`; hash-locked structured-decision profile; attention priority only |
 | Mingli Decision evidence trace | Executable read projection | Verifies immutable identity and reference coverage; not professional correctness or admission |
-| Dream Reading observation lens | Executable read projection | Same three equal domains through Grove and Encounter; no AnswerSeal/result input or write-back |
 | Statistical calibration | Missing | No production probability may be displayed |
 
 ## Implemented quantitative foundation v1
@@ -473,7 +472,7 @@ Identities at that delivery were `v60.mingli-cognitive-engine.025`,
 `v60.foundation.016`, `v60.runtime-architecture.048`,
 `v60.unit-mingli.019`, `v60.unit-lab.016` and migration
 `0024_relation_effect_material`. Knowledge remains `.008`, Cognition `.004`
-and Dream Game `.015`. All 284 backend tests, Ruff, TypeScript/Vite build,
+at that historical delivery. All 284 backend tests, Ruff, TypeScript/Vite build,
 Runtime Architecture, source maintainability and the 38-mutation frontend
 contract pass. Evidence is in
 `.artifacts/relation-effect-provenance-material/`.
@@ -587,7 +586,7 @@ versioned Timing Evidence Profile
 -> label-level mechanism overlap
 -> append-only Timing Evidence Vector
 -> Mingli Reading v4
--> Mingli, Lab and bounded Dream projection
+-> Mingli, Abu Says and internal Lab projection
 ```
 
 The active Profile is
@@ -825,20 +824,8 @@ TIMING_ONLY
 INSUFFICIENT_EVIDENCE
 ```
 
-Dream may consume one such bounded uncertainty only when a concrete,
-independently settled WorldEvent can distinguish the choices. A domain label
-alone is never enough to author a question.
-
-Dream Grove now shows exactly the career, wealth and relationship questions at
-equal weight under `ATTENTION_WINDOW_ONLY /
-NOT_APPLIED_TO_TREE_CANDIDATES_OR_ORDER`. It does not alter the Grove
-candidate set/order, predict, receive future evidence or write back. Decision
-state is reduced to one boolean; no Ref, Hash, rationale, evidence count,
-timing coordinate, confidence or candidate data crosses into the lens.
-
-The desktop audit confirms all three questions match the loaded Home Reading,
-all three Grove trees remain enabled, no POST is emitted and the document does
-not overflow. The complete backend suite contains 233 passing tests.
+A domain label alone is never enough to create a conclusion. Bounded life-domain
+observations stay inside Mingli and cannot write back into Canonical facts.
 
 ## Lab responsibility
 
@@ -887,10 +874,7 @@ OBSERVE
 effective work. `OBSERVE` is a bounded real-life attention window, not a
 prediction. Absence of an admitted counter-model is never counted as support.
 
-Mingli, Lab and Abu consume the same Explanation and Reading identities.
-Dream may consume only the public, pre-outcome baseline explaining why a
-question appeared; it cannot receive hidden evidence, a sealed outcome or a
-result label before AnswerSeal.
+Mingli, internal Lab and Abu consume the same Explanation and Reading identities.
 
 ## Mechanism evidence-completeness contract
 

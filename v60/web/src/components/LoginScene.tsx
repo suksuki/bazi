@@ -1,12 +1,12 @@
 import { type FormEvent, useState } from "react";
 
 import { AbuIdle } from "../AbuIdle";
-import type { RuntimeMediaManifest } from "../api";
-import { DreamStage } from "../DreamStage";
+import type { PublicRuntimeMediaManifest } from "../publicRuntimeTypes";
 import { BrandMark } from "./BrandMark";
+import { LifeTreeBackdrop } from "./LifeTreeBackdrop";
 
 interface LoginSceneProps {
-  media: RuntimeMediaManifest;
+  media: PublicRuntimeMediaManifest;
   busy: boolean;
   error: string | null;
   onLogin: (email: string, password: string) => Promise<void>;
@@ -27,33 +27,33 @@ export function LoginScene({
   };
 
   return (
-    <main className="dream-root v60-shell login-shell">
+    <main className="v60-root v60-shell login-shell">
       <header className="app-header login-header">
         <BrandMark asset={media.assets.brand_logo} />
-        <p className="login-world-mark">一个持续生长的生命世界</p>
+        <p className="login-world-mark">命盘 · 断命 · 阿布说</p>
       </header>
 
       <div className="login-layout">
         <section className="login-visual" aria-label="阿布知命 V60">
-          <DreamStage asset={media.assets.life_world_background} />
+          <LifeTreeBackdrop asset={media.assets.login_life_tree_background} />
           <div className="login-visual-wash" aria-hidden="true" />
           <div className="login-intro">
             <p className="eyebrow">阿布知命 V60</p>
             <h1>
               回来时，
               <br />
-              世界仍在继续。
+              生命树仍在生长。
             </h1>
-            <p>你的命盘、故事与每一次判断，都沿同一条生命线生长。</p>
+            <p>你的命盘、断语与每一次校准，都沿同一条生命线生长。</p>
           </div>
           <AbuIdle
             className="login-abu"
             cue={media.cues.abu_idle}
-            label="阿布坐在林地边，安静地等待你进入梦境"
+            label="阿布坐在生命树旁，安静地等待你回来"
           />
           <p className="login-scene-note">
             <span aria-hidden="true" />
-            梦境入口已经亮起
+            生命树入口已经亮起
           </p>
         </section>
 
@@ -61,7 +61,7 @@ export function LoginScene({
           <div>
             <p className="eyebrow">欢迎回来</p>
             <h2>进入你的生命现场</h2>
-            <p>使用已有账号继续上一次尚未结束的相遇。</p>
+            <p>使用已有账号继续上一次尚未完成的命理解读。</p>
           </div>
           <form className="login-form" onSubmit={submit}>
             <label>
@@ -83,7 +83,7 @@ export function LoginScene({
               />
             </label>
             <button type="submit" disabled={busy || !password}>
-              {busy ? "正在进入" : "进入梦境"}
+              {busy ? "正在进入" : "进入生命树"}
               <span aria-hidden="true">→</span>
             </button>
             {error && (

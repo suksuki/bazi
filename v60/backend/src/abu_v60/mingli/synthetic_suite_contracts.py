@@ -12,9 +12,7 @@ from abu_v60.mingli.synthetic_experiment_contracts import (
 )
 
 SYNTHETIC_SUITE_RUN_VERSION = "v60.mingli-synthetic-suite-run.002"
-SYNTHETIC_SUITE_REVIEW_PROJECTION_VERSION = (
-    "v60.mingli-synthetic-suite-review-projection.001"
-)
+SYNTHETIC_SUITE_REVIEW_PROJECTION_VERSION = "v60.mingli-synthetic-suite-review-projection.001"
 
 
 class SyntheticSuiteCandidateIdentity(BaseModel):

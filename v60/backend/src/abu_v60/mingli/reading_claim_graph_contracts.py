@@ -236,10 +236,7 @@ class MingliReadingClaimGraph(BaseModel):
             if item.kind == "COMPETING_HYPOTHESIS" and item.role == "PRIMARY"
         )
         if (
-            (
-                primary_hypothesis.status == "WITHHELD"
-                or by_key["WORK_PATH"].status == "WITHHELD"
-            )
+            (primary_hypothesis.status == "WITHHELD" or by_key["WORK_PATH"].status == "WITHHELD")
             and by_key["WHOLE_CHART"].status != "WITHHELD"
             and (
                 by_key["WHOLE_CHART"].status != "NEEDS_RECONCILIATION"

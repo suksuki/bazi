@@ -145,21 +145,13 @@ def test_decision_trace_verifies_identity_coverage_and_authority_boundary() -> N
         "candidate:b",
     ]
     assert trace["candidate_coverage_complete"] is True
-    assert trace["candidate_coverage_semantics"] == (
-        "PROVIDER_REVIEWED_ATTENTION_CANDIDATES"
-    )
+    assert trace["candidate_coverage_semantics"] == ("PROVIDER_REVIEWED_ATTENTION_CANDIDATES")
     assert trace["selected_evidence_bound"] is True
-    assert trace["selected_evidence_use_semantics"] == (
-        "PROVIDER_CITED_BOUND_EVIDENCE"
-    )
-    assert trace["evidence_use_semantics"] == (
-        "PROVIDER_CITED_BOUND_EVIDENCE"
-    )
+    assert trace["selected_evidence_use_semantics"] == ("PROVIDER_CITED_BOUND_EVIDENCE")
+    assert trace["evidence_use_semantics"] == ("PROVIDER_CITED_BOUND_EVIDENCE")
     assert trace["gate_disposition"] == "ADMITTED"
     assert trace["provider_counter_evidence_refs"] == ["evidence:b"]
-    assert trace["counter_evidence_semantics"] == (
-        "BOUND_REF_ONLY_NOT_PROFESSIONALLY_ADMITTED"
-    )
+    assert trace["counter_evidence_semantics"] == ("BOUND_REF_ONLY_NOT_PROFESSIONALLY_ADMITTED")
     assert trace["professional_selection_qualified"] is False
     assert trace["professional_verdict_allowed"] is False
     assert trace["probability_claim_allowed"] is False
@@ -411,17 +403,11 @@ def test_decision_trace_supports_single_candidate_rule_engine_route() -> None:
     )
 
     assert trace["reviewed_candidate_refs"] == ["candidate:rule"]
-    assert trace["candidate_coverage_semantics"] == (
-        "RULE_ENGINE_SINGLE_ATTENTION_CANDIDATE"
-    )
+    assert trace["candidate_coverage_semantics"] == ("RULE_ENGINE_SINGLE_ATTENTION_CANDIDATE")
     assert trace["evidence_refs_used"] == []
-    assert trace["evidence_use_semantics"] == (
-        "REQUEST_BOUND_NOT_PROVIDER_USED"
-    )
+    assert trace["evidence_use_semantics"] == ("REQUEST_BOUND_NOT_PROVIDER_USED")
     assert trace["selected_evidence_bound"] is True
-    assert trace["selected_evidence_use_semantics"] == (
-        "REQUEST_BOUND_RULE_NOT_PROVIDER_CITED"
-    )
+    assert trace["selected_evidence_use_semantics"] == ("REQUEST_BOUND_RULE_NOT_PROVIDER_CITED")
     assert trace["gate_disposition"] == "NOT_REQUIRED"
     assert trace["proposal_ref"] is None
     assert trace["gate_receipt_ref"] is None
@@ -429,9 +415,7 @@ def test_decision_trace_supports_single_candidate_rule_engine_route() -> None:
     assert trace["selection_rationale_contract"] == (
         "DETERMINISTIC_SINGLE_CANDIDATE_ROUTE_REASON_ONLY"
     )
-    assert trace["provider_confidence_semantics"] == (
-        "NOT_RECORDED_RULE_ENGINE_ROUTE"
-    )
+    assert trace["provider_confidence_semantics"] == ("NOT_RECORDED_RULE_ENGINE_ROUTE")
     assert trace["professional_selection_qualified"] is False
 
     rule_shape_drift = deepcopy(record)

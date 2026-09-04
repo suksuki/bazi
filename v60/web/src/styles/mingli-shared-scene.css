@@ -238,6 +238,47 @@
     linear-gradient(180deg, rgba(244, 239, 216, 0.04), rgba(33, 48, 36, 0.18));
 }
 
+.mingli-scene-host[data-world-light="day"]
+  .mingli-scene-composition[data-overlay="REHEARSAL"]
+  .mingli-scene-vignette {
+  background:
+    radial-gradient(circle at 50% 43%, transparent 20%, rgba(28, 53, 38, 0.16) 80%),
+    linear-gradient(180deg, rgba(247, 242, 217, 0.02) 38%, rgba(24, 49, 35, 0.34));
+}
+
+.mingli-scene-host[data-world-light="day"]
+  .mingli-scene-composition[data-overlay="REHEARSAL"]
+  .mingli-scene-column-labels span {
+  color: #163e2d;
+  font-weight: 700;
+  text-shadow:
+    0 1px 2px rgba(255, 252, 231, 0.98),
+    0 0 12px rgba(255, 250, 224, 0.92);
+}
+
+.mingli-scene-host[data-world-light="day"]
+  .mingli-scene-composition[data-overlay="REHEARSAL"]
+  .mingli-scene-column-labels small {
+  color: #315d48;
+  font-size: 8px;
+}
+
+.mingli-scene-host[data-world-light="day"]
+  .mingli-scene-composition[data-overlay="REHEARSAL"]
+  .mingli-scene-column-labels :is(
+    [data-source-layer="DAYUN"],
+    [data-source-layer="ANNUAL"]
+  ) {
+  color: #6f531e;
+}
+
+.mingli-scene-host[data-world-light="day"]
+  .mingli-scene-composition[data-overlay="REHEARSAL"]
+  .mingli-scene-fallback
+  .mingli-pillar-stage {
+  transform: translateY(8%);
+}
+
 .mingli-scene-player {
   position: absolute;
   z-index: 1;

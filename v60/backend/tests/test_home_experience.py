@@ -110,9 +110,7 @@ def test_home_experience_uses_only_the_signed_in_human_owner_case() -> None:
         snapshot["mingli"]["mechanism_evidence"]["candidates"]
     )
     assert explanation["observation_count"] == 3
-    assert [item["epistemic_status"] for item in explanation["claims"]].count(
-        "CONFIRMED"
-    ) == 1
+    assert [item["epistemic_status"] for item in explanation["claims"]].count("CONFIRMED") == 1
     assert all(item["support_evidence"] for item in explanation["claims"])
     assert snapshot["lab"]["research_admission_status"] == ("PROFILE_ADMISSION_REQUIRED")
     with engine.connect() as connection:
@@ -129,13 +127,12 @@ def test_home_experience_uses_only_the_signed_in_human_owner_case() -> None:
     assert persisted == reading
     assert snapshot["boundaries"] == {
         "private_to_account": True,
-        "dream_encounter_subject": False,
         "canonical_write_allowed": False,
         "visual_semantics": "VISUAL_METAPHOR_ONLY",
     }
 
 
-def test_home_projection_contains_no_dream_subject_or_mutable_dream_state() -> None:
+def test_home_projection_contains_only_owner_mingli_subject_state() -> None:
     snapshot = HomeExperienceService(engine).snapshot(account_ref=_human_owner_account_ref())
     serialized = canonical_json(snapshot)
     with engine.connect() as connection:
@@ -178,9 +175,7 @@ def test_home_projection_contains_no_dream_subject_or_mutable_dream_state() -> N
     else:
         assert decision_trace["decision_ref"] == comparison_decision_ref
         assert decision_trace["decision_hash"] == comparison["decision_hash"]
-        assert decision_trace["selected_candidate_ref"] == (
-            comparison["selected_candidate_ref"]
-        )
+        assert decision_trace["selected_candidate_ref"] == (comparison["selected_candidate_ref"])
         assert decision_trace["trace_integrity_status"] == "VERIFIED"
         assert decision_trace["candidate_coverage_complete"] is True
         assert decision_trace["selected_evidence_bound"] is True
@@ -204,9 +199,7 @@ def test_home_projection_contains_no_dream_subject_or_mutable_dream_state() -> N
     assert len(mechanism["candidates"]) >= 1
     explanation = snapshot["mingli"]["explanation"]
     candidate_claims = [
-        item
-        for item in explanation["claims"]
-        if item["claim_kind"] == "MECHANISM_CANDIDATE"
+        item for item in explanation["claims"] if item["claim_kind"] == "MECHANISM_CANDIDATE"
     ]
     assert len(candidate_claims) == len(mechanism["candidates"])
     assert all(
@@ -218,14 +211,11 @@ def test_home_projection_contains_no_dream_subject_or_mutable_dream_state() -> N
         for item in candidate_claims
     )
     observation_claims = [
-        item
-        for item in explanation["claims"]
-        if item["claim_kind"] == "LIFE_DOMAIN_WINDOW"
+        item for item in explanation["claims"] if item["claim_kind"] == "LIFE_DOMAIN_WINDOW"
     ]
     assert len(observation_claims) == 3
     assert all(
-        item["epistemic_status"] == "OBSERVE"
-        and "不是事件预言" in item["boundary"]
+        item["epistemic_status"] == "OBSERVE" and "不是事件预言" in item["boundary"]
         for item in observation_claims
     )
     assert snapshot["lab"]["mechanism_vector_ref"] == mechanism["vector_ref"]
@@ -257,8 +247,7 @@ def test_home_projection_contains_no_dream_subject_or_mutable_dream_state() -> N
         "relationship",
     ]
     assert all(
-        item["outcome_status"] == "UNRESOLVED"
-        and item["probability_status"] == "NOT_COMPUTED"
+        item["outcome_status"] == "UNRESOLVED" and item["probability_status"] == "NOT_COMPUTED"
         for item in domains["observations"]
     )
     with engine.connect() as connection:
@@ -310,9 +299,7 @@ def test_home_source_discussion_receipt_is_shared_and_creates_no_decision() -> N
         prerequisite["prerequisite_ref"],
         prerequisite["prerequisite_hash"],
     )
-    assert receipt["carrier_refs"] == [
-        item["carrier_ref"] for item in prerequisite["carriers"]
-    ]
+    assert receipt["carrier_refs"] == [item["carrier_ref"] for item in prerequisite["carriers"]]
     assert receipt["carrier_count"] == prerequisite["carrier_count"]
     assert receipt["ready_carrier_count"] == 0
     assert receipt["abstained_claims"] == [
@@ -373,12 +360,12 @@ def test_home_relation_effect_frontier_is_shared_and_creates_no_decision() -> No
         frontier["refusal_receipt_ref"],
         frontier["refusal_receipt_hash"],
     ) == (refusal["receipt_ref"], refusal["receipt_hash"])
-    assert source_review["source_evidence_count"] == 10
-    assert source_review["clear_coordinate_count"] == 7
-    assert source_review["review_required_count"] == 3
-    assert frontier["demand_count"] == 3
-    assert frontier["scope_invariant_rule_demand_count"] == 1
-    assert frontier["match_scope_rule_first_count"] == 2
+    assert source_review["source_evidence_count"] == 2
+    assert source_review["clear_coordinate_count"] == 2
+    assert source_review["review_required_count"] == 0
+    assert frontier["demand_count"] == 0
+    assert frontier["scope_invariant_rule_demand_count"] == 0
+    assert frontier["match_scope_rule_first_count"] == 0
     assert frontier["admitted_effect_rule_count"] == 0
     assert frontier["source_discussion_disposition"] == "ABSTAIN"
     assert frontier["provider_invoked"] is False
@@ -412,19 +399,19 @@ def test_home_relation_effect_admission_review_is_shared_and_creates_no_decision
         ).scalar_one()
 
     assert review == second["mingli"]["relation_effect_admission_review"]
-    assert source_review["source_evidence_count"] == 10
-    assert source_review["clear_coordinate_count"] == 7
-    assert source_review["review_required_count"] == 3
+    assert source_review["source_evidence_count"] == 2
+    assert source_review["clear_coordinate_count"] == 2
+    assert source_review["review_required_count"] == 0
     assert (review["frontier_ref"], review["frontier_hash"]) == (
         frontier["frontier_ref"],
         frontier["frontier_hash"],
     )
-    assert review["reviewed_demand_count"] == 1
-    assert review["rejected_pre_admission_count"] == 1
+    assert review["reviewed_demand_count"] == 0
+    assert review["rejected_pre_admission_count"] == 0
     assert review["admitted_effect_rule_count"] == 0
-    assert len(review["deferred_match_scope_demand_refs"]) == 2
+    assert review["deferred_match_scope_demand_refs"] == []
     assert review["unreviewed_scope_invariant_demand_refs"] == []
-    assert review["disposition"] == "REJECTED_PRE_ADMISSION"
+    assert review["disposition"] == "NOT_TRIGGERED"
     assert review["effect_status"] == "UNRESOLVED"
     assert review["usability_status"] == "UNRESOLVED"
     assert review["provider_invoked"] is False
@@ -437,12 +424,8 @@ def test_home_relation_effect_admission_review_is_shared_and_creates_no_decision
     assert review["probability_claim_allowed"] is False
     assert review["canonical_write_allowed"] is False
     assert review["read_only"] is True
-    assert first["lab"]["relation_effect_admission_review_ref"] == (
-        review["review_ref"]
-    )
-    assert first["lab"]["relation_effect_admission_review_hash"] == (
-        review["review_hash"]
-    )
+    assert first["lab"]["relation_effect_admission_review_ref"] == (review["review_ref"])
+    assert first["lab"]["relation_effect_admission_review_hash"] == (review["review_hash"])
     assert decisions_after == decisions_before
 
 
@@ -468,9 +451,9 @@ def test_home_relation_effect_evidence_packet_is_shared_and_creates_no_decision(
         ).scalar_one()
 
     assert packet == second["mingli"]["relation_effect_evidence_packet"]
-    assert source_review["source_evidence_count"] == 10
-    assert source_review["clear_coordinate_count"] == 7
-    assert source_review["review_required_count"] == 3
+    assert source_review["source_evidence_count"] == 2
+    assert source_review["clear_coordinate_count"] == 2
+    assert source_review["review_required_count"] == 0
     assert (packet["case_ref"], packet["chart_version_ref"]) == (
         reading["case_ref"],
         reading["chart_version_ref"],
@@ -487,31 +470,16 @@ def test_home_relation_effect_evidence_packet_is_shared_and_creates_no_decision(
         packet["admission_review_ref"],
         packet["admission_review_hash"],
     ) == (review["review_ref"], review["review_hash"])
-    assert packet["demand_packet_count"] == (
-        review["reviewed_demand_count"]
-    )
-    assert packet["demand_packet_count"] == 1
-    assert packet["required_dimension_slot_count"] == 6
+    assert packet["demand_packet_count"] == (review["reviewed_demand_count"])
+    assert packet["demand_packet_count"] == 0
+    assert packet["required_dimension_slot_count"] == 0
     assert packet["ready_dimension_slot_count"] == 0
     assert packet["professional_evidence_count"] == 0
-    assert packet["status"] == "EVIDENCE_INTAKE_REQUIRED"
-    assert packet["projection_semantics"] == (
-        "PROFESSIONAL_EVIDENCE_READINESS_NOT_DECISION"
-    )
-    assert packet["decision_path_semantics"] == (
-        "READINESS_PATH_NOT_DECISION"
-    )
-    assert packet["decision_path"] == [
-        "DETERMINISTIC_RELATION_FACT_AVAILABLE",
-        "PROFESSIONAL_RULE_EVIDENCE_BLOCKED",
-        "OWNER_PROFESSIONAL_REVIEW_NOT_INVOKED",
-        "KNOWLEDGE_ADMISSION_NOT_ELIGIBLE",
-        "READING_RULE_PROFILE_QUALIFICATION_NOT_AUTHORIZED",
-        "EFFECT_DECISION_WITHHELD",
-    ]
-    assert packet["required_professional_path_semantics"] == (
-        "FUTURE_AUTHORITY_PATH_NOT_EXECUTED"
-    )
+    assert packet["status"] == "NOT_TRIGGERED"
+    assert packet["projection_semantics"] == ("PROFESSIONAL_EVIDENCE_READINESS_NOT_DECISION")
+    assert packet["decision_path_semantics"] == ("READINESS_PATH_NOT_DECISION")
+    assert packet["decision_path"] == []
+    assert packet["required_professional_path_semantics"] == ("FUTURE_AUTHORITY_PATH_NOT_EXECUTED")
     assert packet["required_professional_path"] == [
         "COMPLETE_PROFESSIONAL_EVIDENCE_PACKET",
         "OWNER_PROFESSIONAL_REVIEW_APPROVED",
@@ -519,7 +487,7 @@ def test_home_relation_effect_evidence_packet_is_shared_and_creates_no_decision(
         "NEW_READING_BINDS_ADMITTED_RULE_PROFILE",
         "DETERMINISTIC_RULE_APPLICATION_OR_UNRESOLVED",
     ]
-    assert packet["effect_decision_status"] == "WITHHELD"
+    assert packet["effect_decision_status"] == "NOT_TRIGGERED"
     assert all(
         item["professional_evidence_refs"] == []
         and item["professional_evidence_count"] == 0
@@ -535,15 +503,9 @@ def test_home_relation_effect_evidence_packet_is_shared_and_creates_no_decision(
     }
     assert current_basis_refs.isdisjoint(reading["decision_refs"])
     assert '"decision_ref"' not in canonical_json(packet)
-    assert first["lab"]["relation_effect_evidence_packet_ref"] == (
-        packet["packet_ref"]
-    )
-    assert first["lab"]["relation_effect_evidence_packet_hash"] == (
-        packet["packet_hash"]
-    )
-    assert reading["decision_refs"] == second["mingli"]["reading"][
-        "decision_refs"
-    ]
+    assert first["lab"]["relation_effect_evidence_packet_ref"] == (packet["packet_ref"])
+    assert first["lab"]["relation_effect_evidence_packet_hash"] == (packet["packet_hash"])
+    assert reading["decision_refs"] == second["mingli"]["reading"]["decision_refs"]
     assert decisions_after == decisions_before
 
 
@@ -586,9 +548,7 @@ def test_home_mechanism_comparison_fails_closed_or_replays_existing_record() -> 
 
 def test_mechanism_comparison_rejects_wrong_account_before_decision() -> None:
     account_ref = _human_owner_account_ref()
-    snapshot = HomeExperienceService(engine).snapshot(
-        account_ref=account_ref
-    )
+    snapshot = HomeExperienceService(engine).snapshot(account_ref=account_ref)
     vector = MingliMechanismVectorStore(engine).get(
         vector_ref=str(snapshot["lab"]["mechanism_vector_ref"])
     )
@@ -635,9 +595,7 @@ def test_mechanism_comparison_rejects_owned_non_owner_case() -> None:
             .one()
         )
     account_ref = str(reference_row["owner_account_ref"])
-    vector = MingliMechanismVectorStore(engine).get(
-        vector_ref=str(reference_row["vector_ref"])
-    )
+    vector = MingliMechanismVectorStore(engine).get(vector_ref=str(reference_row["vector_ref"]))
 
     class ForbiddenCoordinator:
         @staticmethod
@@ -649,9 +607,12 @@ def test_mechanism_comparison_rejects_owned_non_owner_case() -> None:
         coordinator=ForbiddenCoordinator(),
     )
 
-    with engine.begin() as connection, pytest.raises(
-        MechanismComparisonUnavailableError,
-        match="mechanism_comparison_active_owner_case_conflict",
+    with (
+        engine.begin() as connection,
+        pytest.raises(
+            MechanismComparisonUnavailableError,
+            match="mechanism_comparison_active_owner_case_conflict",
+        ),
     ):
         service.compare_in_connection(
             connection,

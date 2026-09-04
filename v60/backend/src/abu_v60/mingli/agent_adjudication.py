@@ -5,14 +5,17 @@ from typing import TYPE_CHECKING, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from abu_v60.mingli.agent_counterfactuals import (
+    decision_row_is_valid,
+    decision_row_selection_is_valid,
     method_falsifier_is_actionable,
+    normalized_decision_row,
     repaired_method_falsifier,
-    reversal_is_actionable,
 )
 from abu_v60.mingli.agent_fact_language import (
     manifestation_claim_conflicts,
     resolution_ruling_conflicts,
 )
+from abu_v60.mingli.agent_hypothesis_decision import normalize_hypothesis_decision
 from abu_v60.mingli.agent_method_cards import (
     FALLBACK_METHOD_CARD_REF,
     method_card_catalog,
@@ -57,6 +60,28 @@ _DAY_MASTER_STATE_ALIASES = {
 }
 
 
+class AgentDecisionRowSelection(BaseModel):
+    """Typed selection from one method card's precompiled counterfactual rows."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    row_ref: str = Field(min_length=4, max_length=180)
+    trigger_axis: Literal[
+        "SOURCE_AVAILABILITY",
+        "TARGET_REACHABILITY",
+        "CAPACITY",
+        "BLOCKER_RESOLUTION",
+        "LAYER_ALIGNMENT",
+        "SEASONAL_SUPPORT",
+        "ROOT_SUPPORT",
+        "COMPETING_PATH",
+        "MECHANISM_OBSERVATION",
+    ]
+    current_ruling: AgentMethodRulingValue
+    target_ruling: AgentMethodRulingValue
+    action: Literal["RECLASSIFY"]
+
+
 class AgentMethodRuling(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -71,6 +96,11 @@ class AgentMethodRuling(BaseModel):
             "必须写：若可观察事实变化，则本项由当前 ruling 改判为另一 ruling。"
             "不能复制当前事实或只写条件前件。"
         ),
+    )
+    decision_row: AgentDecisionRowSelection | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description=("逐字选择当前方法卡为本检查编译的反事实决策行；不能自造 row_ref。"),
     )
     evidence_ids: tuple[str, ...] = Field(max_length=8)
 
@@ -107,53 +137,6 @@ class AgentExcludedCandidate(BaseModel):
     decisive_check: str = Field(pattern=r"^[A-Z][A-Z0-9_]{2,63}$")
     rationale: str = Field(min_length=12, max_length=240)
     evidence_ids: tuple[str, ...] = Field(max_length=8)
-
-
-class AgentDecisionSide(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    rationale: str = Field(min_length=16, max_length=260)
-    decisive_checks: tuple[str, ...] = Field(min_length=1, max_length=4)
-
-
-class AgentReversalTest(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    question: str = Field(min_length=12, max_length=180)
-    winner_signal: str = Field(
-        min_length=8,
-        max_length=160,
-        description="若与主解释一致的观察出现，则明确维持 PRIMARY。",
-    )
-    loser_signal: str = Field(
-        min_length=8,
-        max_length=160,
-        description="若相反观察出现，则明确翻转为 ALTERNATIVE；禁止写维持 PRIMARY。",
-    )
-
-    @model_validator(mode="after")
-    def signals_are_distinct(self) -> AgentReversalTest:
-        if not self.question.rstrip().endswith(("？", "?")):
-            raise ValueError("mingli_agent_reversal_question_missing_mark")
-        if self.winner_signal.strip() == self.loser_signal.strip():
-            raise ValueError("mingli_agent_reversal_signals_not_distinct")
-        return self
-
-
-class AgentHypothesisDecision(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    winner_id: Literal["H1", "H2"]
-    loser_id: Literal["H1", "H2"]
-    winner: AgentDecisionSide
-    loser: AgentDecisionSide
-    reversal: AgentReversalTest
-
-    @model_validator(mode="after")
-    def ids_are_distinct(self) -> AgentHypothesisDecision:
-        if self.winner_id == self.loser_id:
-            raise ValueError("mingli_agent_decision_ids_not_distinct")
-        return self
 
 
 def aggregate_method_rulings(
@@ -194,8 +177,7 @@ def normalize_adjudication_output(
     raw_primary_slot = raw_primary_slots[0] if len(raw_primary_slots) == 1 else None
     raw_primary_method_ref = (
         hypotheses[raw_primary_slot].get("method_card_ref")
-        if raw_primary_slot is not None
-        and isinstance(hypotheses[raw_primary_slot], dict)
+        if raw_primary_slot is not None and isinstance(hypotheses[raw_primary_slot], dict)
         else None
     )
     # Every newly generated Reading uses the current contract. Historical
@@ -293,7 +275,7 @@ def normalize_adjudication_output(
                 rationale = "这一项尚未形成足以改变整盘主次的明确判断。"
             falsifier = raw.get("condition_or_falsifier")
             if manifestation_claim_conflicts(
-                f"{rationale}\n{falsifier}",
+                rationale,
                 pillars=packet.pillars,
             ):
                 ruling = "UNRESOLVED"
@@ -322,6 +304,26 @@ def normalize_adjudication_output(
             ):
                 falsifier = repaired_method_falsifier(current_ruling=ruling)
                 normalization_issues.add(f"HYPOTHESIS_H{index + 1}")
+            raw_decision_row = raw.get("decision_row")
+            decision_row = (
+                raw_decision_row
+                if decision_row_is_valid(
+                    raw_decision_row,
+                    method_card_ref=card_ref,
+                    check_code=check_code,
+                    current_ruling=ruling,
+                )
+                else normalized_decision_row(
+                    method_card_ref=card_ref,
+                    check_code=check_code,
+                    current_ruling=ruling,
+                )
+            )
+            if raw_decision_row is not None and not decision_row_selection_is_valid(
+                raw_decision_row,
+                check_code=check_code,
+            ):
+                normalization_issues.add(f"HYPOTHESIS_H{index + 1}")
             raw_evidence = raw.get("evidence_ids")
             evidence = raw_evidence if isinstance(raw_evidence, list) else []
             evidence = list(dict.fromkeys(item for item in evidence if item in natal_ids))
@@ -332,11 +334,31 @@ def normalize_adjudication_output(
                     "ruling": ruling,
                     "rationale": rationale.strip(),
                     "condition_or_falsifier": falsifier.strip(),
+                    "decision_row": decision_row,
                     "evidence_ids": evidence[:8],
                 }
             )
         hypothesis["method_rulings"] = ordered
-        if ordered != raw_rulings:
+        raw_rulings_for_comparison = [
+            (
+                {
+                    **raw_item,
+                    "decision_row": ordered[index]["decision_row"],
+                }
+                if isinstance(raw_item, dict)
+                and (
+                    raw_item.get("decision_row") is None
+                    or decision_row_selection_is_valid(
+                        raw_item.get("decision_row"),
+                        check_code=str(raw_item.get("check_code")),
+                    )
+                )
+                and index < len(ordered)
+                else raw_item
+            )
+            for index, raw_item in enumerate(raw_rulings)
+        ]
+        if ordered != raw_rulings_for_comparison:
             normalization_issues.add(f"HYPOTHESIS_H{index + 1}")
         parsed = tuple(AgentMethodRuling.model_validate(item) for item in ordered)
         hypothesis["adjudication"] = aggregate_method_rulings(
@@ -371,7 +393,7 @@ def normalize_adjudication_output(
     decision_identity_repaired = set(identity_repaired)
     if selection_repaired:
         decision_identity_repaired.update(range(2))
-    decision, decision_repaired = _normalize_decision(
+    decision, decision_repaired = normalize_hypothesis_decision(
         value.get("hypothesis_decision"),
         normalized=normalized,
         identity_repaired=decision_identity_repaired,
@@ -381,10 +403,7 @@ def normalize_adjudication_output(
     if decision_repaired:
         normalization_issues.add("HYPOTHESIS_DECISION")
     primary = next(item for item in normalized if item["role"] == "PRIMARY")
-    if (
-        raw_primary_method_ref is not None
-        and raw_primary_method_ref != primary["method_card_ref"]
-    ):
+    if raw_primary_method_ref is not None and raw_primary_method_ref != primary["method_card_ref"]:
         normalization_issues.add("WORK_PATH")
     work_path = value.get("work_path")
     if binding_mode and isinstance(work_path, dict):
@@ -430,16 +449,13 @@ def _assign_method_card_refs(
     """Preserve valid semantic identities before repairing missing or duplicate refs."""
 
     raw_refs = [
-        item.get("method_card_ref") if isinstance(item, dict) else None
-        for item in hypotheses
+        item.get("method_card_ref") if isinstance(item, dict) else None for item in hypotheses
     ]
     raw_refs.extend([None] * (2 - len(raw_refs)))
     raw_refs = raw_refs[:2]
     if not candidate_refs:
         assigned = (FALLBACK_METHOD_CARD_REF, FALLBACK_METHOD_CARD_REF)
-        repaired = {
-            index for index, raw_ref in enumerate(raw_refs) if raw_ref != assigned[index]
-        }
+        repaired = {index for index, raw_ref in enumerate(raw_refs) if raw_ref != assigned[index]}
         return assigned, repaired
 
     available_refs = (
@@ -448,8 +464,7 @@ def _assign_method_card_refs(
         else list(candidate_refs)
     )
     counts = {
-        card_ref: sum(raw_ref == card_ref for raw_ref in raw_refs)
-        for card_ref in available_refs
+        card_ref: sum(raw_ref == card_ref for raw_ref in raw_refs) for card_ref in available_refs
     }
     assigned: list[str | None] = [None, None]
     used_refs: set[str] = set()
@@ -469,9 +484,7 @@ def _assign_method_card_refs(
 
     resolved = (str(assigned[0]), str(assigned[1]))
     duplicate_indices = {
-        index
-        for index, raw_ref in enumerate(raw_refs)
-        if raw_ref in counts and counts[raw_ref] > 1
+        index for index, raw_ref in enumerate(raw_refs) if raw_ref in counts and counts[raw_ref] > 1
     }
     repaired = {
         index for index, raw_ref in enumerate(raw_refs) if raw_ref != resolved[index]
@@ -490,9 +503,7 @@ def _neutralize_rebound_hypothesis(
     hypothesis.update(
         {
             "name": name,
-            "thesis": (
-                f"{name}需要重新完成全部条件比较，当前只保留为低置信度工作解释。"
-            )[:300],
+            "thesis": (f"{name}需要重新完成全部条件比较，当前只保留为低置信度工作解释。")[:300],
             "failure_condition": "关键来源、目标、承载或阻断条件不成立时不采用",
             "evidence_ids": [] if card_ref == FALLBACK_METHOD_CARD_REF else [card_ref],
             "confidence": "LOW",
@@ -561,9 +572,7 @@ def _normalize_hypothesis_roles(
 ) -> bool:
     rank = {"BROKEN": 0, "UNRESOLVED": 1, "CONDITIONAL": 2, "SUPPORTED": 3}
     ruling_score = {"OPPOSES": 0, "UNRESOLVED": 1, "CONDITIONAL": 2, "SUPPORTS": 3}
-    pattern_by_card = {
-        item.evidence_id: item.pattern_ref for item in packet.mechanism_observations
-    }
+    pattern_by_card = {item.evidence_id: item.pattern_ref for item in packet.mechanism_observations}
     discriminator = cross_card_discriminator()
     decisive_by_pattern = {
         OUTPUT_TO_PRESSURE: tuple(discriminator["pressure_decisive_checks"]),
@@ -627,6 +636,11 @@ def _normalize_hypothesis_roles(
                 "ruling": "UNRESOLVED",
                 "rationale": "命名机制均受阻，先回到月令与整盘力量次序继续判断。",
                 "condition_or_falsifier": "若现实反馈支持一条完整路径，再恢复对应机制解释。",
+                "decision_row": normalized_decision_row(
+                    method_card_ref=FALLBACK_METHOD_CARD_REF,
+                    check_code=check,
+                    current_ruling="UNRESOLVED",
+                ),
                 "evidence_ids": [],
             }
             for check in fallback["required_checks"]
@@ -648,139 +662,11 @@ def _normalize_hypothesis_roles(
         elif item.get("confidence") not in {"LOW", "MEDIUM"}:
             item["confidence"] = "MEDIUM"
     alternative_index = 1 - selected
-    if rank[normalized[selected]["adjudication"]] < rank[
-        normalized[alternative_index]["adjudication"]
-    ]:
+    if (
+        rank[normalized[selected]["adjudication"]]
+        < rank[normalized[alternative_index]["adjudication"]]
+    ):
         normalized[selected]["confidence"] = "LOW"
     if normalized[0].get("name") == normalized[1].get("name"):
         normalized[1]["name"] = f"{normalized[1]['name']}的替代解释"
     return fallback_repaired or raw_primary_index is None or selected != raw_primary_index
-
-
-def _normalize_decision(
-    value: Any,
-    *,
-    normalized: list[dict[str, Any]],
-    identity_repaired: set[int],
-    preserve_valid: bool,
-) -> tuple[dict[str, Any], bool]:
-    raw = value if isinstance(value, dict) else {}
-    primary = next(item for item in normalized if item["role"] == "PRIMARY")
-    alternative = next(item for item in normalized if item["role"] == "ALTERNATIVE")
-
-    if preserve_valid and not identity_repaired and _decision_matches_hypotheses(
-        raw,
-        primary=primary,
-        alternative=alternative,
-    ):
-        return dict(raw), False
-
-    def side(item: dict[str, Any], label: str) -> dict[str, Any]:
-        preferred = (
-            ("SUPPORTS", "CONDITIONAL", "UNRESOLVED", "OPPOSES")
-            if label == "主解释"
-            else ("OPPOSES", "UNRESOLVED", "CONDITIONAL", "SUPPORTS")
-        )
-        selected = list(
-            dict.fromkeys(
-                ruling["check_code"]
-                for status in preferred
-                for ruling in item["method_rulings"]
-                if ruling["ruling"] == status
-            )
-        )[:2]
-        decisive = next(
-            ruling for ruling in item["method_rulings"] if ruling["check_code"] == selected[0]
-        )
-        counts = {
-            status: sum(ruling["ruling"] == status for ruling in item["method_rulings"])
-            for status in ("SUPPORTS", "CONDITIONAL", "UNRESOLVED", "OPPOSES")
-        }
-        rationale = (
-            f"{item.get('name', label)}"
-            f"{'暂列主线' if label == '主解释' else '暂不列主线'}："
-            f"{counts['SUPPORTS']}项支持、{counts['CONDITIONAL']}项有条件、"
-            f"{counts['UNRESOLVED']}项未决、{counts['OPPOSES']}项反对；"
-            f"{decisive['rationale']}"
-        )[:260]
-        return {"rationale": rationale, "decisive_checks": selected[:4]}
-
-    reversal = raw.get("reversal")
-    reversal = reversal if isinstance(reversal, dict) else {}
-    question = reversal.get("question")
-    if not isinstance(question, str) or len(question.strip()) < 12:
-        question = "现实中更常先出现成果转化，还是先出现责任压力？"
-    if not question.rstrip().endswith(("？", "?")):
-        question = f"{question.rstrip('。！!')}？"
-    raw_winner_id = raw.get("winner_id")
-    raw_loser_id = raw.get("loser_id")
-    signal_by_hypothesis: dict[str, Any] = {}
-    if (
-        raw_winner_id in {"H1", "H2"}
-        and raw_loser_id in {"H1", "H2"}
-        and raw_winner_id != raw_loser_id
-    ):
-        signal_by_hypothesis = {
-            str(raw_winner_id): reversal.get("winner_signal"),
-            str(raw_loser_id): reversal.get("loser_signal"),
-        }
-    repaired_ids = {f"H{index + 1}" for index in identity_repaired}
-    winner_signal = (
-        None
-        if primary["hypothesis_id"] in repaired_ids
-        else signal_by_hypothesis.get(primary["hypothesis_id"])
-    )
-    if not isinstance(winner_signal, str) or len(winner_signal.strip()) < 8:
-        winner_signal = f"若更符合{primary.get('name', '主解释')}，维持当前判断。"
-    elif primary.get("name") not in winner_signal:
-        winner_signal = f"更符合{primary['name']}：{winner_signal}"
-    loser_signal = (
-        None
-        if alternative["hypothesis_id"] in repaired_ids
-        else signal_by_hypothesis.get(alternative["hypothesis_id"])
-    )
-    if not isinstance(loser_signal, str) or len(loser_signal.strip()) < 8:
-        loser_signal = f"若更符合{alternative.get('name', '替代解释')}，就翻转主次。"
-    elif alternative.get("name") not in loser_signal:
-        loser_signal = f"更符合{alternative['name']}：{loser_signal}"
-    return {
-        "winner_id": primary["hypothesis_id"],
-        "loser_id": alternative["hypothesis_id"],
-        "winner": side(primary, "主解释"),
-        "loser": side(alternative, "替代解释"),
-        "reversal": {
-            "question": question,
-            "winner_signal": winner_signal[:160],
-            "loser_signal": loser_signal[:160],
-        },
-    }, preserve_valid
-
-
-def _decision_matches_hypotheses(
-    raw: dict[str, Any],
-    *,
-    primary: dict[str, Any],
-    alternative: dict[str, Any],
-) -> bool:
-    try:
-        decision = AgentHypothesisDecision.model_validate(raw)
-    except ValueError:
-        return False
-    if (
-        decision.winner_id != primary["hypothesis_id"]
-        or decision.loser_id != alternative["hypothesis_id"]
-    ):
-        return False
-    for side, hypothesis in (
-        (decision.winner, primary),
-        (decision.loser, alternative),
-    ):
-        allowed = {item["check_code"] for item in hypothesis["method_rulings"]}
-        if not set(side.decisive_checks).issubset(allowed):
-            return False
-    return reversal_is_actionable(
-        winner_signal=decision.reversal.winner_signal,
-        loser_signal=decision.reversal.loser_signal,
-        primary_name=primary.get("name"),
-        alternative_name=alternative.get("name"),
-    )

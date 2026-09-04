@@ -185,10 +185,7 @@ class MingliStageProjection(BaseModel):
         )
         identity_is_valid = (
             (self.subject_id == "current" and private_owner)
-            or (
-                self.subject_id.startswith("case:")
-                and (private_owner or private_reference)
-            )
+            or (self.subject_id.startswith("case:") and (private_owner or private_reference))
             or (self.subject_id in {"abu", "duoduo"} and public_showcase)
             or (
                 self.subject_id.startswith("research:")

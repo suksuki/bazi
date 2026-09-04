@@ -47,20 +47,15 @@ def test_relation_effect_admission_policy_registers_only_research_material() -> 
     policy = manifest["policy"]
     proposal = manifest["proposal"]
 
-    assert policy["required_dimensions"] == list(
-        RELATION_EFFECT_RULE_DIMENSIONS
-    )
+    assert policy["required_dimensions"] == list(RELATION_EFFECT_RULE_DIMENSIONS)
     assert policy["professionally_reviewed"] is False
     assert policy["effect_conclusion_allowed"] is False
     assert policy["source_usability_conclusion_allowed"] is False
     assert policy["admitted_effect_rule_profile_refs"] == []
-    assert [
-        item["dimension_id"]
-        for item in proposal["dimension_submissions"]
-    ] == list(RELATION_EFFECT_RULE_DIMENSIONS)
-    assert [
-        item["status"] for item in proposal["dimension_submissions"]
-    ] == [
+    assert [item["dimension_id"] for item in proposal["dimension_submissions"]] == list(
+        RELATION_EFFECT_RULE_DIMENSIONS
+    )
+    assert [item["status"] for item in proposal["dimension_submissions"]] == [
         "PARTIAL",
         "COMPETING",
         "MISSING",
@@ -142,14 +137,10 @@ def test_relation_effect_admission_reviews_real_10_7_3_shape_stably() -> None:
         assessment.peer_slot,
         assessment.peer_branch,
     ) == ("year", "己", "hour", "午", "month", "子")
-    assert [
-        item.dimension_id
-        for item in assessment.dimension_assessments
-    ] == list(RELATION_EFFECT_RULE_DIMENSIONS)
-    assert [
-        item.submission_status
-        for item in assessment.dimension_assessments
-    ] == [
+    assert [item.dimension_id for item in assessment.dimension_assessments] == list(
+        RELATION_EFFECT_RULE_DIMENSIONS
+    )
+    assert [item.submission_status for item in assessment.dimension_assessments] == [
         "PARTIAL",
         "COMPETING",
         "MISSING",
@@ -157,21 +148,14 @@ def test_relation_effect_admission_reviews_real_10_7_3_shape_stably() -> None:
         "MISSING",
         "MISSING",
     ]
-    assert all(
-        item.satisfied is False
-        for item in assessment.dimension_assessments
-    )
-    assert [
-        item.interpretation_id for item in assessment.interpretations
-    ] == [
+    assert all(item.satisfied is False for item in assessment.dimension_assessments)
+    assert [item.interpretation_id for item in assessment.interpretations] == [
         "RELATION_MEMBERSHIP_DISTURBANCE_ONLY",
         "SOURCE_OPEN_OR_EXPOSE",
         "SOURCE_DAMAGE_OR_REMOVE",
     ]
     assert all(
-        item.status == "HELD"
-        and item.selected is False
-        and item.effect_atom_created is False
+        item.status == "HELD" and item.selected is False and item.effect_atom_created is False
         for item in assessment.interpretations
     )
     assert assessment.admitted_effect_atom_refs == ()
@@ -203,9 +187,7 @@ def test_relation_effect_admission_fails_closed_on_forged_authority() -> None:
     forged_disposition = review.model_dump(mode="python")
     forged_disposition["disposition"] = "ADMITTED"
     with pytest.raises(ValueError, match="disposition"):
-        MingliRelationEffectAdmissionReviewEnvelope.model_validate(
-            forged_disposition
-        )
+        MingliRelationEffectAdmissionReviewEnvelope.model_validate(forged_disposition)
 
     reordered_dimensions = assessment.model_dump(mode="python")
     reordered_dimensions["dimension_assessments"] = tuple(
@@ -215,21 +197,15 @@ def test_relation_effect_admission_fails_closed_on_forged_authority() -> None:
         ValueError,
         match="relation_effect_assessment_dimensions_invalid",
     ):
-        RelationEffectRuleAdmissionAssessment.model_validate(
-            reordered_dimensions
-        )
+        RelationEffectRuleAdmissionAssessment.model_validate(reordered_dimensions)
 
     forged_effect = assessment.model_dump(mode="python")
-    forged_effect["admitted_effect_atom_refs"] = (
-        "effect-atom:automatic-source-damage",
-    )
+    forged_effect["admitted_effect_atom_refs"] = ("effect-atom:automatic-source-damage",)
     with pytest.raises(
         ValueError,
         match="relation_effect_assessment_effect_atom_not_allowed",
     ):
-        RelationEffectRuleAdmissionAssessment.model_validate(
-            forged_effect
-        )
+        RelationEffectRuleAdmissionAssessment.model_validate(forged_effect)
 
     drifted_review = review.model_dump(mode="python")
     drifted_review["reading_hash"] = "f" * 64
@@ -237,9 +213,7 @@ def test_relation_effect_admission_fails_closed_on_forged_authority() -> None:
         ValueError,
         match="relation_effect_review_hash_mismatch",
     ):
-        MingliRelationEffectAdmissionReviewEnvelope.model_validate(
-            drifted_review
-        )
+        MingliRelationEffectAdmissionReviewEnvelope.model_validate(drifted_review)
 
 
 def test_relation_effect_admission_clear_case_is_not_triggered() -> None:
@@ -287,11 +261,7 @@ def test_relation_effect_registry_revalidates_model_copy_identity() -> None:
 
     proposal = bazi_zi_wu_automatic_damage_proposal()
     stale_proposal = proposal.model_copy(
-        update={
-            "claim": (
-                f"{proposal.claim} tamper:stale-proposal-identity"
-            )
-        }
+        update={"claim": (f"{proposal.claim} tamper:stale-proposal-identity")}
     )
     with pytest.raises(
         ValueError,
@@ -349,9 +319,7 @@ def test_relation_effect_explicit_empty_registries_do_not_use_defaults() -> None
 def test_relation_effect_projector_requires_the_canonical_registered_proposal() -> None:
     canonical = bazi_zi_wu_automatic_damage_proposal()
     reissued = BaziRelationEffectRuleProposal.issue(
-        claim=(
-            "这是结构合法但未经 canonical registry 选择的另一份研究提案。"
-        ),
+        claim=("这是结构合法但未经 canonical registry 选择的另一份研究提案。"),
         dimension_submissions=canonical.dimension_submissions,
     )
     authority = KnowledgeAuthority(
@@ -416,9 +384,7 @@ def test_relation_effect_review_inventory_fails_closed_on_partition_drift() -> N
         ValueError,
         match="relation_effect_review_frontier_inventory_overlap",
     ):
-        MingliRelationEffectAdmissionReviewEnvelope.model_validate(
-            overlap
-        )
+        MingliRelationEffectAdmissionReviewEnvelope.model_validate(overlap)
 
     omitted = review.model_dump(mode="python")
     omitted["frontier_scope_invariant_demand_refs"] = ()
@@ -426,9 +392,7 @@ def test_relation_effect_review_inventory_fails_closed_on_partition_drift() -> N
         ValueError,
         match="relation_effect_review_scope_inventory_not_covered",
     ):
-        MingliRelationEffectAdmissionReviewEnvelope.model_validate(
-            omitted
-        )
+        MingliRelationEffectAdmissionReviewEnvelope.model_validate(omitted)
 
     reordered = review.model_dump(mode="python")
     reordered["frontier_match_scope_demand_refs"] = tuple(
@@ -438,21 +402,15 @@ def test_relation_effect_review_inventory_fails_closed_on_partition_drift() -> N
         ValueError,
         match="relation_effect_review_match_inventory_not_covered",
     ):
-        MingliRelationEffectAdmissionReviewEnvelope.model_validate(
-            reordered
-        )
+        MingliRelationEffectAdmissionReviewEnvelope.model_validate(reordered)
 
     original = review.assessments[0]
     duplicate_values = original.model_dump(
         mode="python",
         exclude={"assessment_ref", "assessment_hash"},
     )
-    duplicate_values["proposal_claim"] = (
-        f"{original.proposal_claim} duplicate-demand-fixture"
-    )
-    duplicate_demand = RelationEffectRuleAdmissionAssessment.issue(
-        **duplicate_values
-    )
+    duplicate_values["proposal_claim"] = f"{original.proposal_claim} duplicate-demand-fixture"
+    duplicate_demand = RelationEffectRuleAdmissionAssessment.issue(**duplicate_values)
     repeated = review.model_dump(mode="python")
     repeated["assessments"] = tuple(
         item.model_dump(mode="python")
@@ -467,9 +425,7 @@ def test_relation_effect_review_inventory_fails_closed_on_partition_drift() -> N
         ValueError,
         match="relation_effect_review_assessed_demands_not_unique",
     ):
-        MingliRelationEffectAdmissionReviewEnvelope.model_validate(
-            repeated
-        )
+        MingliRelationEffectAdmissionReviewEnvelope.model_validate(repeated)
 
 
 def test_relation_effect_verified_dimension_requires_evidence() -> None:
@@ -504,9 +460,7 @@ def test_relation_effect_interpretations_use_the_actual_ding_source_identity() -
         for item in frontier.demands
         if item.dependency_status == "SCOPE_INVARIANT_RULE_DEMAND"
     }
-    summaries = tuple(
-        item.summary for item in assessment.interpretations
-    )
+    summaries = tuple(item.summary for item in assessment.interpretations)
     assert all("午中丁" in summary for summary in summaries)
     assert all("午中己" not in summary for summary in summaries)
 
@@ -524,9 +478,7 @@ def test_relation_effect_review_issuer_requires_all_target_demands() -> None:
     assert review.reviewed_demand_count == 1
     with pytest.raises(
         ValueError,
-        match=(
-            "relation_effect_review_target_demands_not_fully_assessed"
-        ),
+        match=("relation_effect_review_target_demands_not_fully_assessed"),
     ):
         MingliRelationEffectAdmissionReviewEnvelope.issue(
             frontier=frontier,
@@ -553,27 +505,21 @@ def test_relation_effect_review_issuer_rejects_resigned_proposal_drift() -> None
         mode="python",
         exclude={"assessment_ref", "assessment_hash"},
     )
-    claim_values["proposal_claim"] = (
-        f"{assessment.proposal_claim} tamper:resigned-claim"
-    )
-    resigned_claim = RelationEffectRuleAdmissionAssessment.issue(
-        **claim_values
-    )
+    claim_values["proposal_claim"] = f"{assessment.proposal_claim} tamper:resigned-claim"
+    resigned_claim = RelationEffectRuleAdmissionAssessment.issue(**claim_values)
 
     dimension_values = assessment.model_dump(
         mode="python",
         exclude={"assessment_ref", "assessment_hash"},
     )
-    altered_dimension = assessment.dimension_assessments[
-        0
-    ].model_copy(update={"submission_status": "UNSUPPORTED"})
+    altered_dimension = assessment.dimension_assessments[0].model_copy(
+        update={"submission_status": "UNSUPPORTED"}
+    )
     dimension_values["dimension_assessments"] = (
         altered_dimension,
         *assessment.dimension_assessments[1:],
     )
-    resigned_dimension = RelationEffectRuleAdmissionAssessment.issue(
-        **dimension_values
-    )
+    resigned_dimension = RelationEffectRuleAdmissionAssessment.issue(**dimension_values)
 
     for resigned in (resigned_claim, resigned_dimension):
         assert resigned.policy_ref == policy.policy_ref
@@ -582,9 +528,7 @@ def test_relation_effect_review_issuer_rejects_resigned_proposal_drift() -> None
         assert resigned.proposal_hash == proposal.proposal_hash
         with pytest.raises(
             ValueError,
-            match=(
-                "relation_effect_review_assessment_proposal_mismatch"
-            ),
+            match=("relation_effect_review_assessment_proposal_mismatch"),
         ):
             MingliRelationEffectAdmissionReviewEnvelope.issue(
                 frontier=frontier,

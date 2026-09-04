@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { RuntimeMediaManifest } from "../api";
+import type { RuntimeMediaManifest } from "../publicRuntimeTypes";
 import {
-  generateMingliAgentReading,
+  generateMingliFocusedPass,
   loadMingliReadingSummary,
   loadMingliStage,
 } from "../mingliStageApi";
@@ -15,7 +15,12 @@ import {
   writeMingliStageExperience,
   writeMingliStageRoute,
 } from "../mingliStageNavigation";
+import {
+  hasMingliSummaryLayerNarration,
+  mingliLayerFocuses,
+} from "../mingliLayerNarrationProjection";
 import type {
+  MingliFocus,
   MingliReadingSummaryProjection,
   MingliStageProjection,
   MingliStageViewContext,
@@ -28,14 +33,14 @@ export function MingliBranchSceneHost({
   media,
   onContextChange,
   onExit,
-  onOpenLab,
   onOpenStage,
+  publicMode = false,
 }: {
   media: RuntimeMediaManifest;
   onContextChange: (context: MingliStageViewContext) => void;
   onExit: () => void;
-  onOpenLab: () => void;
   onOpenStage: (entryMode: MingliStageEntryMode) => void;
+  publicMode?: boolean;
 }) {
   const [route, setRoute] = useState(readMingliStageRoute);
   const [entry] = useState(readMingliLeafEntry);
@@ -104,28 +109,69 @@ export function MingliBranchSceneHost({
     setRoute(next);
     writeMingliStageRoute(next, "replace", "mingli");
   };
-  const openStage = (
-    expandTime: boolean,
-    entryMode: MingliStageEntryMode = "observe",
-  ) => {
-    const next = expandTime
-      ? { ...route, mode: "NATAL_DAYUN_YEAR_6" as const, year: null }
-      : route;
+  const openLayerRehearsal = (layer: MingliReadingLayer) => {
+    const current = readMingliStageRoute();
+    const next = {
+      ...current,
+      layer,
+      mode: publicMode || layer === "timing"
+        ? "NATAL_DAYUN_YEAR_6" as const
+        : "NATAL_4" as const,
+      year: null,
+    };
     writeMingliStageRoute(next, "replace", "mingli");
-    writeMingliStageExperience("stage", entryMode, "push");
-    onOpenStage(entryMode);
+    writeMingliStageExperience("stage", "rehearsal", "push");
+    onOpenStage("rehearsal");
   };
-  const generateAgentReading = () => {
-    if (stage === null || agentGenerating) return;
+  const activateLayer = (layer: MingliReadingLayer) => {
+    selectLayer(layer);
+    if (stage === null || agentGenerating || generationControllerRef.current) return;
+    const currentSummary = summaryMatchesStage(summary, stage) ? summary : null;
+    if (
+      currentSummary !== null
+      && hasMingliSummaryLayerNarration(currentSummary, layer)
+    ) {
+      setAgentError(null);
+      openLayerRehearsal(layer);
+      return;
+    }
+    if (
+      currentSummary === null
+      || !currentSummary.focused_generation_available
+      || stage.reading_ref === null
+    ) {
+      setAgentError("这一层还没有形成可直接讲述的初断。");
+      return;
+    }
     const requestedStage = stage;
     const requestId = generationRequestRef.current + 1;
     generationRequestRef.current = requestId;
-    generationControllerRef.current?.abort();
     const controller = new AbortController();
     generationControllerRef.current = controller;
     setAgentGenerating(true);
     setAgentError(null);
-    void generateMingliAgentReading(requestedStage, controller.signal)
+    const existingFocuses = new Set<MingliFocus>([
+      ...(currentSummary.focused_reading?.passes.map((item) => item.focus) ?? []),
+      ...currentSummary.focused_pass_records.map((record) => record.focus),
+    ]);
+    const requiredFocuses: MingliFocus[] = [
+      ...(layer !== "principle" && !existingFocuses.has("STRUCTURE")
+        ? ["STRUCTURE" as const]
+        : []),
+      ...mingliLayerFocuses(layer),
+    ];
+    const missingFocuses = requiredFocuses.filter(
+      (focus, index) =>
+        !existingFocuses.has(focus)
+        && requiredFocuses.indexOf(focus) === index,
+    );
+    void missingFocuses
+      .reduce<Promise<void>>(
+        (pending, focus) => pending.then(async () => {
+          await generateMingliFocusedPass(requestedStage, focus, controller.signal);
+        }),
+        Promise.resolve(),
+      )
       .then(() => loadMingliReadingSummary(requestedStage, controller.signal))
       .then((nextSummary) => {
         const activeStage = stageRef.current;
@@ -136,6 +182,11 @@ export function MingliBranchSceneHost({
           && summaryMatchesStage(nextSummary, activeStage)
         ) {
           setSummary(nextSummary);
+          if (hasMingliSummaryLayerNarration(nextSummary, layer)) {
+            openLayerRehearsal(layer);
+          } else {
+            setAgentError("这一层还没有形成可直接讲述的初断。");
+          }
         }
       })
       .catch((cause) => {
@@ -180,13 +231,8 @@ export function MingliBranchSceneHost({
       media={media}
       onClose={onExit}
       onEntryConsumed={clearMingliLeafEntry}
-      onLayerChange={selectLayer}
-      onGenerateAgent={generateAgentReading}
-      onOpenLab={onOpenLab}
-      onOpenRehearsal={() => openStage(route.layer === "timing", "rehearsal")}
-      onOpenStage={(expandTime) => openStage(expandTime, "observe")}
+      onActivateLayer={activateLayer}
       stage={stage}
-      summary={summaryMatchesStage(summary, stage) ? summary : null}
     />
   );
 }

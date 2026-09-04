@@ -200,7 +200,9 @@ def _reasoner_json_transport(**kwargs: Any) -> dict[str, Any]:
     try:
         return default_json_transport(**kwargs)
     except LlmTransportError as exc:
-        raise ReasonerProviderError(str(exc).replace("llm_provider_", "reasoner_provider_")) from exc
+        raise ReasonerProviderError(
+            str(exc).replace("llm_provider_", "reasoner_provider_")
+        ) from exc
 
 
 class OpenAIResponsesReasonerProvider:
@@ -731,10 +733,7 @@ def reasoner_runtime_status(
         OLLAMA_GENERATE_PROVIDER_ID,
     }:
         return ReasonerRuntimeStatus.MISCONFIGURED
-    if (
-        provider_id == OPENAI_RESPONSES_PROVIDER_ID
-        and not current_settings.reasoner_api_key
-    ):
+    if provider_id == OPENAI_RESPONSES_PROVIDER_ID and not current_settings.reasoner_api_key:
         return ReasonerRuntimeStatus.NOT_CONFIGURED
     if not current_settings.reasoner_enabled:
         return ReasonerRuntimeStatus.DISABLED

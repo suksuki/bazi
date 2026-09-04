@@ -126,15 +126,13 @@ def test_explicit_profile_activation_changes_new_reading_not_source_facts() -> N
     foundation_v2 = foundation_v1.model_copy(
         update={
             "profile_version": "1.0.1-test",
-            "source_refs": foundation_v1.source_refs
-            + ("test-only:admitted-foundation-profile",),
+            "source_refs": foundation_v1.source_refs + ("test-only:admitted-foundation-profile",),
         }
     )
     candidate_v2 = candidate_v1.model_copy(
         update={
             "profile_version": "1.0.1-test",
-            "source_refs": candidate_v1.source_refs
-            + ("test-only:admitted-candidate-profile",),
+            "source_refs": candidate_v1.source_refs + ("test-only:admitted-candidate-profile",),
         }
     )
     authority = KnowledgeAuthority(
@@ -146,9 +144,7 @@ def test_explicit_profile_activation_changes_new_reading_not_source_facts() -> N
             quant_foundation=quant_v1,
         ),
     )
-    candidates = StructuralCandidateCompiler(
-        CandidateQualificationEngine(authority)
-    ).compile(
+    candidates = StructuralCandidateCompiler(CandidateQualificationEngine(authority)).compile(
         chart_version_ref=compiled.chart_version_ref,
         facts=facts,
     )

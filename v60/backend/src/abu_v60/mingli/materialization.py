@@ -81,12 +81,8 @@ class MingliCaseMaterializationService:
             self._timing_compiler.compile(
                 case_ref=case_ref,
                 chart_version_ref=chart_ref,
-                life_case_revision_ref=str(
-                    workspace["life_case"]["life_case_revision_ref"]
-                ),
-                birth_input=BirthInput.model_validate(
-                    workspace["profile"]["birth_input"]
-                ),
+                life_case_revision_ref=str(workspace["life_case"]["life_case_revision_ref"]),
+                birth_input=BirthInput.model_validate(workspace["profile"]["birth_input"]),
                 gender=str(workspace["profile"]["gender"]),
                 pillars=workspace["chart"]["pillars"],
                 facts=facts,
@@ -104,9 +100,7 @@ class MingliCaseMaterializationService:
             self._reading_projector.project(
                 case_ref=case_ref,
                 chart_version_ref=chart_ref,
-                life_case_revision_ref=str(
-                    workspace["life_case"]["life_case_revision_ref"]
-                ),
+                life_case_revision_ref=str(workspace["life_case"]["life_case_revision_ref"]),
                 facts=facts,
                 candidates=candidates,
                 quant_vector=quant,
@@ -121,9 +115,7 @@ class MingliCaseMaterializationService:
             "case_ref": case_ref,
             "subject_kind": subject_kind,
             "chart_version_ref": chart_ref,
-            "life_case_revision_ref": workspace["life_case"][
-                "life_case_revision_ref"
-            ],
+            "life_case_revision_ref": workspace["life_case"]["life_case_revision_ref"],
             "quant_vector_ref": quant.vector_ref,
             "source_review_vector_ref": source_review.vector_ref,
             "mechanism_vector_ref": mechanism.vector_ref,

@@ -1,5 +1,5 @@
-import type { Bootstrap, Session } from "./api";
 import { request } from "./http";
+import type { Bootstrap, Session } from "./publicRuntimeTypes";
 
 export function loadBootstrap(): Promise<Bootstrap> {
   return request("/api/v60/bootstrap");

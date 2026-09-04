@@ -152,9 +152,7 @@ class MingliCaseService:
                     "birth_date": root["birth_date"].isoformat(),
                     "birth_time": root["birth_time"].isoformat(),
                     "timezone": root["timezone"],
-                    "lunar_leap_month": bool(
-                        root["input_json"].get("lunar_leap_month", False)
-                    ),
+                    "lunar_leap_month": bool(root["input_json"].get("lunar_leap_month", False)),
                     "true_solar_time_policy": root["input_json"].get(
                         "true_solar_time_policy",
                         "not_applied",

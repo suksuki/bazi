@@ -1,6 +1,9 @@
 import { request } from "./http";
 import type {
   MingliAgentReading,
+  MingliFocusedPassRecord,
+  MingliFocusedReading,
+  MingliFocus,
   MingliNarrationReadyResponse,
   MingliReadingSummaryProjection,
   MingliStageMode,
@@ -15,6 +18,10 @@ import {
   validateStageProjection,
   validateStageSubjects,
 } from "./mingliStageValidation";
+import {
+  validateFocusedPassRecord,
+  validateFocusedReading,
+} from "./mingliFocusedValidation";
 
 export async function loadMingliStageSubjects(
   signal?: AbortSignal,
@@ -67,6 +74,48 @@ export async function generateMingliAgentReading(
     }),
   });
   return validateAgentReading(value, stage);
+}
+
+export async function generateMingliFocusedReading(
+  stage: MingliStageProjection,
+  signal?: AbortSignal,
+): Promise<MingliFocusedReading> {
+  if (stage.reading_ref === null || stage.reading_hash === null) {
+    throw new Error("这份档案还没有形成可研判的基础命盘。");
+  }
+  const value = await request<unknown>("/api/v60/mingli/stage/focused-reading", {
+    method: "POST",
+    signal,
+    body: JSON.stringify({
+      request_version: "v60.mingli-focused-request.001",
+      case_ref: stage.case_ref,
+      expected_reading_ref: stage.reading_ref,
+      expected_reading_hash: stage.reading_hash,
+    }),
+  });
+  return validateFocusedReading(value, stage);
+}
+
+export async function generateMingliFocusedPass(
+  stage: MingliStageProjection,
+  focus: MingliFocus,
+  signal?: AbortSignal,
+): Promise<MingliFocusedPassRecord> {
+  if (stage.reading_ref === null || stage.reading_hash === null) {
+    throw new Error("这份档案还没有形成可研判的基础命盘。");
+  }
+  const value = await request<unknown>("/api/v60/mingli/stage/focused-pass", {
+    method: "POST",
+    signal,
+    body: JSON.stringify({
+      request_version: "v60.mingli-focused-pass-request.001",
+      case_ref: stage.case_ref,
+      expected_reading_ref: stage.reading_ref,
+      expected_reading_hash: stage.reading_hash,
+      focus,
+    }),
+  });
+  return validateFocusedPassRecord(value, stage);
 }
 
 export async function prepareMingliNarration(

@@ -67,9 +67,7 @@ def test_private_reference_is_listed_and_projects_its_own_formal_reading() -> No
         stage.reading_ref,
         stage.reading_hash,
     )
-    assert summary.reading_brief["qualification"]["status"] == (
-        "FORMAL_BOUNDED_READING"
-    )
+    assert summary.reading_brief["qualification"]["status"] == ("FORMAL_BOUNDED_READING")
     assert summary.agent_status == "NOT_GENERATED"
     assert summary.agent_reading is None
     assert summary.claim_graph is None

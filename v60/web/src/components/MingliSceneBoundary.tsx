@@ -3,11 +3,13 @@ import type { MingliStageProjection } from "../mingliStageTypes";
 
 export function MingliSceneBoundary({
   claimGraphReady,
+  focusedReadingReady = false,
   stage,
   surface,
   wholeChartNeedsReconciliation,
 }: {
   claimGraphReady: boolean;
+  focusedReadingReady?: boolean;
   stage: MingliStageProjection;
   surface: MingliSceneSurface;
   wholeChartNeedsReconciliation: boolean;
@@ -30,13 +32,13 @@ export function MingliSceneBoundary({
   return (
     <footer className="mingli-stage-boundary">
       <span>
-        {claimGraphReady
+        {claimGraphReady || focusedReadingReady
           ? wholeChartNeedsReconciliation
             ? "这份整盘初断已经保存；主解释仍在专业校准，不是定论。"
-            : "这份整盘初断已经保存；刷新或切回档案后仍会回到同一结果。"
-          : "四柱已经排定，等待阿布完成一次整盘研判。"}
+            : "这份分层初断已经保存；刷新或切回档案后仍会回到同一结果。"
+          : "四柱已经排定，等待阿布完成分层初断。"}
       </span>
-      <small>阿布会把原局、结构竞争与岁运放在同一条判断链里。</small>
+      <small>阿布会先问原局总纲，再分别追问意象、人生主题与岁运。</small>
     </footer>
   );
 }

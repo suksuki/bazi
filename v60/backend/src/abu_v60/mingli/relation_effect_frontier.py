@@ -24,9 +24,7 @@ from abu_v60.mingli.source_usability_contracts import (
 )
 
 SOURCE_REVIEW_RUNTIME_SCOPE = "SOURCE_COORDINATE_RELATION_REVIEW"
-REQUIRED_READING_UNRESOLVED_DIMENSIONS = frozenset(
-    {"relation_effect", "usability"}
-)
+REQUIRED_READING_UNRESOLVED_DIMENSIONS = frozenset({"relation_effect", "usability"})
 
 
 class MingliRelationEffectResearchFrontierProjector:
@@ -40,13 +38,11 @@ class MingliRelationEffectResearchFrontierProjector:
         prerequisite: MingliSourceUsabilityPrerequisiteEnvelope,
         refusal: MingliSourceDiscussionAbstentionReceipt,
     ) -> MingliRelationEffectResearchFrontierEnvelope:
-        reading, source_review_vector, prerequisite, refusal = (
-            self._validated_inputs(
-                reading=reading,
-                source_review_vector=source_review_vector,
-                prerequisite=prerequisite,
-                refusal=refusal,
-            )
+        reading, source_review_vector, prerequisite, refusal = self._validated_inputs(
+            reading=reading,
+            source_review_vector=source_review_vector,
+            prerequisite=prerequisite,
+            refusal=refusal,
         )
         self._validate_lineage(
             reading=reading,
@@ -65,17 +61,11 @@ class MingliRelationEffectResearchFrontierProjector:
                     carriers_by_review=carriers_by_review,
                 ),
                 key=lambda item: (
-                    ("year", "month", "day", "hour").index(
-                        item.visible_slot
-                    ),
+                    ("year", "month", "day", "hour").index(item.visible_slot),
                     item.visible_stem,
-                    ("year", "month", "day", "hour").index(
-                        item.source_slot
-                    ),
+                    ("year", "month", "day", "hour").index(item.source_slot),
                     item.source_branch,
-                    ("year", "month", "day", "hour").index(
-                        item.peer_slot
-                    ),
+                    ("year", "month", "day", "hour").index(item.peer_slot),
                     item.peer_branch,
                     item.relation_type,
                     item.intersection_ref,
@@ -96,12 +86,10 @@ class MingliRelationEffectResearchFrontierProjector:
             demands=demands,
             demand_count=len(demands),
             scope_invariant_rule_demand_count=sum(
-                item.dependency_status == "SCOPE_INVARIANT_RULE_DEMAND"
-                for item in demands
+                item.dependency_status == "SCOPE_INVARIANT_RULE_DEMAND" for item in demands
             ),
             match_scope_rule_first_count=sum(
-                item.dependency_status == "MATCH_SCOPE_RULE_FIRST"
-                for item in demands
+                item.dependency_status == "MATCH_SCOPE_RULE_FIRST" for item in demands
             ),
             admitted_effect_rule_count=0,
         )
@@ -120,9 +108,7 @@ class MingliRelationEffectResearchFrontierProjector:
         MingliSourceDiscussionAbstentionReceipt,
     ]:
         validated = (
-            MingliReadingEnvelope.model_validate(
-                reading.model_dump(mode="python")
-            ),
+            MingliReadingEnvelope.model_validate(reading.model_dump(mode="python")),
             MingliSourceCoordinateReviewVector.model_validate(
                 source_review_vector.model_dump(mode="python")
             ),
@@ -133,41 +119,26 @@ class MingliRelationEffectResearchFrontierProjector:
                 refusal.model_dump(mode="python")
             ),
         )
-        current_reading, current_review, current_prerequisite, current_refusal = (
-            validated
-        )
+        current_reading, current_review, current_prerequisite, current_refusal = validated
         if current_reading.reading_version != MINGLI_READING_VERSION:
             raise ValueError("relation_effect_frontier_reading_version_not_supported")
         if current_review.vector_version != SOURCE_REVIEW_VECTOR_VERSION:
-            raise ValueError(
-                "relation_effect_frontier_source_review_version_not_supported"
-            )
-        if (
-            current_prerequisite.prerequisite_version
-            != SOURCE_USABILITY_PREREQUISITE_VERSION
-        ):
-            raise ValueError(
-                "relation_effect_frontier_prerequisite_version_not_supported"
-            )
+            raise ValueError("relation_effect_frontier_source_review_version_not_supported")
+        if current_prerequisite.prerequisite_version != SOURCE_USABILITY_PREREQUISITE_VERSION:
+            raise ValueError("relation_effect_frontier_prerequisite_version_not_supported")
         if current_refusal.receipt_version != SOURCE_DISCUSSION_RECEIPT_VERSION:
             raise ValueError("relation_effect_frontier_refusal_version_not_supported")
         source_review_profile = current_reading.source_review_profile
         if source_review_profile is None:
             raise ValueError("relation_effect_frontier_source_review_profile_missing")
         if source_review_profile.runtime_scope != SOURCE_REVIEW_RUNTIME_SCOPE:
-            raise ValueError(
-                "relation_effect_frontier_source_review_runtime_scope_mismatch"
-            )
+            raise ValueError("relation_effect_frontier_source_review_runtime_scope_mismatch")
         if source_review_profile.professionally_reviewed:
             raise ValueError(
                 "relation_effect_frontier_professionally_reviewed_profile_not_supported"
             )
-        if not REQUIRED_READING_UNRESOLVED_DIMENSIONS <= set(
-            current_reading.unresolved_dimensions
-        ):
-            raise ValueError(
-                "relation_effect_frontier_reading_unresolved_dimensions_missing"
-            )
+        if not REQUIRED_READING_UNRESOLVED_DIMENSIONS <= set(current_reading.unresolved_dimensions):
+            raise ValueError("relation_effect_frontier_reading_unresolved_dimensions_missing")
         if (
             current_refusal.disposition != "ABSTAIN"
             or current_refusal.discussion_allowed
@@ -199,22 +170,15 @@ class MingliRelationEffectResearchFrontierProjector:
         if (
             reading.source_review_vector_ref != source_review_vector.vector_ref
             or reading.source_review_vector_hash != source_review_vector.vector_hash
-            or prerequisite.source_review_vector_ref
-            != source_review_vector.vector_ref
-            or prerequisite.source_review_vector_hash
-            != source_review_vector.vector_hash
-            or refusal.source_review_vector_ref
-            != source_review_vector.vector_ref
-            or refusal.source_review_vector_hash
-            != source_review_vector.vector_hash
+            or prerequisite.source_review_vector_ref != source_review_vector.vector_ref
+            or prerequisite.source_review_vector_hash != source_review_vector.vector_hash
+            or refusal.source_review_vector_ref != source_review_vector.vector_ref
+            or refusal.source_review_vector_hash != source_review_vector.vector_hash
         ):
-            raise ValueError(
-                "relation_effect_frontier_source_review_lineage_mismatch"
-            )
+            raise ValueError("relation_effect_frontier_source_review_lineage_mismatch")
         if (
             prerequisite.quant_vector_ref != source_review_vector.quant_vector_ref
-            or prerequisite.quant_vector_hash
-            != source_review_vector.quant_vector_hash
+            or prerequisite.quant_vector_hash != source_review_vector.quant_vector_hash
             or reading.quant_vector_ref != source_review_vector.quant_vector_ref
             or reading.quant_vector_hash != source_review_vector.quant_vector_hash
         ):
@@ -228,9 +192,7 @@ class MingliRelationEffectResearchFrontierProjector:
             refusal.prerequisite_ref != prerequisite.prerequisite_ref
             or refusal.prerequisite_hash != prerequisite.prerequisite_hash
         ):
-            raise ValueError(
-                "relation_effect_frontier_prerequisite_lineage_mismatch"
-            )
+            raise ValueError("relation_effect_frontier_prerequisite_lineage_mismatch")
         carrier_refs = tuple(item.carrier_ref for item in prerequisite.carriers)
         if (
             refusal.carrier_refs != carrier_refs
@@ -246,9 +208,7 @@ class MingliRelationEffectResearchFrontierProjector:
         source_review_vector: MingliSourceCoordinateReviewVector,
         prerequisite: MingliSourceUsabilityPrerequisiteEnvelope,
     ) -> dict[str, SourceCarrierUsabilityPrerequisite]:
-        reviews = {
-            item.review_ref: item for item in source_review_vector.reviews
-        }
+        reviews = {item.review_ref: item for item in source_review_vector.reviews}
         if len(reviews) != len(source_review_vector.reviews):
             raise ValueError("relation_effect_frontier_review_identity_not_unique")
         carriers_by_review: dict[str, SourceCarrierUsabilityPrerequisite] = {}
@@ -259,38 +219,23 @@ class MingliRelationEffectResearchFrontierProjector:
             for review_ref in inclusive.source_review_refs:
                 review = reviews.get(review_ref)
                 if review is None or review_ref in carriers_by_review:
-                    raise ValueError(
-                        "relation_effect_frontier_review_carrier_bijection_invalid"
-                    )
+                    raise ValueError("relation_effect_frontier_review_carrier_bijection_invalid")
                 cls._validate_review_carrier(review=review, carrier=carrier)
                 carriers_by_review[review_ref] = carrier
-                intersections = [
-                    item.intersection_ref
-                    for item in review.relation_intersections
-                ]
+                intersections = [item.intersection_ref for item in review.relation_intersections]
                 expected_inclusive_intersections.extend(intersections)
                 if review_ref in strict.source_review_refs:
                     if review.source_match_kind != "EXACT_IDENTITY":
-                        raise ValueError(
-                            "relation_effect_frontier_strict_scope_match_invalid"
-                        )
+                        raise ValueError("relation_effect_frontier_strict_scope_match_invalid")
                     expected_strict_intersections.extend(intersections)
                 elif review.source_match_kind != "SAME_ELEMENT_DIFFERENT_IDENTITY":
-                    raise ValueError(
-                        "relation_effect_frontier_inclusive_scope_match_invalid"
-                    )
+                    raise ValueError("relation_effect_frontier_inclusive_scope_match_invalid")
             if strict.intersection_refs != tuple(
                 sorted(expected_strict_intersections)
-            ) or inclusive.intersection_refs != tuple(
-                sorted(expected_inclusive_intersections)
-            ):
-                raise ValueError(
-                    "relation_effect_frontier_scope_intersection_mismatch"
-                )
+            ) or inclusive.intersection_refs != tuple(sorted(expected_inclusive_intersections)):
+                raise ValueError("relation_effect_frontier_scope_intersection_mismatch")
         if set(carriers_by_review) != set(reviews):
-            raise ValueError(
-                "relation_effect_frontier_review_carrier_bijection_invalid"
-            )
+            raise ValueError("relation_effect_frontier_review_carrier_bijection_invalid")
         return carriers_by_review
 
     @staticmethod
@@ -303,9 +248,7 @@ class MingliRelationEffectResearchFrontierProjector:
             review.visible_slot != carrier.visible_slot
             or review.visible_stem != carrier.visible_stem
         ):
-            raise ValueError(
-                "relation_effect_frontier_review_carrier_coordinate_mismatch"
-            )
+            raise ValueError("relation_effect_frontier_review_carrier_coordinate_mismatch")
 
     @staticmethod
     def _demands(

@@ -217,7 +217,9 @@ def upgrade() -> None:
         sa.Column("revision", sa.BigInteger(), nullable=False),
         sa.Column("status", sa.String(length=80), nullable=False),
         sa.Column("payload_json", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-        sa.Column("evidence_manifest_json", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column(
+            "evidence_manifest_json", postgresql.JSONB(astext_type=sa.Text()), nullable=False
+        ),
         sa.Column("revision_hash", sa.String(length=64), nullable=False, unique=True),
         sa.Column(
             "created_at",

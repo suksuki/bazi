@@ -51,12 +51,8 @@ class MingliSyntheticExperimentRunStore:
                 {
                     **payload,
                     "analysis_date": date.fromisoformat(payload["analysis_date"]),
-                    "member_a_stage_json": canonical_json(
-                        payload["member_a_stage_json"]
-                    ),
-                    "member_b_stage_json": canonical_json(
-                        payload["member_b_stage_json"]
-                    ),
+                    "member_a_stage_json": canonical_json(payload["member_a_stage_json"]),
+                    "member_b_stage_json": canonical_json(payload["member_b_stage_json"]),
                     "evaluation_json": canonical_json(payload["evaluation_json"]),
                     "run_ref": run_ref,
                     "run_hash": run_hash,
@@ -64,9 +60,7 @@ class MingliSyntheticExperimentRunStore:
             )
         stored = self.get(run_ref=run_ref)
         if stored is None or stored["run_hash"] != run_hash:
-            raise MingliSyntheticExperimentRunStoreError(
-                "mingli_synthetic_experiment_run_conflict"
-            )
+            raise MingliSyntheticExperimentRunStoreError("mingli_synthetic_experiment_run_conflict")
         return stored
 
     def latest(self, *, experiment_ref: str) -> dict[str, Any] | None:

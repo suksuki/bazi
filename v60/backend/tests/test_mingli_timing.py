@@ -113,7 +113,7 @@ def test_liu_jin_timing_coordinates_are_real_and_bounded() -> None:
     assert "reality_event" in timing.forbidden_conclusions
 
 
-def test_yanzhou_timing_coordinates_feed_dream_without_deciding_story() -> None:
+def test_yanzhou_timing_coordinates_remain_bounded_without_deciding_events() -> None:
     _, _, timing = _compile_timing(
         case_ref="case-yanzhou-timing",
         birth_date=date(1991, 8, 14),

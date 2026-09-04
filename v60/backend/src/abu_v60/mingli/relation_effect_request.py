@@ -23,9 +23,7 @@ class RelationEffectEvidenceRequestError(ValueError):
     pass
 
 
-class RelationEffectEvidenceRequestConflictError(
-    RelationEffectEvidenceRequestError
-):
+class RelationEffectEvidenceRequestConflictError(RelationEffectEvidenceRequestError):
     pass
 
 
@@ -125,9 +123,7 @@ class RelationEffectEvidenceRequestStore:
                 "packet_ref": expected.packet_ref,
                 "packet_hash": expected.packet_hash,
                 "idempotency_key": expected.idempotency_key,
-                "receipt_json": canonical_json(
-                    expected.model_dump(mode="json")
-                ),
+                "receipt_json": canonical_json(expected.model_dump(mode="json")),
                 "receipt_hash": expected.receipt_hash,
             },
         )
@@ -264,9 +260,7 @@ class RelationEffectEvidenceRequestStore:
                         slot_ref=slot.slot_ref,
                         dimension_id=slot.dimension_id,
                         requirement=slot.requirement,
-                        requested_artifact_kinds=(
-                            slot.requested_artifact_kinds
-                        ),
+                        requested_artifact_kinds=(slot.requested_artifact_kinds),
                         next_action=slot.next_action,
                     )
                     for slot in demand.dimension_slots
@@ -389,9 +383,7 @@ class RelationEffectEvidenceRequestStore:
         row: Any,
     ) -> RelationEffectEvidenceRequestReceipt:
         try:
-            receipt = RelationEffectEvidenceRequestReceipt.model_validate(
-                row["receipt_json"]
-            )
+            receipt = RelationEffectEvidenceRequestReceipt.model_validate(row["receipt_json"])
         except (ValidationError, ValueError) as exc:
             raise RelationEffectEvidenceRequestError(
                 "relation_effect_evidence_request_receipt_invalid"

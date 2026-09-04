@@ -12,6 +12,16 @@ from abu_v60.mingli.agent_runtime import mingli_agent_runtime_manifest
 from abu_v60.mingli.agent_store import MingliAgentReadingStore
 from abu_v60.mingli.brief import MingliReadingBriefProjector
 from abu_v60.mingli.domain_store import MingliLifeDomainVectorStore
+from abu_v60.mingli.focused_pass_store import MingliFocusedPassStore
+from abu_v60.mingli.focused_reading_contracts import (
+    MINGLI_FOCUS_ORDER,
+    MingliFocusedPassRecord,
+    MingliFocusedReadingEnvelope,
+)
+from abu_v60.mingli.focused_reading_runtime import (
+    mingli_focused_runtime_manifest,
+)
+from abu_v60.mingli.focused_reading_store import MingliFocusedReadingStore
 from abu_v60.mingli.mechanism_decision import MingliMechanismComparisonService
 from abu_v60.mingli.mechanism_store import MingliMechanismVectorStore
 from abu_v60.mingli.quant_store import MingliQuantVectorStore
@@ -23,10 +33,8 @@ from abu_v60.mingli.showcases import SHOWCASE_ACCOUNT_REF, SHOWCASE_BY_SUBJECT
 from abu_v60.mingli.timing_store import MingliTimingVectorStore
 from abu_v60.provenance import content_hash, stable_ref
 
-MINGLI_READING_SUMMARY_VERSION = "v60.mingli-reading-summary.006"
-SUPPORTED_SUBJECT_KINDS = frozenset(
-    {"HUMAN_OWNER", "HUMAN_REFERENCE", "CANONICAL_SYNTHETIC"}
-)
+MINGLI_READING_SUMMARY_VERSION = "v60.mingli-reading-summary.008"
+SUPPORTED_SUBJECT_KINDS = frozenset({"HUMAN_OWNER", "HUMAN_REFERENCE", "CANONICAL_SYNTHETIC"})
 SHOWCASE_CASE_REFS = frozenset(item.case_ref for item in SHOWCASE_BY_SUBJECT.values())
 
 
@@ -41,7 +49,7 @@ class MingliReadingSummaryProjection(BaseModel):
 
     summary_ref: str = Field(min_length=1)
     summary_hash: str = Field(min_length=64, max_length=64)
-    summary_version: Literal["v60.mingli-reading-summary.006"]
+    summary_version: Literal["v60.mingli-reading-summary.008"]
     case_ref: str = Field(min_length=1)
     chart_version_ref: str = Field(min_length=1)
     life_case_revision_ref: str = Field(min_length=1)
@@ -53,6 +61,12 @@ class MingliReadingSummaryProjection(BaseModel):
         "CANONICAL_SYNTHETIC",
     ]
     reading_brief: dict[str, Any]
+    focused_runtime_status: Literal["READY_FOR_OWNER_REVIEW", "DISABLED"]
+    focused_generation_available: bool
+    focused_status: Literal["READY", "PARTIAL", "NOT_GENERATED"]
+    focused_reading: MingliFocusedReadingEnvelope | None
+    focused_pass_records: tuple[MingliFocusedPassRecord, ...] = Field(max_length=5)
+    focused_projection_scope: Literal["OWNER_REVIEW", "NOT_GENERATED"]
     agent_runtime_status: Literal[
         "READY",
         "DISABLED",
@@ -90,18 +104,15 @@ class MingliReadingSummaryProjection(BaseModel):
                 self.agent_status != "NOT_GENERATED"
                 or self.claim_graph is not None
                 or self.agent_projection_scope != "NOT_GENERATED"
-                or self.image_projection_status != "NOT_GENERATED"
             ):
                 raise ValueError("mingli_reading_summary_agent_status_mismatch")
         elif (
             self.agent_status != "READY"
             or self.claim_graph is None
             or self.agent_projection_scope not in {"OWNER_REVIEW", "PUBLIC"}
-            or self.image_projection_status != "AGENT_INTERPRETATION"
             or self.agent_reading.case_ref != self.case_ref
             or self.agent_reading.chart_version_ref != self.chart_version_ref
-            or self.agent_reading.life_case_revision_ref
-            != self.life_case_revision_ref
+            or self.agent_reading.life_case_revision_ref != self.life_case_revision_ref
             or self.agent_reading.reading_ref != self.reading_ref
             or self.agent_reading.reading_hash != self.reading_hash
         ):
@@ -113,10 +124,8 @@ class MingliReadingSummaryProjection(BaseModel):
             or self.claim_graph.reading_ref != self.reading_ref
             or self.claim_graph.reading_hash != self.reading_hash
             or self.agent_reading is None
-            or self.claim_graph.agent_reading_ref
-            != self.agent_reading.agent_reading_ref
-            or self.claim_graph.agent_reading_hash
-            != self.agent_reading.agent_reading_hash
+            or self.claim_graph.agent_reading_ref != self.agent_reading.agent_reading_ref
+            or self.claim_graph.agent_reading_hash != self.agent_reading.agent_reading_hash
         ):
             raise ValueError("mingli_reading_summary_claim_graph_lineage_mismatch")
         if (
@@ -129,11 +138,71 @@ class MingliReadingSummaryProjection(BaseModel):
             self.agent_runtime_status in {"READY", "READY_FOR_OWNER_REVIEW"}
         ):
             raise ValueError("mingli_reading_summary_agent_runtime_status_mismatch")
+        records = self.focused_pass_records
+        record_focuses = tuple(item.focus for item in records)
+        if record_focuses != tuple(
+            focus for focus in MINGLI_FOCUS_ORDER if focus in record_focuses
+        ):
+            raise ValueError("mingli_reading_summary_focused_pass_order_invalid")
+        if any(
+            item.case_ref != self.case_ref
+            or item.chart_version_ref != self.chart_version_ref
+            or item.life_case_revision_ref != self.life_case_revision_ref
+            or item.reading_ref != self.reading_ref
+            or item.reading_hash != self.reading_hash
+            for item in records
+        ):
+            raise ValueError("mingli_reading_summary_focused_pass_lineage_mismatch")
+        structure = next(
+            (item for item in records if item.focus == "STRUCTURE"),
+            None,
+        )
+        if any(
+            item.focus != "STRUCTURE"
+            and (structure is None or item.structure_pass_hash != structure.pass_result.pass_hash)
+            for item in records
+        ):
+            raise ValueError("mingli_reading_summary_focused_structure_mismatch")
+        has_focused = self.focused_reading is not None or bool(records)
+        expected_focused_status = (
+            "READY"
+            if self.focused_reading is not None or len(records) == len(MINGLI_FOCUS_ORDER)
+            else "PARTIAL"
+            if records
+            else "NOT_GENERATED"
+        )
+        expected_focused_scope = "OWNER_REVIEW" if has_focused else "NOT_GENERATED"
+        if (
+            self.focused_status != expected_focused_status
+            or self.focused_projection_scope != expected_focused_scope
+        ):
+            raise ValueError("mingli_reading_summary_focused_status_mismatch")
+        if self.focused_reading is not None and (
+            self.focused_reading.case_ref != self.case_ref
+            or self.focused_reading.chart_version_ref != self.chart_version_ref
+            or self.focused_reading.life_case_revision_ref != self.life_case_revision_ref
+            or self.focused_reading.reading_ref != self.reading_ref
+            or self.focused_reading.reading_hash != self.reading_hash
+        ):
+            raise ValueError("mingli_reading_summary_focused_lineage_mismatch")
+        if self.focused_generation_available != (
+            self.focused_runtime_status == "READY_FOR_OWNER_REVIEW"
+        ):
+            raise ValueError("mingli_reading_summary_focused_runtime_status_mismatch")
+        expected_image_status = (
+            "AGENT_INTERPRETATION"
+            if has_focused or self.agent_reading is not None
+            else "NOT_GENERATED"
+        )
+        if self.image_projection_status != expected_image_status:
+            raise ValueError("mingli_reading_summary_image_status_mismatch")
         return self
 
     @classmethod
     def issue(cls, **values: Any) -> MingliReadingSummaryProjection:
         agent_reading = values.get("agent_reading")
+        focused_reading = values.get("focused_reading")
+        focused_pass_records = tuple(values.get("focused_pass_records", ()))
         claim_graph = values.get("claim_graph")
         if (agent_reading is None) != (claim_graph is None):
             raise ValueError("mingli_reading_summary_claim_graph_copresence_required")
@@ -143,15 +212,22 @@ class MingliReadingSummaryProjection(BaseModel):
             and isinstance(claim_graph, MingliReadingClaimGraph)
             and not claim_graph.public_projection_allowed
         ):
-            raise ValueError(
-                "mingli_reading_summary_unqualified_graph_cannot_be_public"
-            )
+            raise ValueError("mingli_reading_summary_unqualified_graph_cannot_be_public")
         normalized_values = {
             **values,
             "agent_reading": (
                 agent_reading.model_dump(mode="json")
                 if isinstance(agent_reading, BaseModel)
                 else agent_reading
+            ),
+            "focused_reading": (
+                focused_reading.model_dump(mode="json")
+                if isinstance(focused_reading, BaseModel)
+                else focused_reading
+            ),
+            "focused_pass_records": tuple(
+                item.model_dump(mode="json") if isinstance(item, BaseModel) else item
+                for item in focused_pass_records
             ),
             "claim_graph": (
                 claim_graph.model_dump(mode="json")
@@ -162,6 +238,19 @@ class MingliReadingSummaryProjection(BaseModel):
         identity = {
             **normalized_values,
             "summary_version": MINGLI_READING_SUMMARY_VERSION,
+            "focused_status": (
+                "READY"
+                if focused_reading is not None
+                or len(focused_pass_records) == len(MINGLI_FOCUS_ORDER)
+                else "PARTIAL"
+                if focused_pass_records
+                else "NOT_GENERATED"
+            ),
+            "focused_projection_scope": (
+                "OWNER_REVIEW"
+                if focused_reading is not None or focused_pass_records
+                else "NOT_GENERATED"
+            ),
             "agent_status": "READY" if agent_reading is not None else "NOT_GENERATED",
             "agent_projection_scope": (
                 "PUBLIC"
@@ -172,7 +261,7 @@ class MingliReadingSummaryProjection(BaseModel):
             ),
             "image_projection_status": (
                 "AGENT_INTERPRETATION"
-                if agent_reading is not None
+                if focused_reading is not None or focused_pass_records or agent_reading is not None
                 else "NOT_GENERATED"
             ),
             "professional_verdict_allowed": False,
@@ -194,6 +283,9 @@ class MingliReadingSummaryService:
         self._agent_readings = MingliAgentReadingStore(engine)
         self._agent_runtime_manifest = mingli_agent_runtime_manifest()
         self._agent_runtime_profile = self._agent_runtime_manifest["profile"]
+        self._focused_readings = MingliFocusedReadingStore(engine)
+        self._focused_passes = MingliFocusedPassStore(engine)
+        self._focused_runtime_manifest = mingli_focused_runtime_manifest()
         self._quant = MingliQuantVectorStore(engine)
         self._mechanism = MingliMechanismVectorStore(engine)
         self._timing = MingliTimingVectorStore(engine)
@@ -291,20 +383,32 @@ class MingliReadingSummaryService:
                 case_ref=case_ref,
                 reading_ref=reading.reading_ref,
                 reading_hash=reading.reading_hash,
-                agent_profile_ref=str(
-                    self._agent_runtime_profile["agent_profile_ref"]
-                ),
-                agent_profile_hash=str(
-                    self._agent_runtime_profile["agent_profile_hash"]
-                ),
-                provider_profile_ref=str(
-                    self._agent_runtime_profile["provider_profile_ref"]
-                ),
-                provider_profile_hash=str(
-                    self._agent_runtime_profile["provider_profile_hash"]
-                ),
+                agent_profile_ref=str(self._agent_runtime_profile["agent_profile_ref"]),
+                agent_profile_hash=str(self._agent_runtime_profile["agent_profile_hash"]),
+                provider_profile_ref=str(self._agent_runtime_profile["provider_profile_ref"]),
+                provider_profile_hash=str(self._agent_runtime_profile["provider_profile_hash"]),
                 prompt_ref=str(self._agent_runtime_profile["prompt_ref"]),
                 prompt_hash=str(self._agent_runtime_profile["prompt_hash"]),
+            )
+        focused_reading = None
+        focused_pass_records: tuple[MingliFocusedPassRecord, ...] = ()
+        focused_profile = self._focused_runtime_manifest.get("provider_profile")
+        if isinstance(focused_profile, dict):
+            focused_reading = self._focused_readings.latest(
+                requester_account_ref=account_ref,
+                case_ref=case_ref,
+                reading_ref=reading.reading_ref,
+                reading_hash=reading.reading_hash,
+                provider_profile_hash=str(self._focused_runtime_manifest["provider_profile_hash"]),
+                prompt_hash=str(self._focused_runtime_manifest["prompt_hash"]),
+            )
+            focused_pass_records = self._focused_passes.latest_all(
+                requester_account_ref=account_ref,
+                case_ref=case_ref,
+                reading_ref=reading.reading_ref,
+                reading_hash=reading.reading_hash,
+                provider_profile_hash=str(self._focused_runtime_manifest["provider_profile_hash"]),
+                prompt_hash=str(self._focused_runtime_manifest["prompt_hash"]),
             )
         claim_graph = None
         if agent_reading is not None:
@@ -327,14 +431,17 @@ class MingliReadingSummaryService:
             reading_hash=reading.reading_hash,
             subject_kind=subject_kind,
             reading_brief=brief,
+            focused_runtime_status=str(self._focused_runtime_manifest["status"]),
+            focused_generation_available=(
+                self._focused_runtime_manifest["status"] == "READY_FOR_OWNER_REVIEW"
+            ),
+            focused_reading=focused_reading,
+            focused_pass_records=focused_pass_records,
             agent_runtime_status=str(self._agent_runtime_manifest["status"]),
             agent_generation_available=(
-                self._agent_runtime_manifest["status"]
-                in {"READY", "READY_FOR_OWNER_REVIEW"}
+                self._agent_runtime_manifest["status"] in {"READY", "READY_FOR_OWNER_REVIEW"}
             ),
             agent_reading=agent_reading,
             claim_graph=claim_graph,
-            publication_allowed=bool(
-                self._agent_runtime_manifest["publication_allowed"]
-            ),
+            publication_allowed=bool(self._agent_runtime_manifest["publication_allowed"]),
         )

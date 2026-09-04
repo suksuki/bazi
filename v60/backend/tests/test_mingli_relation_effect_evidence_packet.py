@@ -36,9 +36,7 @@ def _evidence_packet(
         reverse_facts=reverse_facts,
     )
     frontier = project_relation_effect_frontier(bundle)
-    review = MingliRelationEffectAdmissionProjector().project(
-        frontier=frontier
-    )
+    review = MingliRelationEffectAdmissionProjector().project(frontier=frontier)
     packet = MingliRelationEffectEvidencePacketProjector().project(
         reading=bundle["reading"],
         frontier=frontier,
@@ -63,10 +61,7 @@ def test_relation_effect_evidence_packet_projects_real_10_7_3_readiness() -> Non
     reading = bundle["reading"]
 
     assert first == second
-    assert (
-        first.packet_version
-        == RELATION_EFFECT_EVIDENCE_PACKET_VERSION
-    )
+    assert first.packet_version == RELATION_EFFECT_EVIDENCE_PACKET_VERSION
     assert source_review.source_evidence_count == 10
     assert source_review.clear_coordinate_count == 7
     assert source_review.review_required_count == 3
@@ -77,21 +72,11 @@ def test_relation_effect_evidence_packet_projects_real_10_7_3_readiness() -> Non
     assert first.ready_dimension_slot_count == 0
     assert first.professional_evidence_count == 0
     assert first.status == "EVIDENCE_INTAKE_REQUIRED"
-    assert first.projection_semantics == (
-        "PROFESSIONAL_EVIDENCE_READINESS_NOT_DECISION"
-    )
-    assert first.decision_path_semantics == (
-        "READINESS_PATH_NOT_DECISION"
-    )
-    assert first.decision_path == (
-        RELATION_EFFECT_EVIDENCE_DECISION_PATH
-    )
-    assert first.required_professional_path_semantics == (
-        "FUTURE_AUTHORITY_PATH_NOT_EXECUTED"
-    )
-    assert first.required_professional_path == (
-        RELATION_EFFECT_REQUIRED_PROFESSIONAL_PATH
-    )
+    assert first.projection_semantics == ("PROFESSIONAL_EVIDENCE_READINESS_NOT_DECISION")
+    assert first.decision_path_semantics == ("READINESS_PATH_NOT_DECISION")
+    assert first.decision_path == (RELATION_EFFECT_EVIDENCE_DECISION_PATH)
+    assert first.required_professional_path_semantics == ("FUTURE_AUTHORITY_PATH_NOT_EXECUTED")
+    assert first.required_professional_path == (RELATION_EFFECT_REQUIRED_PROFESSIONAL_PATH)
     assert first.effect_decision_status == "WITHHELD"
     assert (first.case_ref, first.chart_version_ref) == (
         reading.case_ref,
@@ -112,11 +97,7 @@ def test_relation_effect_evidence_packet_projects_real_10_7_3_readiness() -> Non
 
     demand_packet = first.demand_packets[0]
     assessment = review.assessments[0]
-    demand = next(
-        item
-        for item in frontier.demands
-        if item.demand_ref == assessment.demand_ref
-    )
+    demand = next(item for item in frontier.demands if item.demand_ref == assessment.demand_ref)
     assert (
         demand_packet.assessment_ref,
         demand_packet.assessment_hash,
@@ -134,34 +115,23 @@ def test_relation_effect_evidence_packet_projects_real_10_7_3_readiness() -> Non
     assert demand_packet.ready_dimension_slot_count == 0
     assert demand_packet.professional_evidence_count == 0
     assert demand_packet.status == "EVIDENCE_INTAKE_REQUIRED"
-    assert [
-        item.dimension_id
-        for item in demand_packet.dimension_slots
-    ] == list(RELATION_EFFECT_RULE_DIMENSIONS)
-    assert [
-        item.current_basis_refs
-        for item in demand_packet.dimension_slots
-    ] == [
-        item.current_basis_refs
-        for item in assessment.dimension_assessments
+    assert [item.dimension_id for item in demand_packet.dimension_slots] == list(
+        RELATION_EFFECT_RULE_DIMENSIONS
+    )
+    assert [item.current_basis_refs for item in demand_packet.dimension_slots] == [
+        item.current_basis_refs for item in assessment.dimension_assessments
     ]
     assert all(
-        item.current_basis_status
-        == "RUNTIME_CONTEXT_ONLY_NOT_PROFESSIONAL_EVIDENCE"
-        and item.guidance_semantics
-        == "REQUEST_GUIDANCE_NOT_KNOWLEDGE_ADMISSION"
+        item.current_basis_status == "RUNTIME_CONTEXT_ONLY_NOT_PROFESSIONAL_EVIDENCE"
+        and item.guidance_semantics == "REQUEST_GUIDANCE_NOT_KNOWLEDGE_ADMISSION"
         and item.professional_evidence_refs == ()
         and item.professional_evidence_count == 0
-        and item.slot_status
-        == "BLOCKED_MISSING_PROFESSIONAL_EVIDENCE"
+        and item.slot_status == "BLOCKED_MISSING_PROFESSIONAL_EVIDENCE"
         and item.requested_artifact_kinds
         and item.requirement
         and item.next_action
         and item.ready is False
-        and not (
-            set(item.current_basis_refs)
-            & set(item.professional_evidence_refs)
-        )
+        and not (set(item.current_basis_refs) & set(item.professional_evidence_refs))
         for item in demand_packet.dimension_slots
     )
     assert all(
@@ -258,9 +228,7 @@ def test_relation_effect_evidence_revalidates_reading_frontier_and_review_hashes
         match="mingli_reading_hash_mismatch",
     ):
         projector.project(
-            reading=bundle["reading"].model_copy(
-                update={"reading_hash": "f" * 64}
-            ),
+            reading=bundle["reading"].model_copy(update={"reading_hash": "f" * 64}),
             frontier=frontier,
             admission_review=review,
         )
@@ -270,9 +238,7 @@ def test_relation_effect_evidence_revalidates_reading_frontier_and_review_hashes
     ):
         projector.project(
             reading=bundle["reading"],
-            frontier=frontier.model_copy(
-                update={"reading_hash": "f" * 64}
-            ),
+            frontier=frontier.model_copy(update={"reading_hash": "f" * 64}),
             admission_review=review,
         )
     with pytest.raises(
@@ -282,9 +248,7 @@ def test_relation_effect_evidence_revalidates_reading_frontier_and_review_hashes
         projector.project(
             reading=bundle["reading"],
             frontier=frontier,
-            admission_review=review.model_copy(
-                update={"frontier_hash": "f" * 64}
-            ),
+            admission_review=review.model_copy(update={"frontier_hash": "f" * 64}),
         )
 
 
@@ -315,9 +279,7 @@ def test_relation_effect_evidence_fails_closed_on_rehashed_coordinate_drift() ->
         mode="json",
         exclude={"review_ref", "review_hash"},
     )
-    review_identity["assessments"] = (
-        forged_assessment.model_dump(mode="json"),
-    )
+    review_identity["assessments"] = (forged_assessment.model_dump(mode="json"),)
     forged_review = MingliRelationEffectAdmissionReviewEnvelope(
         review_ref=stable_ref(
             "v60-relation-effect-admission-review",
@@ -348,28 +310,19 @@ def test_relation_effect_evidence_rejects_version_and_packet_forgery() -> None:
         )
     )
     version_drift = packet.model_dump(mode="python")
-    version_drift["packet_version"] = (
-        "v60.mingli-relation-effect-evidence-packet.999"
-    )
+    version_drift["packet_version"] = "v60.mingli-relation-effect-evidence-packet.999"
     with pytest.raises(ValueError, match="packet_version"):
-        MingliRelationEffectEvidencePacketEnvelope.model_validate(
-            version_drift
-        )
+        MingliRelationEffectEvidencePacketEnvelope.model_validate(version_drift)
 
     slot_drift = packet.model_dump(mode="python")
-    slot_drift["demand_packets"][0]["dimension_slots"][0][
-        "professional_evidence_refs"
-    ] = ("artifact:forged",)
+    slot_drift["demand_packets"][0]["dimension_slots"][0]["professional_evidence_refs"] = (
+        "artifact:forged",
+    )
     with pytest.raises(
         ValueError,
-        match=(
-            "relation_effect_evidence_slot_"
-            "professional_evidence_not_admitted"
-        ),
+        match=("relation_effect_evidence_slot_professional_evidence_not_admitted"),
     ):
-        MingliRelationEffectEvidencePacketEnvelope.model_validate(
-            slot_drift
-        )
+        MingliRelationEffectEvidencePacketEnvelope.model_validate(slot_drift)
 
 
 def test_relation_effect_evidence_requires_canonical_knowledge_registry() -> None:
@@ -382,9 +335,7 @@ def test_relation_effect_evidence_requires_canonical_knowledge_registry() -> Non
         )
     )
     frontier = project_relation_effect_frontier(bundle)
-    review = MingliRelationEffectAdmissionProjector().project(
-        frontier=frontier
-    )
+    review = MingliRelationEffectAdmissionProjector().project(frontier=frontier)
     authority = KnowledgeAuthority(
         relation_effect_admission_policies=(),
     )
@@ -393,9 +344,7 @@ def test_relation_effect_evidence_requires_canonical_knowledge_registry() -> Non
         KnowledgeAuthorityError,
         match="relation_effect_admission_policy_not_registered",
     ):
-        MingliRelationEffectEvidencePacketProjector(
-            authority=authority
-        ).project(
+        MingliRelationEffectEvidencePacketProjector(authority=authority).project(
             reading=bundle["reading"],
             frontier=frontier,
             admission_review=review,
@@ -404,7 +353,4 @@ def test_relation_effect_evidence_requires_canonical_knowledge_registry() -> Non
     assert bazi_relation_effect_admission_policy().professionally_reviewed is False
     proposal = bazi_zi_wu_automatic_damage_proposal()
     assert proposal.professional_source_manifest == ()
-    assert all(
-        item.evidence_refs == ()
-        for item in proposal.dimension_submissions
-    )
+    assert all(item.evidence_refs == () for item in proposal.dimension_submissions)

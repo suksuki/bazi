@@ -6,21 +6,13 @@ import {
   type CSSProperties,
 } from "react";
 
-import type { RuntimeMediaManifest } from "../api";
+import type { RuntimeMediaManifest } from "../publicRuntimeTypes";
 import type { HomeWorldLight } from "../homeWorldLight";
-import { hasMingliLayerNarration } from "../mingliLayerNarrationProjection";
 import type {
   MingliLeafEntry,
   MingliReadingLayer,
 } from "../mingliStageNavigation";
-import type {
-  MingliReadingSummaryProjection,
-  MingliStageProjection,
-} from "../mingliStageTypes";
-import {
-  MingliReadingLayerContent,
-  summaryMatchesStage,
-} from "./MingliReadingJourney";
+import type { MingliStageProjection } from "../mingliStageTypes";
 import { TransparentCharacterMedia } from "./TransparentCharacterMedia";
 
 type EntryState = "opening" | "entered" | "closing";
@@ -49,13 +41,8 @@ export function MingliBranchJourney({
   media,
   onClose,
   onEntryConsumed,
-  onLayerChange,
-  onGenerateAgent,
-  onOpenLab,
-  onOpenRehearsal,
-  onOpenStage,
+  onActivateLayer,
   stage,
-  summary,
 }: {
   agentError: string | null;
   agentGenerating: boolean;
@@ -65,13 +52,8 @@ export function MingliBranchJourney({
   media: RuntimeMediaManifest;
   onClose: () => void;
   onEntryConsumed: () => void;
-  onLayerChange: (layer: MingliReadingLayer) => void;
-  onGenerateAgent: () => void;
-  onOpenLab: () => void;
-  onOpenRehearsal: () => void;
-  onOpenStage: (expandTime: boolean) => void;
+  onActivateLayer: (layer: MingliReadingLayer) => void;
   stage: MingliStageProjection;
-  summary: MingliReadingSummaryProjection | null;
 }) {
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const shouldGrow = entry !== null && !reducedMotion;
@@ -88,11 +70,6 @@ export function MingliBranchJourney({
   const videoRef = useRef<HTMLVideoElement>(null);
   const timerRef = useRef<number | null>(null);
   const entryTimerRef = useRef<number | null>(null);
-  const hasFormalReading = summaryMatchesStage(summary, stage);
-  const hasClaimGraph = hasFormalReading && summary?.claim_graph !== null;
-  const hasLayerRehearsal = hasFormalReading
-    && summary?.claim_graph != null
-    && hasMingliLayerNarration(summary.claim_graph, layer);
   const guideIsDodo = light === "day";
   const guideCue = guideIsDodo ? media.cues.dodo_idle : media.cues.abu_idle;
   const film = light === "day"
@@ -180,7 +157,6 @@ export function MingliBranchJourney({
 
   const replay = () => {
     videoRef.current?.pause();
-    onLayerChange("principle");
     setGrowthState("growing");
     setRevealedCount(0);
     setReplayNonce((current) => current + 1);
@@ -207,7 +183,7 @@ export function MingliBranchJourney({
   const ready = growthState !== "growing";
   return (
     <section
-      aria-busy={!ready}
+      aria-busy={!ready || agentGenerating}
       aria-label={`${stage.display_name}的命理枝`}
       aria-modal="true"
       className="mingli-growth-world"
@@ -215,7 +191,6 @@ export function MingliBranchJourney({
       data-growth-state={growthState}
       data-layer={layer}
       data-light={light}
-      data-claim-graph-ref={hasClaimGraph ? summary?.claim_graph?.graph_ref : undefined}
       role="dialog"
       style={style}
     >
@@ -251,12 +226,12 @@ export function MingliBranchJourney({
           const revealed = growthState !== "growing" || index < revealedCount;
           return (
             <button
-              aria-label={`${item.professional}：${item.product}`}
+              aria-label={`点${item.organ}，让阿布说${item.product}`}
               aria-pressed={layer === item.id}
               className={`mingli-growth-node is-${item.id} ${revealed ? "is-revealed" : ""}`}
-              disabled={!ready || !revealed}
+              disabled={!ready || !revealed || agentGenerating}
               key={item.id}
-              onClick={() => onLayerChange(item.id)}
+              onClick={() => onActivateLayer(item.id)}
               type="button"
             >
               <span>{item.organ}</span>
@@ -271,19 +246,15 @@ export function MingliBranchJourney({
         {ready && !reducedMotion && (
           <button onClick={replay} type="button"><span aria-hidden="true">↺</span> 重看生长</button>
         )}
-        {ready && (
-          <button onClick={onOpenLab} type="button"><span aria-hidden="true">◇</span> 进入命理 Lab</button>
-        )}
       </div>
 
       {ready && (
         <>
-          <button
-            aria-label={`进入${guideIsDodo ? "多多" : "阿布"}陪伴的命理舞台`}
+          <div
+            aria-live="polite"
             className={`mingli-growth-guide ${guideIsDodo ? "is-dodo" : "is-abu"}`}
-            disabled={!hasLayerRehearsal}
-            onClick={onOpenRehearsal}
-            type="button"
+            data-speaking-state={agentGenerating ? "preparing" : agentError ? "retry" : "ready"}
+            role="status"
           >
             <TransparentCharacterMedia
               active
@@ -294,35 +265,12 @@ export function MingliBranchJourney({
               video={guideCue.deliveries.VP9_ALPHA_WEBM}
               webp={guideCue.deliveries.ANIMATED_WEBP}
             />
-            <span>{hasLayerRehearsal
-              ? `${guideIsDodo ? "多多" : "阿布"} · 带你看这一层`
-              : hasClaimGraph
-                ? "这一层暂无可讲的判断"
-                : "完成整盘初断后，可以一起看"}</span>
-          </button>
-          <article aria-live="polite" className="mingli-growth-whisper">
-            <header className="mingli-growth-identity">
-              <span>{stage.identity_badge}</span>
-              <strong>{stage.display_name}的命理枝</strong>
-              <small>{hasClaimGraph ? "阿布初断 · 可以继续校准" : "等待阿布整盘初断"}</small>
-            </header>
-            <MingliReadingLayerContent
-              agentError={agentError}
-              agentGenerating={agentGenerating}
-              hasFormalReading={hasFormalReading}
-              layer={layer}
-              onExpandTime={() => onOpenStage(true)}
-              onGenerateAgent={onGenerateAgent}
-              stage={stage}
-              summary={summary}
-            />
-            <div className="mingli-growth-actions">
-              <span>轻触枝、叶、花、果，继续看这份命局</span>
-              <button onClick={() => onOpenStage(layer === "timing")} type="button">
-                {layer === "timing" ? "进入六柱时间舞台" : "查看本命四柱舞台"}
-              </button>
-            </div>
-          </article>
+            <span>{agentGenerating
+              ? "阿布正在准备这一层……"
+              : agentError
+                ? "刚才没讲完整，再点一次重试"
+                : "点枝、叶、花、果，直接听阿布说"}</span>
+          </div>
         </>
       )}
     </section>

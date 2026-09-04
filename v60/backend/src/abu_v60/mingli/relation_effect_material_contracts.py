@@ -15,9 +15,7 @@ from abu_v60.provenance import content_hash, stable_ref
 RELATION_EFFECT_EVIDENCE_MATERIAL_REQUEST_VERSION = (
     "v60.mingli-relation-effect-evidence-material-request.001"
 )
-RELATION_EFFECT_EVIDENCE_MATERIAL_VERSION = (
-    "v60.mingli-relation-effect-evidence-material.001"
-)
+RELATION_EFFECT_EVIDENCE_MATERIAL_VERSION = "v60.mingli-relation-effect-evidence-material.001"
 
 
 class RelationEffectEvidenceBibliographyMetadata(BaseModel):
@@ -42,22 +40,14 @@ class RelationEffectEvidenceBibliographyMetadata(BaseModel):
     @classmethod
     def metadata_is_bounded_and_not_a_url(cls, value: str) -> str:
         if value != value.strip() or any(
-            ord(character) < 32 or ord(character) == 127
-            for character in value
+            ord(character) < 32 or ord(character) == 127 for character in value
         ):
-            raise ValueError(
-                "relation_effect_evidence_material_metadata_not_canonical"
-            )
+            raise ValueError("relation_effect_evidence_material_metadata_not_canonical")
         lowered = value.casefold()
-        if (
-            "://" in lowered
-            or lowered.startswith(
-                ("http:", "https:", "ftp:", "file:", "data:", "www.")
-            )
+        if "://" in lowered or lowered.startswith(
+            ("http:", "https:", "ftp:", "file:", "data:", "www.")
         ):
-            raise ValueError(
-                "relation_effect_evidence_material_url_not_allowed"
-            )
+            raise ValueError("relation_effect_evidence_material_url_not_allowed")
         return value
 
 
@@ -66,9 +56,7 @@ class RelationEffectEvidenceMaterialRequest(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    material_request_version: Literal[
-        "v60.mingli-relation-effect-evidence-material-request.001"
-    ]
+    material_request_version: Literal["v60.mingli-relation-effect-evidence-material-request.001"]
     expected_receipt_ref: str = Field(min_length=1)
     expected_receipt_hash: str = Field(min_length=64, max_length=64)
     expected_packet_ref: str = Field(min_length=1)
@@ -93,9 +81,9 @@ class RelationEffectEvidenceMaterialRecord(BaseModel):
 
     material_ref: str = Field(min_length=1)
     material_hash: str = Field(min_length=64, max_length=64)
-    material_version: Literal[
-        "v60.mingli-relation-effect-evidence-material.001"
-    ] = RELATION_EFFECT_EVIDENCE_MATERIAL_VERSION
+    material_version: Literal["v60.mingli-relation-effect-evidence-material.001"] = (
+        RELATION_EFFECT_EVIDENCE_MATERIAL_VERSION
+    )
     material_request_version: Literal[
         "v60.mingli-relation-effect-evidence-material-request.001"
     ] = RELATION_EFFECT_EVIDENCE_MATERIAL_REQUEST_VERSION
@@ -118,9 +106,7 @@ class RelationEffectEvidenceMaterialRecord(BaseModel):
     target_artifact_kind: Literal["PROFESSIONAL_SOURCE_MANIFEST"]
     bibliography: RelationEffectEvidenceBibliographyMetadata
     bibliography_hash: str = Field(min_length=64, max_length=64)
-    status: Literal[
-        "CANDIDATE_METADATA_RECORDED_NOT_REQUESTED_ARTIFACT"
-    ]
+    status: Literal["CANDIDATE_METADATA_RECORDED_NOT_REQUESTED_ARTIFACT"]
     semantics: Literal["UNVERIFIED_BIBLIOGRAPHY_METADATA_ONLY"]
     evidence_role: Literal["NOT_EVIDENCE"]
     requested_artifact_satisfied: Literal[False]
@@ -162,27 +148,19 @@ class RelationEffectEvidenceMaterialRecord(BaseModel):
     def boundary_and_identity_are_valid(
         self,
     ) -> RelationEffectEvidenceMaterialRecord:
-        if self.bibliography_hash != content_hash(
-            self.bibliography.model_dump(mode="json")
-        ):
-            raise ValueError(
-                "relation_effect_evidence_material_bibliography_hash_mismatch"
-            )
+        if self.bibliography_hash != content_hash(self.bibliography.model_dump(mode="json")):
+            raise ValueError("relation_effect_evidence_material_bibliography_hash_mismatch")
         identity = self.model_dump(
             mode="json",
             exclude={"material_ref", "material_hash"},
         )
         if self.material_hash != content_hash(identity):
-            raise ValueError(
-                "relation_effect_evidence_material_hash_mismatch"
-            )
+            raise ValueError("relation_effect_evidence_material_hash_mismatch")
         if self.material_ref != stable_ref(
             "v60-relation-effect-evidence-material",
             identity,
         ):
-            raise ValueError(
-                "relation_effect_evidence_material_ref_mismatch"
-            )
+            raise ValueError("relation_effect_evidence_material_ref_mismatch")
         return self
 
     @classmethod
@@ -195,21 +173,15 @@ class RelationEffectEvidenceMaterialRecord(BaseModel):
         )
         identity = {
             "material_version": RELATION_EFFECT_EVIDENCE_MATERIAL_VERSION,
-            "material_request_version": (
-                RELATION_EFFECT_EVIDENCE_MATERIAL_REQUEST_VERSION
-            ),
+            "material_request_version": (RELATION_EFFECT_EVIDENCE_MATERIAL_REQUEST_VERSION),
             **values,
             "bibliography": (
                 bibliography.model_dump(mode="json")
                 if isinstance(bibliography, BaseModel)
                 else bibliography
             ),
-            "bibliography_hash": content_hash(
-                bibliography.model_dump(mode="json")
-            ),
-            "status": (
-                "CANDIDATE_METADATA_RECORDED_NOT_REQUESTED_ARTIFACT"
-            ),
+            "bibliography_hash": content_hash(bibliography.model_dump(mode="json")),
+            "status": ("CANDIDATE_METADATA_RECORDED_NOT_REQUESTED_ARTIFACT"),
             "semantics": "UNVERIFIED_BIBLIOGRAPHY_METADATA_ONLY",
             "evidence_role": "NOT_EVIDENCE",
             "requested_artifact_satisfied": False,

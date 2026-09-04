@@ -5,18 +5,37 @@ from datetime import date, time
 
 import pytest
 from abu_v60.db import engine
-from abu_v60.dream.seed import SEED_BATCH_REF
 from abu_v60.mingli.owner_cases import MingliOwnerCaseService, OwnerCaseInput
 from abu_v60.mingli.service import MingliCaseService
-from abu_v60.provenance import content_hash
+from abu_v60.provenance import canonical_json, content_hash
 from sqlalchemy import text
 
 ACCOUNT_REF = "v60-account-owner-case-intake-qa"
+TEST_BATCH_REF = "v60-test-batch-owner-case-intake"
+TEST_BATCH_MANIFEST = {"fixture": "owner-case-intake", "scope": "TEST_ONLY"}
 
 
 @pytest.fixture
 def owner_account() -> Iterator[str]:
     with engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                INSERT INTO platform.migration_batches
+                    (batch_ref, source_system, source_database, status,
+                     manifest_json, manifest_hash)
+                VALUES
+                    (:batch_ref, 'V60_TEST', 'qiazhi_v60', 'COMPLETED',
+                     CAST(:manifest_json AS jsonb), :manifest_hash)
+                ON CONFLICT (batch_ref) DO NOTHING
+                """
+            ),
+            {
+                "batch_ref": TEST_BATCH_REF,
+                "manifest_json": canonical_json(TEST_BATCH_MANIFEST),
+                "manifest_hash": content_hash(TEST_BATCH_MANIFEST),
+            },
+        )
         connection.execute(
             text(
                 """
@@ -37,7 +56,7 @@ def owner_account() -> Iterator[str]:
                 "password_hash": "0" * 64,
                 "password_salt": "0" * 32,
                 "source_hash": content_hash({"account_ref": ACCOUNT_REF}),
-                "batch_ref": SEED_BATCH_REF,
+                "batch_ref": TEST_BATCH_REF,
             },
         )
     try:
@@ -104,6 +123,15 @@ def owner_account() -> Iterator[str]:
                 ),
                 {"account_ref": ACCOUNT_REF},
             )
+            connection.execute(
+                text(
+                    """
+                    DELETE FROM platform.migration_batches
+                    WHERE batch_ref = :batch_ref
+                    """
+                ),
+                {"batch_ref": TEST_BATCH_REF},
+            )
 
 
 def _payload(name: str, day: int) -> OwnerCaseInput:
@@ -130,21 +158,23 @@ def test_owner_can_create_switch_and_replay_real_compiled_cases(
     assert replay == first
     assert second["case_ref"] != first["case_ref"]
     with engine.connect() as connection:
-        rows = connection.execute(
-            text(
-                """
+        rows = (
+            connection.execute(
+                text(
+                    """
                 SELECT case_ref, status
                 FROM mingli.cases
                 WHERE owner_account_ref = :account_ref
                 ORDER BY case_ref
                 """
-            ),
-            {"account_ref": owner_account},
-        ).mappings().all()
+                ),
+                {"account_ref": owner_account},
+            )
+            .mappings()
+            .all()
+        )
     assert len(rows) == 2
-    assert {row["case_ref"] for row in rows if row["status"] == "ACTIVE"} == {
-        second["case_ref"]
-    }
+    assert {row["case_ref"] for row in rows if row["status"] == "ACTIVE"} == {second["case_ref"]}
     projected = MingliCaseService(engine).list_cases(account_ref=owner_account)
     first_projection = next(item for item in projected if item["case_ref"] == first["case_ref"])
     assert first_projection["gender"] == "male"

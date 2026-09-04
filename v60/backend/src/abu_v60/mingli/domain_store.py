@@ -69,9 +69,7 @@ class MingliLifeDomainVectorStore:
         )
         row = self._load_row(connection, vector_ref=vector.vector_ref)
         if row is None:
-            raise MingliLifeDomainVectorStoreError(
-                "life_domain_vector_identity_conflict"
-            )
+            raise MingliLifeDomainVectorStoreError("life_domain_vector_identity_conflict")
         self._verify_row(row, expected=vector)
         return vector
 
@@ -79,9 +77,7 @@ class MingliLifeDomainVectorStore:
         with self._engine.connect() as connection:
             row = self._load_row(connection, vector_ref=vector_ref)
         if row is None:
-            raise MingliLifeDomainVectorNotFoundError(
-                "life_domain_vector_not_found"
-            )
+            raise MingliLifeDomainVectorNotFoundError("life_domain_vector_not_found")
         vector = MingliLifeDomainEvidenceVector.model_validate(row["vector_json"])
         self._verify_row(row, expected=vector)
         return vector
@@ -126,6 +122,4 @@ class MingliLifeDomainVectorStore:
             "vector_hash": expected.vector_hash,
         }
         if dict(row) != exact:
-            raise MingliLifeDomainVectorStoreError(
-                "life_domain_vector_persistence_conflict"
-            )
+            raise MingliLifeDomainVectorStoreError("life_domain_vector_persistence_conflict")

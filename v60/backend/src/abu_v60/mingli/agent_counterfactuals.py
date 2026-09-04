@@ -26,6 +26,115 @@ _RULING_ZH: Final = {
 }
 
 
+def decision_row_axis(check_code: str) -> str:
+    """Map one immutable method check to its only admissible counterfactual axis."""
+
+    code = str(check_code)
+    if "RESOLUTION" in code or "BLOCKER" in code or "INTERFERENCE" in code:
+        return "BLOCKER_RESOLUTION"
+    if "CAPACITY" in code:
+        return "CAPACITY"
+    if "REACHABILITY" in code or "TARGET" in code:
+        return "TARGET_REACHABILITY"
+    if "SAME_LAYER" in code:
+        return "LAYER_ALIGNMENT"
+    if "ROOT" in code or "PEER" in code:
+        return "ROOT_SUPPORT"
+    if "SOURCE" in code or "AVAILABILITY" in code:
+        return "SOURCE_AVAILABILITY"
+    if "MONTH" in code or "SEASON" in code:
+        return "SEASONAL_SUPPORT"
+    if "DRAIN" in code or "COMPETING" in code:
+        return "COMPETING_PATH"
+    return "MECHANISM_OBSERVATION"
+
+
+def decision_row_ref(
+    *,
+    method_card_ref: str,
+    check_code: str,
+    current_ruling: str,
+) -> str:
+    """Build the stable row identity the model must copy into one method ruling."""
+
+    target = _FALSIFIER_TARGET.get(current_ruling, "UNRESOLVED")
+    return f"{method_card_ref}:{check_code}:{current_ruling}>{target}"
+
+
+def decision_row_catalog(
+    *,
+    method_card_ref: str,
+    check_codes: tuple[str, ...],
+) -> tuple[str, ...]:
+    """Compile one compact, typed counterfactual row per method-card check."""
+
+    return tuple(f"{check_code}:{decision_row_axis(check_code)}" for check_code in check_codes)
+
+
+def reversal_row_ref(*, primary_method_card_ref: str, alternative_method_card_ref: str) -> str:
+    """Bind the two opposite reversal actions to the two selected method cards."""
+
+    return (
+        f"REVERSAL:{primary_method_card_ref}>{alternative_method_card_ref}:"
+        "MAINTAIN_PRIMARY>FLIP_TO_ALTERNATIVE"
+    )
+
+
+def decision_row_is_valid(
+    value: object,
+    *,
+    method_card_ref: str,
+    check_code: str,
+    current_ruling: str,
+) -> bool:
+    if not isinstance(value, dict):
+        return False
+    target = _FALSIFIER_TARGET.get(current_ruling)
+    return (
+        value.get("row_ref")
+        == decision_row_ref(
+            method_card_ref=method_card_ref,
+            check_code=check_code,
+            current_ruling=current_ruling,
+        )
+        and value.get("current_ruling") == current_ruling
+        and value.get("target_ruling") == target
+        and value.get("trigger_axis") == decision_row_axis(check_code)
+        and value.get("action") == "RECLASSIFY"
+    )
+
+
+def decision_row_selection_is_valid(value: object, *, check_code: str) -> bool:
+    """Validate the model-owned part; ruling transitions are server-derived."""
+
+    return isinstance(value, dict) and (
+        value.get("trigger_axis") == decision_row_axis(check_code)
+        and value.get("action") == "RECLASSIFY"
+    )
+
+
+def normalized_decision_row(
+    *,
+    method_card_ref: str,
+    check_code: str,
+    current_ruling: str,
+) -> dict[str, str]:
+    """Return the server-safe row when a model omits or invents the selection."""
+
+    target = _FALSIFIER_TARGET.get(current_ruling, "UNRESOLVED")
+    return {
+        "row_ref": decision_row_ref(
+            method_card_ref=method_card_ref,
+            check_code=check_code,
+            current_ruling=current_ruling,
+        ),
+        "trigger_axis": decision_row_axis(check_code),
+        "current_ruling": current_ruling,
+        "target_ruling": target,
+        "action": "RECLASSIFY",
+    }
+
+
 def method_falsifier_is_actionable(text: object, *, current_ruling: object) -> bool:
     """Require an observable condition and an explicit change away from the ruling."""
 

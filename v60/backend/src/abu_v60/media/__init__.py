@@ -6,7 +6,11 @@ from abu_v60.media.catalog import (
     media_library_summary,
 )
 from abu_v60.media.registry import PROJECT_ROOT, load_verified_assets, sync_assets
-from abu_v60.media.runtime import RuntimeMediaError, runtime_media_manifest
+from abu_v60.media.runtime import (
+    RuntimeMediaError,
+    public_runtime_media_manifest,
+    runtime_media_manifest,
+)
 from abu_v60.media.tts import (
     Qwen3TTSProvider,
     TTSProviderError,
@@ -30,6 +34,7 @@ __all__ = [
     "load_verified_media_catalog",
     "media_library_summary",
     "merge_wav",
+    "public_runtime_media_manifest",
     "runtime_media_manifest",
     "sync_assets",
     "validate_wav",

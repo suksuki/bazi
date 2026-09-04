@@ -1,19 +1,103 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, HTTPException, Request, Response, status
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from abu_v60.api.identity import SessionDependency
 from abu_v60.db import engine
 from abu_v60.media import TTSProviderError, TTSUnavailableError
+from abu_v60.media.focused_speech import (
+    FOCUSED_SPEECH_TIMELINE_HEADER,
+    FocusedPassSpeechConflict,
+    FocusedPassSpeechError,
+    FocusedPassSpeechNotFound,
+    FocusedPassSpeechService,
+)
 from abu_v60.media.mingli_narration import (
     MingliNarrationConflictError,
     MingliNarrationError,
     MingliNarrationService,
 )
 from abu_v60.mingli.narration_contracts import MingliNarrationPrepareRequest
+from abu_v60.mingli.stage_contracts import MingliStageMode
 
 router = APIRouter(prefix="/api/v60/mingli/narrations", tags=["mingli-narration"])
 service = MingliNarrationService(engine)
+focused_speech = FocusedPassSpeechService(engine)
+
+
+class FocusedPassSpeechRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    request_version: Literal["v60.mingli-focused-speech-request.001"] = (
+        "v60.mingli-focused-speech-request.001"
+    )
+    subject_id: str = Field(min_length=1, max_length=240)
+    stage_mode: MingliStageMode = MingliStageMode.NATAL_4
+    selected_year: int | None = Field(default=None, ge=1900, le=2200)
+    expected_stage_projection_ref: str = Field(min_length=1)
+    expected_stage_projection_hash: str = Field(min_length=64, max_length=64)
+    record_ref: str = Field(min_length=1)
+    expected_record_hash: str = Field(min_length=64, max_length=64)
+
+    @model_validator(mode="after")
+    def stage_coordinates_are_complete(self) -> FocusedPassSpeechRequest:
+        if self.stage_mode == MingliStageMode.NATAL_DAYUN_YEAR_6:
+            if self.selected_year is None:
+                raise ValueError("mingli_focused_speech_six_year_required")
+        elif self.selected_year is not None:
+            raise ValueError("mingli_focused_speech_four_year_forbidden")
+        return self
+
+
+@router.post("/focused-pass")
+def focused_pass_audio(
+    payload: FocusedPassSpeechRequest,
+    session: SessionDependency,
+) -> Response:
+    try:
+        prepared = focused_speech.prepare(
+            account_ref=session.account.account_ref,
+            subject_id=payload.subject_id,
+            stage_mode=payload.stage_mode,
+            selected_year=payload.selected_year,
+            expected_stage_projection_ref=payload.expected_stage_projection_ref,
+            expected_stage_projection_hash=payload.expected_stage_projection_hash,
+            record_ref=payload.record_ref,
+            expected_record_hash=payload.expected_record_hash,
+        )
+    except FocusedPassSpeechNotFound as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except FocusedPassSpeechConflict as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except FocusedPassSpeechError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    except TTSUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    except TTSProviderError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
+    return Response(
+        content=prepared.audio.audio_bytes,
+        media_type="audio/wav",
+        headers={
+            "Cache-Control": "private, no-store",
+            "Content-Disposition": "inline",
+            "Content-Length": str(len(prepared.audio.audio_bytes)),
+            FOCUSED_SPEECH_TIMELINE_HEADER: prepared.timeline_header_value(),
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.post("")

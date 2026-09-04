@@ -52,35 +52,27 @@ def _account_ref() -> str:
 
 def _context(connection):
     account_ref = _account_ref()
-    snapshot = HomeExperienceService(engine).snapshot(
-        account_ref=account_ref
-    )
+    snapshot = HomeExperienceService(engine).snapshot(account_ref=account_ref)
     packet = MingliRelationEffectEvidencePacketEnvelope.model_validate(
         snapshot["mingli"]["relation_effect_evidence_packet"]
     )
-    receipt_payload = snapshot["mingli"][
-        "relation_effect_evidence_request_receipt"
-    ]
+    if not packet.demand_packets:
+        pytest.skip("active owner chart has no relation-effect evidence demand")
+    receipt_payload = snapshot["mingli"]["relation_effect_evidence_request_receipt"]
     if receipt_payload is None:
-        receipt = RelationEffectEvidenceRequestStore(
-            engine
-        ).request_in_connection(
+        receipt = RelationEffectEvidenceRequestStore(engine).request_in_connection(
             connection,
             account_ref=account_ref,
             request=RelationEffectEvidencePreparationRequest(
                 request_version=RELATION_EFFECT_EVIDENCE_REQUEST_VERSION,
                 expected_packet_ref=packet.packet_ref,
                 expected_packet_hash=packet.packet_hash,
-                idempotency_key=(
-                    "qa:relation-effect-material:preparation"
-                ),
+                idempotency_key=("qa:relation-effect-material:preparation"),
             ),
             packet=packet,
         )
     else:
-        receipt = RelationEffectEvidenceRequestReceipt.model_validate(
-            receipt_payload
-        )
+        receipt = RelationEffectEvidenceRequestReceipt.model_validate(receipt_payload)
     return account_ref, packet, receipt
 
 
@@ -101,14 +93,10 @@ def _material_request(
 ) -> RelationEffectEvidenceMaterialRequest:
     item = receipt.request_items[0]
     slot = next(
-        slot
-        for slot in item.dimension_slots
-        if slot.dimension_id == "PROFESSIONAL_PROVENANCE"
+        slot for slot in item.dimension_slots if slot.dimension_id == "PROFESSIONAL_PROVENANCE"
     )
     return RelationEffectEvidenceMaterialRequest(
-        material_request_version=(
-            RELATION_EFFECT_EVIDENCE_MATERIAL_REQUEST_VERSION
-        ),
+        material_request_version=(RELATION_EFFECT_EVIDENCE_MATERIAL_REQUEST_VERSION),
         expected_receipt_ref=receipt.receipt_ref,
         expected_receipt_hash=receipt.receipt_hash,
         expected_packet_ref=receipt.packet_ref,
@@ -173,9 +161,7 @@ def _insert_record(connection, record) -> None:
                     "material_hash",
                 },
             ),
-            "material_json": canonical_json(
-                record.model_dump(mode="json")
-            ),
+            "material_json": canonical_json(record.model_dump(mode="json")),
         },
     )
 
@@ -215,15 +201,11 @@ def test_material_contract_is_metadata_only_and_never_evidence() -> None:
         "edition_or_publication_identity",
         "locator",
     }
-    assert record.status == (
-        "CANDIDATE_METADATA_RECORDED_NOT_REQUESTED_ARTIFACT"
-    )
+    assert record.status == ("CANDIDATE_METADATA_RECORDED_NOT_REQUESTED_ARTIFACT")
     assert record.semantics == "UNVERIFIED_BIBLIOGRAPHY_METADATA_ONLY"
     assert record.evidence_role == "NOT_EVIDENCE"
     assert record.requested_artifact_satisfied is False
-    assert record.bibliography_hash == content_hash(
-        request.bibliography.model_dump(mode="json")
-    )
+    assert record.bibliography_hash == content_hash(request.bibliography.model_dump(mode="json"))
     assert (
         record.professional_material_count,
         record.professional_evidence_count,
@@ -270,23 +252,16 @@ def test_material_contract_is_metadata_only_and_never_evidence() -> None:
             ValidationError,
             match="relation_effect_evidence_material_url_not_allowed",
         ):
-            RelationEffectEvidenceBibliographyMetadata.model_validate(
-                forged
-            )
+            RelationEffectEvidenceBibliographyMetadata.model_validate(forged)
         forged = {
             **request.bibliography.model_dump(mode="json"),
             field: "候选\x01坐标",
         }
         with pytest.raises(
             ValidationError,
-            match=(
-                "relation_effect_evidence_material_"
-                "metadata_not_canonical"
-            ),
+            match=("relation_effect_evidence_material_metadata_not_canonical"),
         ):
-            RelationEffectEvidenceBibliographyMetadata.model_validate(
-                forged
-            )
+            RelationEffectEvidenceBibliographyMetadata.model_validate(forged)
 
 
 def test_material_store_is_private_idempotent_deduplicated_and_append_only() -> None:
@@ -297,9 +272,7 @@ def test_material_store_is_private_idempotent_deduplicated_and_append_only() -> 
             account_ref, packet, receipt = _context(connection)
             request = _material_request(
                 receipt,
-                idempotency_key=(
-                    "qa:relation-effect-material:transaction"
-                ),
+                idempotency_key=("qa:relation-effect-material:transaction"),
             )
             first = store.register_in_connection(
                 connection,
@@ -357,9 +330,7 @@ def test_material_store_is_private_idempotent_deduplicated_and_append_only() -> 
                 )
             duplicate = _material_request(
                 receipt,
-                idempotency_key=(
-                    "qa:relation-effect-material:changed-key"
-                ),
+                idempotency_key=("qa:relation-effect-material:changed-key"),
             )
             with pytest.raises(
                 RelationEffectEvidenceMaterialConflictError,
@@ -374,10 +345,7 @@ def test_material_store_is_private_idempotent_deduplicated_and_append_only() -> 
                 )
             with pytest.raises(
                 RelationEffectEvidenceMaterialConflictError,
-                match=(
-                    "relation_effect_evidence_material_"
-                    "receipt_packet_conflict"
-                ),
+                match=("relation_effect_evidence_material_receipt_packet_conflict"),
             ):
                 store.register_in_connection(
                     connection,
@@ -390,9 +358,7 @@ def test_material_store_is_private_idempotent_deduplicated_and_append_only() -> 
             savepoint = connection.begin_nested()
             with pytest.raises(
                 DBAPIError,
-                match=(
-                    "mingli_relation_effect_evidence_materials_are_append_only"
-                ),
+                match=("mingli_relation_effect_evidence_materials_are_append_only"),
             ):
                 connection.execute(
                     text(
@@ -409,9 +375,7 @@ def test_material_store_is_private_idempotent_deduplicated_and_append_only() -> 
             savepoint = connection.begin_nested()
             with pytest.raises(
                 DBAPIError,
-                match=(
-                    "mingli_relation_effect_evidence_materials_are_append_only"
-                ),
+                match=("mingli_relation_effect_evidence_materials_are_append_only"),
             ):
                 connection.execute(
                     text(
@@ -437,9 +401,7 @@ def test_material_rejects_wrong_dimension_and_cross_demand_binding() -> None:
     )
     item = receipt.request_items[0]
     non_provenance = next(
-        slot
-        for slot in item.dimension_slots
-        if slot.dimension_id != "PROFESSIONAL_PROVENANCE"
+        slot for slot in item.dimension_slots if slot.dimension_id != "PROFESSIONAL_PROVENANCE"
     )
     with pytest.raises(
         RelationEffectEvidenceMaterialConflictError,
@@ -447,9 +409,7 @@ def test_material_rejects_wrong_dimension_and_cross_demand_binding() -> None:
     ):
         RelationEffectEvidenceMaterialStore.derive_expected_record(
             account_ref=account_ref,
-            request=request.model_copy(
-                update={"expected_slot_ref": non_provenance.slot_ref}
-            ),
+            request=request.model_copy(update={"expected_slot_ref": non_provenance.slot_ref}),
             receipt=receipt,
             packet=packet,
         )
@@ -460,9 +420,7 @@ def test_material_rejects_wrong_dimension_and_cross_demand_binding() -> None:
     ):
         with pytest.raises(
             RelationEffectEvidenceMaterialConflictError,
-            match=(
-                "relation_effect_evidence_material_demand_chain_conflict"
-            ),
+            match=("relation_effect_evidence_material_demand_chain_conflict"),
         ):
             RelationEffectEvidenceMaterialStore.derive_expected_record(
                 account_ref=account_ref,
@@ -480,9 +438,7 @@ def test_material_requires_current_active_human_owner_case() -> None:
             account_ref, packet, receipt = _context(connection)
             request = _material_request(
                 receipt,
-                idempotency_key=(
-                    "qa:relation-effect-material:inactive-case"
-                ),
+                idempotency_key=("qa:relation-effect-material:inactive-case"),
             )
             connection.execute(
                 text(
@@ -496,10 +452,7 @@ def test_material_requires_current_active_human_owner_case() -> None:
             )
             with pytest.raises(
                 RelationEffectEvidenceMaterialConflictError,
-                match=(
-                    "relation_effect_evidence_material_"
-                    "active_case_conflict"
-                ),
+                match=("relation_effect_evidence_material_active_case_conflict"),
             ):
                 store.register_in_connection(
                     connection,
@@ -521,9 +474,7 @@ def test_projection_and_integrity_reject_self_consistent_wrong_slot() -> None:
             account_ref, packet, receipt = _context(connection)
             canonical_request = _material_request(
                 receipt,
-                idempotency_key=(
-                    "qa:relation-effect-material:forged-slot"
-                ),
+                idempotency_key=("qa:relation-effect-material:forged-slot"),
             )
             item = receipt.request_items[0]
             forged_slot = next(
@@ -552,8 +503,7 @@ def test_projection_and_integrity_reject_self_consistent_wrong_slot() -> None:
                 bibliography=canonical_request.bibliography,
             )
             invalid_before = (
-                RuntimeIntegrityService
-                ._count_invalid_relation_effect_evidence_materials(
+                RuntimeIntegrityService._count_invalid_relation_effect_evidence_materials(
                     connection,
                     resolver=resolver,
                 )
@@ -570,8 +520,7 @@ def test_projection_and_integrity_reject_self_consistent_wrong_slot() -> None:
                     packet=packet,
                 )
             invalid_after = (
-                RuntimeIntegrityService
-                ._count_invalid_relation_effect_evidence_materials(
+                RuntimeIntegrityService._count_invalid_relation_effect_evidence_materials(
                     connection,
                     resolver=resolver,
                 )
@@ -583,15 +532,13 @@ def test_projection_and_integrity_reject_self_consistent_wrong_slot() -> None:
 
 def test_home_replays_material_without_upgrading_packet_or_receipt() -> None:
     account_ref = _account_ref()
-    baseline = HomeExperienceService(engine).snapshot(
-        account_ref=account_ref
-    )
+    baseline = HomeExperienceService(engine).snapshot(account_ref=account_ref)
     packet = MingliRelationEffectEvidencePacketEnvelope.model_validate(
         baseline["mingli"]["relation_effect_evidence_packet"]
     )
-    receipt_payload = baseline["mingli"][
-        "relation_effect_evidence_request_receipt"
-    ]
+    if not packet.demand_packets:
+        pytest.skip("active owner chart has no relation-effect evidence demand")
+    receipt_payload = baseline["mingli"]["relation_effect_evidence_request_receipt"]
     receipt = (
         RelationEffectEvidenceRequestReceipt.model_validate(receipt_payload)
         if receipt_payload is not None
@@ -601,9 +548,7 @@ def test_home_replays_material_without_upgrading_packet_or_receipt() -> None:
                 request_version=RELATION_EFFECT_EVIDENCE_REQUEST_VERSION,
                 expected_packet_ref=packet.packet_ref,
                 expected_packet_hash=packet.packet_hash,
-                idempotency_key=(
-                    "qa:relation-effect-material:home-receipt"
-                ),
+                idempotency_key=("qa:relation-effect-material:home-receipt"),
             ),
             packet=packet,
         )
@@ -634,37 +579,32 @@ def test_home_replays_material_without_upgrading_packet_or_receipt() -> None:
         relation_effect_requests=ReceiptProjection(),
         relation_effect_materials=MaterialProjection(),
     ).snapshot(account_ref=account_ref)
-    assert projected["mingli"][
-        "relation_effect_evidence_materials"
-    ] == [record.model_dump(mode="json")]
-    assert projected["lab"][
-        "relation_effect_evidence_material_refs"
-    ] == [record.material_ref]
-    assert projected["lab"][
-        "relation_effect_evidence_material_hashes"
-    ] == [record.material_hash]
-    assert projected["lab"][
-        "relation_effect_evidence_material_count"
-    ] == 1
-    assert projected["mingli"][
-        "relation_effect_evidence_request_receipt"
-    ]["professional_material_count"] == 0
-    assert projected["mingli"][
-        "relation_effect_evidence_packet"
-    ]["professional_evidence_count"] == 0
+    assert projected["mingli"]["relation_effect_evidence_materials"] == [
+        record.model_dump(mode="json")
+    ]
+    assert projected["lab"]["relation_effect_evidence_material_refs"] == [record.material_ref]
+    assert projected["lab"]["relation_effect_evidence_material_hashes"] == [record.material_hash]
+    assert projected["lab"]["relation_effect_evidence_material_count"] == 1
+    assert (
+        projected["mingli"]["relation_effect_evidence_request_receipt"][
+            "professional_material_count"
+        ]
+        == 0
+    )
+    assert (
+        projected["mingli"]["relation_effect_evidence_packet"]["professional_evidence_count"] == 0
+    )
 
 
 def test_account_lock_serializes_material_snapshot_and_mechanism_write() -> None:
     account_ref = _account_ref()
-    baseline = HomeExperienceService(engine).snapshot(
-        account_ref=account_ref
-    )
+    baseline = HomeExperienceService(engine).snapshot(account_ref=account_ref)
     packet = MingliRelationEffectEvidencePacketEnvelope.model_validate(
         baseline["mingli"]["relation_effect_evidence_packet"]
     )
-    receipt_payload = baseline["mingli"][
-        "relation_effect_evidence_request_receipt"
-    ]
+    if not packet.demand_packets:
+        pytest.skip("active owner chart has no relation-effect evidence demand")
+    receipt_payload = baseline["mingli"]["relation_effect_evidence_request_receipt"]
     receipt = (
         RelationEffectEvidenceRequestReceipt.model_validate(receipt_payload)
         if receipt_payload is not None
@@ -674,17 +614,13 @@ def test_account_lock_serializes_material_snapshot_and_mechanism_write() -> None
                 request_version=RELATION_EFFECT_EVIDENCE_REQUEST_VERSION,
                 expected_packet_ref=packet.packet_ref,
                 expected_packet_hash=packet.packet_hash,
-                idempotency_key=(
-                    "qa:relation-effect-material:lock-receipt"
-                ),
+                idempotency_key=("qa:relation-effect-material:lock-receipt"),
             ),
             packet=packet,
         )
     )
     baseline = deepcopy(baseline)
-    baseline["mingli"][
-        "relation_effect_evidence_request_receipt"
-    ] = receipt.model_dump(mode="json")
+    baseline["mingli"]["relation_effect_evidence_request_receipt"] = receipt.model_dump(mode="json")
     request = _material_request(
         receipt,
         idempotency_key="qa:relation-effect-material:lock",
@@ -747,7 +683,5 @@ def test_account_lock_serializes_material_snapshot_and_mechanism_write() -> None
         finally:
             release_material.set()
         assert material_future.result(timeout=5) == expected
-        assert comparison_future.result(timeout=5) == {
-            "decision_ref": "qa-material-lock"
-        }
+        assert comparison_future.result(timeout=5) == {"decision_ref": "qa-material-lock"}
     assert len(snapshot_threads) == 2

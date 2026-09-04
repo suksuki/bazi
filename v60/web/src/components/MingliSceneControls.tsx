@@ -12,9 +12,9 @@ export function MingliSceneControls({
   exitLabel = "回到生命树",
   onExit,
   onNavigate,
-  onOpenSyntheticLab,
   onRetrySubjects,
   onSurfaceChange,
+  publicMode = false,
   route,
   stage,
   subjects,
@@ -25,9 +25,9 @@ export function MingliSceneControls({
   exitLabel?: string;
   onExit: () => void;
   onNavigate: (route: MingliStageRoute) => void;
-  onOpenSyntheticLab?: () => void;
   onRetrySubjects: () => void;
   onSurfaceChange: (surface: MingliSceneSurface) => void;
+  publicMode?: boolean;
   route: MingliStageRoute;
   stage: MingliStageProjection | null;
   subjects: MingliStageSubject[];
@@ -47,63 +47,58 @@ export function MingliSceneControls({
           <h1>{stage ? `${stage.display_name}的命理枝` : "命理枝正在生长"}</h1>
           <span>{stage?.identity_badge ?? "读取档案身份"}</span>
         </div>
-        <div className="mingli-scene-surfaces" role="group" aria-label="命理阅读与 Lab">
-          <button
-            aria-pressed={surface === "READING"}
-            onClick={() => onSurfaceChange("READING")}
-            type="button"
-          >
-            命理阅读
-          </button>
-          <button
-            aria-pressed={surface === "LAB"}
-            onClick={() => onSurfaceChange("LAB")}
-            type="button"
-          >
-            Lab 观察
-          </button>
-          {surface === "LAB" && onOpenSyntheticLab && (
+        {!publicMode && (
+          <div className="mingli-scene-surfaces" role="group" aria-label="命理阅读与 Lab">
             <button
-              aria-pressed="false"
-              onClick={onOpenSyntheticLab}
+              aria-pressed={surface === "READING"}
+              onClick={() => onSurfaceChange("READING")}
               type="button"
             >
-              合成验证
+              命理阅读
             </button>
-          )}
-        </div>
+            <button
+              aria-pressed={surface === "LAB"}
+              onClick={() => onSurfaceChange("LAB")}
+              type="button"
+            >
+              Lab 观察
+            </button>
+          </div>
+        )}
       </header>
 
       <div className="mingli-scene-toolbar" aria-label="命理舞台坐标选择">
-        <label>
-          <span>档案</span>
-          <select
-            aria-label="选择命理档案"
-            disabled={subjectsLoading || Boolean(subjectsError) || !subjects.length}
-            onChange={(event) =>
-              onNavigate({
-                ...route,
-                subjectId: event.target.value as MingliStageSubjectId,
-                year: null,
-              })
-            }
-            value={route.subjectId}
-          >
-            {!subjects.length && (
-              <option value={route.subjectId}>
-                {subjectsLoading ? "正在读取档案…" : "档案列表暂不可用"}
-              </option>
-            )}
-            {subjects.map((subject) => (
-              <option key={subject.subject_id} value={subject.subject_id}>
-                {route.subjectId !== "current" && subject.subject_id === "current"
-                  ? "我的档案 · 私密真实档案"
-                  : `${subject.display_name} · ${subject.identity_badge}`}
-              </option>
-            ))}
-          </select>
-        </label>
-        {subjectsError && (
+        {!publicMode && (
+          <label>
+            <span>档案</span>
+            <select
+              aria-label="选择命理档案"
+              disabled={subjectsLoading || Boolean(subjectsError) || !subjects.length}
+              onChange={(event) =>
+                onNavigate({
+                  ...route,
+                  subjectId: event.target.value as MingliStageSubjectId,
+                  year: null,
+                })
+              }
+              value={route.subjectId}
+            >
+              {!subjects.length && (
+                <option value={route.subjectId}>
+                  {subjectsLoading ? "正在读取档案…" : "档案列表暂不可用"}
+                </option>
+              )}
+              {subjects.map((subject) => (
+                <option key={subject.subject_id} value={subject.subject_id}>
+                  {route.subjectId !== "current" && subject.subject_id === "current"
+                    ? "我的档案 · 私密真实档案"
+                    : `${subject.display_name} · ${subject.identity_badge}`}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {!publicMode && subjectsError && (
           <button className="mingli-subject-retry" onClick={onRetrySubjects} type="button">
             重试档案列表
           </button>

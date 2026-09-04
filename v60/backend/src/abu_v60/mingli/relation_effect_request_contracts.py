@@ -16,9 +16,7 @@ from abu_v60.mingli.relation_effect_evidence_contracts import (
 )
 from abu_v60.provenance import content_hash, stable_ref
 
-RELATION_EFFECT_EVIDENCE_REQUEST_VERSION = (
-    "v60.mingli-relation-effect-evidence-request.001"
-)
+RELATION_EFFECT_EVIDENCE_REQUEST_VERSION = "v60.mingli-relation-effect-evidence-request.001"
 RELATION_EFFECT_EVIDENCE_REQUEST_RECEIPT_VERSION = (
     "v60.mingli-relation-effect-evidence-request-receipt.001"
 )
@@ -29,9 +27,7 @@ class RelationEffectEvidencePreparationRequest(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    request_version: Literal[
-        "v60.mingli-relation-effect-evidence-request.001"
-    ]
+    request_version: Literal["v60.mingli-relation-effect-evidence-request.001"]
     expected_packet_ref: str = Field(min_length=1)
     expected_packet_hash: str = Field(min_length=64, max_length=64)
     idempotency_key: str = Field(min_length=1, max_length=180)
@@ -61,9 +57,7 @@ class RelationEffectEvidenceRequestedSlot(BaseModel):
     ) -> RelationEffectEvidenceRequestedSlot:
         expected = (
             RELATION_EFFECT_EVIDENCE_REQUIREMENTS[self.dimension_id],
-            RELATION_EFFECT_EVIDENCE_REQUESTED_ARTIFACTS[
-                self.dimension_id
-            ],
+            RELATION_EFFECT_EVIDENCE_REQUESTED_ARTIFACTS[self.dimension_id],
             RELATION_EFFECT_EVIDENCE_NEXT_ACTIONS[self.dimension_id],
         )
         if (
@@ -71,10 +65,7 @@ class RelationEffectEvidenceRequestedSlot(BaseModel):
             self.requested_artifact_kinds,
             self.next_action,
         ) != expected:
-            raise ValueError(
-                "relation_effect_evidence_request_slot_"
-                "canonical_guidance_mismatch"
-            )
+            raise ValueError("relation_effect_evidence_request_slot_canonical_guidance_mismatch")
         return self
 
     @classmethod
@@ -124,18 +115,13 @@ class RelationEffectEvidenceRequestItem(BaseModel):
     def dimensions_and_identity_are_valid(
         self,
     ) -> RelationEffectEvidenceRequestItem:
-        if tuple(
-            item.dimension_id for item in self.dimension_slots
-        ) != RELATION_EFFECT_RULE_DIMENSIONS:
-            raise ValueError(
-                "relation_effect_evidence_request_dimensions_invalid"
-            )
-        if len(
-            {item.slot_ref for item in self.dimension_slots}
-        ) != len(self.dimension_slots):
-            raise ValueError(
-                "relation_effect_evidence_request_slots_not_unique"
-            )
+        if (
+            tuple(item.dimension_id for item in self.dimension_slots)
+            != RELATION_EFFECT_RULE_DIMENSIONS
+        ):
+            raise ValueError("relation_effect_evidence_request_dimensions_invalid")
+        if len({item.slot_ref for item in self.dimension_slots}) != len(self.dimension_slots):
+            raise ValueError("relation_effect_evidence_request_slots_not_unique")
         identity = self.model_dump(
             mode="json",
             exclude={"request_item_ref"},
@@ -144,9 +130,7 @@ class RelationEffectEvidenceRequestItem(BaseModel):
             "v60-relation-effect-evidence-request-item",
             identity,
         ):
-            raise ValueError(
-                "relation_effect_evidence_request_item_ref_mismatch"
-            )
+            raise ValueError("relation_effect_evidence_request_item_ref_mismatch")
         return self
 
     @classmethod
@@ -157,9 +141,7 @@ class RelationEffectEvidenceRequestItem(BaseModel):
         identity = {
             **values,
             "dimension_slots": tuple(
-                item.model_dump(mode="json")
-                if isinstance(item, BaseModel)
-                else item
+                item.model_dump(mode="json") if isinstance(item, BaseModel) else item
                 for item in values["dimension_slots"]
             ),
             "requested_dimension_slot_count": 6,
@@ -180,12 +162,12 @@ class RelationEffectEvidenceRequestReceipt(BaseModel):
 
     receipt_ref: str = Field(min_length=1)
     receipt_hash: str = Field(min_length=64, max_length=64)
-    receipt_version: Literal[
-        "v60.mingli-relation-effect-evidence-request-receipt.001"
-    ] = RELATION_EFFECT_EVIDENCE_REQUEST_RECEIPT_VERSION
-    request_version: Literal[
-        "v60.mingli-relation-effect-evidence-request.001"
-    ] = RELATION_EFFECT_EVIDENCE_REQUEST_VERSION
+    receipt_version: Literal["v60.mingli-relation-effect-evidence-request-receipt.001"] = (
+        RELATION_EFFECT_EVIDENCE_REQUEST_RECEIPT_VERSION
+    )
+    request_version: Literal["v60.mingli-relation-effect-evidence-request.001"] = (
+        RELATION_EFFECT_EVIDENCE_REQUEST_VERSION
+    )
     requester_account_ref: str = Field(min_length=1)
     idempotency_key: str = Field(min_length=1, max_length=180)
     case_ref: str = Field(min_length=1)
@@ -202,18 +184,14 @@ class RelationEffectEvidenceRequestReceipt(BaseModel):
     proposal_hash: str = Field(min_length=64, max_length=64)
     packet_ref: str = Field(min_length=1)
     packet_hash: str = Field(min_length=64, max_length=64)
-    request_items: tuple[RelationEffectEvidenceRequestItem, ...] = Field(
-        min_length=1
-    )
+    request_items: tuple[RelationEffectEvidenceRequestItem, ...] = Field(min_length=1)
     request_item_count: int = Field(ge=1)
     requested_dimension_slot_count: int = Field(ge=6)
     ready_dimension_slot_count: Literal[0]
     professional_material_count: Literal[0]
     professional_evidence_count: Literal[0]
     status: Literal["REQUEST_RECORDED_NOT_EVIDENCE"]
-    semantics: Literal[
-        "PREPARATION_REQUEST_NOT_PROFESSIONAL_EVIDENCE"
-    ]
+    semantics: Literal["PREPARATION_REQUEST_NOT_PROFESSIONAL_EVIDENCE"]
     evidence_role: Literal["NOT_EVIDENCE"]
     effect_decision_status: Literal["WITHHELD"]
     effect_status: Literal["UNRESOLVED"]
@@ -242,38 +220,24 @@ class RelationEffectEvidenceRequestReceipt(BaseModel):
     def counts_order_boundaries_and_identity_are_valid(
         self,
     ) -> RelationEffectEvidenceRequestReceipt:
-        item_refs = tuple(
-            item.demand_packet_ref for item in self.request_items
-        )
+        item_refs = tuple(item.demand_packet_ref for item in self.request_items)
         if item_refs != tuple(sorted(set(item_refs))):
-            raise ValueError(
-                "relation_effect_evidence_request_items_not_ordered_unique"
-            )
+            raise ValueError("relation_effect_evidence_request_items_not_ordered_unique")
         if self.request_item_count != len(self.request_items):
-            raise ValueError(
-                "relation_effect_evidence_request_item_count_mismatch"
-            )
-        if self.requested_dimension_slot_count != (
-            6 * len(self.request_items)
-        ):
-            raise ValueError(
-                "relation_effect_evidence_request_slot_count_mismatch"
-            )
+            raise ValueError("relation_effect_evidence_request_item_count_mismatch")
+        if self.requested_dimension_slot_count != (6 * len(self.request_items)):
+            raise ValueError("relation_effect_evidence_request_slot_count_mismatch")
         identity = self.model_dump(
             mode="json",
             exclude={"receipt_ref", "receipt_hash"},
         )
         if self.receipt_hash != content_hash(identity):
-            raise ValueError(
-                "relation_effect_evidence_request_receipt_hash_mismatch"
-            )
+            raise ValueError("relation_effect_evidence_request_receipt_hash_mismatch")
         if self.receipt_ref != stable_ref(
             "v60-relation-effect-evidence-request-receipt",
             identity,
         ):
-            raise ValueError(
-                "relation_effect_evidence_request_receipt_ref_mismatch"
-            )
+            raise ValueError("relation_effect_evidence_request_receipt_ref_mismatch")
         return self
 
     @classmethod
@@ -288,26 +252,17 @@ class RelationEffectEvidenceRequestReceipt(BaseModel):
             )
         )
         identity = {
-            "receipt_version": (
-                RELATION_EFFECT_EVIDENCE_REQUEST_RECEIPT_VERSION
-            ),
+            "receipt_version": (RELATION_EFFECT_EVIDENCE_REQUEST_RECEIPT_VERSION),
             "request_version": RELATION_EFFECT_EVIDENCE_REQUEST_VERSION,
             **values,
-            "request_items": tuple(
-                item.model_dump(mode="json")
-                for item in request_items
-            ),
+            "request_items": tuple(item.model_dump(mode="json") for item in request_items),
             "request_item_count": len(request_items),
-            "requested_dimension_slot_count": (
-                6 * len(request_items)
-            ),
+            "requested_dimension_slot_count": (6 * len(request_items)),
             "ready_dimension_slot_count": 0,
             "professional_material_count": 0,
             "professional_evidence_count": 0,
             "status": "REQUEST_RECORDED_NOT_EVIDENCE",
-            "semantics": (
-                "PREPARATION_REQUEST_NOT_PROFESSIONAL_EVIDENCE"
-            ),
+            "semantics": ("PREPARATION_REQUEST_NOT_PROFESSIONAL_EVIDENCE"),
             "evidence_role": "NOT_EVIDENCE",
             "effect_decision_status": "WITHHELD",
             "effect_status": "UNRESOLVED",

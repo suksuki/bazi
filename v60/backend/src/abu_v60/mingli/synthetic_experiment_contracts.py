@@ -8,9 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from abu_v60.mingli.stage_contracts import MingliStageProjection
 
 SYNTHETIC_EXPERIMENT_RUN_VERSION = "v60.mingli-synthetic-experiment-run.001"
-SYNTHETIC_EXPERIMENT_SNAPSHOT_VERSION = (
-    "v60.mingli-synthetic-experiment-snapshot.004"
-)
+SYNTHETIC_EXPERIMENT_SNAPSHOT_VERSION = "v60.mingli-synthetic-experiment-snapshot.004"
 SyntheticExperimentOutcome = Literal[
     "PASS",
     "PRODUCT_SAFE_MODEL_FAIL",
@@ -26,6 +24,8 @@ SyntheticExperimentEvaluatorVersion = Literal[
     "v60.mingli-synthetic-experiment-evaluator.006",
     "v60.mingli-synthetic-experiment-evaluator.007",
     "v60.mingli-synthetic-experiment-evaluator.008",
+    "v60.mingli-synthetic-experiment-evaluator.009",
+    "v60.mingli-synthetic-experiment-evaluator.010",
 ]
 SyntheticExperimentDevGoldVersion = Literal[
     "v60.mingli-synthetic-experiment-dev-gold.001",
@@ -33,6 +33,7 @@ SyntheticExperimentDevGoldVersion = Literal[
     "v60.mingli-synthetic-experiment-dev-gold.003",
     "v60.mingli-synthetic-experiment-dev-gold.004",
     "v60.mingli-synthetic-experiment-dev-gold.005",
+    "v60.mingli-synthetic-experiment-dev-gold.006",
 ]
 
 
@@ -63,6 +64,10 @@ class SyntheticExperimentEvaluation(BaseModel):
     outcome: SyntheticExperimentOutcome
     checks: tuple[SyntheticExperimentCheck, ...] = Field(min_length=1)
     server_issue_keys: SyntheticExperimentIssueKeys
+    raw_judgment_repair_variants: tuple[Literal["A", "B"], ...] = Field(
+        default=(),
+        exclude_if=lambda value: not value,
+    )
     changed_pass_count: int = Field(ge=0)
     hold_pass_count: int = Field(ge=0)
     drift_checks: tuple[str, ...]
@@ -74,12 +79,10 @@ class SyntheticExperimentEvaluation(BaseModel):
         if len({item.check_ref for item in self.checks}) != len(self.checks):
             raise ValueError("mingli_synthetic_experiment_check_ref_duplicate")
         changed_pass_count = sum(
-            item.group == "EXPECTED_CHANGE" and item.status == "PASS"
-            for item in self.checks
+            item.group == "EXPECTED_CHANGE" and item.status == "PASS" for item in self.checks
         )
         hold_pass_count = sum(
-            item.group == "MUST_HOLD" and item.status == "PASS"
-            for item in self.checks
+            item.group == "MUST_HOLD" and item.status == "PASS" for item in self.checks
         )
         drift_checks = tuple(
             item.check_ref
@@ -92,20 +95,31 @@ class SyntheticExperimentEvaluation(BaseModel):
             or self.drift_checks != drift_checks
         ):
             raise ValueError("mingli_synthetic_experiment_derived_counts_invalid")
+        if self.raw_judgment_repair_variants != tuple(
+            sorted(set(self.raw_judgment_repair_variants))
+        ) or any(
+            not any(
+                item.check_ref == f"{variant}_RAW_HYPOTHESIS_JUDGMENT_COHERENT"
+                and item.status == "FAIL"
+                for item in self.checks
+            )
+            for variant in self.raw_judgment_repair_variants
+        ):
+            raise ValueError("mingli_synthetic_experiment_raw_repair_binding_invalid")
         validity_failed = any(
-            item.group in {"EXPERIMENT_VALIDITY", "MUST_HOLD"}
-            and item.status == "FAIL"
+            item.group in {"EXPERIMENT_VALIDITY", "MUST_HOLD"} and item.status == "FAIL"
             for item in self.checks
         )
         expected_outcome = (
             "INVALID_EXPERIMENT"
             if validity_failed
             else "PRODUCT_SAFE_MODEL_FAIL"
-            if self.server_issue_keys.A or self.server_issue_keys.B
+            if self.server_issue_keys.A
+            or self.server_issue_keys.B
+            or self.raw_judgment_repair_variants
             else "MODEL_FAIL"
             if any(
-                item.group == "EXPECTED_CHANGE" and item.status == "FAIL"
-                for item in self.checks
+                item.group == "EXPECTED_CHANGE" and item.status == "FAIL" for item in self.checks
             )
             else "PASS"
         )
@@ -138,8 +152,7 @@ class SyntheticExperimentRunIdentity(BaseModel):
         if self.member_a_agent_reading_ref == self.member_b_agent_reading_ref:
             raise ValueError("mingli_synthetic_experiment_run_readings_not_distinct")
         if (
-            self.member_a_stage_json.subject_id
-            == self.member_b_stage_json.subject_id
+            self.member_a_stage_json.subject_id == self.member_b_stage_json.subject_id
             or self.member_a_stage_json.case_ref == self.member_b_stage_json.case_ref
         ):
             raise ValueError("mingli_synthetic_experiment_run_members_not_distinct")

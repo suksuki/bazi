@@ -7,9 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from abu_v60.mingli.source_usability_contracts import PILLAR_SLOT_ORDER
 from abu_v60.provenance import content_hash, stable_ref
 
-RELATION_EFFECT_RESEARCH_FRONTIER_VERSION = (
-    "v60.mingli-relation-effect-research-frontier.001"
-)
+RELATION_EFFECT_RESEARCH_FRONTIER_VERSION = "v60.mingli-relation-effect-research-frontier.001"
 RELATION_EFFECT_REQUIRED_RULE_DIMENSIONS = (
     "APPLICABILITY_CONTEXT",
     "EFFECT_DIRECTION",
@@ -93,10 +91,7 @@ class RelationEffectRuleDemand(BaseModel):
         )
         if self.source_match_kind != expected_match_kind:
             raise ValueError("relation_effect_frontier_match_dependency_mismatch")
-        if (
-            self.required_rule_dimensions
-            != RELATION_EFFECT_REQUIRED_RULE_DIMENSIONS
-        ):
+        if self.required_rule_dimensions != RELATION_EFFECT_REQUIRED_RULE_DIMENSIONS:
             raise ValueError("relation_effect_frontier_rule_dimensions_invalid")
         identity = self.model_dump(mode="json", exclude={"demand_ref"})
         if self.demand_ref != stable_ref(
@@ -110,9 +105,7 @@ class RelationEffectRuleDemand(BaseModel):
     def issue(cls, **values: Any) -> RelationEffectRuleDemand:
         identity = {
             **values,
-            "required_rule_dimensions": (
-                RELATION_EFFECT_REQUIRED_RULE_DIMENSIONS
-            ),
+            "required_rule_dimensions": (RELATION_EFFECT_REQUIRED_RULE_DIMENSIONS),
             "effect_status": "UNRESOLVED",
             "usability_status": "UNRESOLVED",
             "selection_authority": False,
@@ -133,9 +126,9 @@ class MingliRelationEffectResearchFrontierEnvelope(BaseModel):
 
     frontier_ref: str = Field(min_length=1)
     frontier_hash: str = Field(min_length=64, max_length=64)
-    frontier_version: Literal[
-        "v60.mingli-relation-effect-research-frontier.001"
-    ] = RELATION_EFFECT_RESEARCH_FRONTIER_VERSION
+    frontier_version: Literal["v60.mingli-relation-effect-research-frontier.001"] = (
+        RELATION_EFFECT_RESEARCH_FRONTIER_VERSION
+    )
     case_ref: str = Field(min_length=1)
     chart_version_ref: str = Field(min_length=1)
     reading_ref: str = Field(min_length=1)
@@ -151,9 +144,7 @@ class MingliRelationEffectResearchFrontierEnvelope(BaseModel):
     scope_invariant_rule_demand_count: int = Field(ge=0)
     match_scope_rule_first_count: int = Field(ge=0)
     admitted_effect_rule_count: Literal[0]
-    research_semantics: Literal[
-        "MEMBERSHIP_DEPENDENCY_AND_RULE_GAPS_ONLY"
-    ]
+    research_semantics: Literal["MEMBERSHIP_DEPENDENCY_AND_RULE_GAPS_ONLY"]
     source_discussion_disposition: Literal["ABSTAIN"]
     effect_status: Literal["UNRESOLVED"]
     usability_status: Literal["UNRESOLVED"]
@@ -188,12 +179,10 @@ class MingliRelationEffectResearchFrontierEnvelope(BaseModel):
         expected_counts = {
             "demand_count": len(self.demands),
             "scope_invariant_rule_demand_count": sum(
-                item.dependency_status == "SCOPE_INVARIANT_RULE_DEMAND"
-                for item in self.demands
+                item.dependency_status == "SCOPE_INVARIANT_RULE_DEMAND" for item in self.demands
             ),
             "match_scope_rule_first_count": sum(
-                item.dependency_status == "MATCH_SCOPE_RULE_FIRST"
-                for item in self.demands
+                item.dependency_status == "MATCH_SCOPE_RULE_FIRST" for item in self.demands
             ),
             "admitted_effect_rule_count": 0,
         }
@@ -221,14 +210,10 @@ class MingliRelationEffectResearchFrontierEnvelope(BaseModel):
             "frontier_version": RELATION_EFFECT_RESEARCH_FRONTIER_VERSION,
             **values,
             "demands": tuple(
-                item.model_dump(mode="json")
-                if isinstance(item, BaseModel)
-                else item
+                item.model_dump(mode="json") if isinstance(item, BaseModel) else item
                 for item in values["demands"]
             ),
-            "research_semantics": (
-                "MEMBERSHIP_DEPENDENCY_AND_RULE_GAPS_ONLY"
-            ),
+            "research_semantics": ("MEMBERSHIP_DEPENDENCY_AND_RULE_GAPS_ONLY"),
             "source_discussion_disposition": "ABSTAIN",
             "effect_status": "UNRESOLVED",
             "usability_status": "UNRESOLVED",

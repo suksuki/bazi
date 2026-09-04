@@ -1,0 +1,296 @@
+.public-reading-loading,
+.public-boot-screen {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  min-height: 360px;
+  padding: 40px;
+  text-align: center;
+}
+
+.public-boot-screen { min-height: 100dvh; }
+
+.public-reading-loading h2,
+.public-boot-screen h1 {
+  margin: 18px 0 5px;
+  color: var(--public-green-deep);
+  font-family: "STSong", "Songti SC", serif;
+  font-size: 23px;
+}
+
+.public-reading-loading p { color: var(--public-ink-soft); font-size: 12px; }
+.public-loading-mark { display: flex; gap: 6px; }
+
+.public-loading-mark span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--public-green);
+  animation: public-bounce 1s ease-in-out infinite;
+}
+
+.public-loading-mark span:nth-child(2) { animation-delay: 120ms; }
+.public-loading-mark span:nth-child(3) { animation-delay: 240ms; }
+.public-boot-screen .public-primary-button { margin-top: 20px; }
+
+.public-abu-stage {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.28fr);
+  min-height: 480px;
+  overflow: hidden;
+  border: 1px solid rgba(42, 80, 67, 0.12);
+  border-radius: 24px;
+  background: rgba(255, 253, 248, 0.92);
+  box-shadow: var(--public-shadow);
+}
+
+.public-abu-visual {
+  position: relative;
+  min-height: 480px;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 36%, rgba(255, 245, 209, 0.9), transparent 11rem), linear-gradient(165deg, #dcebe0 0%, #bcd4c2 52%, #86ad96 100%);
+}
+
+.public-abu-visual::before,
+.public-abu-visual::after { position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.26); content: ""; }
+.public-abu-visual::before { top: -50px; right: -40px; width: 180px; height: 180px; }
+.public-abu-visual::after { bottom: -90px; left: -80px; width: 260px; height: 260px; }
+.public-abu-orbit { position: absolute; border: 1px solid rgba(255, 255, 255, 0.34); border-radius: 50%; }
+.public-abu-orbit-one { top: 64px; left: calc(50% - 145px); width: 290px; height: 290px; }
+.public-abu-orbit-two { top: 105px; left: calc(50% - 105px); width: 210px; height: 210px; }
+
+.public-abu-character {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: 54px;
+  display: block;
+  width: min(88%, 360px);
+  height: 370px;
+  object-fit: contain;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 18px 22px rgba(35, 65, 52, 0.18));
+}
+
+.public-abu-nameplate {
+  position: absolute;
+  z-index: 3;
+  right: 18px;
+  bottom: 18px;
+  left: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.43);
+  border-radius: 12px;
+  background: rgba(25, 74, 56, 0.72);
+  color: #fff;
+  backdrop-filter: blur(10px);
+}
+
+.public-abu-nameplate strong { font-family: "STKaiti", "KaiTi", serif; font-size: 18px; }
+.public-abu-nameplate span { opacity: 0.75; font-size: 9px; }
+.public-abu-dialogue { display: grid; align-content: center; padding: clamp(30px, 5vw, 64px); }
+.public-abu-dialogue > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
+
+.public-abu-dialogue h2 {
+  margin: 0;
+  color: var(--public-green-deep);
+  font-family: "STSong", "Songti SC", serif;
+  font-size: clamp(23px, 2.5vw, 33px);
+}
+
+.public-audio-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--public-green-deep);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 720;
+}
+
+.public-audio-button:disabled { cursor: wait; opacity: 0.58; }
+
+.public-speech-bubble {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  max-height: 315px;
+  padding: 24px 26px;
+  overflow-y: auto;
+  border: 1px solid rgba(40, 101, 79, 0.16);
+  border-radius: 6px 20px 20px;
+  background: #f4f7f1;
+}
+
+.public-speech-bubble::before {
+  position: absolute;
+  top: -1px;
+  left: -16px;
+  width: 18px;
+  height: 18px;
+  border-top: 1px solid rgba(40, 101, 79, 0.16);
+  background: #f4f7f1;
+  clip-path: polygon(100% 0, 100% 100%, 0 0);
+  content: "";
+}
+
+.public-speech-bubble strong {
+  color: #163f32;
+  font-family: "STSong", "Songti SC", serif;
+  font-size: clamp(18px, 1.9vw, 24px);
+  line-height: 1.65;
+}
+
+.public-speech-bubble p { margin: 0; color: var(--public-ink-soft); font-size: 13px; line-height: 1.82; }
+.public-speech-note { margin: 11px 4px 0; color: var(--public-ink-faint); font-size: 10px; }
+
+.public-modal-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  overflow-y: auto;
+  background: rgba(20, 45, 37, 0.42);
+  backdrop-filter: blur(8px);
+}
+
+.public-case-modal {
+  width: min(650px, 100%);
+  max-height: calc(100dvh - 48px);
+  padding: 30px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 24px;
+  background: #fffdf8;
+  box-shadow: 0 34px 90px rgba(23, 57, 47, 0.3);
+}
+
+.public-case-modal > header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 26px; }
+
+.public-icon-button {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 50%;
+  background: #f0f2ed;
+  color: var(--public-ink-soft);
+  font-size: 22px;
+}
+
+.public-case-form { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.public-case-form fieldset { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.public-field-wide { grid-column: 1 / -1; }
+
+.public-segmented-field {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 48px;
+  padding: 4px;
+  border: 1px solid var(--public-line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.public-segmented-field button { border: 0; border-radius: 8px; background: transparent; color: var(--public-ink-soft); cursor: pointer; }
+.public-segmented-field button.is-active { background: #e7efe9; color: var(--public-green-deep); font-weight: 720; }
+.public-check-field { display: flex !important; grid-template-columns: auto 1fr; align-items: center; }
+.public-check-field input { width: 18px; min-height: 18px; }
+.public-form-note { margin: 0; color: var(--public-ink-faint); font-size: 10px; line-height: 1.6; }
+.public-empty-workspace { min-height: 100dvh; }
+.public-empty-workspace > .public-header > img { width: 116px; height: 54px; }
+
+.public-empty-workspace main {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  min-height: calc(100dvh - 72px);
+  padding: 40px;
+  text-align: center;
+}
+
+.public-empty-workspace h1 { margin: 0; color: var(--public-green-deep); font-family: "STSong", "Songti SC", serif; font-size: 36px; }
+.public-empty-workspace main > p:not(.public-kicker) { margin: 14px 0 26px; color: var(--public-ink-soft); }
+
+@keyframes public-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(0.86); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes public-bounce {
+  0%, 100% { opacity: 0.42; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-6px); }
+}
+
+@media (max-width: 920px) {
+  .public-login { grid-template-columns: 1fr; gap: 18px; width: min(620px, calc(100% - 36px)); padding: 30px 0; }
+  .public-login-intro { padding: 10px 12px 26px; }
+  .public-login-logo { width: 130px; height: 68px; margin-bottom: 25px; }
+  .public-login h1 { font-size: clamp(37px, 10vw, 56px); }
+  .public-login-lead { font-size: 15px; }
+  .public-chart-intro { grid-template-columns: 1fr; gap: 24px; }
+  .public-reading-layout { grid-template-columns: 1fr; }
+  .public-reading-aside { grid-template-columns: 1fr 1fr; }
+  .public-boundary-note { grid-column: 1 / -1; }
+  .public-abu-stage { grid-template-columns: minmax(240px, 0.65fr) minmax(0, 1.35fr); }
+}
+
+@media (max-width: 680px) {
+  .public-header { position: relative; min-height: 64px; padding: 6px 14px; }
+  .public-brand { width: 92px; height: 48px; }
+  .public-header-actions { gap: 6px; }
+  .public-case-select { padding: 7px 8px; }
+  .public-case-select > span,
+  .public-account-button > span,
+  .public-account-button { display: none; }
+  .public-case-select select { max-width: 95px; font-size: 11px; }
+  .public-quiet-button { padding: 0 10px; font-size: 10px; }
+  .public-reading-main { width: min(100% - 24px, 1240px); padding: 12px 0 38px; }
+  .public-chart-intro { gap: 18px; padding: 22px 18px; border-radius: 19px; }
+  .public-chart-intro h1 { font-size: 28px; }
+  .public-pillars { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+  .public-pillars > div { min-height: 104px; padding: 22px 5px 10px; border-radius: 12px; }
+  .public-pillars strong { width: auto; height: 52px; font-size: 25px; }
+  .public-mode-switch { margin: 14px auto 12px; }
+  .public-mode-switch button { min-height: 48px; }
+  .public-topic-nav { display: flex; gap: 8px; margin: 0 -12px 14px; padding: 0 12px 6px; overflow-x: auto; scrollbar-width: none; }
+  .public-topic-nav::-webkit-scrollbar { display: none; }
+  .public-topic-nav button { min-width: 108px; min-height: 58px; padding: 10px 12px; }
+  .public-reading-card { min-height: 0; padding: 26px 22px; border-radius: 18px; }
+  .public-reading-card > header { display: grid; margin-bottom: 22px; }
+  .public-reading-card > header > span { width: fit-content; }
+  .public-reading-card .public-reading-lead { font-size: 21px; }
+  .public-reading-aside { grid-template-columns: 1fr; }
+  .public-boundary-note { grid-column: auto; }
+  .public-abu-stage { grid-template-columns: 1fr; border-radius: 18px; }
+  .public-abu-visual { min-height: 300px; }
+  .public-abu-character { bottom: 44px; width: min(72%, 290px); height: 255px; }
+  .public-abu-dialogue { padding: 26px 21px 30px; }
+  .public-abu-dialogue > header { align-items: center; }
+  .public-abu-dialogue h2 { font-size: 23px; }
+  .public-speech-bubble { max-height: none; padding: 21px; }
+  .public-modal-backdrop { align-items: end; padding: 0; }
+  .public-case-modal { width: 100%; max-height: 92dvh; padding: 24px 18px calc(24px + env(safe-area-inset-bottom)); border-radius: 24px 24px 0 0; }
+  .public-case-form { grid-template-columns: 1fr; gap: 15px; }
+  .public-field-wide { grid-column: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

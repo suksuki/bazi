@@ -1,0 +1,24 @@
+@media (max-width: 520px) and (orientation: portrait) {
+  .mingli-growth-scene,
+  .mingli-growth-nodes {
+    top: 50%;
+    left: 32%;
+    width: 205vw;
+    height: 100%;
+    aspect-ratio: auto;
+  }
+
+  .mingli-growth-node {
+    min-width: 48px;
+  }
+
+  .mingli-growth-controls {
+    top: max(10px, calc(env(safe-area-inset-top) + 6px));
+    left: 10px;
+  }
+
+  .mingli-growth-controls button {
+    min-height: 34px;
+    padding: 7px 10px;
+  }
+}

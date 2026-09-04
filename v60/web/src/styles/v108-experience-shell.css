@@ -12,6 +12,9 @@
 
 .v60-shell[data-scene-id="mingli-shared-scene"]:has(
   .mingli-scene-host[data-rehearsal-open="true"]
+) :is(.mingli-canonical-drawer, .mingli-case-evidence-boundary),
+.v60-shell[data-scene-id="mingli-shared-scene"]:has(
+  .mingli-scene-host[data-narration-open="true"]
 ) :is(.mingli-canonical-drawer, .mingli-case-evidence-boundary) {
   display: none;
 }
@@ -70,6 +73,212 @@
 .v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host-header {
   min-height: 76px;
   background: linear-gradient(180deg, rgba(6, 25, 19, 0.94), rgba(6, 25, 19, 0.64));
+}
+
+/*
+ * V131 public Lab continuity: the overview and both tester demos stay in the
+ * same watercourt. Domain projections remain supplied by the V60 canonical
+ * stage; this is deliberately a visual-shell alignment only.
+ */
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"] {
+  background:
+    linear-gradient(180deg, rgba(244, 244, 226, 0.08), rgba(19, 47, 37, 0.12)),
+    var(--mingli-lab-stage-art) center / cover no-repeat,
+    #dfe5d8;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="night"] {
+  background:
+    linear-gradient(180deg, rgba(1, 15, 21, 0.12), rgba(1, 14, 18, 0.3)),
+    var(--mingli-lab-stage-art) center / cover no-repeat,
+    #071d23;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"] :is(
+  .mingli-scene-player-field,
+  .mingli-scene-player canvas
+) {
+  background: transparent;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] {
+  color: #193b31;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"]::before {
+  opacity: 0.12;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-scene-host-header {
+  color: #193b31;
+  border-bottom-color: rgba(51, 82, 68, 0.15);
+  background: linear-gradient(180deg, rgba(250, 249, 238, 0.94), rgba(245, 246, 232, 0.7));
+  box-shadow: 0 8px 30px rgba(57, 77, 63, 0.08);
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-scene-exit {
+  color: #294d41;
+  border-color: rgba(54, 90, 75, 0.24);
+  background: rgba(255, 255, 247, 0.62);
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-scene-title p {
+  color: #8b7441;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-scene-title span {
+  color: #62796e;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-scene-surfaces {
+  border-color: rgba(61, 92, 78, 0.18);
+  background: rgba(255, 255, 247, 0.5);
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-scene-surfaces button {
+  color: #60796d;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-scene-surfaces button[aria-pressed="true"] {
+  color: #fffdf2;
+  background: rgba(76, 119, 94, 0.9);
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-scene-toolbar {
+  color: #60786c;
+  border-bottom-color: rgba(55, 86, 72, 0.12);
+  background: rgba(244, 246, 232, 0.7);
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-scene-toolbar :is(
+  select,
+  .mingli-stage-mode button,
+  .mingli-subject-retry
+) {
+  color: #294d41;
+  border-color: rgba(57, 91, 76, 0.22);
+  background: rgba(255, 255, 248, 0.7);
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-scene-toolbar .mingli-stage-mode {
+  border-color: rgba(57, 91, 76, 0.18);
+  background: rgba(255, 255, 248, 0.44);
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-scene-toolbar .mingli-stage-mode button[aria-pressed="true"] {
+  color: #fffdf2;
+  background: rgba(76, 119, 94, 0.9);
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-scene-vignette {
+  background:
+    radial-gradient(circle at 50% 44%, transparent 30%, rgba(43, 67, 54, 0.08) 78%),
+    linear-gradient(180deg, rgba(250, 248, 229, 0.03), rgba(56, 81, 65, 0.12));
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-scene-column-labels span {
+  color: #294c40;
+  text-shadow: 0 1px 8px rgba(255, 255, 245, 0.9);
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-scene-column-labels small {
+  color: #60786c;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-scene-column-labels :is(
+  [data-source-layer="DAYUN"],
+  [data-source-layer="ANNUAL"]
+) {
+  color: #8f7438;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-scene-truth-line {
+  color: #49675a;
+  border-top-color: rgba(55, 86, 72, 0.13);
+  background: rgba(248, 248, 236, 0.78);
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-scene-truth-line small {
+  color: #71867b;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-lab-inspector {
+  color: #203f35;
+  border-color: rgba(60, 91, 77, 0.2);
+  background: rgba(250, 250, 239, 0.82);
+  box-shadow: 0 22px 56px rgba(57, 75, 62, 0.16);
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-lab-inspector header p {
+  color: #8b7441;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-lab-inspector header span,
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-lab-section-title,
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-lab-relation-list > p {
+  color: #61796d;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] :is(
+  .mingli-lab-claim-graph,
+  .mingli-lab-method-review article,
+  .mingli-lab-evidence
+) {
+  border-color: rgba(132, 108, 55, 0.2);
+  background: rgba(255, 254, 244, 0.52);
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-lab-claim-graph article {
+  border-bottom-color: rgba(61, 91, 77, 0.12);
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] :is(
+  .mingli-lab-claim-graph strong,
+  .mingli-lab-relation-list button strong
+) {
+  color: #725e2f;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] :is(
+  .mingli-lab-claim-graph p,
+  .mingli-lab-method-review p,
+  .mingli-lab-relation-list button,
+  .mingli-lab-evidence dd
+) {
+  color: #38584b;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] :is(
+  .mingli-lab-claim-graph small,
+  .mingli-lab-claim-graph span,
+  .mingli-lab-relation-list button small,
+  .mingli-lab-evidence dt
+) {
+  color: #71877b;
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-lab-relation-list button {
+  border-color: rgba(61, 92, 78, 0.17);
+  background: rgba(255, 255, 247, 0.48);
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] .mingli-lab-relation-list button[aria-pressed="true"] {
+  border-color: rgba(139, 116, 65, 0.52);
+  background: rgba(229, 216, 180, 0.34);
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] > .mingli-stage-boundary {
+  color: #637a6f;
+  border-top-color: rgba(55, 86, 72, 0.13);
+  background: rgba(247, 248, 235, 0.82);
+}
+
+.v60-shell[data-scene-id="mingli-shared-scene"] .mingli-scene-host[data-scene-surface="LAB"][data-world-light="day"] > :is(
+  .mingli-stage-loading,
+  .mingli-stage-error
+) {
+  color: #3d5d50;
+  background: rgba(244, 246, 233, 0.8);
 }
 
 .v60-shell[data-scene-id="mingli-shared-scene"] .runtime-error {

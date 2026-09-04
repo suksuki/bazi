@@ -18,6 +18,15 @@ Archive bytes     33,413,120
 The archive identity is the immutable Sites version receipt, not a V60
 runtime input. V60 independently re-hashes each imported asset byte-for-byte.
 
+## 2026-09-04 Owner public-exposure override
+
+The Experience sources below remain frozen, but the public V60 surface is now
+limited to the LifeTree Home, Mingli branch, Reading and Abu Says. Lab has no
+public entry or route; synthetic catalogs, experiments and training controls
+remain internal development infrastructure. The executable policy and route
+behavior are recorded in
+[`25_V60_MINIMAL_PUBLIC_RELEASE.md`](25_V60_MINIMAL_PUBLIC_RELEASE.md).
+
 V128 remains the frozen Mingli-branch Experience Canonical. V131 supersedes it
 only for the Lab realm and synthetic-validation entry flow. V60 remains the
 Domain Canonical for Profile, Case, Chart, Reading, evidence, experiments,
@@ -37,17 +46,19 @@ profile leaf
 → image leaf at 3.32s
 → life-theme flower at 4.58s
 → timing fruit at 5.32s
-→ real V60 layer content and Reading actions
-→ companion opens the same four/six-pillar Scene Player
-→ current-layer admitted ClaimGraph chapters
-→ silent LISTENING rehearsal before formal narration
+→ one click on any organ opens its matching Abu Says layer
+→ the same four/six-pillar Scene Player
+→ complete Focused Pass chapters, otherwise admitted ClaimGraph chapters
+→ one continuous, silent character-led reading with no chapter rail
 
 Lab flower
 → V131 research watercourt overview
 → real six-pillar relation-coordinate room
-→ real four-topic synthetic research shelf
-→ exact sealed experiment replay
 → Abu Says on the same six-pillar Scene Player
+
+Internal only
+→ synthetic research shelf
+→ sealed experiment replay and training Runtime
 ```
 
 For the timing layer, “current-layer chapters” currently means the natal
@@ -68,21 +79,27 @@ on its existing V108 baseline until a matching V128 night parcel is reviewed.
   pillar Projection, narration script and Lab data.
 - Do not reuse as authority: prototype mock API, static Golden Bundles, raw
   client TTS text, URL-hash-only persistence or the monolithic prototype page.
-- Known prototype bug not copied: “进入明理 Lab” must enter Lab rather than
-  opening Abu Says exploration.
-- The inverse route collapse is also forbidden: the companion rehearsal and
-  ordinary stage must remain Reading experiences, while only the explicit Lab
-  action enters `view=lab`.
+- The branch no longer exposes “进入明理 Lab” or a separate companion/stage
+  action. Lab remains reachable from the Home flower; each organic Mingli node
+  is now the sole primary action for its matching Abu Says reading.
+- Abu Says and ordinary stage remain Reading experiences, while only the Home
+  Lab flower enters `view=lab`.
 - Current rehearsal is intentionally silent. V128 composition and character
   presence are reused, but the old coordinate-bound narration text is not
   dressed up as four-layer destiny analysis and no unapproved semantic Cue is
   faked.
-- A rehearsal route is admitted only when the selected layer has at least one
-  projectable Claim; empty or fully withheld layers keep normal Reading
-  controls visible.
-- Lab overview and topic shelf read their `4 topics / 16 sealed runs / latest
-  2 of 2 sealed / 2 review-required / 2 error clusters` from real catalog and
-  Suite APIs. They create no Canvas and never call a model from the browser.
+- The four product layers now request one server-owned Qwen3.8 Focused Pass at
+  a time. Structure is the only prerequisite; every later layer restores its
+  own append-only normalized result and does not start the strict whole-chart
+  DEV Agent. The full runtime and latency evidence is recorded in
+  [`23_V60_QWEN38_MINGLI_INTEGRATION_AND_PRACTITIONER_REVIEW.md`](23_V60_QWEN38_MINGLI_INTEGRATION_AND_PRACTITIONER_REVIEW.md).
+- A direct-reading route is admitted only when the selected layer has a
+  complete Focused Pass set or at least one projectable Claim. If neither is
+  available, the same click may generate the missing short pass server-side;
+  failure returns to the branch with a retry cue and never invents content.
+- The internal topic shelf reads its catalog and Suite state from real APIs,
+  creates no Canvas and never calls a model from the browser. It is no longer
+  imported or reachable by the tester-facing Lab Host.
 - Prototype `localStorage` adjudication, fake Profile/Prompt/Gold identities and
   manual “blind review” are not copied. The current product correctly calls the
   deep view an already-revealed sealed replay.
@@ -93,18 +110,17 @@ on its existing V108 baseline until a matching V128 night parcel is reviewed.
   the same canonical Scene Player; it does not replace the Case-bound narrator,
   script, Projection, Cue or audio clock.
 
-## Explicit freeze
+## Explicit product boundary
 
-Abu Dream World is outside this integration. V128's new Heroes-like direction
-is still under product analysis, so no Dream scene, asset, route, state or
-engine code may be copied or modified under this parcel.
+The retired narrative/game product line is absent from this integration and
+has been physically removed from V60. The independently developed Abu Divine
+Tree Game stays a separate product and must not be silently merged here.
 
 ## Next UI parcels
 
-Continue in visible user order: make Home profile identity and current-tree
-switching match the prototype, then refine the shared stage's daytime contrast
-and freeze the real Abu Says audio/Cue performance. Lab now has its V131 realm,
-real research shelf and shared-stage entry; the next Lab work is method depth,
-not another shell. Dream stays frozen. Each parcel must preserve the applicable
-prototype fidelity while proving that displayed content comes from real V60
-lineage and survives refresh, back/forward and profile changes.
+Home and the simplified V128 branch form the visible tester continuity. Branch
+reading has one interaction grammar: `枝／叶／花／果 -> 阿布说 -> 回到命理枝`.
+The shared stage keeps the V131 particle language for Six Pillars and Abu Says
+while retaining V60's real Projection and evidence boundary. Each parcel must
+prove that displayed content comes from real V60 lineage and survives refresh,
+back/forward and profile changes.

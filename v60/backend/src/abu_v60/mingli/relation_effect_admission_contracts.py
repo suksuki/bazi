@@ -16,9 +16,7 @@ from abu_v60.mingli.relation_effect_frontier_contracts import (
 )
 from abu_v60.provenance import content_hash, stable_ref
 
-RELATION_EFFECT_ADMISSION_REVIEW_VERSION = (
-    "v60.mingli-relation-rule-admission-review.001"
-)
+RELATION_EFFECT_ADMISSION_REVIEW_VERSION = "v60.mingli-relation-rule-admission-review.001"
 
 RelationEffectInterpretationId = Literal[
     "RELATION_MEMBERSHIP_DISTURBANCE_ONLY",
@@ -51,9 +49,7 @@ class RelationEffectCompetingInterpretation(BaseModel):
             "v60-relation-effect-competing-interpretation",
             identity,
         ):
-            raise ValueError(
-                "relation_effect_interpretation_ref_mismatch"
-            )
+            raise ValueError("relation_effect_interpretation_ref_mismatch")
         return self
 
     @classmethod
@@ -94,12 +90,8 @@ class RelationEffectDimensionAssessment(BaseModel):
     def basis_is_unique(
         self,
     ) -> RelationEffectDimensionAssessment:
-        if len(self.current_basis_refs) != len(
-            set(self.current_basis_refs)
-        ):
-            raise ValueError(
-                "relation_effect_dimension_basis_refs_not_unique"
-            )
+        if len(self.current_basis_refs) != len(set(self.current_basis_refs)):
+            raise ValueError("relation_effect_dimension_basis_refs_not_unique")
         return self
 
 
@@ -138,9 +130,7 @@ class RelationEffectRuleAdmissionAssessment(BaseModel):
         ...,
     ] = Field(min_length=6, max_length=6)
     disposition: Literal["REJECTED_PRE_ADMISSION"]
-    candidate_truth_status: Literal[
-        "NOT_EVALUATED_AS_TRUE_OR_FALSE"
-    ]
+    candidate_truth_status: Literal["NOT_EVALUATED_AS_TRUE_OR_FALSE"]
     rejection_codes: tuple[
         Literal[
             "APPLICABILITY_AUTHORITY_INCOMPLETE",
@@ -167,26 +157,19 @@ class RelationEffectRuleAdmissionAssessment(BaseModel):
     def contract_and_identity_are_valid(
         self,
     ) -> RelationEffectRuleAdmissionAssessment:
-        if tuple(
-            item.interpretation_id for item in self.interpretations
-        ) != (
+        if tuple(item.interpretation_id for item in self.interpretations) != (
             "RELATION_MEMBERSHIP_DISTURBANCE_ONLY",
             "SOURCE_OPEN_OR_EXPOSE",
             "SOURCE_DAMAGE_OR_REMOVE",
         ):
-            raise ValueError(
-                "relation_effect_assessment_interpretations_invalid"
-            )
-        if tuple(
-            item.dimension_id for item in self.dimension_assessments
-        ) != RELATION_EFFECT_RULE_DIMENSIONS:
-            raise ValueError(
-                "relation_effect_assessment_dimensions_invalid"
-            )
+            raise ValueError("relation_effect_assessment_interpretations_invalid")
+        if (
+            tuple(item.dimension_id for item in self.dimension_assessments)
+            != RELATION_EFFECT_RULE_DIMENSIONS
+        ):
+            raise ValueError("relation_effect_assessment_dimensions_invalid")
         if any(item.satisfied for item in self.dimension_assessments):
-            raise ValueError(
-                "relation_effect_assessment_dimension_cannot_be_satisfied"
-            )
+            raise ValueError("relation_effect_assessment_dimension_cannot_be_satisfied")
         if self.rejection_codes != (
             "APPLICABILITY_AUTHORITY_INCOMPLETE",
             "EFFECT_DIRECTION_COMPETING",
@@ -195,35 +178,25 @@ class RelationEffectRuleAdmissionAssessment(BaseModel):
             "COUNTER_EVIDENCE_MISSING",
             "PROFESSIONAL_PROVENANCE_MISSING",
         ):
-            raise ValueError(
-                "relation_effect_assessment_rejection_codes_invalid"
-            )
+            raise ValueError("relation_effect_assessment_rejection_codes_invalid")
         if self.blocked_claims != (
             "AUTOMATIC_RELATION_DAMAGE",
             "AUTOMATIC_SOURCE_UNUSABLE",
         ):
-            raise ValueError(
-                "relation_effect_assessment_blocked_claims_invalid"
-            )
+            raise ValueError("relation_effect_assessment_blocked_claims_invalid")
         if self.admitted_effect_atom_refs:
-            raise ValueError(
-                "relation_effect_assessment_effect_atom_not_allowed"
-            )
+            raise ValueError("relation_effect_assessment_effect_atom_not_allowed")
         identity = self.model_dump(
             mode="json",
             exclude={"assessment_ref", "assessment_hash"},
         )
         if self.assessment_hash != content_hash(identity):
-            raise ValueError(
-                "relation_effect_assessment_hash_mismatch"
-            )
+            raise ValueError("relation_effect_assessment_hash_mismatch")
         if self.assessment_ref != stable_ref(
             "v60-relation-effect-admission-assessment",
             identity,
         ):
-            raise ValueError(
-                "relation_effect_assessment_ref_mismatch"
-            )
+            raise ValueError("relation_effect_assessment_ref_mismatch")
         return self
 
     @classmethod
@@ -234,21 +207,15 @@ class RelationEffectRuleAdmissionAssessment(BaseModel):
         identity = {
             **values,
             "interpretations": tuple(
-                item.model_dump(mode="json")
-                if isinstance(item, BaseModel)
-                else item
+                item.model_dump(mode="json") if isinstance(item, BaseModel) else item
                 for item in values["interpretations"]
             ),
             "dimension_assessments": tuple(
-                item.model_dump(mode="json")
-                if isinstance(item, BaseModel)
-                else item
+                item.model_dump(mode="json") if isinstance(item, BaseModel) else item
                 for item in values["dimension_assessments"]
             ),
             "disposition": "REJECTED_PRE_ADMISSION",
-            "candidate_truth_status": (
-                "NOT_EVALUATED_AS_TRUE_OR_FALSE"
-            ),
+            "candidate_truth_status": ("NOT_EVALUATED_AS_TRUE_OR_FALSE"),
             "rejection_codes": (
                 "APPLICABILITY_AUTHORITY_INCOMPLETE",
                 "EFFECT_DIRECTION_COMPETING",
@@ -282,9 +249,9 @@ class MingliRelationEffectAdmissionReviewEnvelope(BaseModel):
 
     review_ref: str = Field(min_length=1)
     review_hash: str = Field(min_length=64, max_length=64)
-    review_version: Literal[
-        "v60.mingli-relation-rule-admission-review.001"
-    ] = RELATION_EFFECT_ADMISSION_REVIEW_VERSION
+    review_version: Literal["v60.mingli-relation-rule-admission-review.001"] = (
+        RELATION_EFFECT_ADMISSION_REVIEW_VERSION
+    )
     case_ref: str = Field(min_length=1)
     chart_version_ref: str = Field(min_length=1)
     reading_ref: str = Field(min_length=1)
@@ -307,9 +274,7 @@ class MingliRelationEffectAdmissionReviewEnvelope(BaseModel):
         "REJECTED_PRE_ADMISSION",
         "NOT_TRIGGERED",
     ]
-    review_semantics: Literal[
-        "SHORTCUT_ADMISSION_REJECTION_NOT_EFFECT_NEGATION"
-    ]
+    review_semantics: Literal["SHORTCUT_ADMISSION_REJECTION_NOT_EFFECT_NEGATION"]
     effect_status: Literal["UNRESOLVED"]
     usability_status: Literal["UNRESOLVED"]
     provider_invoked: Literal[False]
@@ -327,39 +292,19 @@ class MingliRelationEffectAdmissionReviewEnvelope(BaseModel):
     def counts_boundaries_and_identity_are_valid(
         self,
     ) -> MingliRelationEffectAdmissionReviewEnvelope:
-        assessment_refs = tuple(
-            item.assessment_ref for item in self.assessments
-        )
+        assessment_refs = tuple(item.assessment_ref for item in self.assessments)
         if assessment_refs != tuple(sorted(set(assessment_refs))):
-            raise ValueError(
-                "relation_effect_review_assessments_not_ordered_unique"
-            )
-        assessed_demand_refs = tuple(
-            item.demand_ref for item in self.assessments
-        )
+            raise ValueError("relation_effect_review_assessments_not_ordered_unique")
+        assessed_demand_refs = tuple(item.demand_ref for item in self.assessments)
         if len(assessed_demand_refs) != len(set(assessed_demand_refs)):
-            raise ValueError(
-                "relation_effect_review_assessed_demands_not_unique"
-            )
+            raise ValueError("relation_effect_review_assessed_demands_not_unique")
         if self.reviewed_demand_count != len(self.assessments):
-            raise ValueError(
-                "relation_effect_review_demand_count_mismatch"
-            )
-        if self.rejected_pre_admission_count != len(
-            self.assessments
-        ):
-            raise ValueError(
-                "relation_effect_review_rejected_count_mismatch"
-            )
-        expected_disposition = (
-            "REJECTED_PRE_ADMISSION"
-            if self.assessments
-            else "NOT_TRIGGERED"
-        )
+            raise ValueError("relation_effect_review_demand_count_mismatch")
+        if self.rejected_pre_admission_count != len(self.assessments):
+            raise ValueError("relation_effect_review_rejected_count_mismatch")
+        expected_disposition = "REJECTED_PRE_ADMISSION" if self.assessments else "NOT_TRIGGERED"
         if self.disposition != expected_disposition:
-            raise ValueError(
-                "relation_effect_review_disposition_mismatch"
-            )
+            raise ValueError("relation_effect_review_disposition_mismatch")
         if any(
             item.policy_ref != self.policy_ref
             or item.policy_hash != self.policy_hash
@@ -367,74 +312,46 @@ class MingliRelationEffectAdmissionReviewEnvelope(BaseModel):
             or item.proposal_hash != self.proposal_hash
             for item in self.assessments
         ):
-            raise ValueError(
-                "relation_effect_review_policy_proposal_mismatch"
-            )
+            raise ValueError("relation_effect_review_policy_proposal_mismatch")
         if len(self.deferred_match_scope_demand_refs) != len(
             set(self.deferred_match_scope_demand_refs)
         ):
-            raise ValueError(
-                "relation_effect_review_deferred_refs_not_unique"
-            )
+            raise ValueError("relation_effect_review_deferred_refs_not_unique")
         if len(self.unreviewed_scope_invariant_demand_refs) != len(
             set(self.unreviewed_scope_invariant_demand_refs)
         ):
-            raise ValueError(
-                "relation_effect_review_unreviewed_refs_not_unique"
-            )
-        if len(
-            self.frontier_scope_invariant_demand_refs
-        ) != len(set(self.frontier_scope_invariant_demand_refs)):
-            raise ValueError(
-                "relation_effect_review_scope_inventory_not_unique"
-            )
+            raise ValueError("relation_effect_review_unreviewed_refs_not_unique")
+        if len(self.frontier_scope_invariant_demand_refs) != len(
+            set(self.frontier_scope_invariant_demand_refs)
+        ):
+            raise ValueError("relation_effect_review_scope_inventory_not_unique")
         if len(self.frontier_match_scope_demand_refs) != len(
             set(self.frontier_match_scope_demand_refs)
         ):
-            raise ValueError(
-                "relation_effect_review_match_inventory_not_unique"
-            )
-        scope_inventory = set(
-            self.frontier_scope_invariant_demand_refs
-        )
+            raise ValueError("relation_effect_review_match_inventory_not_unique")
+        scope_inventory = set(self.frontier_scope_invariant_demand_refs)
         match_inventory = set(self.frontier_match_scope_demand_refs)
         assessed = set(assessed_demand_refs)
-        unreviewed = set(
-            self.unreviewed_scope_invariant_demand_refs
-        )
+        unreviewed = set(self.unreviewed_scope_invariant_demand_refs)
         deferred = set(self.deferred_match_scope_demand_refs)
         if scope_inventory & match_inventory:
-            raise ValueError(
-                "relation_effect_review_frontier_inventory_overlap"
-            )
+            raise ValueError("relation_effect_review_frontier_inventory_overlap")
         if assessed & unreviewed or assessed & deferred or unreviewed & deferred:
-            raise ValueError(
-                "relation_effect_review_demand_partition_overlap"
-            )
+            raise ValueError("relation_effect_review_demand_partition_overlap")
         if assessed | unreviewed != scope_inventory:
-            raise ValueError(
-                "relation_effect_review_scope_inventory_not_covered"
-            )
+            raise ValueError("relation_effect_review_scope_inventory_not_covered")
         if (
-            self.deferred_match_scope_demand_refs
-            != self.frontier_match_scope_demand_refs
+            self.deferred_match_scope_demand_refs != self.frontier_match_scope_demand_refs
             or deferred != match_inventory
         ):
-            raise ValueError(
-                "relation_effect_review_match_inventory_not_covered"
-            )
+            raise ValueError("relation_effect_review_match_inventory_not_covered")
         expected_unreviewed = tuple(
             demand_ref
             for demand_ref in self.frontier_scope_invariant_demand_refs
             if demand_ref not in assessed
         )
-        if (
-            self.unreviewed_scope_invariant_demand_refs
-            != expected_unreviewed
-        ):
-            raise ValueError(
-                "relation_effect_review_unreviewed_order_invalid"
-            )
+        if self.unreviewed_scope_invariant_demand_refs != expected_unreviewed:
+            raise ValueError("relation_effect_review_unreviewed_order_invalid")
         identity = self.model_dump(
             mode="json",
             exclude={"review_ref", "review_hash"},

@@ -28,9 +28,7 @@ class RelationEffectEvidenceMaterialError(ValueError):
     pass
 
 
-class RelationEffectEvidenceMaterialConflictError(
-    RelationEffectEvidenceMaterialError
-):
+class RelationEffectEvidenceMaterialConflictError(RelationEffectEvidenceMaterialError):
     pass
 
 
@@ -44,9 +42,7 @@ class RelationEffectEvidenceMaterialStore:
         evidence_requests: RelationEffectEvidenceRequestStore | None = None,
     ) -> None:
         self._engine = engine
-        self._evidence_requests = (
-            evidence_requests or RelationEffectEvidenceRequestStore(engine)
-        )
+        self._evidence_requests = evidence_requests or RelationEffectEvidenceRequestStore(engine)
 
     def register_in_connection(
         self,
@@ -142,14 +138,10 @@ class RelationEffectEvidenceMaterialStore:
                 "slot_ref": expected.slot_ref,
                 "dimension_id": expected.dimension_id,
                 "candidate_kind": expected.candidate_kind,
-                "target_artifact_kind": (
-                    expected.target_artifact_kind
-                ),
+                "target_artifact_kind": (expected.target_artifact_kind),
                 "bibliography_hash": expected.bibliography_hash,
                 "idempotency_key": expected.idempotency_key,
-                "material_json": canonical_json(
-                    expected.model_dump(mode="json")
-                ),
+                "material_json": canonical_json(expected.model_dump(mode="json")),
                 "material_hash": expected.material_hash,
             },
         )
@@ -259,20 +251,14 @@ class RelationEffectEvidenceMaterialStore:
             expected = self.derive_expected_record(
                 account_ref=account_ref,
                 request=RelationEffectEvidenceMaterialRequest(
-                    material_request_version=(
-                        record.material_request_version
-                    ),
+                    material_request_version=(record.material_request_version),
                     expected_receipt_ref=record.request_receipt_ref,
                     expected_receipt_hash=record.request_receipt_hash,
                     expected_packet_ref=record.packet_ref,
                     expected_packet_hash=record.packet_hash,
                     expected_request_item_ref=record.request_item_ref,
-                    expected_demand_packet_ref=(
-                        record.demand_packet_ref
-                    ),
-                    expected_demand_packet_hash=(
-                        record.demand_packet_hash
-                    ),
+                    expected_demand_packet_ref=(record.demand_packet_ref),
+                    expected_demand_packet_hash=(record.demand_packet_hash),
                     expected_slot_ref=record.slot_ref,
                     candidate_kind=record.candidate_kind,
                     target_artifact_kind=record.target_artifact_kind,
@@ -322,17 +308,15 @@ class RelationEffectEvidenceMaterialStore:
             raise RelationEffectEvidenceMaterialConflictError(
                 "relation_effect_evidence_material_receipt_packet_conflict"
             )
-        expected_receipt = (
-            RelationEffectEvidenceRequestStore.derive_expected_receipt(
-                account_ref=account_ref,
-                request=RelationEffectEvidencePreparationRequest(
-                    request_version=receipt.request_version,
-                    expected_packet_ref=receipt.packet_ref,
-                    expected_packet_hash=receipt.packet_hash,
-                    idempotency_key=receipt.idempotency_key,
-                ),
-                packet=packet,
-            )
+        expected_receipt = RelationEffectEvidenceRequestStore.derive_expected_receipt(
+            account_ref=account_ref,
+            request=RelationEffectEvidencePreparationRequest(
+                request_version=receipt.request_version,
+                expected_packet_ref=receipt.packet_ref,
+                expected_packet_hash=receipt.packet_hash,
+                idempotency_key=receipt.idempotency_key,
+            ),
+            packet=packet,
         )
         if receipt != expected_receipt:
             raise RelationEffectEvidenceMaterialConflictError(
@@ -342,12 +326,9 @@ class RelationEffectEvidenceMaterialStore:
             item
             for item in receipt.request_items
             if (
-                item.request_item_ref
-                == request.expected_request_item_ref
-                and item.demand_packet_ref
-                == request.expected_demand_packet_ref
-                and item.demand_packet_hash
-                == request.expected_demand_packet_hash
+                item.request_item_ref == request.expected_request_item_ref
+                and item.demand_packet_ref == request.expected_demand_packet_ref
+                and item.demand_packet_hash == request.expected_demand_packet_hash
             )
         )
         if len(item_matches) != 1:
@@ -356,9 +337,7 @@ class RelationEffectEvidenceMaterialStore:
             )
         item = item_matches[0]
         slot_matches = tuple(
-            slot
-            for slot in item.dimension_slots
-            if slot.slot_ref == request.expected_slot_ref
+            slot for slot in item.dimension_slots if slot.slot_ref == request.expected_slot_ref
         )
         if len(slot_matches) != 1:
             raise RelationEffectEvidenceMaterialConflictError(
@@ -367,12 +346,9 @@ class RelationEffectEvidenceMaterialStore:
         slot = slot_matches[0]
         if (
             slot.dimension_id != "PROFESSIONAL_PROVENANCE"
-            or request.candidate_kind
-            != "BIBLIOGRAPHIC_COORDINATE_CANDIDATE"
-            or request.target_artifact_kind
-            != "PROFESSIONAL_SOURCE_MANIFEST"
-            or request.target_artifact_kind
-            not in slot.requested_artifact_kinds
+            or request.candidate_kind != "BIBLIOGRAPHIC_COORDINATE_CANDIDATE"
+            or request.target_artifact_kind != "PROFESSIONAL_SOURCE_MANIFEST"
+            or request.target_artifact_kind not in slot.requested_artifact_kinds
         ):
             raise RelationEffectEvidenceMaterialConflictError(
                 "relation_effect_evidence_material_scope_not_allowed"
@@ -510,9 +486,7 @@ class RelationEffectEvidenceMaterialStore:
         row: Any,
     ) -> RelationEffectEvidenceMaterialRecord:
         try:
-            record = RelationEffectEvidenceMaterialRecord.model_validate(
-                row["material_json"]
-            )
+            record = RelationEffectEvidenceMaterialRecord.model_validate(row["material_json"])
         except (ValidationError, ValueError) as exc:
             raise RelationEffectEvidenceMaterialError(
                 "relation_effect_evidence_material_record_invalid"

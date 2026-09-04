@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "abu-knows-v60"
-version = "0.1.0"
-description = "Mingli-centered Abu life-intelligence product with a persistent dream game"
+version = "0.2.0"
+description = "Mingli reading and Abu Says product with private deterministic charts"
 requires-python = ">=3.12,<3.13"
 dependencies = [
   "alembic>=1.14,<2",

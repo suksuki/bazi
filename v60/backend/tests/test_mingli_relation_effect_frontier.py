@@ -81,16 +81,12 @@ def test_relation_effect_frontier_classifies_real_10_7_3_review_shape() -> None:
     assert first.scope_invariant_rule_demand_count == 1
     assert first.match_scope_rule_first_count == 2
     assert first.admitted_effect_rule_count == 0
-    assert {
-        (item.source_match_kind, item.dependency_status)
-        for item in first.demands
-    } == {
+    assert {(item.source_match_kind, item.dependency_status) for item in first.demands} == {
         ("EXACT_IDENTITY", "SCOPE_INVARIANT_RULE_DEMAND"),
         ("SAME_ELEMENT_DIFFERENT_IDENTITY", "MATCH_SCOPE_RULE_FIRST"),
     }
     assert all(
-        item.required_rule_dimensions
-        == RELATION_EFFECT_REQUIRED_RULE_DIMENSIONS
+        item.required_rule_dimensions == RELATION_EFFECT_REQUIRED_RULE_DIMENSIONS
         and item.effect_status == "UNRESOLVED"
         and item.usability_status == "UNRESOLVED"
         and item.selection_authority is False
@@ -180,9 +176,7 @@ def test_relation_effect_frontier_fails_closed_on_version_or_lineage_drift() -> 
             source_review_vector=bundle["source_review"],
             prerequisite=_reissue_prerequisite(
                 bundle["prerequisite"],
-                prerequisite_version=(
-                    "v60.mingli-source-usability-prerequisite.999"
-                ),
+                prerequisite_version=("v60.mingli-source-usability-prerequisite.999"),
             ),
             refusal=bundle["refusal"],
         )
@@ -255,7 +249,5 @@ def test_relation_effect_frontier_has_no_effect_or_decision_authority() -> None:
         match="relation_effect_frontier_hash_mismatch",
     ):
         MingliRelationEffectResearchFrontierEnvelope.model_validate(
-            frontier.model_copy(
-                update={"reading_hash": "f" * 64}
-            ).model_dump(mode="python")
+            frontier.model_copy(update={"reading_hash": "f" * 64}).model_dump(mode="python")
         )

@@ -69,9 +69,7 @@ class MingliSourceUsabilityPrerequisiteProjector:
             source_review_vector_hash=source_review_vector.vector_hash,
             carriers=carriers,
             carrier_count=len(carriers),
-            exact_identity_only_clear_count=sum(
-                item.clear_count for item in strict_scopes
-            ),
+            exact_identity_only_clear_count=sum(item.clear_count for item in strict_scopes),
             exact_identity_only_review_required_count=sum(
                 item.relation_review_count for item in strict_scopes
             ),
@@ -100,8 +98,7 @@ class MingliSourceUsabilityPrerequisiteProjector:
     ) -> None:
         if (
             source_review_vector.case_ref != quant_vector.case_ref
-            or source_review_vector.chart_version_ref
-            != quant_vector.chart_version_ref
+            or source_review_vector.chart_version_ref != quant_vector.chart_version_ref
         ):
             raise ValueError("source_usability_case_chart_lineage_mismatch")
         if (
@@ -109,14 +106,8 @@ class MingliSourceUsabilityPrerequisiteProjector:
             or source_review_vector.quant_vector_hash != quant_vector.vector_hash
         ):
             raise ValueError("source_usability_quant_vector_lineage_mismatch")
-        sources = {
-            item.evidence_ref: item
-            for item in quant_vector.source_manifestation_evidence
-        }
-        reviews = {
-            item.source_evidence_ref: item
-            for item in source_review_vector.reviews
-        }
+        sources = {item.evidence_ref: item for item in quant_vector.source_manifestation_evidence}
+        reviews = {item.source_evidence_ref: item for item in source_review_vector.reviews}
         if len(sources) != len(quant_vector.source_manifestation_evidence):
             raise ValueError("source_usability_quant_source_identity_not_unique")
         if len(reviews) != len(source_review_vector.reviews):
@@ -138,9 +129,7 @@ class MingliSourceUsabilityPrerequisiteProjector:
     def _carrier(
         self,
         *,
-        items: Sequence[
-            tuple[SourceManifestationEvidence, SourceCoordinateReviewEvidence]
-        ],
+        items: Sequence[tuple[SourceManifestationEvidence, SourceCoordinateReviewEvidence]],
     ) -> SourceCarrierUsabilityPrerequisite:
         visible_slot = items[0][0].visible_slot
         visible_stem = items[0][0].visible_stem
@@ -175,19 +164,11 @@ class MingliSourceUsabilityPrerequisiteProjector:
         visible_slot: str,
         visible_stem: str,
         scope_id: SourceScopeId,
-        items: Sequence[
-            tuple[SourceManifestationEvidence, SourceCoordinateReviewEvidence]
-        ],
+        items: Sequence[tuple[SourceManifestationEvidence, SourceCoordinateReviewEvidence]],
     ) -> SourceUsabilityResearchScope:
-        source_review_refs = tuple(
-            sorted(item[1].review_ref for item in items)
-        )
+        source_review_refs = tuple(sorted(item[1].review_ref for item in items))
         relation_review_refs = tuple(
-            sorted(
-                item[1].review_ref
-                for item in items
-                if item[1].relation_intersections
-            )
+            sorted(item[1].review_ref for item in items if item[1].relation_intersections)
         )
         intersection_refs = tuple(
             sorted(
@@ -239,16 +220,12 @@ class MingliSourceUsabilityPrerequisiteProjector:
             ),
             SourceUsabilityRequirement(
                 requirement_id="RELATION_EFFECT_RULE",
-                status=(
-                    "NOT_ADMITTED" if relation_triggered else "NOT_TRIGGERED"
-                ),
+                status=("NOT_ADMITTED" if relation_triggered else "NOT_TRIGGERED"),
                 evidence_refs=inclusive_scope.intersection_refs,
                 meaning=(
-                    "已有关系成员事实命中来源坐标，但没有作用方向、"
-                    "完成条件或阻断条件。"
+                    "已有关系成员事实命中来源坐标，但没有作用方向、完成条件或阻断条件。"
                     if relation_triggered
-                    else "本版已准入的六冲、六合没有命中这些来源坐标；"
-                    "这不是来源可用的正向证据。"
+                    else "本版已准入的六冲、六合没有命中这些来源坐标；这不是来源可用的正向证据。"
                 ),
                 next_evidence=(
                     "精确到该关系配置的作用规则、上下文要求与反证。"
@@ -265,15 +242,10 @@ class MingliSourceUsabilityPrerequisiteProjector:
             ),
             SourceUsabilityRequirement(
                 requirement_id="MULTI_SOURCE_AGGREGATION_RULE",
-                status=(
-                    "NOT_ADMITTED" if multiple_sources else "NOT_TRIGGERED"
-                ),
-                evidence_refs=(
-                    inclusive_scope.source_review_refs if multiple_sources else ()
-                ),
+                status=("NOT_ADMITTED" if multiple_sources else "NOT_TRIGGERED"),
+                evidence_refs=(inclusive_scope.source_review_refs if multiple_sources else ()),
                 meaning=(
-                    "同一明干有多个来源候选，当前不能用任一清晰或任一命中"
-                    "自动代表整个载体。"
+                    "同一明干有多个来源候选，当前不能用任一清晰或任一命中自动代表整个载体。"
                     if multiple_sources
                     else "该载体当前只有一个来源候选，不触发多来源聚合问题。"
                 ),

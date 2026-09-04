@@ -10,9 +10,7 @@ from abu_v60.mingli.source_usability_contracts import (
 )
 from abu_v60.provenance import content_hash, stable_ref
 
-SOURCE_DISCUSSION_RECEIPT_VERSION = (
-    "v60.mingli-source-discussion-abstention-receipt.001"
-)
+SOURCE_DISCUSSION_RECEIPT_VERSION = "v60.mingli-source-discussion-abstention-receipt.001"
 SOURCE_DISCUSSION_ABSTAINED_CLAIMS = (
     "RELATION_EFFECT",
     "SOURCE_USABILITY",
@@ -31,9 +29,9 @@ class MingliSourceDiscussionAbstentionReceipt(BaseModel):
 
     receipt_ref: str = Field(min_length=1)
     receipt_hash: str = Field(min_length=64, max_length=64)
-    receipt_version: Literal[
-        "v60.mingli-source-discussion-abstention-receipt.001"
-    ] = SOURCE_DISCUSSION_RECEIPT_VERSION
+    receipt_version: Literal["v60.mingli-source-discussion-abstention-receipt.001"] = (
+        SOURCE_DISCUSSION_RECEIPT_VERSION
+    )
     case_ref: str = Field(min_length=1)
     chart_version_ref: str = Field(min_length=1)
     reading_ref: str = Field(min_length=1)
@@ -69,9 +67,8 @@ class MingliSourceDiscussionAbstentionReceipt(BaseModel):
     def identity_and_boundaries_are_valid(
         self,
     ) -> MingliSourceDiscussionAbstentionReceipt:
-        if (
-            len(self.carrier_refs) != len(set(self.carrier_refs))
-            or self.carrier_count != len(self.carrier_refs)
+        if len(self.carrier_refs) != len(set(self.carrier_refs)) or self.carrier_count != len(
+            self.carrier_refs
         ):
             raise ValueError("source_discussion_carrier_binding_invalid")
         for values in (
@@ -84,21 +81,15 @@ class MingliSourceDiscussionAbstentionReceipt(BaseModel):
                 if requirement_id in set(values)
             )
             if values != expected:
-                raise ValueError(
-                    "source_discussion_requirement_ids_not_ordered_unique"
-                )
+                raise ValueError("source_discussion_requirement_ids_not_ordered_unique")
         requirement_ids = set(self.blocking_requirement_ids) | set(
             self.non_triggered_requirement_ids
         )
         if self.carrier_count:
             if requirement_ids != set(SOURCE_USABILITY_REQUIREMENT_ORDER):
-                raise ValueError(
-                    "source_discussion_requirement_coverage_incomplete"
-                )
+                raise ValueError("source_discussion_requirement_coverage_incomplete")
         elif requirement_ids:
-            raise ValueError(
-                "source_discussion_empty_carrier_requirements_invalid"
-            )
+            raise ValueError("source_discussion_empty_carrier_requirements_invalid")
         if self.abstained_claims != SOURCE_DISCUSSION_ABSTAINED_CLAIMS:
             raise ValueError("source_discussion_abstained_claims_invalid")
         identity = self.model_dump(

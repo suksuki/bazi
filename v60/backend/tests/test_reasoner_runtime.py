@@ -70,9 +70,7 @@ class _MemoryConnection:
             return _MappingResult(self.records.get(decision_id))
         if "SELECT record_hash" in sql:
             record = self.records.get(decision_id)
-            return _ScalarResult(
-                str(record["record_hash"]) if record is not None else None
-            )
+            return _ScalarResult(str(record["record_hash"]) if record is not None else None)
         raise AssertionError(f"unexpected_sql:{sql}")
 
 
@@ -173,8 +171,6 @@ def _settings(**overrides: object) -> Settings:
     values: dict[str, object] = {
         "database_url": "postgresql+psycopg:///test",
         "environment": "test",
-        "world_runtime_enabled": False,
-        "world_runtime_poll_seconds": 1.0,
         "reasoner_enabled": False,
         "reasoner_provider": None,
         "reasoner_model": None,

@@ -4,6 +4,8 @@ Status: `IMPLEMENTED_AND_REAL_BROWSER_AUDITED_LOCAL`
 
 Date: 2026-08-01
 
+Last synchronized: 2026-09-04
+
 This is the first implementation slice for the pre-prototype-merge Mingli
 vertical. It does not claim that V60 has reached advanced-practitioner-grade
 destiny reading. It turns the existing canonical Case and bounded Reading
@@ -19,9 +21,9 @@ Home profile leaf
 -> audio-clocked subtitles and deterministic stage emphasis
 ```
 
-Dream, the ten-tree loop, multi-NPC scenes, the question bank, iPad book layout
-and mobile are not part of this slice. The current acceptance target is
-Desktop Chrome.
+Retired narrative/game surfaces, multi-NPC scenes and the question bank are not
+part of this product. Desktop and 390 px mobile are current acceptance targets;
+the iPad book layout remains deferred.
 
 ## Owner decisions now in the executable baseline
 
@@ -44,6 +46,35 @@ The selected Abu voice identity is
 `v60.voice-profile.abu-dylan-owner-selected.001`. An environment override is
 automatically demoted to `AUDITION_CANDIDATE`; it cannot inherit the
 Owner-selected label.
+
+## Progressive focused reading
+
+The Mingli branch now generates prose by layer instead of starting one large
+whole-chart request. The first action requests `STRUCTURE`; the saved structure
+pass is then the only prerequisite for the life-image, career/wealth,
+relationship/family and timing questions. The two theme questions are also
+independent, so reading one never forces the other.
+
+The browser posts one explicit `MingliFocus` to `/stage/focused-pass`, displays
+its busy state immediately, reloads the same lineage-bound Summary and renders
+only persisted normalized text. A partial result survives refresh. Raw local
+model text, model prompts and teacher material are never projected to the
+browser. The earlier `/stage/focused-reading` five-pass batch remains available
+for bounded DEV comparison but is not called by the product UI.
+
+Focused readings remain private Owner-review interpretations. Every pass binds
+Case, Chart, LifeCase, Reading, Packet, model digest, provider profile, prompt,
+structure dependency and deterministic normalization receipts. PostgreSQL
+rejects update/delete mutations. A review flag in the structure pass propagates
+visibly to dependent layers; no pass can write canonical facts or claim a
+professional verdict.
+
+The active Qwen3.8 Focused Profile `.005` follows the official non-thinking
+template and sampling recommendations with a product-specific `4096 / 320`
+context/output budget. Real first-generation passes measured 8.1–16.2 seconds;
+an identical persisted pass replayed in 9ms. The full integration chronology,
+exact parameters and practitioner-grade comparison with Gemma4 are recorded in
+[`23_V60_QWEN38_MINGLI_INTEGRATION_AND_PRACTITIONER_REVIEW.md`](23_V60_QWEN38_MINGLI_INTEGRATION_AND_PRACTITIONER_REVIEW.md).
 
 ## Canonical subjects
 
@@ -169,16 +200,18 @@ stage-emphasis clock. PAUSED freezes the same clock. Refresh preserves the selec
 four/six-pillar mode and year through the URL, while narration returns to
 `IDLE`; it never pretends to recover an in-flight audio position.
 
-### Current-layer silent rehearsal
+### Current-layer direct silent reading
 
-The grown LifeTree branch now has a separate companion action before formal
-audio delivery. It projects the selected four-layer Reading surface from the
+The grown LifeTree branch now uses each organic node itself as the direct
+companion action. There is no intermediate Reading card, character CTA, stage
+button or chapter rail. One click projects the selected four-layer Reading
+surface from a complete Qwen3.8 Focused Pass set or, when that is absent, the
 same validated ClaimGraph used by Reading and Lab:
 
 ```text
-current layer
--> admitted ClaimGraph claims only
--> ordered rehearsal chapters
+branch / leaf / flower / fruit click
+-> complete Focused Passes, otherwise admitted ClaimGraph claims
+-> all source-bound chapters in one continuous reading
 -> same four/six-pillar Scene Player
 -> LISTENING / PAUSED character state
 ```
@@ -188,10 +221,12 @@ narration. It does not call `/api/v60/mingli/narrations`, mount an audio element
 or claim that semantic Cue choreography has been approved. `WITHHELD` claims
 are excluded, internal codes such as `WEAK` are translated into user-facing
 Chinese, Work Path closure and assessment states preserve their distinct
-professional meanings, and each visible chapter carries the exact Claim Ref
-plus Graph Ref/Hash. A layer with no admitted/projectable Claim cannot enter
-rehearsal. The time-trend layer opens the full six-pillar coordinate state; the
-other three layers open the natal four-pillar state.
+professional meanings, and each visible chapter carries the exact Claim Ref or
+Pass Ref plus its Source Ref/Hash. A layer with no admitted/projectable source
+cannot enter direct reading unless the same click can generate its missing
+Focused Pass server-side; failure remains on the branch with a retry cue. The
+time-trend layer opens the full six-pillar coordinate state; the other three
+layers open the natal four-pillar state.
 
 The six-pillar coordinate state is not itself permission to attach frozen
 Reading prose to the selected year. Until ClaimGraph carries a typed binding
@@ -208,9 +243,9 @@ mingli_stage=1                     ordinary Reading observation
 view=lab                           explicit Lab research surface
 ```
 
-Refresh restores rehearsal. Back returns to the same branch and selected
-layer, Forward restores it, and closing rehearsal returns to Reading
-observation without opening Lab. Formal server-locked TTS remains available
+Refresh restores direct reading. Back returns to the same branch and selected
+layer, Forward restores it, and the visible close action returns directly to
+the branch without opening Lab. Formal server-locked TTS remains available
 from the ordinary Reading/Lab stage, but its current coordinate script is not
 silently reused as four-layer destiny narration.
 
@@ -281,12 +316,8 @@ voice, provider deployment, audio and cue identities plus the validated mono
 24 kHz 16-bit PCM WAV. Historical Narration `.001` rows remain readable and
 immutable.
 
-The Timing upgrade also preserves historical Dream Episode truth. Seed replay
-may recover an Episode's already-admitted Timing `.001` and derived Life-domain
-Refs only after validating the persisted contract, question, organ, resolution
-rule and admission-manifest Hashes; the recovered package then passes the same
-normal Story lineage and admission checks. New Mingli projections continue to
-use Timing `.002`.
+New Mingli projections use Timing `.002`; older Timing `.001` rows remain
+decodable as immutable migration history but are not active projection inputs.
 
 Media owns TTS generation and this schema write. Mingli owns the chart, stage
 Projection and narration script facts. Architecture tests now include Media
@@ -296,7 +327,7 @@ schema directly.
 Current executable identities are:
 
 ```text
-Foundation       v60.foundation.037
+Foundation       v60.foundation.041
 Architecture     v60.runtime-architecture.077
 Mingli Engine    v60.mingli-cognitive-engine.048
 Media            v60.media-library.005
@@ -306,7 +337,7 @@ Unit Abu Says    v60.unit-abu-says.008
 Stage            v60.mingli-stage-projection.004
 Timing           v60.mingli-timing-evidence-vector.002
 Narration        v60.mingli-narration.002
-Migration        0045_mingli_counterfactuals
+Migration        0049_mingli_progressive_focused_passes
 ```
 
 ## Real evidence
@@ -406,9 +437,8 @@ scene plane, day/night growth film, organ positions, opening/closing timing and
 companion placement while replacing mock conclusions with V60 Case-bound
 projections. The formal product also improves one prototype limitation: V108
 Lab and Abu Says each mounted a separate Canvas, whereas the formal product
-keeps one shared Scene Player. Remaining fidelity work concerns future Dream
-and scene-specific narration design, not a second Mingli entry or replacement
-UI framework.
+keeps one shared Scene Player. Remaining fidelity work concerns scene-specific
+narration design, not a second Mingli entry or replacement UI framework.
 
 ```text
 DESIGN_REQUEST
@@ -441,14 +471,61 @@ Desktop Chrome is the active first-round target; the older responsive iPad
 checks above remain historical evidence, not a current iPad portrait product
 commitment.
 
-The current-layer rehearsal browser audit additionally verified:
+The current-layer direct-reading browser audit additionally verified:
 
-- principle rehearsal showed three admitted chapters and translated the Day
+- branch, leaf, flower and fruit each opened the matching reading in one click,
+  with no separate companion, Lab, stage, generation or chapter-pagination
+  control on the branch;
+- principle reading translated the Day
   Master title to `日主偏弱` rather than exposing `WEAK`;
-- timing rehearsal restored a six-column/twelve-body stage with current Dayun
+- timing reading restored a six-column/twelve-body stage with current Dayun
   and 2026 annual coordinates, while no unbound Dayun/annual prose was attached
   to those columns;
-- there was no audio element, playback state or narration generation request;
-- refresh, Back and Forward retained the exact Case, layer and rehearsal mode;
-- close returned to Reading observation, ordinary stage entry stayed on
-  Reading, and the explicit Lab action alone entered `view=lab`.
+- at that pre-speech checkpoint there was no audio element, playback state or
+  narration generation request; the 2026-09-04 slice below supersedes this
+  presentation limitation;
+- refresh retained the exact Case, layer and direct-reading mode;
+- close returned to the same branch, and only the Home Lab flower entered
+  `view=lab`.
+
+## 2026-09-04 public six-pillar focused narration
+
+The Owner retained the old Six-Pillar Lab's 3D particle-and-explanation
+capability without reopening the complete LAB surface. Public Abu Says now
+reuses the same lazy `MingliSceneCanvas`, six deterministic columns and twelve
+stable particle bodies. There is still exactly one Canvas; narration remains an
+overlay and does not own a renderer.
+
+Focused Pass speech now has its own sequenced Director. It pairs every audio
+blob with the exact persisted chapter by `pass_ref`, samples the real
+`HTMLAudioElement.currentTime` on animation frames and publishes that clock to
+the shared Scene Player. Particle rotation, breathing and size pulses therefore
+advance with speech. PLAYING advances both clocks; PAUSED and BUFFERING retain
+the exact sampled time and Cue progress; resuming continues from that point.
+The active text chapter and Abu's speaking/paused performance state follow the
+same segment. Device speech fallback deliberately keeps only ambient motion
+because it exposes no reliable audio clock.
+
+The speech request now carries the current Stage mode and selected year. The
+server reconstructs and Hash-checks that exact four- or six-pillar Projection
+before accepting the account-owned Focused Pass. This repairs the former
+six-stage `409 mingli_focused_speech_stage_stale` mismatch while preserving the
+old four-pillar request default.
+
+Real headless Chrome evidence at 1440×900 verified:
+
+- six labels: 年柱、月柱、日柱、时柱、大运、流年;
+- Focused Speech HTTP 200 on the six-pillar Projection;
+- one stable Scene instance before, during and after playback;
+- audio time 622 → 1538 ms and Scene Cue progress 0.010571 → 0.026126;
+- PAUSED held 1575 ms / 0.026754 exactly across an 800 ms sample;
+- resume advanced to 2319 ms / 0.039384;
+- Abu changed with the same clock from SPEAKING to PAUSED and back;
+- no console, page, request or HTTP errors.
+
+A second 390×844 Chrome run reached PLAYING with six columns, a 390×844 Canvas,
+positive Cue progress, no horizontal/vertical document overflow and no runtime
+errors.
+
+Evidence is in `.artifacts/mingli-six-pillar-focused-speech/`. LAB source and
+research modules remain internal; LAB public routes remain unregistered.

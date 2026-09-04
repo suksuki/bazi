@@ -15,22 +15,16 @@ from typing import Any
 
 from abu_v60.system_manifest import (
     DECISION_POLICY_VERSION,
-    DREAM_GAME_ENGINE_VERSION,
     FOUNDATION_VERSION,
     MINGLI_ENGINE_VERSION,
     PRODUCT_ID,
-    STORY_ENGINE_VERSION,
-    WORLD_ENGINE_VERSION,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_DIR = REPO_ROOT / ".runtime"
 EXPECTED_ENGINES = {
     "decision": DECISION_POLICY_VERSION,
-    "game": DREAM_GAME_ENGINE_VERSION,
-    "world": WORLD_ENGINE_VERSION,
     "mingli": MINGLI_ENGINE_VERSION,
-    "story": STORY_ENGINE_VERSION,
 }
 EXPECTED_FOUNDATION_VERSION = FOUNDATION_VERSION
 LOCAL_REASONER_DEFAULTS = {
@@ -55,9 +49,7 @@ LOCAL_MINGLI_AGENT_DEFAULTS = {
     "V60_MINGLI_AGENT_MODEL_DIGEST": (
         "c6eb396dbd5992bbe3f5cdb947e8bbc0ee413d7c17e2beaae69f5d569cf982eb"
     ),
-    "V60_MINGLI_AGENT_PROFILE_REF": (
-        "v60.model-serving.gemma4-mingli-agent.003"
-    ),
+    "V60_MINGLI_AGENT_PROFILE_REF": ("v60.model-serving.gemma4-mingli-agent.003"),
     "V60_MINGLI_AGENT_BASE_URL": "http://dblife.com:11888",
     "V60_MINGLI_AGENT_TIMEOUT_SECONDS": "420",
     "V60_MINGLI_AGENT_THINK": "false",
@@ -68,7 +60,23 @@ LOCAL_MINGLI_AGENT_DEFAULTS = {
     "V60_MINGLI_AGENT_NUM_PREDICT": "5200",
     "V60_MINGLI_AGENT_KEEP_ALIVE": "30m",
 }
+LOCAL_MINGLI_AGENT_CANDIDATES = {
+    "gemma4": LOCAL_MINGLI_AGENT_DEFAULTS,
+    "qwen3.8-27b": {
+        **LOCAL_MINGLI_AGENT_DEFAULTS,
+        "V60_MINGLI_AGENT_MODEL": "qwen3.8:27b",
+        "V60_MINGLI_AGENT_MODEL_DIGEST": (
+            "22130167c4c20e20c7b71454612966ca8e8171e9b3cc8ab6ce8aa6cbfec79643"
+        ),
+        "V60_MINGLI_AGENT_PROFILE_REF": ("v60.model-serving.qwen38-27b-mingli-agent.002"),
+        "V60_MINGLI_AGENT_TOP_K": "20",
+        "V60_MINGLI_AGENT_NUM_CTX": "24576",
+        "V60_MINGLI_AGENT_NUM_PREDICT": "6000",
+    },
+}
+PRIMARY_MINGLI_AGENT_CANDIDATE = "qwen3.8-27b"
 LOCAL_TTS_DEFAULTS = {
+    "V60_INTERNAL_SURFACES_ENABLED": "false",
     "V60_TTS_ENABLED": "true",
     "V60_TTS_URL": "https://dblife.com/abu-tts/tts",
     "V60_TTS_PROVIDER_PROFILE_REF": "v60.qwen3-tts-proxy.001",
@@ -171,8 +179,7 @@ def _assert_ready(host: str, port: int) -> dict[str, Any]:
     }
     if mismatches:
         raise LocalRuntimeError(
-            "local_runtime_version_mismatch:"
-            f"{json.dumps(mismatches, sort_keys=True)}"
+            f"local_runtime_version_mismatch:{json.dumps(mismatches, sort_keys=True)}"
         )
     if status is None or status.get("status") != "READY":
         raise LocalRuntimeError("local_runtime_integrity_not_ready")
@@ -191,7 +198,14 @@ def _assert_ready(host: str, port: int) -> dict[str, Any]:
     return probe
 
 
-def start(host: str, port: int) -> dict[str, Any]:
+def start(
+    host: str,
+    port: int,
+    *,
+    mingli_candidate: str = PRIMARY_MINGLI_AGENT_CANDIDATE,
+) -> dict[str, Any]:
+    if mingli_candidate not in LOCAL_MINGLI_AGENT_CANDIDATES:
+        raise LocalRuntimeError(f"unknown_mingli_candidate:{mingli_candidate}")
     existing_pid = _owned_pid(port)
     if existing_pid is not None:
         return {
@@ -226,7 +240,7 @@ def start(host: str, port: int) -> dict[str, Any]:
     with log_path.open("ab", buffering=0) as log:
         runtime_environment = {
             **LOCAL_REASONER_DEFAULTS,
-            **LOCAL_MINGLI_AGENT_DEFAULTS,
+            **LOCAL_MINGLI_AGENT_CANDIDATES[mingli_candidate],
             **LOCAL_TTS_DEFAULTS,
             **os.environ,
         }
@@ -261,9 +275,7 @@ def start(host: str, port: int) -> dict[str, Any]:
     while time.monotonic() < deadline:
         if process.poll() is not None:
             pid_path.unlink(missing_ok=True)
-            raise LocalRuntimeError(
-                f"local_runtime_exited_during_start:{process.returncode}"
-            )
+            raise LocalRuntimeError(f"local_runtime_exited_during_start:{process.returncode}")
         try:
             return {
                 "action": "started",
@@ -315,16 +327,30 @@ def main() -> None:
     parser.add_argument("action", choices=("start", "stop", "restart", "status", "check"))
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", default=8060, type=int)
+    parser.add_argument(
+        "--mingli-candidate",
+        choices=tuple(LOCAL_MINGLI_AGENT_CANDIDATES),
+        default=PRIMARY_MINGLI_AGENT_CANDIDATE,
+        help="Named local Mingli model candidate for start/restart.",
+    )
     args = parser.parse_args()
 
     try:
         if args.action == "start":
-            result = start(args.host, args.port)
+            result = start(
+                args.host,
+                args.port,
+                mingli_candidate=args.mingli_candidate,
+            )
         elif args.action == "stop":
             result = stop(args.host, args.port)
         elif args.action == "restart":
             stop(args.host, args.port)
-            result = start(args.host, args.port)
+            result = start(
+                args.host,
+                args.port,
+                mingli_candidate=args.mingli_candidate,
+            )
         elif args.action == "check":
             result = {"action": "check", **_assert_ready(args.host, args.port)}
         else:

@@ -10,9 +10,7 @@ from abu_v60.knowledge.timing_contracts import (
 
 TIMING_EVIDENCE_PROFILE_ID: Final = "v60.timing-evidence.owner-bounded.v1"
 TIMING_EVIDENCE_PROFILE_VERSION: Final = "1.0.0"
-TIMING_CALENDAR_ENGINE_VERSION: Final = (
-    "v60.birth-calendar.lunar-python-1.4.8.five-rats.v1"
-)
+TIMING_CALENDAR_ENGINE_VERSION: Final = "v60.birth-calendar.lunar-python-1.4.8.five-rats.v1"
 
 
 @lru_cache(maxsize=1)

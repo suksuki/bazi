@@ -36,11 +36,7 @@ def relation_effect_bundle(
         case_ref=case_ref,
         chart=pillars,
     )
-    facts = (
-        tuple(reversed(compiled.facts))
-        if reverse_facts
-        else compiled.facts
-    )
+    facts = tuple(reversed(compiled.facts)) if reverse_facts else compiled.facts
     quant = MingliQuantFoundationCompiler().compile(
         case_ref=case_ref,
         chart_version_ref=compiled.chart_version_ref,

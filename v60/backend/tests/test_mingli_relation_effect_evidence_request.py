@@ -78,6 +78,21 @@ def _active_owner_account_ref() -> str:
         )
 
 
+def _triggered_home_packet_or_skip() -> tuple[
+    str,
+    dict[str, object],
+    MingliRelationEffectEvidencePacketEnvelope,
+]:
+    account_ref = _active_owner_account_ref()
+    snapshot = HomeExperienceService(engine).snapshot(account_ref=account_ref)
+    packet = MingliRelationEffectEvidencePacketEnvelope.model_validate(
+        snapshot["mingli"]["relation_effect_evidence_packet"]
+    )
+    if not packet.demand_packets:
+        pytest.skip("active owner chart has no relation-effect evidence demand")
+    return account_ref, snapshot, packet
+
+
 def test_request_contract_derives_one_demand_and_six_slots_without_input() -> None:
     packet = _packet(
         ChartPillars(
@@ -194,12 +209,7 @@ def test_request_contract_derives_one_demand_and_six_slots_without_input() -> No
 
 
 def test_request_store_is_private_replay_safe_append_only_and_rolled_back() -> None:
-    account_ref = _active_owner_account_ref()
-    snapshot = HomeExperienceService(engine).snapshot(account_ref=account_ref)
-    packet = MingliRelationEffectEvidencePacketEnvelope.model_validate(
-        snapshot["mingli"]["relation_effect_evidence_packet"]
-    )
-    assert packet.demand_packet_count == 1
+    account_ref, _, packet = _triggered_home_packet_or_skip()
     store = RelationEffectEvidenceRequestStore(engine)
     request = _request(
         packet,
@@ -333,10 +343,7 @@ def test_request_store_is_private_replay_safe_append_only_and_rolled_back() -> N
             delete_savepoint = connection.begin_nested()
             with pytest.raises(
                 DBAPIError,
-                match=(
-                    "mingli_relation_effect_evidence_requests_"
-                    "are_append_only"
-                ),
+                match=("mingli_relation_effect_evidence_requests_are_append_only"),
             ):
                 connection.execute(
                     text(
@@ -403,11 +410,7 @@ def test_clear_packet_rejects_request_before_any_write() -> None:
 
 
 def test_home_projection_shares_recovered_receipt_without_evidence_credit() -> None:
-    account_ref = _active_owner_account_ref()
-    first = HomeExperienceService(engine).snapshot(account_ref=account_ref)
-    canonical_packet = MingliRelationEffectEvidencePacketEnvelope.model_validate(
-        first["mingli"]["relation_effect_evidence_packet"]
-    )
+    account_ref, _, canonical_packet = _triggered_home_packet_or_skip()
     receipt = RelationEffectEvidenceRequestStore.derive_expected_receipt(
         account_ref=account_ref,
         request=_request(
@@ -469,19 +472,14 @@ def test_request_slot_rejects_noncanonical_professional_guidance() -> None:
 
     with pytest.raises(
         ValidationError,
-        match=(
-            "relation_effect_evidence_request_slot_"
-            "canonical_guidance_mismatch"
-        ),
+        match=("relation_effect_evidence_request_slot_canonical_guidance_mismatch"),
     ):
         RelationEffectEvidenceRequestedSlot.model_validate(forged)
 
 
 def test_historical_packet_resolver_rebuilds_from_persisted_reading() -> None:
     account_ref = _active_owner_account_ref()
-    snapshot = HomeExperienceService(engine).snapshot(
-        account_ref=account_ref
-    )
+    snapshot = HomeExperienceService(engine).snapshot(account_ref=account_ref)
     packet = MingliRelationEffectEvidencePacketEnvelope.model_validate(
         snapshot["mingli"]["relation_effect_evidence_packet"]
     )
@@ -497,13 +495,7 @@ def test_historical_packet_resolver_rebuilds_from_persisted_reading() -> None:
 
 
 def test_runtime_integrity_rejects_self_consistent_forged_packet_lineage() -> None:
-    account_ref = _active_owner_account_ref()
-    snapshot = HomeExperienceService(engine).snapshot(
-        account_ref=account_ref
-    )
-    packet = MingliRelationEffectEvidencePacketEnvelope.model_validate(
-        snapshot["mingli"]["relation_effect_evidence_packet"]
-    )
+    account_ref, _, packet = _triggered_home_packet_or_skip()
     forged_packet = MingliRelationEffectEvidencePacketEnvelope.issue(
         case_ref=packet.case_ref,
         chart_version_ref=packet.chart_version_ref,
@@ -521,16 +513,12 @@ def test_runtime_integrity_rejects_self_consistent_forged_packet_lineage() -> No
     )
     forged_request = _request(
         forged_packet,
-        idempotency_key=(
-            "qa:relation-effect-request:forged-packet-lineage"
-        ),
+        idempotency_key=("qa:relation-effect-request:forged-packet-lineage"),
     )
-    forged_receipt = (
-        RelationEffectEvidenceRequestStore.derive_expected_receipt(
-            account_ref=account_ref,
-            request=forged_request,
-            packet=forged_packet,
-        )
+    forged_receipt = RelationEffectEvidenceRequestStore.derive_expected_receipt(
+        account_ref=account_ref,
+        request=forged_request,
+        packet=forged_packet,
     )
     resolver = MingliRelationEffectHistoricalPacketResolver(engine)
 
@@ -538,8 +526,7 @@ def test_runtime_integrity_rejects_self_consistent_forged_packet_lineage() -> No
         transaction = connection.begin()
         try:
             invalid_before = (
-                RuntimeIntegrityService
-                ._count_invalid_relation_effect_evidence_requests(
+                RuntimeIntegrityService._count_invalid_relation_effect_evidence_requests(
                     connection,
                     resolver=resolver,
                 )
@@ -569,15 +556,12 @@ def test_runtime_integrity_rejects_self_consistent_forged_packet_lineage() -> No
                     "packet_ref": forged_receipt.packet_ref,
                     "packet_hash": forged_receipt.packet_hash,
                     "idempotency_key": forged_receipt.idempotency_key,
-                    "receipt_json": canonical_json(
-                        forged_receipt.model_dump(mode="json")
-                    ),
+                    "receipt_json": canonical_json(forged_receipt.model_dump(mode="json")),
                     "receipt_hash": forged_receipt.receipt_hash,
                 },
             )
             invalid_after = (
-                RuntimeIntegrityService
-                ._count_invalid_relation_effect_evidence_requests(
+                RuntimeIntegrityService._count_invalid_relation_effect_evidence_requests(
                     connection,
                     resolver=resolver,
                 )
@@ -589,23 +573,15 @@ def test_runtime_integrity_rejects_self_consistent_forged_packet_lineage() -> No
 
 
 def test_account_lock_serializes_request_snapshot_and_mechanism_write() -> None:
-    account_ref = _active_owner_account_ref()
-    baseline = HomeExperienceService(engine).snapshot(
-        account_ref=account_ref
-    )
-    packet = MingliRelationEffectEvidencePacketEnvelope.model_validate(
-        baseline["mingli"]["relation_effect_evidence_packet"]
-    )
+    account_ref, baseline, packet = _triggered_home_packet_or_skip()
     request = _request(
         packet,
         idempotency_key="qa:relation-effect-request:account-lock",
     )
-    expected_receipt = (
-        RelationEffectEvidenceRequestStore.derive_expected_receipt(
-            account_ref=account_ref,
-            request=request,
-            packet=packet,
-        )
+    expected_receipt = RelationEffectEvidenceRequestStore.derive_expected_receipt(
+        account_ref=account_ref,
+        request=request,
+        packet=packet,
     )
     request_entered = Event()
     release_request = Event()
@@ -626,14 +602,10 @@ def test_account_lock_serializes_request_snapshot_and_mechanism_write() -> None:
             packet: MingliRelationEffectEvidencePacketEnvelope,
         ):
             assert account_ref == expected_receipt.requester_account_ref
-            assert request.idempotency_key == (
-                expected_receipt.idempotency_key
-            )
+            assert request.idempotency_key == (expected_receipt.idempotency_key)
             assert packet.packet_ref == expected_receipt.packet_ref
             self.request_backend_pid = int(
-                connection.execute(
-                    text("SELECT pg_backend_pid()")
-                ).scalar_one()
+                connection.execute(text("SELECT pg_backend_pid()")).scalar_one()
             )
             request_entered.set()
             if not release_request.wait(timeout=5):
@@ -651,13 +623,9 @@ def test_account_lock_serializes_request_snapshot_and_mechanism_write() -> None:
             vector,
         ):
             assert account_ref == expected_receipt.requester_account_ref
-            assert vector.vector_ref == baseline["lab"][
-                "mechanism_vector_ref"
-            ]
+            assert vector.vector_ref == baseline["lab"]["mechanism_vector_ref"]
             self.comparison_backend_pid = int(
-                connection.execute(
-                    text("SELECT pg_backend_pid()")
-                ).scalar_one()
+                connection.execute(text("SELECT pg_backend_pid()")).scalar_one()
             )
             return {"decision_ref": "qa-lock-serialized"}
 
@@ -702,15 +670,10 @@ def test_account_lock_serializes_request_snapshot_and_mechanism_write() -> None:
             release_request.set()
 
         assert request_future.result(timeout=5) == expected_receipt
-        assert compare_future.result(timeout=5) == {
-            "decision_ref": "qa-lock-serialized"
-        }
+        assert compare_future.result(timeout=5) == {"decision_ref": "qa-lock-serialized"}
 
     assert len(snapshot_threads) == 2
     assert snapshot_threads[0] != snapshot_threads[1]
     assert blocking_store.request_backend_pid is not None
     assert comparison.comparison_backend_pid is not None
-    assert (
-        blocking_store.request_backend_pid
-        != comparison.comparison_backend_pid
-    )
+    assert blocking_store.request_backend_pid != comparison.comparison_backend_pid

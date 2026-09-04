@@ -566,7 +566,7 @@ def upsert_runtime_records(manifest: dict[str, Any]) -> None:
         if identity["character_version"] == CHARACTER_VERSION:
             identity["motion_media_refs"] = sorted({*identity["motion_media_refs"], MEDIA_REF})
     for cue in catalog["cue_bundles"]:
-        if cue["cue_ref"] == "cue.dream.grove-arrival.v1":
+        if cue["cue_ref"] == "cue.mingli.abu-idle.v1":
             cue["visual_media_ref"] = MEDIA_REF
             cue["reduced_motion"]["visual_asset_ref"] = "abu.v60.seated.idle.poster.v1"
     write_json(CATALOG_PATH, catalog)

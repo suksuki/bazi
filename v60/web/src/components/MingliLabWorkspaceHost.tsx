@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-import type { RuntimeMediaManifest } from "../api";
 import type { MingliSceneSurface } from "../mingliSceneDirector";
 import {
   readMingliStageRoute,
@@ -11,10 +10,28 @@ import {
   writeMingliSyntheticLabRoute,
 } from "../mingliSyntheticLabNavigation";
 import type { MingliStageViewContext } from "../mingliStageTypes";
+import type { RuntimeMediaManifest } from "../publicRuntimeTypes";
 import { MingliSceneHost } from "./MingliSceneHost";
 import { MingliResearchOverview } from "./MingliResearchOverview";
-import { MingliSyntheticCatalogScene } from "./MingliSyntheticCatalogScene";
-import { MingliSyntheticExperimentScene } from "./MingliSyntheticExperimentScene";
+
+const LAB_OVERVIEW_ROUTE: MingliSyntheticLabRoute = {
+  mode: "overview",
+  suiteRunRef: null,
+  experimentRef: null,
+  runRef: null,
+  variant: "A",
+};
+
+function isDemoLabMode(
+  mode: MingliSyntheticLabRoute["mode"],
+): mode is "overview" | "current" | "narration" {
+  return mode === "overview" || mode === "current" || mode === "narration";
+}
+
+function readDemoLabRoute(): MingliSyntheticLabRoute {
+  const route = readMingliSyntheticLabRoute();
+  return isDemoLabMode(route.mode) ? route : LAB_OVERVIEW_ROUTE;
+}
 
 export function MingliLabWorkspaceHost({
   homeLineageKey,
@@ -30,11 +47,18 @@ export function MingliLabWorkspaceHost({
   onSurfaceChange: (surface: MingliSceneSurface) => void;
 }) {
   const [route, setRoute] = useState<MingliSyntheticLabRoute>(
-    readMingliSyntheticLabRoute,
+    readDemoLabRoute,
   );
 
   useEffect(() => {
-    const restore = () => setRoute(readMingliSyntheticLabRoute());
+    const restore = () => {
+      const requested = readMingliSyntheticLabRoute();
+      if (!isDemoLabMode(requested.mode)) {
+        writeMingliSyntheticLabRoute(LAB_OVERVIEW_ROUTE, "replace");
+      }
+      setRoute(isDemoLabMode(requested.mode) ? requested : LAB_OVERVIEW_ROUTE);
+    };
+    restore();
     window.addEventListener("popstate", restore);
     return () => window.removeEventListener("popstate", restore);
   }, []);
@@ -48,7 +72,7 @@ export function MingliLabWorkspaceHost({
   }, []);
 
   useEffect(() => {
-    if (route.mode === "overview" || route.mode === "catalog") {
+    if (route.mode === "overview") {
       onContextChange({ subjectId: "current", status: "LOADING", projection: null });
     }
   }, [onContextChange, route.mode]);
@@ -69,14 +93,6 @@ export function MingliLabWorkspaceHost({
     });
   };
 
-  const overviewRoute: MingliSyntheticLabRoute = {
-    mode: "overview",
-    suiteRunRef: null,
-    experimentRef: null,
-    runRef: null,
-    variant: "A",
-  };
-
   if (route.mode === "overview") {
     return (
       <MingliResearchOverview
@@ -84,38 +100,6 @@ export function MingliLabWorkspaceHost({
         onExit={onExit}
         onOpenNarration={() => enterCurrentRoom("narration")}
         onOpenSixPillar={() => enterCurrentRoom("current")}
-        onOpenSynthesis={() => navigate({ ...overviewRoute, mode: "catalog" })}
-      />
-    );
-  }
-
-  if (route.mode === "catalog") {
-    return (
-      <MingliSyntheticCatalogScene
-        media={media}
-        onBack={() => navigate(overviewRoute)}
-        onOpenExperiment={navigate}
-      />
-    );
-  }
-
-  if (route.mode === "synthetic") {
-    return (
-      <MingliSyntheticExperimentScene
-        onBackToCurrent={() =>
-          navigate({
-            mode: "current",
-            suiteRunRef: null,
-            experimentRef: null,
-            runRef: null,
-            variant: "A",
-          })
-        }
-        onContextChange={onContextChange}
-        onExit={() => navigate(overviewRoute)}
-        onOpenReading={() => onSurfaceChange("READING")}
-        onRouteChange={navigate}
-        route={route}
       />
     );
   }
@@ -127,14 +111,11 @@ export function MingliLabWorkspaceHost({
       homeLineageKey={homeLineageKey}
       media={media}
       onContextChange={onContextChange}
-      onExit={() => navigate(overviewRoute)}
+      onExit={() => navigate(LAB_OVERVIEW_ROUTE)}
       onNarrationStateChange={(open) => navigate({
-        ...overviewRoute,
+        ...LAB_OVERVIEW_ROUTE,
         mode: open ? "narration" : "current",
       }, "replace")}
-      onOpenSyntheticLab={() =>
-        navigate({ ...overviewRoute, mode: "catalog" })
-      }
       onSurfaceChange={onSurfaceChange}
       surface="LAB"
     />

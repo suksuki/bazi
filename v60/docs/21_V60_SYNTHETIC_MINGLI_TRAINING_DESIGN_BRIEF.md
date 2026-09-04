@@ -4,6 +4,15 @@
 
 日期：2026-08-03
 
+## 2026-08-15 Runtime 与模型状态同步
+
+当前本地命理首选候选已从历史 Gemma4 基线切换为 `qwen3.8:27b`；Gemma4 保留为显式
+比较和低延迟回退。二者同尺 Suite 都是 `PRODUCT_SAFE_MODEL_FAIL`，不能在体验中用
+“新模型已成为高级命理师”替代三轨状态。Qwen 的产品文字已经走服务器端逐主题
+Focused Pass，不允许浏览器直连模型；Lab 仍复盘封存的严格整盘实验，两条路径不得合并
+成一个模糊分数。完整接入过程、参数、延迟和命理师视角比较见
+[`23_V60_QWEN38_MINGLI_INTEGRATION_AND_PRACTITIONER_REVIEW.md`](23_V60_QWEN38_MINGLI_INTEGRATION_AND_PRACTITIONER_REVIEW.md)。
+
 ## 给设计师的完整任务
 
 这不是为现有结果页补几个按钮，也不是另做一个工程后台。请把下面的训练流程整合进
@@ -360,3 +369,19 @@ REVIEW_READY
 
 设计完成前，Codex 会继续建设真实实验、三轨数据和审阅契约；不会等待视觉稿才推进命理
 专业底座，也不会抢先把临时工程面板当成最终设计。
+
+## 2026-08-27 实施回执：三段式训练探针，不新增公开 Lab
+
+后端已经按本 Brief 的“模型负责有限判断、系统负责集合与边界”原则，落下独立的
+`REGIME -> CANDIDATE_COMPARISON -> CERTAINTY` DEV 探针。它只接受 canonical synthetic
+packet；Gold 在模型调用结束后才进入 evaluator；主次覆盖、排除集合、方法卡 aggregate 与
+最终确定性由本地系统复算，全部 Run 只追加保存。
+
+当前公开产品边界不变：该探针没有浏览器路由、没有生成按钮，也没有进入公开页面。
+Lab 完全内部化，只保留六柱与阿布说所需的共享基础组件。以后若 Owner 决定恢复专业审阅体验，应
+读取这份 append-only 证据，而不是让浏览器直连 Qwen 或把 `DEV_PASS` 显示为资格通过。
+
+同一壬水 A/B 的三段结果从严格整盘的 `389.875s / 32,327 tokens` 降至
+`141.994s / 13,918 tokens`。但教师复核发现 A 的候选 aggregate 会随提示词压缩从
+`SUPPORTED/BROKEN` 变成 `BROKEN/BROKEN`，所以当前只证明调用拆分、事实绑定与本地强度
+收口有效；专业候选 Gold、真人应事校准、QUALIFICATION 与 HOLDOUT 仍未完成。

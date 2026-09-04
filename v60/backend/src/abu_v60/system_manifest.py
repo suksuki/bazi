@@ -2,28 +2,64 @@ from __future__ import annotations
 
 from typing import Final
 
-from abu_v60.architecture import runtime_architecture
-from abu_v60.decision.reasoner import reasoner_runtime_manifest
 from abu_v60.knowledge import KnowledgeAuthority
-from abu_v60.mingli.agent_runtime import mingli_agent_runtime_manifest
-from abu_v60.story.packages import (
-    default_episode_source_registry,
-    qualification_episode_source_registry,
-)
+from abu_v60.media.focused_speech import FOCUSED_SPEECH_TIMELINE_VERSION
+from abu_v60.mingli.focused_reading_runtime import mingli_focused_runtime_manifest
+from abu_v60.settings import settings
 
 PRODUCT_ID: Final = "abu-knows-v60"
-PRODUCT_VERSION: Final = "0.1.0"
-FOUNDATION_VERSION: Final = "v60.foundation.037"
-EXPERIENCE_CONTEXT_VERSION: Final = "v60.experience-context.003"
+PRODUCT_VERSION: Final = "0.2.0"
+FOUNDATION_VERSION: Final = "v60.foundation.045"
 DECISION_POLICY_VERSION: Final = "v60.cognitive-decision-kernel.004"
-DREAM_GAME_ENGINE_VERSION: Final = "v60.dream-game-engine.019"
-WORLD_ENGINE_VERSION: Final = "v60.world-continuity-engine.004"
-MINGLI_ENGINE_VERSION: Final = "v60.mingli-cognitive-engine.048"
-STORY_ENGINE_VERSION: Final = "v60.life-story-engine.011"
+MINGLI_ENGINE_VERSION: Final = "v60.mingli-cognitive-engine.051"
 ASSET_REGISTRY_VERSION: Final = "v60.asset-registry.003"
-MEDIA_RUNTIME_VERSION: Final = "v60.runtime-media-registry.006"
-PRIMARY_WORLD_ID: Final = "abu-dream-world-v1"
-ENTRY_EXPERIENCE: Final = "PRIVATE_LIFE_TREE_HOME"
+MEDIA_RUNTIME_VERSION: Final = "v60.runtime-media-registry.009"
+PUBLIC_PRODUCT_EXPOSURE_VERSION: Final = "v60.public-product-exposure.003"
+ENTRY_EXPERIENCE: Final = "MINGLI_HOME"
+
+
+def public_product_exposure_manifest() -> dict[str, object]:
+    return {
+        "policy_version": PUBLIC_PRODUCT_EXPOSURE_VERSION,
+        "public_units": ["MINGLI_READING", "ABU_SAYS"],
+        "lab": {
+            "status": "INTERNAL_ONLY",
+            "public_entry_allowed": False,
+            "public_route_allowed": False,
+        },
+    }
+
+
+def _public_architecture_manifest() -> dict[str, object]:
+    return {
+        "architecture_version": "v60.public-runtime-architecture.002",
+        "default_locale": "zh-CN",
+        "product_units": ["unit-mingli", "unit-abu"],
+        "product_core": "unit-mingli",
+        "entry_flow": ["AUTH", "CHART", "MINGLI_READING", "ABU_SAYS"],
+        "modules": [
+            {
+                "module_id": "identity",
+                "status": "ACTIVE",
+                "capabilities": ["account_session", "private_profile"],
+            },
+            {
+                "module_id": "mingli",
+                "status": "ACTIVE",
+                "capabilities": [
+                    "deterministic_chart",
+                    "formal_bounded_reading",
+                    "progressive_one_focus_reading",
+                ],
+            },
+            {
+                "module_id": "abu-expression",
+                "status": "ACTIVE",
+                "capabilities": ["same_reading_expression", "lazy_focused_speech"],
+            },
+        ],
+        "internal_surfaces_registered": settings.internal_surfaces_enabled,
+    }
 
 
 def runtime_manifest() -> dict[str, object]:
@@ -34,39 +70,39 @@ def runtime_manifest() -> dict[str, object]:
         "foundation_version": FOUNDATION_VERSION,
         "entry_experience": ENTRY_EXPERIENCE,
         "engines": {
-            "context": EXPERIENCE_CONTEXT_VERSION,
             "decision": DECISION_POLICY_VERSION,
-            "game": DREAM_GAME_ENGINE_VERSION,
-            "world": WORLD_ENGINE_VERSION,
             "mingli": MINGLI_ENGINE_VERSION,
-            "story": STORY_ENGINE_VERSION,
         },
-        "architecture": runtime_architecture().public_manifest(),
+        "architecture": _public_architecture_manifest(),
         "knowledge_profiles": knowledge.public_manifest(),
         "candidate_rule_profiles": knowledge.candidate_rule_manifest(),
         "quant_foundation_profiles": knowledge.quant_foundation_manifest(),
         "source_review_profiles": knowledge.source_review_manifest(),
         "mechanism_evidence_profiles": knowledge.mechanism_evidence_manifest(),
         "timing_evidence_profiles": knowledge.timing_evidence_manifest(),
-        "relation_effect_rule_admission": (
-            knowledge.relation_effect_rule_admission_manifest()
-        ),
+        "relation_effect_rule_admission": knowledge.relation_effect_rule_admission_manifest(),
         "knowledge_profile_selection": knowledge.selection_manifest(),
         "asset_registry_version": ASSET_REGISTRY_VERSION,
         "media_runtime_version": MEDIA_RUNTIME_VERSION,
+        "public_product_exposure": public_product_exposure_manifest(),
         "authority": {
-            "facts": "SYSTEM",
-            "world_outcomes": "SYSTEM",
-            "interpretation": "BOUNDED_REASONER_AND_SPECIALIST_MINGLI_AGENT",
-            "formal_commit": "EPISTEMIC_GATE",
+            "chart": "DETERMINISTIC_LOCAL_SYSTEM",
+            "interpretation": "LOCAL_QWEN_WITH_LOCAL_NORMALIZATION",
+            "expression": "SAME_READING_ONLY",
             "consent": "HUMAN",
-            "global_knowledge": "OWNER_PROFESSIONAL_REVIEW",
+            "formal_commit": "EPISTEMIC_GATE",
         },
-        "reasoner_runtime": reasoner_runtime_manifest(),
-        "mingli_agent_runtime": mingli_agent_runtime_manifest(),
-        "episode_source_packages": {
-            "canonical_story": default_episode_source_registry().public_manifest(),
-            "three_life_qualification": (qualification_episode_source_registry().public_manifest()),
+        "mingli_focused_runtime": mingli_focused_runtime_manifest(),
+        "speech_runtime": {
+            "status": "READY" if settings.tts_enabled else "DISABLED",
+            "actor_ref": "ABU_NARRATOR_V1",
+            "generation_mode": "LAZY_FROM_PERSISTED_FOCUSED_PASS",
+            "timeline_version": FOCUSED_SPEECH_TIMELINE_VERSION,
+            "clock_source": "HTML_AUDIO_CURRENT_TIME",
+            "subtitle_granularity": "SENTENCE_OR_CLAUSE",
+            "particle_focus": "EXPLICIT_COORDINATE_TERMS_ONLY",
+            "text_first": True,
+            "upstream_url_exposed": False,
         },
         "v50_runtime_dependency": False,
     }

@@ -165,9 +165,7 @@ def test_source_discussion_receipt_is_stable_and_binds_complete_lineage() -> Non
         prerequisite.prerequisite_ref,
         prerequisite.prerequisite_hash,
     )
-    assert first.carrier_refs == tuple(
-        item.carrier_ref for item in prerequisite.carriers
-    )
+    assert first.carrier_refs == tuple(item.carrier_ref for item in prerequisite.carriers)
     assert first.carrier_count == prerequisite.carrier_count
     assert first.ready_carrier_count == 0
     assert first.abstained_claims == SOURCE_DISCUSSION_ABSTAINED_CLAIMS
@@ -256,9 +254,7 @@ def test_source_discussion_fails_closed_on_lineage_profile_and_state_drift() -> 
             reading=reading,
             prerequisite=_reissue_prerequisite(
                 prerequisite,
-                prerequisite_version=(
-                    "v60.mingli-source-usability-prerequisite.999"
-                ),
+                prerequisite_version=("v60.mingli-source-usability-prerequisite.999"),
             ),
         )
 
@@ -286,9 +282,7 @@ def test_source_discussion_fails_closed_on_lineage_profile_and_state_drift() -> 
             reading=_reissue_reading(
                 reading,
                 unresolved_dimensions=tuple(
-                    item
-                    for item in reading.unresolved_dimensions
-                    if item != "usability"
+                    item for item in reading.unresolved_dimensions if item != "usability"
                 ),
             ),
             prerequisite=prerequisite,
@@ -300,9 +294,7 @@ def test_source_discussion_fails_closed_on_lineage_profile_and_state_drift() -> 
     ):
         projector.project(
             reading=reading,
-            prerequisite=prerequisite.model_copy(
-                update={"ready_carrier_count": 1}
-            ),
+            prerequisite=prerequisite.model_copy(update={"ready_carrier_count": 1}),
         )
 
 
@@ -330,7 +322,5 @@ def test_source_discussion_never_creates_decision_or_professional_claim() -> Non
         match="source_discussion_receipt_hash_mismatch",
     ):
         MingliSourceDiscussionAbstentionReceipt.model_validate(
-            receipt.model_copy(
-                update={"reading_hash": "f" * 64}
-            ).model_dump(mode="python")
+            receipt.model_copy(update={"reading_hash": "f" * 64}).model_dump(mode="python")
         )

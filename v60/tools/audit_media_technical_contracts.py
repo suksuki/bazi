@@ -43,20 +43,15 @@ def main() -> None:
             role = str(delivery["role"])
             path = PROJECT_ROOT / str(delivery["path"])
             streams = probe(path)["streams"]
-            video_streams = [
-                stream for stream in streams if stream["codec_type"] == "video"
-            ]
-            audio_streams = [
-                stream for stream in streams if stream["codec_type"] == "audio"
-            ]
+            video_streams = [stream for stream in streams if stream["codec_type"] == "video"]
+            audio_streams = [stream for stream in streams if stream["codec_type"] == "audio"]
 
             if role == "VP9_ALPHA_WEBM":
                 if len(video_streams) != 1 or audio_streams:
                     raise RuntimeError(f"{path} must contain one video stream and no audio")
                 video = video_streams[0]
                 tags = {
-                    str(key).upper(): str(value)
-                    for key, value in video.get("tags", {}).items()
+                    str(key).upper(): str(value) for key, value in video.get("tags", {}).items()
                 }
                 alpha_mode = tags.get("ALPHA_MODE", "0")
                 if video["codec_name"] != "vp9" or alpha_mode != "1":

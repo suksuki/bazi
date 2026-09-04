@@ -99,9 +99,7 @@ def test_source_usability_keeps_clear_coordinates_unresolved() -> None:
     assert prerequisite.element_affinity_included_review_required_count == 0
     assert prerequisite.ready_carrier_count == 0
     for carrier in prerequisite.carriers:
-        requirements = {
-            item.requirement_id: item for item in carrier.requirements
-        }
+        requirements = {item.requirement_id: item for item in carrier.requirements}
         assert requirements["RELATION_EFFECT_RULE"].status == "NOT_TRIGGERED"
         assert requirements["ROOT_USABILITY_RULE"].status == "NOT_ADMITTED"
         assert carrier.scopes[1].root_usability_status == "UNRESOLVED"
@@ -124,9 +122,7 @@ def test_source_usability_fails_closed_on_lineage_or_bijection_drift() -> None:
     ):
         projector.project(
             quant_vector=quant,
-            source_review_vector=review.model_copy(
-                update={"case_ref": "different-case"}
-            ),
+            source_review_vector=review.model_copy(update={"case_ref": "different-case"}),
         )
 
     with pytest.raises(
@@ -135,9 +131,7 @@ def test_source_usability_fails_closed_on_lineage_or_bijection_drift() -> None:
     ):
         projector.project(
             quant_vector=quant,
-            source_review_vector=review.model_copy(
-                update={"reviews": review.reviews[:-1]}
-            ),
+            source_review_vector=review.model_copy(update={"reviews": review.reviews[:-1]}),
         )
 
 

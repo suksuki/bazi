@@ -4,6 +4,126 @@
 
 日期：2026-08-03
 
+最后同步：2026-08-15
+
+## 2026-08-15 Qwen3.8 官方调用校准与产品分层路径
+
+从发现部署、服务端核验、官方模板、双 Runtime 重构、本地规则蒸馏到命理师视角评分的
+完整过程，统一记录在
+[`23_V60_QWEN38_MINGLI_INTEGRATION_AND_PRACTITIONER_REVIEW.md`](23_V60_QWEN38_MINGLI_INTEGRATION_AND_PRACTITIONER_REVIEW.md)。
+
+官方 `Qwen/Qwen3.8-27B` 模型卡确认模型默认进入 thinking；非思考模式推荐
+`temperature=0.7`、`top_p=0.8`、`top_k=20`、`min_p=0`、
+`presence_penalty=1.5`、`repetition_penalty=1.0`。官方 tokenizer template 在
+`enable_thinking=false` 时以空的 `<think>\n\n</think>\n\n` 开始 assistant
+generation。当前 Ollama 模型自带模板只有 `{{ .Prompt }}`，因此 Focused Runtime
+使用 `raw=true` 明确渲染同一 ChatML non-thinking 模板；这不是通过自然语言假装关闭
+thinking。参考：[Qwen3.8-27B model card](https://huggingface.co/Qwen/Qwen3.8-27B)、
+[Ollama generate API](https://docs.ollama.com/api/generate)。
+
+产品路径不再复用严格整盘 JSON Agent 的 24K 上下文与 6K 输出预算。Focused Profile
+`.005` 固定 `num_ctx=4096`、`num_predict=320`、`seed=42`、`keep_alive=30m`，
+每次只问一个主题；总纲是其他四问唯一依赖。每个回答作为
+`v60.mingli-focused-pass-record.001` 追加保存，Summary `.008` 可以表达
+`NOT_GENERATED / PARTIAL / READY`，页面会立即进入“正在判断”状态并在用户切换层次时
+按需继续。五问批量入口只保留为 DEV 教师批处理，不是产品点击路径。
+
+同一合成命盘的真实 Ollama `qwen3.8:27b` Q4_K_M 测量如下：
+
+| 调用 | 输入 token | 输出 token | 墙钟时间 |
+| --- | ---: | ---: | ---: |
+| 原局总纲 | 826 | 191 | 14.8s |
+| 生命意象／性情 | 556 | 102 | 8.0s |
+| 事业／财富 | 627 | 160 | 13.0s |
+| 关系／家庭 | 649 | 128 | 10.7s |
+| 大运／流年 | 668 | 220 | 16.2s |
+| 同一专问缓存重放 | — | — | 9ms |
+
+此前五问串行原型约 `109.6s`，严格整盘资格 Agent 约 `190.9s`。本轮优化没有证明
+模型已达到高级命理师：总纲仍把月干甲木写成“月令七杀”，并越界谈岁运；关系层从
+无印直接推断原生家庭；时间层把已准入的午子六冲成员关系扩大为确定的财星动荡。
+这些差异已蒸馏进本地 Normalizer `.003`，形成月令坐标、判型、范围、传记推断、
+五行因果、藏干坐标、心理／灾祸和未准入关系效果等 review code。系统保留原文供
+DEV 教师审读，不静默改成“正确答案”，也不允许其写入 canonical facts。
+
+按当前有限样本的高级命理师审稿口径，Qwen3.8 相比 Gemma4 约提升一档：文字与取象提升
+明显，结构判断有可信但有限的改善；主次决胜、反证与岁运边界仍未跨过独立执业门槛。
+这不是资格结论，完整证据和评分边界见上述整合文档。
+
+## 2026-08-15 Qwen3.8 DEV 对照首轮
+
+本日首轮对照时，`qwen3.8:27b` 先以 DEV comparison candidate 接入 V60 命理
+Agent Runner，Gemma4 默认 Profile 与历史封存保持不变。完成同尺审读及后续 Owner
+授权后，Qwen 才在同日后续阶段成为当前首选；本段记录的是切换之前的实验时点。两者
+使用同一 Suite Definition、Evaluator `.008`、DEV Gold `.005` 和结构化盲断合同。
+
+```text
+Qwen3.8 Suite: v60-mingli-synthetic-suite-run-150c896e9c1fe901408e
+Gemma4  Suite: v60-mingli-synthetic-suite-run-ea54d9e849a422f02ea3
+```
+
+| Candidate | Hold | Changed | Outcome | Model independence | Avg reading time |
+| --- | ---: | ---: | --- | --- | ---: |
+| `qwen3.8:27b` | 6/6 | 41 | `PRODUCT_SAFE_MODEL_FAIL` | `FAIL` | 191.6s |
+| `gemma4:latest` | 6/6 | 37 | `PRODUCT_SAFE_MODEL_FAIL` | `FAIL` | 88.3s |
+
+Qwen3.8 在本轮没有出现 Gemma4 的 `DAY_MASTER_REGIME` 或
+`WORK_PATH_FORM` 服务端修复，说明它在根气／判型入口和主路径格式上出现了真实
+改善；但四个变体仍出现 `HYPOTHESIS_H1/H2` 或 `HYPOTHESIS_DECISION` 修复，且
+反证条件与主次翻转仍未达到模型独立通过。第二个实验还保留隐藏位阶表达范围和
+可执行反证失败。因此本轮结论是：Qwen3.8 值得作为本地 Owner Review 首选和教师
+差异来源，但不能宣称高级命理师资格通过，也不能进入公开发布。
+
+## 2026-08-15 Qwen3.8 首选与低延迟配置（上一阶段）
+
+本地 Runtime 已将 Qwen3.8 设为命理整盘首选；Gemma4 只有在显式选择
+`--mingli-candidate gemma4` 时使用，不做静默混用。Qwen Profile 保持 `think=false`
+和严格 JSON Schema，采用 `num_ctx=24576`、`num_predict=5200`、`top_k=20`。
+当前四次完整 Reading 的最大输入为 `11219` tokens、最大输出为 `4488` tokens，
+因此该上下文和输出预算仍保留安全余量，同时避免为未使用的 32K/8K 上限支付缓存和
+生成成本。优化后的 Suite `v60-mingli-synthetic-suite-run-19db9c11b6bbf85c90bc`
+仍为 `22/19 changed`、`6/6 hold`、`PRODUCT_SAFE_MODEL_FAIL`，平均 Reading
+耗时 `190.9s`；相对原始 `191.6s` 基本没有变化。提示词主合同暂不删减，以免速度
+优化破坏事实、方法卡和反证门禁。当前主要瓶颈确认是 27B Q4_K_M 的 token 解码，
+不是上下文窗口或异常输出上限。
+
+## 2026-08-15 Qwen3.8 `.032` typed counterfactual calibration
+
+为推进“高级命理师断命”训练，方法卡已经从说明性文本推进为可执行的
+counterfactual decision row。每个 method card 会编译出
+`CHECK_CODE:TRIGGER_AXIS` 目录；Qwen 只负责选择合法的 `trigger_axis` 和
+`RECLASSIFY` action，服务端根据当前 ruling 派生稳定的 `row_ref`、目标
+状态和反证转移。这避免模型自由改写当前／目标裁决，同时保留模型对实际触发
+轴的判断责任。
+
+跨方法卡翻转也绑定了稳定的
+`REVERSAL:PRIMARY>ALTERNATIVE:MAINTAIN_PRIMARY>FLIP_TO_ALTERNATIVE`
+receipt，并要求输出两个候选路径的完整假设名称。实现已进入
+`agent_counterfactuals.py`、Agent Schema/Prompt、输出清洗、完整性评估和
+回归测试；历史没有这些字段的 Reading 仍按兼容规则保留为历史证据。
+
+当前本地首选是 `qwen3.8:27b`，Serving Profile 为
+`v60.model-serving.qwen38-27b-mingli-agent.002`，Agent Profile 为
+`v60.mingli-agent.whole-chart-cognition.033`；保持 `think=false`、
+`temperature=0`、`top_p=0.95`、`top_k=20`、`num_ctx=24576`，输出预算提高到
+`num_predict=6000`，以容纳新增 typed receipt，避免 5200 导致 JSON 尾部截断。
+
+最新 Suite 为 `v60-mingli-synthetic-suite-run-92d81fd67b5c94bf89f2`：
+`runner_errors=0`、两项实验均 sealed；两个实验的 changed/hold 分别为
+`27/30 + 3/30 hold`、`26/30 + 3/30 hold`。本轮重要进展是四个成员的
+`RAW_DECISION_ROWS_BOUND` 和 `RAW_REVERSAL_ACTIONABLE` 均通过，说明模型已
+能按结构合同选择反事实轴并输出具名翻转信号。仍失败的是
+`PRODUCT_SAFE_MODEL` 与 model-independence：H1/H2 方法裁决、work-path
+范围、隐藏位阶 prose 和部分可执行反证仍需继续校准。因此 Qwen 已用于系统的
+私有 Owner Review/DEV Lab 链路，但没有写入 canonical facts，也没有开启公开
+断命或“高级命理师”资格。
+
+随后加入的 `0047_mingli_resolution_guard` 没有改写这份 append-only sealed
+Suite；只对四份已保存 raw output 做了只读 replay。结果显示原先由“未形成更强竞争”、
+“竞争路径弱／不改变主轴”等中文弱化语义引起的 H1/H2 服务端误修复已消失；剩余
+`WORK_PATH` 时序越界、个别反证当前裁决标签不一致和隐藏位阶 prose 失败仍然保留，
+所以本次是裁决器真实性修复，不是把模型成绩静默改成通过。
+
 ## 目标
 
 合成命盘从本轮开始是命理 Agent 的主要研发与资格验证场，而不是附属演示。
@@ -513,6 +633,73 @@ Evaluator `.008` 把上一版只写在提示里的要求变成可执行考试：
 里选择并结合本盘事实落地。跨卡 reversal 同样绑定两张卡的专属决胜项和相反动作。这样仍是
 一次 LLM 裁决，但把稳定集合运算与合法状态交给系统，把真正需要命理比较的取舍留给模型。
 
+## 第八组合成实验：月令坐标、根气与原始判断一致性
+
+第五个 DEV Suite 换成从未进入目录的壬水对照，专门检验模型是否把月支月令与月干十神
+分开，并在完整时柱变化后重编译判型、候选集合和主路径：
+
+```text
+experiment  v60-mingli-synthetic-experiment-4355419cf3ec29abc246
+suite       v60-mingli-synthetic-suite-f1d255f320067d119d27
+
+A：1990-03-18 12:00 Asia/Shanghai
+   庚午 / 己卯 / 壬午 / 丙午
+   月令 = 卯；月干己 = 正官；卯藏乙 = 伤官
+   无根、无明干比劫；year干庚偏印只作资源竞争
+   regime = FALSE_FOLLOW_COMPETITION / UNRESOLVED
+
+B：1990-03-18 22:00 Asia/Shanghai
+   庚午 / 己卯 / 壬午 / 辛亥
+   月令与月干坐标不变
+   hour支藏壬 = EXACT_DAY_MASTER / PRIMARY_QI
+   year干庚偏印、hour干辛正印仍不得冒充根
+   regime = ORDINARY_WEAK / UNRESOLVED / NON_WEAK_OUTSIDE_SCOPE
+```
+
+完整时柱还同时改变财、印、藏干、同支关系与起运边界，所以 Gold 不把任何结果单独归因于
+亥中壬根，也不预选机制赢家。A 的合法候选是 `pressure-resource-self`、
+`wealth-to-pressure`、`resource-to-self`；B 重新编译为 `resource-to-self`、
+`pressure-resource-self`。新增本地坐标纪律同时检查 raw 与 normalized prose：
+“月令正官己土”属于坐标混淆；“月令卯木，月干己土正官”属于合法分离表达。
+
+真实 `qwen3.8:27b` 严格整盘运行共两次调用：
+
+| 变体 | 输入 token | 输出 token | 墙钟时间 |
+| --- | ---: | ---: | ---: |
+| A | 12,013 | 4,643 | 187.812s |
+| B | 10,883 | 4,788 | 202.063s |
+| 合计 | 22,896 | 9,431 | 389.875s |
+
+Qwen 原文正确写成“壬水生于卯月”，没有把己正官冒充月令；A 原生识别无根与
+`UNRESOLVED`，B 原生识别 `hour支藏壬` 有效根与 `ORDINARY_WEAK`。两盘的候选全集、
+唯一主次、排除项、可执行反证、翻转信号和 PRIMARY-bound work path 也全部通过。
+
+但首轮 Evaluator `.009` 把
+`v60-mingli-synthetic-run-adad4f4f971bd6cdcb2d` 记成 `PASS` 后，教师逐项复核发现一个
+裁判盲点：A/B 的 H1/H2 都把 raw `judgment` 写成 `SUPPORTED`，而各自方法裁决汇总与 raw
+`adjudication` 实际都是 `CONDITIONAL`。服务端已把它们安全降为 A 的
+`WORKS_IF / PARTIAL` 和 B 的 `PARTIAL / WORKS_IF`，但旧尺子没有要求这种原始修复留下回执。
+
+Evaluator `.010` 因此新增 raw judgment coherence 与 repair receipt 检查。它只读重放同一
+sealed raw output，约 `0.25s` 完成，没有再次调用 Qwen，也没有改 Prompt。修正后的证据为：
+
+```text
+experiment run  v60-mingli-synthetic-run-5eb1438b1dee74c3395e
+run hash        5eb1438b1dee74c3395eabcf2e43ee0ac05dcd00f3cf80a07d2cbd2d28277d6f
+suite run       v60-mingli-synthetic-suite-run-0ca2f52f7628e6987f7f
+suite hash      0ca2f52f7628e6987f7f4d62b6d94ddb4924d95c6d7a3d33fa5c616ec505cfd2
+changed / hold  27 / 3
+outcome         PRODUCT_SAFE_MODEL_FAIL
+independence    FAIL
+runner errors   0
+```
+
+失败项只保留在 A/B 的 `RAW_HYPOTHESIS_JUDGMENT_COHERENT` 与
+`RAW_REPAIRS_RECEIPTED`；月令坐标、月干十神、根与资源分离、关系 collateral、最低根门、
+候选重编译、typed regime 与主路径绑定全部通过。这说明 Qwen 已经能完成这组陌生盘的主要
+命理结构工作，但尚不能稳定控制结论强度。产品结果经本地裁判可保持安全，模型独立资格仍
+失败；`QUALIFICATION / HOLDOUT` 不解锁。
+
 ## V131 Lab 体验接线
 
 V131 commit `ea2db274ba55b8f9d323881c096d3a3a1ceba66c` 的水庭总览和合成验证目录
@@ -520,64 +707,142 @@ V131 commit `ea2db274ba55b8f9d323881c096d3a3a1ceba66c` 的水庭总览和合成�
 
 ```text
 六柱关系观察     -> canonical 四／六柱 Scene Player
-八字合成验证     -> 7 个真实课题、24 次封存运行、真实 Suite／训练任务状态
+八字合成验证     -> 8 个真实课题、append-only 封存运行、真实 Suite／训练任务状态
 阿布说           -> 同一个六柱 Scene Player 与服务端锁定声画链
 ```
 
 总览为只读 GET；目录只增加一个服务端绑定任务入口，仍为零 Canvas。只有进入六柱、
-阿布说或具体封存现场后才懒加载唯一 Scene Player。最新戊土 DEV Suite 如实显示
-`1/1` 封存、`1` 项待复核和 `10` 个错误簇；跨日主与位阶 Suite 历史继续保留；
+阿布说或具体封存现场后才懒加载唯一 Scene Player。最新卯月 DEV Suite 如实显示
+`1/1` 封存、`1` 项待复核和修正后的模型独立失败；跨日主与位阶 Suite 历史继续保留；
 `QUALIFICATION / HOLDOUT` 继续显示 `Owner Gate 后开放`。当前页面是“已揭晓封存
 复盘”，不是盲审；原型的 `localStorage` 裁决、假 Run 身份和写死统计均未进入系统。
 
 六柱入口只说明当前已准入的六冲／六合成员事实。关系作用、来源可用性、旺衰、有效
 做功或吉凶仍必须由整盘方法和专业裁决支持，不能从原型演示文案反推。
 
+## 三段式 DEV 蒸馏：先分题，再由本地系统收口
+
+第八组严格整盘运行证明 Qwen 已能处理主要结构，但两次调用合计仍需 `389.875s`，而且
+Evaluator `.010` 发现模型会把自身 `CONDITIONAL` 方法证据抬高成 `SUPPORTED`。因此下一步
+不再要求它一口气完成整盘、候选、人生领域与文字成品，而是实现独立的 DEV 蒸馏探针：
+
+```text
+canonical synthetic packet
+  -> REGIME                 只判身弱／从势出口
+  -> CANDIDATE_COMPARISON   只比较两张方法卡的逐项检查
+  -> local assembly         重算主次、排除集合与 aggregate adjudication
+  -> CERTAINTY              只映射 judgment 与 work-path closure
+  -> local evaluator        Gold 后置评分、坐标检查与确定性上限
+  -> append-only run
+```
+
+三段都使用 `think=false`、`temperature=0`、`top_p=0.95`、`top_k=20`、固定 seed `42` 和
+`num_ctx=8192`。输出预算分别为 `500 / 1800 / 320`；候选段只要求最短必要解释，避免重复
+复述命盘。Gold、另一变体、人生领域与 Timing 都不进入模型上下文。严格整盘 Agent 没有被
+删除或替换，它仍是最终同尺资格考试。
+
+首轮 B 的候选 JSON 在 1400-token 上限处被截断，没有形成 Run。保持字段契约不变后，仅将
+候选说明压短并把安全上限调到 1800；随后同一 Prompt Hash 的真实 A/B 结果为：
+
+| 变体 | 判型 | 候选比较 | 确定性 | 总 token | 总时长 | 合同结果 |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| A | 11.898s | 52.473s | 5.313s | 7,676 | 69.684s | `DEV_PASS` |
+| B | 15.897s | 51.202s | 5.211s | 6,242 | 72.310s | `DEV_PASS` |
+| 合计 | 27.795s | 103.675s | 10.524s | 13,918 | 141.994s | DEV-only |
+
+与严格整盘 A/B 相比，总时长下降约 `63.6%`，总 token 下降约 `57.0%`；六个小调用仍为
+串行，候选比较占总模型时长约 `73.0%`，所以它是下一轮真正要蒸馏的热点。缓存重放不调用
+模型，A/B 分别约 `54ms / 42ms`。
+
+```text
+prompt hash  bd5dfb9618cc7bc1d7ddec1d53ea6ebc1509cf5b1ce9c669bde44321a36d79ca
+A run        v60-mingli-distillation-run-544e86ed8e20b6fd7aa1
+B run        v60-mingli-distillation-run-fc8da8a2364ea2a6c2ee
+```
+
+两个 `DEV_PASS` 的精确含义是：模型没有依赖服务端改写就完成三段 Schema；判型符合当前
+packet 与 DEV Gold；候选全集、检查顺序、证据范围、排除集合、aggregate 和最终强度映射
+闭合。它不等于候选裁决已获专业 Gold。压缩前 A 曾给出 `SUPPORTED/BROKEN`，当前 A 给出
+`BROKEN/BROKEN`；B 当前为 `SUPPORTED/BROKEN`。提示词变化即可改变 A 的方法强度，教师
+复核因此把它记录为“候选专业稳定性待审”，不裁定哪个版本已成为 canonical 命理结论。
+
+本探针没有产品 API 或浏览器入口，不影响当前按主题读取的 Focused Reading；也不解锁
+`QUALIFICATION / HOLDOUT`、publication 或 canonical fact write。
+
 ## 当前版本
 
 ```text
-Foundation                 v60.foundation.037
-Mingli Engine              v60.mingli-cognitive-engine.048
-Runtime Architecture       v60.runtime-architecture.077
-Agent Runtime              v60.mingli-agent-runtime.032
-Agent Profile              v60.mingli-agent.whole-chart-cognition.030
-Agent Prompt               v60.prompt.mingli-agent-whole-chart.027
-Provider Profile           v60.model-serving.gemma4-mingli-agent.003
-Agent Prompt View          v60.mingli-agent-prompt-view.018
+Foundation                 v60.foundation.044
+Mingli Engine              v60.mingli-cognitive-engine.051
+Runtime Architecture       v60.runtime-architecture.080
+Agent Runtime              v60.mingli-agent-runtime.035
+Agent Profile              v60.mingli-agent.whole-chart-cognition.033
+Agent Prompt               v60.prompt.mingli-agent-whole-chart.029
+Provider Profile           v60.model-serving.qwen38-27b-mingli-agent.002
+Agent Prompt View          v60.mingli-agent-prompt-view.019
 Agent Reading              v60.mingli-agent-reading.006
 Normalization Receipt      v60.mingli-agent-normalization-receipt.001
-Agent Adjudication         v60.mingli-agent-adjudication.011
+Agent Adjudication         v60.mingli-agent-adjudication.013
 Agent Output Repair        v60.mingli-agent-output-repair.004
 Method Distillation        v60.mingli-agent-method-distillation.006
 Effective-root Method      v60.mingli-effective-root-method.001
 Regime Decision            v60.mingli-agent-regime-decision.002
 Stage Projection           v60.mingli-stage-projection.004
-Synthetic Catalog          v60.mingli-synthetic-experiment-catalog.006
-Synthetic Evaluator        v60.mingli-synthetic-experiment-evaluator.008
-Synthetic DEV Gold         v60.mingli-synthetic-experiment-dev-gold.005
+Synthetic Catalog          v60.mingli-synthetic-experiment-catalog.007
+Synthetic Evaluator        v60.mingli-synthetic-experiment-evaluator.010
+Synthetic DEV Gold         v60.mingli-synthetic-experiment-dev-gold.006
 Synthetic Run              v60.mingli-synthetic-experiment-run.001
 Synthetic Snapshot         v60.mingli-synthetic-experiment-snapshot.004
-Suite Catalog              v60.mingli-synthetic-suite-catalog.004
+Suite Catalog              v60.mingli-synthetic-suite-catalog.005
 Suite Definition           v60.mingli-synthetic-suite-definition.001
 Suite Runner               v60.mingli-synthetic-suite-runner.002
 Suite Run                  v60.mingli-synthetic-suite-run.002
 Training Request           v60.mingli-synthetic-suite-run-request.001
 Training Status            v60.mingli-synthetic-training-status.001
+Focused Runtime            v60.mingli-focused-runtime.001
+Focused Provider Profile   v60.model-serving.mingli-focused-text.008
+Focused Pass               v60.mingli-focused-pass.001
+Focused Normalizer         v60.mingli-focused-normalizer.006
+Distillation Runtime       v60.mingli-synthetic-distillation-runtime.001
+Distillation Prompt        v60.prompt.mingli-synthetic-distillation.001
+Distillation Pass          v60.mingli-synthetic-distillation-pass.001
+Distillation Evaluator     v60.mingli-synthetic-distillation-evaluator.001
+Distillation Run           v60.mingli-synthetic-distillation-run.001
+Reading Summary            v60.mingli-reading-summary.008
 Unit Mingli                v60.unit-mingli.038
-Unit Lab                   v60.unit-lab.034
-Migration                  0045_mingli_counterfactuals
+Unit Lab                   v60.unit-lab.036
+Migration                  0052_mingli_distillation_runs
 ```
 
 Migration 0043/0044 追加判型出口、候选 partition、Method `.006` 与合法决策行；0045
-再追加 packet-bound 根气考试和可执行反证／翻转语义。它们均只更新 manifest，不改写任何
-sealed run。最新 Suite 绑定本地 Gemma4、Profile/Prompt `.030/.027`、Reading `.006`、
-Evaluator `.008` 与 Gold `.005`；历史 Reading、Evaluator、Gold 与 Suite 仍按各自明确版本
-语义重放，不能被“当前版本”常量静默改义。
+再追加 packet-bound 根气考试和可执行反证／翻转语义；0046 将 typed decision row
+的 Agent Runtime/Prompt/Adjudication 版本绑定到数据库 manifest；0047 修正
+中文否定／弱化竞争语义的 resolution guard。它们均只更新 manifest，不改写任何
+sealed run。历史 Gemma4 Suite 仍按 Profile/Prompt `.030/.027`、Reading `.006`、
+Evaluator `.008` 与 Gold `.005` 的明确版本语义重放，不能被“当前版本”常量静默改义。
+当前 typed-row sealed Suite 绑定
+`qwen3.8:27b`、Profile/Prompt `.032/.029`、Serving Profile `.002`；新 Runtime
+Profile `.033` 仅用于后续生成与 replay，不回写历史结果；
+Reading `.006`、Evaluator `.008` 与 Gold `.005`。
+
+Migration 0048 新增五问 DEV envelope；0049 新增产品逐主题 append-only pass，并将
+Foundation 推进到 `.041`、Reading Summary 推进到 `.008`。这两次迁移不回写严格 Agent
+或 Synthetic Suite 的历史记录。
+
+Migration 0050 新增第八个陌生盘实验、月令／月干 prose 坐标纪律及第五个 DEV Suite；
+0051 将教师复核发现的 raw judgment coherence 缺口固化为 Evaluator `.010`。两次迁移只
+推进 manifest 和评尺，不改写旧 sealed run；`.009` 的乐观结果保留为历史证据，当前能力
+判断以 `.010` 对同一 raw output 的 append-only replay 为准。
+
+Migration 0052 新增独立的 `mingli.synthetic_distillation_runs` 只追加账本，绑定三段 Prompt、
+模型 digest、Provider Profile、packet、逐段 token／时长、原始输出、本地 assembly 与评估。
+UPDATE／DELETE 由数据库触发器拒绝；该表只保存 DEV 训练证据，不进入产品 Reading 或正式
+命理事实。
 
 ## 验证
 
 ```text
-Backend tests              455 PASS
+Backend tests              475 PASS
 Ruff                       PASS
 TypeScript / Vite build    PASS
 Runtime Architecture       PASS
@@ -590,7 +855,7 @@ Real Desktop Chrome        PASS
 Vite 仍报告两个大于 500 kB 的既有异步图形 chunk；这是已记录性能债，不改变本轮方法
 Lab 的功能结论。
 
-真实 Desktop Chrome 已验证 V131 总庭、七课题目录、新庚金实验、最新 Suite 优先、
+真实 Desktop Chrome 已验证 V131 总庭、七课题目录、新庚金实验、当时最新 Suite 优先、
 A／B 切换与精确 B 深链接刷新；页面无控制台 error。Evaluator `.008` 的最终运行通过
 服务端契约、前端合成 Lab 契约与生产构建验证，未把它伪称为一次新的 Chrome 模型运行。
 既有完整

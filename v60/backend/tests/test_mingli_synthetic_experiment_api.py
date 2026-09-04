@@ -158,7 +158,7 @@ def test_synthetic_lab_rejects_non_reviewer_session(monkeypatch: Any) -> None:
     assert suite_stub.catalog_calls == []
 
 
-def test_synthetic_lab_api_requires_session() -> None:
+def test_synthetic_lab_api_is_not_registered_in_public_runtime() -> None:
     async def request() -> tuple[int, int, int, int, int, int, int]:
         async with AsyncClient(
             transport=ASGITransport(app=app),
@@ -194,4 +194,4 @@ def test_synthetic_lab_api_requires_session() -> None:
                 create_request.status_code,
             )
 
-    assert asyncio.run(request()) == (401, 401, 401, 401, 401, 401, 401)
+    assert asyncio.run(request()) == (404, 404, 404, 404, 404, 404, 404)

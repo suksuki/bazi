@@ -38,6 +38,31 @@ const ELEMENT_COLORS: Record<string, string> = {
   亥: "#78b9d0",
 };
 
+const DAYLIGHT_ELEMENT_COLORS: Record<string, string> = {
+  甲: "#2f724e",
+  乙: "#2f724e",
+  寅: "#2f724e",
+  卯: "#2f724e",
+  丙: "#a04430",
+  丁: "#a04430",
+  巳: "#a04430",
+  午: "#a04430",
+  戊: "#846123",
+  己: "#846123",
+  辰: "#846123",
+  戌: "#846123",
+  丑: "#846123",
+  未: "#846123",
+  庚: "#53635c",
+  辛: "#53635c",
+  申: "#53635c",
+  酉: "#53635c",
+  壬: "#286b83",
+  癸: "#286b83",
+  子: "#286b83",
+  亥: "#286b83",
+};
+
 interface BodyPlacement {
   body: MingliStageBody;
   column: MingliStageColumn;
@@ -45,10 +70,12 @@ interface BodyPlacement {
 }
 
 export default function MingliSceneCanvas({
+  daylight,
   frame,
   onContextLost,
   stage,
 }: {
+  daylight: boolean;
   frame: MingliSceneFrame;
   onContextLost: () => void;
   stage: MingliStageProjection;
@@ -65,9 +92,13 @@ export default function MingliSceneCanvas({
     [stage.columns],
   );
   const activeRelationRefs = relationRefsForFrame(stage, frame);
-  const activeColumnRefs = useMemo(
+  const relationMemberColumnRefs = useMemo(
     () => relationColumnRefs(stage, activeRelationRefs),
     [activeRelationRefs, stage],
+  );
+  const narratedColumnRefs = useMemo(
+    () => new Set(frame.activeColumnRefs),
+    [frame.activeColumnRefs],
   );
 
   return (
@@ -84,27 +115,37 @@ export default function MingliSceneCanvas({
       <ambientLight intensity={0.85} />
       <pointLight color="#a4e7c3" intensity={11} position={[-4, 4, 5]} />
       <pointLight color="#d6b77c" intensity={8} position={[4, -1, 4]} />
-      <DustField frame={frame} />
-      {stage.relations.map((relation) => (
-        <NeutralRelationArc
-          active={activeRelationRefs.has(relation.relation_ref)}
-          boundary={frame.focus === "EVIDENCE_BOUNDARY"}
-          frame={frame}
-          key={relation.relation_ref}
-          leftX={positionsByColumn.get(relation.left_column_ref) ?? 0}
-          relation={relation}
-          rightX={positionsByColumn.get(relation.right_column_ref) ?? 0}
-        />
-      ))}
-      {placements.map(({ body, column, position }) => (
-        <StageBody
-          body={body}
-          focused={isBodyFocused(body, column, frame, activeColumnRefs)}
-          frame={frame}
-          key={body.body_ref}
-          position={position}
-        />
-      ))}
+      <DustField daylight={daylight} frame={frame} />
+      <group position={daylight ? [0, -0.72, 0] : [0, 0, 0]}>
+        {stage.relations.map((relation) => (
+          <NeutralRelationArc
+            active={activeRelationRefs.has(relation.relation_ref)}
+            boundary={frame.focus === "EVIDENCE_BOUNDARY"}
+            daylight={daylight}
+            frame={frame}
+            key={relation.relation_ref}
+            leftX={positionsByColumn.get(relation.left_column_ref) ?? 0}
+            relation={relation}
+            rightX={positionsByColumn.get(relation.right_column_ref) ?? 0}
+          />
+        ))}
+        {placements.map(({ body, column, position }) => (
+          <StageBody
+            body={body}
+            daylight={daylight}
+            focused={isBodyFocused(
+              body,
+              column,
+              frame,
+              relationMemberColumnRefs,
+              narratedColumnRefs,
+            )}
+            frame={frame}
+            key={body.body_ref}
+            position={position}
+          />
+        ))}
+      </group>
     </Canvas>
   );
 }
@@ -120,7 +161,7 @@ function ResponsiveStageCamera({ columnCount }: { columnCount: number }) {
     const halfVerticalFov = THREE.MathUtils.degToRad(camera.fov / 2);
     const fittedDistance =
       requiredHalfWidth / Math.max(Math.tan(halfVerticalFov) * aspect, 0.01);
-    camera.position.set(0, 0.15, Math.max(9.2, Math.min(fittedDistance, 14.5)));
+    camera.position.set(0, 0.15, Math.max(9.2, Math.min(fittedDistance, 28)));
     camera.updateProjectionMatrix();
   }, [camera, columnCount, size.height, size.width]);
 
@@ -143,25 +184,32 @@ function ContextGuard({ onContextLost }: { onContextLost: () => void }) {
 
 function StageBody({
   body,
+  daylight,
   focused,
   frame,
   position,
 }: {
   body: MingliStageBody;
+  daylight: boolean;
   focused: boolean;
   frame: MingliSceneFrame;
   position: [number, number, number];
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const membraneRef = useRef<THREE.MeshBasicMaterial>(null);
+  const particleRef = useRef<THREE.Points>(null);
   const pointsRef = useRef<THREE.PointsMaterial>(null);
   const ambientSeconds = useRef(0);
-  const color = ELEMENT_COLORS[body.glyph] ?? "#b9d7c6";
+  const color = (daylight ? DAYLIGHT_ELEMENT_COLORS : ELEMENT_COLORS)[body.glyph]
+    ?? (daylight ? "#315d49" : "#b9d7c6");
   const particleGeometry = useMemo(
     () => particleShellGeometry(body.body_ref, 88),
     [body.body_ref],
   );
-  const glyphTexture = useMemo(() => createGlyphTexture(body.glyph), [body.glyph]);
+  const glyphTexture = useMemo(
+    () => createGlyphTexture(body.glyph, daylight),
+    [body.glyph, daylight],
+  );
 
   useEffect(
     () => () => {
@@ -177,15 +225,25 @@ function StageBody({
     if (!group) return;
     const ambient = Math.sin(ambientSeconds.current * 0.9 + body.order * 0.67);
     const semanticAmount = frame.cueProgress;
-    const focusScale = focused ? 1 + semanticAmount * 0.08 : 0.86;
+    const speechSeconds = frame.currentTimeMs / 1000;
+    const speechPulse = frame.currentTimeMs > 0 || frame.semanticRunning
+      ? (Math.sin(speechSeconds * 2.8 + body.order * 0.58) + 1) / 2
+      : 0;
+    const focusScale = focused
+      ? 1 + semanticAmount * 0.055 + speechPulse * 0.038
+      : 0.86;
     group.scale.setScalar(focusScale + ambient * 0.012);
     group.position.set(position[0], position[1] + ambient * 0.035, position[2]);
+    if (particleRef.current) {
+      particleRef.current.rotation.y = speechSeconds * 0.16 + body.order * 0.04;
+      particleRef.current.rotation.x = ambient * 0.025;
+    }
     if (membraneRef.current) {
-      membraneRef.current.opacity = focused ? 0.34 : 0.12;
+      membraneRef.current.opacity = focused ? (daylight ? 0.24 : 0.34) : 0.12;
     }
     if (pointsRef.current) {
-      pointsRef.current.opacity = focused ? 0.82 : 0.23;
-      pointsRef.current.size = focused ? 0.033 : 0.024;
+      pointsRef.current.opacity = focused ? (daylight ? 0.92 : 0.82) : 0.23;
+      pointsRef.current.size = focused ? 0.031 + speechPulse * 0.006 : 0.024;
     }
   });
 
@@ -201,9 +259,9 @@ function StageBody({
           transparent
         />
       </mesh>
-      <points geometry={particleGeometry}>
+      <points geometry={particleGeometry} ref={particleRef}>
         <pointsMaterial
-          blending={THREE.AdditiveBlending}
+          blending={daylight ? THREE.NormalBlending : THREE.AdditiveBlending}
           color={color}
           depthWrite={false}
           opacity={0.82}
@@ -228,6 +286,7 @@ function StageBody({
 function NeutralRelationArc({
   active,
   boundary,
+  daylight,
   frame,
   leftX,
   relation,
@@ -235,6 +294,7 @@ function NeutralRelationArc({
 }: {
   active: boolean;
   boundary: boolean;
+  daylight: boolean;
   frame: MingliSceneFrame;
   leftX: number;
   relation: MingliStageRelation;
@@ -252,12 +312,14 @@ function NeutralRelationArc({
   const material = useMemo(
     () =>
       new THREE.LineBasicMaterial({
-        color: boundary ? "#cbbd91" : "#86ccb0",
+        color: daylight
+          ? boundary ? "#725b28" : "#2f6b52"
+          : boundary ? "#cbbd91" : "#86ccb0",
         depthWrite: false,
         opacity: active ? 0.5 : 0.1,
         transparent: true,
       }),
-    [active, boundary],
+    [active, boundary, daylight],
   );
   const line = useMemo(() => new THREE.Line(geometry, material), [geometry, material]);
 
@@ -281,7 +343,13 @@ function NeutralRelationArc({
   return <primitive object={line} />;
 }
 
-function DustField({ frame }: { frame: MingliSceneFrame }) {
+function DustField({
+  daylight,
+  frame,
+}: {
+  daylight: boolean;
+  frame: MingliSceneFrame;
+}) {
   const pointsRef = useRef<THREE.Points>(null);
   const ambientSeconds = useRef(0);
   const geometry = useMemo(() => {
@@ -304,9 +372,10 @@ function DustField({ frame }: { frame: MingliSceneFrame }) {
   return (
     <points geometry={geometry} ref={pointsRef}>
       <pointsMaterial
-        color="#d5e7d9"
+        blending={daylight ? THREE.NormalBlending : THREE.AdditiveBlending}
+        color={daylight ? "#315d49" : "#d5e7d9"}
         depthWrite={false}
-        opacity={0.22}
+        opacity={daylight ? 0.12 : 0.22}
         size={0.018}
         transparent
       />
@@ -356,11 +425,15 @@ function isBodyFocused(
   body: MingliStageBody,
   column: MingliStageColumn,
   frame: MingliSceneFrame,
-  activeColumnRefs: Set<string>,
+  relationMemberColumnRefs: Set<string>,
+  narratedColumnRefs: Set<string>,
 ) {
+  if (narratedColumnRefs.size > 0) {
+    return narratedColumnRefs.has(column.column_ref);
+  }
   if (frame.focus === "ALL_PILLARS") return true;
   if (frame.focus === "TIME_LAYER") return column.source_layer !== "NATAL";
-  return body.role === "BRANCH" && activeColumnRefs.has(column.column_ref);
+  return body.role === "BRANCH" && relationMemberColumnRefs.has(column.column_ref);
 }
 
 function particleShellGeometry(key: string, count: number) {
@@ -385,17 +458,24 @@ function seededUnit(seed: number) {
   return value - Math.floor(value);
 }
 
-function createGlyphTexture(glyph: string) {
+function createGlyphTexture(glyph: string, daylight: boolean) {
   const canvas = document.createElement("canvas");
   canvas.width = 192;
   canvas.height = 192;
   const context = canvas.getContext("2d");
   if (context) {
     context.clearRect(0, 0, 192, 192);
-    context.fillStyle = "rgba(246, 240, 215, 0.98)";
     context.font = "500 104px 'Songti SC', 'Noto Serif SC', serif";
     context.textAlign = "center";
     context.textBaseline = "middle";
+    if (daylight) {
+      context.lineWidth = 8;
+      context.strokeStyle = "rgba(250, 246, 222, 0.9)";
+      context.strokeText(glyph, 96, 104);
+      context.fillStyle = "rgba(20, 58, 40, 0.98)";
+    } else {
+      context.fillStyle = "rgba(246, 240, 215, 0.98)";
+    }
     context.fillText(glyph, 96, 104);
   }
   const texture = new THREE.CanvasTexture(canvas);

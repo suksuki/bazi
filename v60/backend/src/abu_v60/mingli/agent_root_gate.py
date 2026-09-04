@@ -72,9 +72,7 @@ def root_candidate_assessments(
                 ),
                 "branch": branch,
                 "relation_competition_evidence_ids": relation_ids,
-                "minimum_anti_follow_gate": (
-                    "PRESENT" if gate_present else "NOT_DETERMINED"
-                ),
+                "minimum_anti_follow_gate": ("PRESENT" if gate_present else "NOT_DETERMINED"),
                 "gate_reason": (
                     "日主同字位于该支第一藏干，且该支没有准入的原局冲合成员关系；"
                     "仅在阻断直接从势的窄范围内，最低有效根成立。"

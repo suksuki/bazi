@@ -20,6 +20,7 @@ export interface MingliSceneFrame {
   phase: MingliNarrationVisualClock["phase"] | "LAB_OBSERVE" | "IDLE";
   currentTimeMs: number;
   cueProgress: number;
+  activeColumnRefs: string[];
   selectedRelationRef: string | null;
   semanticRunning: boolean;
   ambientRunning: boolean;
@@ -31,6 +32,7 @@ export const INITIAL_MINGLI_CLOCK: MingliNarrationVisualClock = {
   activeCueId: null,
   cueProgress: 0,
   semanticAction: null,
+  activeColumnRefs: [],
 };
 
 export function directMingliScene({
@@ -55,6 +57,7 @@ export function directMingliScene({
       phase: surface === "LAB" ? "LAB_OBSERVE" : "IDLE",
       currentTimeMs: 0,
       cueProgress: surface === "LAB" && selectedRelationRef ? 1 : 0,
+      activeColumnRefs: [],
       selectedRelationRef,
       semanticRunning: false,
       ambientRunning: true,
@@ -78,6 +81,7 @@ export function directMingliScene({
     phase: clock.phase ?? "IDLE",
     currentTimeMs: clock.currentTimeMs,
     cueProgress: clock.cueProgress,
+    activeColumnRefs: clock.activeColumnRefs ?? [],
     selectedRelationRef:
       focus === "RELATION_MEMBERS" || focus === "EVIDENCE_BOUNDARY"
         ? selectedRelationRef

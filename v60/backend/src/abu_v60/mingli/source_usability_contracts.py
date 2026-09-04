@@ -6,9 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from abu_v60.provenance import content_hash, stable_ref
 
-SOURCE_USABILITY_PREREQUISITE_VERSION = (
-    "v60.mingli-source-usability-prerequisite.001"
-)
+SOURCE_USABILITY_PREREQUISITE_VERSION = "v60.mingli-source-usability-prerequisite.001"
 SOURCE_USABILITY_SCOPE_ORDER = (
     "EXACT_IDENTITY_ONLY",
     "ELEMENT_AFFINITY_INCLUDED",
@@ -73,8 +71,7 @@ class SourceUsabilityResearchScope(BaseModel):
             raise ValueError("source_usability_relation_reviews_not_in_scope")
         expected = {
             "source_review_count": len(self.source_review_refs),
-            "clear_count": len(self.source_review_refs)
-            - len(self.relation_review_refs),
+            "clear_count": len(self.source_review_refs) - len(self.relation_review_refs),
             "relation_review_count": len(self.relation_review_refs),
             "intersection_count": len(self.intersection_refs),
         }
@@ -123,9 +120,7 @@ class SourceCarrierUsabilityPrerequisite(BaseModel):
     def scope_and_requirement_shape_is_valid(
         self,
     ) -> SourceCarrierUsabilityPrerequisite:
-        if tuple(item.scope_id for item in self.scopes) != (
-            SOURCE_USABILITY_SCOPE_ORDER
-        ):
+        if tuple(item.scope_id for item in self.scopes) != (SOURCE_USABILITY_SCOPE_ORDER):
             raise ValueError("source_usability_scope_order_invalid")
         if tuple(item.requirement_id for item in self.requirements) != (
             SOURCE_USABILITY_REQUIREMENT_ORDER
@@ -202,9 +197,7 @@ class MingliSourceUsabilityPrerequisiteEnvelope(BaseModel):
             raise ValueError("source_usability_carriers_not_ordered_unique")
         strict_scopes = tuple(item.scopes[0] for item in self.carriers)
         inclusive_scopes = tuple(item.scopes[1] for item in self.carriers)
-        strict_refs = tuple(
-            ref for scope in strict_scopes for ref in scope.source_review_refs
-        )
+        strict_refs = tuple(ref for scope in strict_scopes for ref in scope.source_review_refs)
         inclusive_refs = tuple(
             ref for scope in inclusive_scopes for ref in scope.source_review_refs
         )
@@ -214,9 +207,7 @@ class MingliSourceUsabilityPrerequisiteEnvelope(BaseModel):
             raise ValueError("source_usability_review_assigned_to_multiple_carriers")
         expected = {
             "carrier_count": len(self.carriers),
-            "exact_identity_only_clear_count": sum(
-                item.clear_count for item in strict_scopes
-            ),
+            "exact_identity_only_clear_count": sum(item.clear_count for item in strict_scopes),
             "exact_identity_only_review_required_count": sum(
                 item.relation_review_count for item in strict_scopes
             ),

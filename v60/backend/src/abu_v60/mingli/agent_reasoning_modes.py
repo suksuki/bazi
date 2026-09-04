@@ -97,7 +97,7 @@ BLIND_READING_CONTRACT = MingliAgentReasoningModeContract.issue(
     forbidden_contexts=tuple(
         sorted(
             {
-                "DREAM_CHOICES",
+                "INTERACTIVE_EXPERIENCE_CHOICES",
                 "HISTORICAL_QUESTIONS_AND_ANSWERS",
                 "LIFECASE_EVENTS",
                 "PREVIOUS_READING_PROSE",
@@ -128,7 +128,7 @@ RECONCILIATION_CONTRACT = MingliAgentReasoningModeContract.issue(
     forbidden_contexts=tuple(
         sorted(
             {
-                "DREAM_FICTION_AS_REALITY",
+                "FICTIONAL_SCENE_AS_REALITY",
                 "UNADMITTED_PROFILE_INFERENCE",
                 "UNSOURCED_LIFE_EVENTS",
             }

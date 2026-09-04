@@ -99,23 +99,16 @@ class MingliReadingBriefProjector:
                 ),
                 "meaning": "当前优先核查方向，不是有效做功或人生结果定论。",
                 "support": {
-                    "direct_fact_count": len(
-                        selected_candidate.support_evidence_refs
-                    ),
-                    "context_fact_count": len(
-                        selected_candidate.context_evidence_refs
-                    ),
+                    "direct_fact_count": len(selected_candidate.support_evidence_refs),
+                    "context_fact_count": len(selected_candidate.context_evidence_refs),
                     "visible_occurrence_count": sum(
-                        role.visible_occurrence_count
-                        for role in selected_candidate.roles
+                        role.visible_occurrence_count for role in selected_candidate.roles
                     ),
                     "hidden_occurrence_count": sum(
-                        role.hidden_occurrence_count
-                        for role in selected_candidate.roles
+                        role.hidden_occurrence_count for role in selected_candidate.roles
                     ),
                     "unresolved": [
-                        _blocker_label(code)
-                        for code in selected_candidate.blocker_codes
+                        _blocker_label(code) for code in selected_candidate.blocker_codes
                     ],
                 },
             }
@@ -168,10 +161,7 @@ class MingliReadingBriefProjector:
                     f"四柱为{pillars['year']}、{pillars['month']}、"
                     f"{pillars['day']}、{pillars['hour']}。"
                 ),
-                (
-                    f"未加权成员统计中以{leading_elements}居前；"
-                    "这描述构成，不直接等同旺衰。"
-                ),
+                (f"未加权成员统计中以{leading_elements}居前；这描述构成，不直接等同旺衰。"),
                 (
                     f"当前时序坐标已定位到{len(timing_coordinates)}层，"
                     f"检出{len(timing_vector.relation_evidence)}条关系成员证据。"

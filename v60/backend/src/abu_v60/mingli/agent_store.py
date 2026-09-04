@@ -75,9 +75,7 @@ class MingliAgentReadingStore:
                 generation_key=reading.generation_key,
             )
             if row is None:
-                raise MingliAgentReadingStoreError(
-                    "mingli_agent_reading_identity_conflict"
-                )
+                raise MingliAgentReadingStoreError("mingli_agent_reading_identity_conflict")
             stored = self._validated(row)
             if result.rowcount == 1:
                 self._verify_row(row, expected=reading)
@@ -318,6 +316,4 @@ class MingliAgentReadingStore:
             "prompt_hash",
         )
         if any(getattr(stored, key) != getattr(requested, key) for key in shared):
-            raise MingliAgentReadingStoreError(
-                "mingli_agent_reading_generation_identity_mismatch"
-            )
+            raise MingliAgentReadingStoreError("mingli_agent_reading_generation_identity_mismatch")

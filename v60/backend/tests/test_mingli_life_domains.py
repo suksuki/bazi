@@ -66,18 +66,12 @@ def test_real_cases_produce_distinct_bounded_domain_windows() -> None:
         birth_time=time(9, 20),
     )
 
-    assert [
-        (item.domain, item.signal_status)
-        for item in liu.observations
-    ] == [
+    assert [(item.domain, item.signal_status) for item in liu.observations] == [
         ("career", "TIMING_MECHANISM_OVERLAP"),
         ("wealth", "TIMING_MECHANISM_OVERLAP"),
         ("relationship", "TIMING_ONLY"),
     ]
-    assert [
-        (item.domain, item.signal_status)
-        for item in yanzhou.observations
-    ] == [
+    assert [(item.domain, item.signal_status) for item in yanzhou.observations] == [
         ("career", "TIMING_MECHANISM_OVERLAP"),
         ("wealth", "MECHANISM_ONLY"),
         ("relationship", "TIMING_ONLY"),

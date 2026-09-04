@@ -8,12 +8,13 @@ from abu_v60.mingli.synthetic_experiment_catalog import (
     HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_EXPERIMENT_REF,
     HIDDEN_RANK_PRIMARY_SECONDARY_EXPERIMENT_REF,
     HIDDEN_RANK_SECONDARY_TERTIARY_EXPERIMENT_REF,
+    MONTH_COMMAND_REGIME_GENERALIZATION_EXPERIMENT_REF,
     REGIME_WORK_PATH_GENERALIZATION_EXPERIMENT_REF,
     resolve_synthetic_experiment,
 )
 from abu_v60.provenance import content_hash, stable_ref
 
-SYNTHETIC_SUITE_CATALOG_VERSION: Final = "v60.mingli-synthetic-suite-catalog.004"
+SYNTHETIC_SUITE_CATALOG_VERSION: Final = "v60.mingli-synthetic-suite-catalog.005"
 SYNTHETIC_SUITE_DEFINITION_VERSION: Final = "v60.mingli-synthetic-suite-definition.001"
 SYNTHETIC_SUITE_RUNNER_VERSION: Final = "v60.mingli-synthetic-suite-runner.002"
 
@@ -169,11 +170,29 @@ CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_DEV_SUITE: Final = _suite(
     ),
 )
 
+MONTH_COMMAND_REGIME_GENERALIZATION_DEV_SUITE: Final = _suite(
+    mode="DEV",
+    availability="ACTIVE",
+    title="月令坐标与整盘决策泛化 · 壬水陌生命盘",
+    question=(
+        "换成全新的壬水命盘后，模型能否始终区分月支卯的月令与月干己正官，"
+        "并在时柱改变根、印和候选全集时重做判型、主次与主路径？"
+    ),
+    experiment_refs=(MONTH_COMMAND_REGIME_GENERALIZATION_EXPERIMENT_REF,),
+    execution_policy="SEQUENTIAL_CONTINUE_ON_BOUNDED_ERROR_THEN_SEAL",
+    inference_limit=(
+        "本 Suite 只做 DEV 盲测；Gold 冻结确定性坐标与候选全集，不指定机制胜者，"
+        "完整时柱存在多项伴随变化。一次通过不解锁 Qualification、HOLDOUT 或正式"
+        "高级命理师能力声明。"
+    ),
+)
+
 SYNTHETIC_SUITES: Final = (
     HIDDEN_RANK_DEV_SUITE,
     HIDDEN_RANK_CROSS_DAY_MASTER_GENERALIZATION_DEV_SUITE,
     REGIME_WORK_PATH_GENERALIZATION_DEV_SUITE,
     CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_DEV_SUITE,
+    MONTH_COMMAND_REGIME_GENERALIZATION_DEV_SUITE,
 )
 SYNTHETIC_SUITE_BY_REF: Final = {item.suite_ref: item for item in SYNTHETIC_SUITES}
 HIDDEN_RANK_DEV_SUITE_REF: Final = HIDDEN_RANK_DEV_SUITE.suite_ref
@@ -185,6 +204,9 @@ REGIME_WORK_PATH_GENERALIZATION_DEV_SUITE_REF: Final = (
 )
 CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_DEV_SUITE_REF: Final = (
     CANDIDATE_PARTITION_FALSIFIER_GENERALIZATION_DEV_SUITE.suite_ref
+)
+MONTH_COMMAND_REGIME_GENERALIZATION_DEV_SUITE_REF: Final = (
+    MONTH_COMMAND_REGIME_GENERALIZATION_DEV_SUITE.suite_ref
 )
 
 SYNTHETIC_SUITE_MODE_CATALOG: Final = (

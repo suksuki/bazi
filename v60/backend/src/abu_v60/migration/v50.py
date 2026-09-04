@@ -120,7 +120,6 @@ class V50OwnerImporter:
             "rejected": [
                 "v50_life_case",
                 "professional_conclusions",
-                "dream_state",
                 "fixtures",
             ],
             "pillar_parity": True,
@@ -171,9 +170,7 @@ class V50OwnerImporter:
                 email=email,
                 profile_id=profile_id,
                 subject_kind=(
-                    "HUMAN_OWNER"
-                    if profile_id == owner_profile_id
-                    else "HUMAN_REFERENCE"
+                    "HUMAN_OWNER" if profile_id == owner_profile_id else "HUMAN_REFERENCE"
                 ),
             )
             for profile_id in ordered_ids

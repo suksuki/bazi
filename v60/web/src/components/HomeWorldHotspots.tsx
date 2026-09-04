@@ -1,23 +1,19 @@
-import type { RuntimeMediaManifest } from "../api";
-import type { HomeSnapshot } from "../homeApi";
+import type { PublicLifeTreeHomeSnapshot } from "../publicHomeApi";
+import type { PublicRuntimeMediaManifest } from "../publicRuntimeTypes";
 
 export function HomeWorldHotspots({
   busy,
   busyCaseRef,
   home,
   media,
-  onEnterDream,
-  onOpenLab,
   onOpenMingli,
   onOpenSettings,
 }: {
   busy: boolean;
   busyCaseRef: string | null;
-  home: HomeSnapshot;
-  media: RuntimeMediaManifest;
-  onEnterDream: () => void;
-  onOpenLab: () => void;
-  onOpenMingli: (option: HomeSnapshot["case_options"][number], anchor: HTMLElement) => void;
+  home: PublicLifeTreeHomeSnapshot;
+  media: PublicRuntimeMediaManifest;
+  onOpenMingli: (option: PublicLifeTreeHomeSnapshot["case_options"][number], anchor: HTMLElement) => void;
   onOpenSettings: () => void;
 }) {
   const cases = [
@@ -53,17 +49,6 @@ export function HomeWorldHotspots({
       )}
 
       <button
-        aria-label="进入命理 Lab"
-        className="v108-tree-entry v108-lab-flower"
-        disabled={busy}
-        onClick={onOpenLab}
-        type="button"
-      >
-        <img data-asset-ref={media.assets.home_lab_flower.asset_ref} src={media.assets.home_lab_flower.url} alt="" />
-        <span><small>研究入口</small><strong>命理 Lab</strong></span>
-      </button>
-
-      <button
         aria-label="打开八字档案"
         className="v108-settings-fruit"
         onClick={onOpenSettings}
@@ -72,18 +57,6 @@ export function HomeWorldHotspots({
         <i aria-hidden="true" />
         <span><small>生命叶</small><strong>八字档案</strong></span>
       </button>
-
-      <div className="v108-dream-hollow">
-        <button
-          aria-label="从树洞进入账号连续的阿布梦境"
-          disabled={busy}
-          onClick={onEnterDream}
-          type="button"
-        >
-          <span className="v108-dream-vortex" aria-hidden="true"><i /><b /></span>
-          <span className="v108-dream-label"><small>阿布梦境 · 账号旅程</small><strong>从树洞入梦</strong></span>
-        </button>
-      </div>
     </nav>
   );
 }

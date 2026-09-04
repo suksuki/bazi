@@ -58,7 +58,7 @@ from abu_v60.provenance import canonical_json, content_hash, stable_ref
 from abu_v60.settings import Settings, settings
 
 OLLAMA_GENERATE_PROVIDER_ID = "ollama-generate"
-MINGLI_AGENT_PROMPT_VIEW_MAX_CHARS = 24000
+MINGLI_AGENT_PROMPT_VIEW_MAX_CHARS = 26000
 MINGLI_AGENT_OUTPUT_SCHEMA_MAX_CHARS = 14000
 
 
@@ -563,6 +563,9 @@ def _strip_evidence_ids_from_prose(value: Any, *, field_name: str = "") -> Any:
         "method_card_ref",
         "natal_evidence_ids",
         "relation_evidence_ids",
+        "row_ref",
+        "decision_row_ref",
+        "decision_row",
     }
     if isinstance(value, dict):
         return {
