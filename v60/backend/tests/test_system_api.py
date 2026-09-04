@@ -99,6 +99,14 @@ def test_health_binds_database_to_runtime_foundation() -> None:
     }
 
 
+def test_reverse_proxy_health_alias_uses_the_same_runtime_check() -> None:
+    canonical = asyncio.run(_get("/api/v60/health"))
+    compatibility = asyncio.run(_get("/health"))
+
+    assert compatibility.status_code == 200
+    assert compatibility.json() == canonical.json()
+
+
 def test_database_manifest_binds_current_mingli_agent_contracts() -> None:
     with engine.connect() as connection:
         manifest = connection.execute(

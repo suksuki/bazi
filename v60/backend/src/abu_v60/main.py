@@ -11,6 +11,7 @@ from abu_v60.api.mingli import router as mingli_router
 from abu_v60.api.mingli_narration import router as mingli_narration_router
 from abu_v60.api.mingli_stage import router as mingli_stage_router
 from abu_v60.api.public_experience import router as public_experience_router
+from abu_v60.api.system import health as v60_health
 from abu_v60.api.system import router as system_router
 from abu_v60.settings import settings
 from abu_v60.system_manifest import PRODUCT_VERSION
@@ -25,6 +26,13 @@ app.include_router(mingli_router)
 app.include_router(mingli_narration_router)
 app.include_router(mingli_stage_router)
 app.include_router(public_experience_router)
+
+
+@app.get("/health", include_in_schema=False)
+def reverse_proxy_health() -> dict[str, object]:
+    """Keep the established nginx health endpoint compatible with V60."""
+
+    return v60_health()
 
 if settings.internal_surfaces_enabled:
     from abu_v60.api.mingli_synthetic_lab import router as mingli_synthetic_lab_router
