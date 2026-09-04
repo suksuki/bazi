@@ -2,6 +2,20 @@
 
 ## 2026-09-04
 
+- Owner authorized and completed the controlled Server 13 deployment. Retired
+  the failed V50 systemd unit, installed PostgreSQL 18 in the dedicated
+  `qiazhi_v60_pgdata` volume, restored the full V60 snapshot, and deployed Git
+  commit `e7f8461881969820355b880bdbacb93bae663800` as the enabled
+  `qiazhi-v60.service`. Both public health paths, `/` and `/experience` return
+  HTTP 200; the database is at migration `0053_remove_dream_runtime` and
+  Foundation `.045`, with the account-owned set of 20 profiles/cases intact.
+- Bound production Qwen and TTS traffic directly over the LAN to
+  `192.168.0.7:11434` and `192.168.0.7:7860/tts`. A real Qwen3.8 probe returned
+  the requested answer in 8.439 seconds including a 7.970-second cold load; a
+  real Dylan TTS probe produced a valid 24 kHz mono WAV. The browser receives
+  neither upstream address. Added the established nginx `/health` compatibility
+  alias and recorded the complete deployment and recovery receipt in
+  `26_V60_SERVER13_DEPLOYMENT_RECEIPT.md`.
 - Restored all account-owned human reference charts to the public LifeTree
   projection. The records had remained intact in PostgreSQL, but a public
   projection filter exposed only the single `HUMAN_OWNER` chart. The corrected
@@ -67,8 +81,8 @@
   to “月干、时干两透比肩”; explicit unsafe or unresolved validation codes now
   fail closed to the immediate local base copy.
 - Aligned backend/web package versions to 0.2.0 and recorded the complete
-  public boundary in 25_V60_MINIMAL_PUBLIC_RELEASE.md. This work remains local;
-  no production deployment was made.
+  public boundary in 25_V60_MINIMAL_PUBLIC_RELEASE.md. This was the local
+  release-candidate checkpoint before the later same-day Server 13 deployment.
 - Verified the current suite at 343 passed and 11 contract-defined skips, full
   Python Ruff, TypeScript/build/public artifact audits, desktop/mobile Chrome
   layouts, public-only case options, retired-route 404 boundaries, and real

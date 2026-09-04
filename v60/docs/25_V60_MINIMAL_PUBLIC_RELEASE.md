@@ -4,7 +4,7 @@
 产品版本：0.2.0
 Foundation：`v60.foundation.045`
 公开策略：`v60.public-product-exposure.003`
-状态：本地发布候选；未执行生产部署
+状态：Owner 已授权部署到 Server 13，供受控测试；专业发布门仍关闭
 
 ## 1. Owner 决策
 
@@ -104,8 +104,9 @@ Qwen 不负责重算四柱，不写 Canonical Fact。输出经过本地坐标修
 ## 7. 发布门
 
 - Runtime 保留 `publication_allowed=false` 与 `professionally_reviewed=false`。
-- 当前候选可以供 Owner 和受控测试者验收，但不等于高级命理师专业资格已经通过。
-- 正式部署、对外发布和专业资格裁决仍需 Owner 单独决定。
+- Owner 已明确授权把当前版本部署到 Server 13，供 Owner 和受控测试者验收。
+- 服务器部署不等于高级命理师专业资格已经通过，也不自动授权更广泛公开推广。
+- 专业资格与扩大公开范围仍由 Owner 单独裁决。
 
 ## 8. 验收清单
 
@@ -119,4 +120,5 @@ Qwen 不负责重算四柱，不写 Canonical Fact。输出经过本地坐标修
 - [x] 完整后端回归（343 passed，11 个数据库无适用证据需求的用例按合同跳过）
 - [x] Vite production build 与全部静态前端审计
 - [x] Runtime 重启与桌面／手机真实浏览器验收
-- [ ] 生产部署（不在本轮授权范围）
+- [x] Server 13 受控生产部署与恢复验收（见
+  [`26_V60_SERVER13_DEPLOYMENT_RECEIPT.md`](26_V60_SERVER13_DEPLOYMENT_RECEIPT.md)）

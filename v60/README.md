@@ -16,6 +16,11 @@ V60 是当前唯一实施目标。公开产品只保留私密命盘、分层断�
 公开地址为 `/experience`，本地默认地址是
 `http://127.0.0.1:8060/experience`。
 
+Owner 已授权把当前受控测试版部署到 Server 13。生产入口为
+`https://dblife.com/experience`；部署结构、数据库恢复与验收凭证见
+[`docs/26_V60_SERVER13_DEPLOYMENT_RECEIPT.md`](docs/26_V60_SERVER13_DEPLOYMENT_RECEIPT.md)。
+这次部署不改变 `publication_allowed=false` 的专业审阅边界。
+
 公开 Runtime 只注册 System、Identity、Mingli、Stage、Focused Reading、
 Focused Speech 和 Public Experience。合成命盘、实验、Suite、训练与蒸馏能力保留在
 Mingli 内部研究边界，默认 `V60_INTERNAL_SURFACES_ENABLED=false`，没有公开入口。

@@ -36,3 +36,6 @@ inside the container with the checked-in application stopped, then verify:
 - `/api/v60/health`, `/api/v60/system/manifest`, `/`, and `/experience` succeed.
 
 Never restore the retired Dream, Story, or World schemas into V60.
+
+The first Owner-authorized Server 13 deployment and its verified hashes are recorded
+in [`../docs/26_V60_SERVER13_DEPLOYMENT_RECEIPT.md`](../docs/26_V60_SERVER13_DEPLOYMENT_RECEIPT.md).
